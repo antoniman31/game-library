@@ -170,6 +170,24 @@ function fmtTime(mins) {
   return h > 0 ? `${h}h${m > 0 ? m + "m" : ""}` : `${m}m`;
 }
 
+// Date de la dernière session jouée, ou null si aucune.
+function lastSessionDate(g) {
+  const s = g.sessions;
+  return s && s.length ? new Date(s[s.length - 1].date) : null;
+}
+function daysSince(date) { return Math.floor((Date.now() - date) / 86400000); }
+// Jeu "en cours" laissé de côté depuis >30j (dernière session, ou date d'ajout en fallback).
+function isDusty(g) {
+  if (g.status !== "en cours") return false;
+  const last = lastSessionDate(g);
+  return daysSince(last || new Date(g.addedDate)) > 30;
+}
+// Ancienneté pour le tri "à finir" : dernière session, sinon date d'ajout.
+function staleKey(g) {
+  const last = lastSessionDate(g);
+  return (last || new Date(g.addedDate)).getTime();
+}
+
 function Cover({ src, title, size = 72 }) {
   const [err, setErr] = useState(false);
   const bg = ["#1a2a4a","#2a1a4a","#1a4a2a","#4a2a1a","#2a4a4a"][title.charCodeAt(0) % 5];
@@ -208,6 +226,10 @@ function GameCard({ g, onEdit, onDelete, onEnrich, activeTimer, onStartTimer, on
   const txt = dark ? "#e2e8f0" : "#1e2a4a";
   const mut = dark ? "#64748b" : "#8090b0";
   const fill = dark ? "#0f0f1a" : "#e8eef8";
+  const dusty = isDusty(g);
+  const last = lastSessionDate(g);
+  const idleDays = last && g.status === "en cours" ? daysSince(last) : null;
+  const baseBorder = dusty ? mut : bdr;
 
   const rawgQuery = (q) => { setRawgQ(q); clearTimeout(rawgDebRef.current); rawgDebRef.current = setTimeout(async () => setRawgSugg(await rawgSearch(q)), 350); };
   const rawgPick = async (s) => {
@@ -238,16 +260,16 @@ function GameCard({ g, onEdit, onDelete, onEnrich, activeTimer, onStartTimer, on
   );
 
   return (
-    <div style={{ background: card, border: `1px solid ${bdr}`, borderRadius: 12, overflow: "hidden", transition: "border-color 0.2s" }}
-      onMouseEnter={e => e.currentTarget.style.borderColor = "#5493FF"}
-      onMouseLeave={e => e.currentTarget.style.borderColor = bdr}>
+    <div style={{ background: card, border: `1px ${dusty ? "dashed" : "solid"} ${baseBorder}`, borderRadius: 12, overflow: "hidden", opacity: dusty ? 0.72 : 1, transition: "border-color 0.2s, opacity 0.2s" }}
+      onMouseEnter={e => { e.currentTarget.style.borderColor = "#5493FF"; e.currentTarget.style.opacity = 1; }}
+      onMouseLeave={e => { e.currentTarget.style.borderColor = baseBorder; e.currentTarget.style.opacity = dusty ? 0.72 : 1; }}>
 
       <div style={{ display: "flex", gap: 10, padding: 12, cursor: "pointer" }} onClick={() => setOpen(!open)}>
         <Cover src={g.cover} title={g.title} size={72} />
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginBottom: 4 }}>
             <span style={{ background: g.platform === "Xbox" ? "#107C10" : "#e4000f", color: "#fff", fontSize: 9, fontWeight: 700, borderRadius: 3, padding: "1px 5px" }}>{g.platform}</span>
-            <span style={{ border: `1px solid ${STATUS_COLORS[g.status]}`, color: STATUS_COLORS[g.status], fontSize: 9, borderRadius: 3, padding: "1px 5px" }}>{g.status}</span>
+            <span key={g.status} style={{ border: `1px solid ${STATUS_COLORS[g.status]}`, color: STATUS_COLORS[g.status], fontSize: 9, borderRadius: 3, padding: "1px 5px", display: "inline-block", animation: "statusPop 200ms ease" }}>{g.status}</span>
             {g.format === "démat" && <span style={{ background: dark ? "#1e3a5f" : "#ddeeff", color: "#5493FF", fontSize: 9, borderRadius: 3, padding: "1px 5px" }}>démat</span>}
             {g.lentA && <span style={{ background: "#7c320044", color: "#f59e0b", fontSize: 9, borderRadius: 3, padding: "1px 5px" }}>📤 {g.lentA}</span>}
             {isActive && <span style={{ background: "#22c55e22", color: "#22c55e", fontSize: 9, borderRadius: 3, padding: "1px 5px" }}>▶ {String(Math.floor(elapsed/60)).padStart(2,"0")}:{String(elapsed%60).padStart(2,"0")}</span>}
@@ -257,6 +279,7 @@ function GameCard({ g, onEdit, onDelete, onEnrich, activeTimer, onStartTimer, on
             {g.metacritic && <span style={{ color: g.metacritic >= 80 ? "#22c55e" : g.metacritic >= 60 ? "#f59e0b" : "#ef4444", fontSize: 11, fontWeight: 700 }}>MC {g.metacritic}</span>}
             {total > 0 && <span style={{ color: mut, fontSize: 11 }}>{fmtTime(total)}</span>}
             {hltbPct !== null && <span style={{ color: hltbPct >= 100 ? "#22c55e" : "#5493FF", fontSize: 11 }}>{hltbPct}% HLtB</span>}
+            {idleDays !== null && <span style={{ color: idleDays > 30 ? "#f59e0b" : mut, fontSize: 11 }}>💤 {idleDays}j depuis dernière session</span>}
           </div>
           {hltbPct !== null && <div style={{ marginTop: 4, height: 3, background: dark ? "#2a2a4a" : "#d0d8f0", borderRadius: 2 }}><div style={{ width: `${Math.min(100, hltbPct)}%`, height: "100%", background: hltbPct >= 100 ? "#22c55e" : "#5493FF", borderRadius: 2 }} /></div>}
         </div>
@@ -360,7 +383,7 @@ function GameCard({ g, onEdit, onDelete, onEnrich, activeTimer, onStartTimer, on
             <div style={{ color: mut, fontSize: 10 }}>Ajouté le {new Date(g.addedDate).toLocaleDateString("fr-FR")}</div>
             <div style={{ display: "flex", gap: 6 }}>
               <button onClick={() => { setRawgOpen(o => !o); if (!rawgOpen) { setRawgQ(g.title); rawgQuery(g.title); } }} style={{ background: "transparent", border: "1px solid #5493FF", color: "#5493FF", borderRadius: 5, padding: "3px 8px", fontSize: 10, cursor: "pointer" }}>🔄 Rechercher sur RAWG</button>
-              <button onClick={() => { if (window.confirm(`Supprimer « ${g.title} » de la bibliothèque ?`)) onDelete(g.id); }} style={{ background: "transparent", border: "1px solid #ef4444", color: "#ef4444", borderRadius: 5, padding: "3px 8px", fontSize: 10, cursor: "pointer" }}>Supprimer</button>
+              <button onClick={() => onDelete(g)} style={{ background: "transparent", border: "1px solid #ef4444", color: "#ef4444", borderRadius: 5, padding: "3px 8px", fontSize: 10, cursor: "pointer" }}>Supprimer</button>
             </div>
           </div>
         </div>
@@ -475,6 +498,9 @@ export default function App() {
   const [dark, setDark] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [refreshProg, setRefreshProg] = useState(0);
+  const [deleted, setDeleted] = useState(null); // { game, index } pour l'undo
+  const undoRef = useRef(null);
+  const importRef = useRef(null);
 
   useEffect(() => { try { localStorage.setItem("gl_v2", JSON.stringify(games)); } catch {} }, [games]);
 
@@ -544,16 +570,56 @@ export default function App() {
     setActiveTimer(null); setTimerStart(null);
   };
   const addGame = (g) => { setGames(gs => [g, ...gs]); setShowAdd(false); };
-  const deleteGame = (id) => setGames(gs => gs.filter(g => g.id !== id));
+  const deleteGame = (g) => {
+    const index = games.findIndex(x => x.id === g.id);
+    setGames(gs => gs.filter(x => x.id !== g.id));
+    setDeleted({ game: g, index });
+    clearTimeout(undoRef.current);
+    undoRef.current = setTimeout(() => setDeleted(null), 5000);
+  };
+  const undoDelete = () => {
+    if (!deleted) return;
+    clearTimeout(undoRef.current);
+    setGames(gs => { const c = [...gs]; c.splice(Math.min(deleted.index, c.length), 0, deleted.game); return c; });
+    setDeleted(null);
+  };
+
+  const exportJSON = () => {
+    const blob = new Blob([JSON.stringify(games, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = `game-library-${new Date().toISOString().slice(0, 10)}.json`;
+    a.click(); URL.revokeObjectURL(url);
+  };
+  const importJSON = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const data = JSON.parse(reader.result);
+        if (!Array.isArray(data)) throw new Error("format");
+        const replace = window.confirm(`Fichier : ${data.length} jeux.\n\nOK = REMPLACER toute la bibliothèque\nAnnuler = FUSIONNER (ajoute uniquement les jeux absents)`);
+        if (replace) setGames(data);
+        else setGames(gs => { const ids = new Set(gs.map(x => x.id)); return [...gs, ...data.filter(x => !ids.has(x.id))]; });
+      } catch { alert("Fichier JSON invalide."); }
+    };
+    reader.readAsText(file);
+    e.target.value = "";
+  };
 
   const filtered = useMemo(() => {
     let list = games.filter(g => {
       const q = search.toLowerCase();
+      const statusMatch = statFil === "tous" ? true
+        : statFil === "à finir" ? (g.status === "en cours" || g.status === "non commencé")
+        : g.status === statFil;
       return (!q || g.title.toLowerCase().includes(q) || g.genre.some(x => x.toLowerCase().includes(q)) || g.style.toLowerCase().includes(q))
         && (plat === "tous" || g.platform === plat)
-        && (statFil === "tous" || g.status === statFil);
+        && statusMatch;
     });
     return list.sort((a, b) => {
+      if (statFil === "à finir") return staleKey(a) - staleKey(b); // plus anciennes d'abord
       if (sort === "date") return new Date(b.addedDate) - new Date(a.addedDate);
       if (sort === "metacritic") return (b.metacritic||0) - (a.metacritic||0);
       if (sort === "temps") return (b.playedMinutes+b.manualMinutes) - (a.playedMinutes+a.manualMinutes);
@@ -579,9 +645,17 @@ export default function App() {
   const mut = dark ? "#64748b" : "#8090b0";
   const inpBg = dark ? "#1a1a2e" : "#f0f4ff";
 
+  const emptyState = (
+    <div style={{ textAlign: "center", padding: "70px 20px", color: mut }}>
+      <div style={{ fontSize: 56, marginBottom: 12, opacity: 0.85 }}>🎮</div>
+      <div style={{ color: txt, fontSize: 15, fontWeight: 600, marginBottom: 6 }}>Aucun jeu trouvé</div>
+      <div style={{ fontSize: 12 }}>Essaie un autre terme ou change les filtres 🔍</div>
+    </div>
+  );
+
   return (
     <div style={{ background: bg, minHeight: "100vh", fontFamily: "'Inter','Segoe UI',sans-serif", color: txt }}>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap'); @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}} *{box-sizing:border-box}`}</style>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap'); @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}} @keyframes statusPop{from{opacity:0;transform:scale(0.75)}to{opacity:1;transform:scale(1)}} @keyframes toastIn{from{opacity:0;transform:translate(-50%,12px)}to{opacity:1;transform:translate(-50%,0)}} *{box-sizing:border-box}`}</style>
 
       {/* Header */}
       <div style={{ background: hdr, borderBottom: `1px solid ${bdr}`, padding: "12px 14px", position: "sticky", top: 0, zIndex: 100 }}>
@@ -610,10 +684,11 @@ export default function App() {
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Rechercher titre, genre, tag…" style={{ background: inpBg, border:`1px solid ${bdr}`, borderRadius:8, color:txt, padding:"7px 12px", fontSize:13, outline:"none", width:"100%", marginBottom:8 }} />
           <div style={{ display:"flex", gap:4, flexWrap:"wrap", marginBottom:6 }}>
             {PLATFORMS.map(p => <button key={p} onClick={() => setPlat(p)} style={{ background:plat===p?"#5493FF22":"transparent", border:`1px solid ${plat===p?"#5493FF":bdr}`, color:plat===p?"#5493FF":mut, borderRadius:5, padding:"3px 8px", fontSize:10, cursor:"pointer" }}>{p==="tous"?"Toutes":p}</button>)}
-            <span style={{ width:1, background:bdr, margin:"0 2px" }} />
-            {["tous",...STATUTS].map(s => <button key={s} onClick={() => setStatFil(s)} style={{ background:statFil===s?(STATUS_COLORS[s]||"#5493FF")+"22":"transparent", border:`1px solid ${statFil===s?(STATUS_COLORS[s]||"#5493FF"):bdr}`, color:statFil===s?(STATUS_COLORS[s]||"#5493FF"):mut, borderRadius:5, padding:"3px 7px", fontSize:10, cursor:"pointer" }}>{s==="tous"?"Tous":s}</button>)}
           </div>
-          <div style={{ display:"flex", gap:4, alignItems:"center" }}>
+          <div style={{ display:"flex", gap:4, flexWrap:"wrap", marginBottom:6 }}>
+            {["tous",...STATUTS,"à finir"].map(s => <button key={s} onClick={() => setStatFil(s)} style={{ background:statFil===s?(STATUS_COLORS[s]||"#5493FF")+"22":"transparent", border:`1px solid ${statFil===s?(STATUS_COLORS[s]||"#5493FF"):bdr}`, color:statFil===s?(STATUS_COLORS[s]||"#5493FF"):mut, borderRadius:5, padding:"3px 7px", fontSize:10, cursor:"pointer" }}>{s==="tous"?"Tous":s==="à finir"?"🎯 à finir":s}</button>)}
+          </div>
+          <div style={{ display:"flex", gap:4, alignItems:"center", flexWrap:"wrap" }}>
             <span style={{ color:mut, fontSize:10 }}>Tri:</span>
             {[["titre","A-Z"],["date","Date"],["metacritic","MC"],["temps","Temps"]].map(([k,l]) => <button key={k} onClick={() => setSort(k)} style={{ background:sort===k?"#5493FF22":"transparent", border:`1px solid ${sort===k?"#5493FF":bdr}`, color:sort===k?"#5493FF":mut, borderRadius:5, padding:"3px 7px", fontSize:10, cursor:"pointer" }}>{l}</button>)}
             <div style={{ marginLeft:"auto", display:"flex", gap:4 }}>
@@ -625,12 +700,12 @@ export default function App() {
 
       {/* Body */}
       <div style={{ padding:"14px 14px 60px" }}>
-        {tab === "library" && (view === "grille" ? (
+        {tab === "library" && (filtered.length === 0 ? emptyState : view === "grille" ? (
           <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(120px,1fr))", gap:10 }}>
             {filtered.map(g => (
-              <div key={g.id} style={{ background:dark?"#1a1a2e":"#f0f4ff", border:`1px solid ${bdr}`, borderRadius:10, overflow:"hidden", cursor:"pointer", transition:"transform 0.15s" }}
-                onMouseEnter={e => e.currentTarget.style.transform="scale(1.04)"}
-                onMouseLeave={e => e.currentTarget.style.transform="scale(1)"}
+              <div key={g.id} style={{ background:dark?"#1a1a2e":"#f0f4ff", border:`1px solid ${bdr}`, borderRadius:10, overflow:"hidden", cursor:"pointer", transition:"transform 0.15s, box-shadow 0.15s" }}
+                onMouseEnter={e => { e.currentTarget.style.transform="scale(1.04)"; e.currentTarget.style.boxShadow="0 10px 24px rgba(0,0,0,0.45)"; e.currentTarget.style.zIndex="1"; e.currentTarget.style.position="relative"; }}
+                onMouseLeave={e => { e.currentTarget.style.transform="scale(1)"; e.currentTarget.style.boxShadow="none"; e.currentTarget.style.zIndex="auto"; }}
                 onClick={() => { setView("liste"); setSearch(g.title); setTimeout(()=>setSearch(""),2000); }}>
                 <Cover src={g.cover} title={g.title} size="100%" />
                 <div style={{ height:3, background:STATUS_COLORS[g.status]+"88" }} />
@@ -643,7 +718,6 @@ export default function App() {
           </div>
         ) : (
           <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
-            {filtered.length === 0 && <div style={{ textAlign:"center", color:mut, padding:"60px 0" }}>Aucun jeu trouvé</div>}
             {filtered.map(g => <GameCard key={g.id} g={g} onEdit={edit} onDelete={deleteGame} onEnrich={enrichGame} activeTimer={activeTimer} onStartTimer={startTimer} onStopTimer={stopTimer} dark={dark} />)}
           </div>
         ))}
@@ -687,11 +761,28 @@ export default function App() {
                 </div>
               ))}
             </div>
+            <div style={{ background:dark?"#1a1a2e":"#f0f4ff", border:`1px solid ${bdr}`, borderRadius:10, padding:14 }}>
+              <div style={{ color:txt, fontWeight:600, fontSize:13, marginBottom:4 }}>Sauvegarde</div>
+              <div style={{ color:mut, fontSize:11, marginBottom:10 }}>Exporte ou restaure toute la bibliothèque au format JSON.</div>
+              <div style={{ display:"flex", gap:8 }}>
+                <button onClick={exportJSON} style={{ flex:1, background:"#5493FF22", border:"1px solid #5493FF", color:"#5493FF", borderRadius:8, padding:"8px 12px", fontSize:12, fontWeight:600, cursor:"pointer" }}>⬇ Exporter</button>
+                <button onClick={() => importRef.current?.click()} style={{ flex:1, background:"transparent", border:`1px solid ${bdr}`, color:txt, borderRadius:8, padding:"8px 12px", fontSize:12, fontWeight:600, cursor:"pointer" }}>⬆ Importer</button>
+                <input ref={importRef} type="file" accept="application/json,.json" onChange={importJSON} style={{ display:"none" }} />
+              </div>
+            </div>
           </div>
         )}
       </div>
 
       {showAdd && <AddModal dark={dark} onAdd={addGame} onClose={() => setShowAdd(false)} />}
+
+      {deleted && (
+        <div style={{ position:"fixed", bottom:20, left:"50%", transform:"translateX(-50%)", zIndex:400, display:"flex", alignItems:"center", gap:14, background:dark?"#1a1a2e":"#f0f4ff", border:`1px solid ${bdr}`, borderRadius:10, padding:"10px 14px", boxShadow:"0 8px 24px rgba(0,0,0,0.4)", animation:"toastIn 200ms ease" }}>
+          <span style={{ color:txt, fontSize:13 }}>🗑 « {deleted.game.title} » supprimé</span>
+          <button onClick={undoDelete} style={{ background:"transparent", border:"1px solid #5493FF", color:"#5493FF", borderRadius:6, padding:"4px 12px", fontSize:12, fontWeight:600, cursor:"pointer" }}>Annuler</button>
+        </div>
+      )}
     </div>
   );
 }
+
