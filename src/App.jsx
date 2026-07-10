@@ -18,6 +18,41 @@ async function rawgDetail(id) {
   } catch { return null; }
 }
 
+const wikiPageUrl = (title) => `https://fr.wikipedia.org/wiki/${encodeURIComponent(title.replace(/ /g, "_"))}`;
+
+// Cherche des titres candidats sur Wikipédia FR, sans clé.
+// On utilise la recherche plein-texte (list=search) plutôt que opensearch : opensearch
+// matche par préfixe et rate souvent le titre FR (ex. "Lego Star Wars: The Force Awakens"
+// ne préfixe pas "Lego Star Wars : Le Réveil de la Force"). srsearch classe par pertinence
+// et remonte le bon titre FR en tête. Retourne [{ title, url }] ; [] si rien / erreur.
+async function wikiFrenchTitles(q) {
+  const clean = (q || "").trim();
+  if (clean.length < 2) return [];
+  try {
+    const r = await fetch(`https://fr.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(clean)}&srlimit=5&srnamespace=0&format=json&origin=*`);
+    if (!r.ok) return [];
+    const d = await r.json();
+    const hits = d?.query?.search || [];
+    return hits.map(h => ({ title: h.title, url: wikiPageUrl(h.title) }));
+  } catch { return []; }
+}
+
+// Résumé (intro) + image principale d'un article Wikipédia FR. Sans clé.
+// Retourne { extract, image } ; valeurs vides/null si absentes ou erreur.
+async function wikiArticleData(title) {
+  try {
+    const r = await fetch(`https://fr.wikipedia.org/w/api.php?action=query&prop=extracts|pageimages&exintro=true&explaintext=true&piprop=original|thumbnail&pithumbsize=500&redirects=1&titles=${encodeURIComponent(title)}&format=json&origin=*`);
+    if (!r.ok) return { extract: "", image: null };
+    const d = await r.json();
+    const pages = d?.query?.pages || {};
+    const page = Object.values(pages)[0] || {};
+    return {
+      extract: (page.extract || "").trim(),
+      image: page.original?.source || page.thumbnail?.source || null,
+    };
+  } catch { return { extract: "", image: null }; }
+}
+
 // Découpe un texte en segments de ≤500 caractères en coupant sur des fins de phrase
 // (". ") pour ne jamais couper au milieu d'un mot.
 function splitIntoSegments(text, max = 500) {
@@ -205,6 +240,16 @@ function GameCard({ g, onEdit, onDelete, onEnrich, activeTimer, onStartTimer, on
   const [rawgSugg, setRawgSugg] = useState([]);
   const [rawgBusy, setRawgBusy] = useState(false);
   const rawgDebRef = useRef(null);
+  const [wikiOpen, setWikiOpen] = useState(false);
+  const [wikiQ, setWikiQ] = useState(g.title);
+  const [wikiSugg, setWikiSugg] = useState([]);
+  const [wikiBusy, setWikiBusy] = useState(false);
+  const [wikiDone, setWikiDone] = useState(false);
+  const [wikiPicked, setWikiPicked] = useState(null);
+  const [wikiExtract, setWikiExtract] = useState(null);
+  const [wikiImage, setWikiImage] = useState(null);
+  const [wikiFetching, setWikiFetching] = useState(false);
+  const wikiDebRef = useRef(null);
   const [descOpen, setDescOpen] = useState(false);
   const [manH, setManH] = useState(0);
   const [manM, setManM] = useState(0);
@@ -247,6 +292,34 @@ function GameCard({ g, onEdit, onDelete, onEnrich, activeTimer, onStartTimer, on
     }
     setRawgBusy(false);
     setRawgOpen(false);
+  };
+
+  const wikiQuery = (q) => {
+    setWikiQ(q);
+    setWikiDone(false);
+    setWikiPicked(null);
+    setWikiExtract(null);
+    setWikiImage(null);
+    clearTimeout(wikiDebRef.current);
+    wikiDebRef.current = setTimeout(async () => {
+      setWikiBusy(true);
+      const res = await wikiFrenchTitles(q);
+      setWikiSugg(res);
+      setWikiBusy(false);
+      setWikiDone(true);
+    }, 350);
+  };
+  const wikiPick = async (title) => {
+    onEdit(g.id, "title", title);
+    setWikiPicked(title);
+    setWikiSugg([]);
+    setWikiExtract(null);
+    setWikiImage(null);
+    setWikiFetching(true);
+    const { extract, image } = await wikiArticleData(title);
+    setWikiExtract(extract || null);
+    setWikiImage(image || null);
+    setWikiFetching(false);
   };
 
   const acc = (id, title, content) => (
@@ -379,10 +452,58 @@ function GameCard({ g, onEdit, onDelete, onEnrich, activeTimer, onStartTimer, on
               )}
             </div>
           )}
+          {/* Titre français via Wikipédia FR */}
+          {wikiOpen && (
+            <div style={{ background: fill, border: `1px solid ${bdr}`, borderRadius: 8, padding: "10px 12px", marginBottom: 10 }}>
+              <div style={{ color: txt, fontSize: 11, fontWeight: 600, marginBottom: 6 }}>Titre français (Wikipédia)</div>
+              <input value={wikiQ} onChange={e => wikiQuery(e.target.value)} placeholder="Titre du jeu…" autoFocus style={{ width: "100%", boxSizing: "border-box", background: "transparent", border: `1px solid ${bdr}`, borderRadius: 6, color: txt, padding: "6px 8px", fontSize: 12, outline: "none" }} />
+              {wikiBusy && <div style={{ color: "#5493FF", fontSize: 11, marginTop: 4 }}>Recherche…</div>}
+              {!wikiBusy && wikiSugg.length > 0 && (
+                <div style={{ marginTop: 6, background: card, border: `1px solid ${bdr}`, borderRadius: 8, maxHeight: 300, overflowY: "auto", boxShadow: "0 8px 24px #0008" }}>
+                  {wikiSugg.map((s, i) => (
+                    <div key={i} style={{ display: "flex", gap: 8, padding: "7px 9px", borderBottom: `1px solid ${bdr}`, alignItems: "center" }}
+                      onMouseEnter={e => e.currentTarget.style.background = "#5493FF22"}
+                      onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+                      <div onClick={() => wikiPick(s.title)} style={{ flex: 1, minWidth: 0, cursor: "pointer", color: txt, fontSize: 12, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.title}</div>
+                      {s.url && <a href={s.url} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()} title="Voir la page Wikipédia" style={{ color: "#5493FF", fontSize: 10, textDecoration: "none", flexShrink: 0 }}>↗ page</a>}
+                    </div>
+                  ))}
+                </div>
+              )}
+              {!wikiBusy && wikiDone && wikiSugg.length === 0 && !wikiPicked && <div style={{ color: mut, fontSize: 11, marginTop: 6 }}>Aucun titre français trouvé</div>}
+
+              {wikiFetching && <div style={{ color: "#5493FF", fontSize: 11, marginTop: 8 }}>Chargement de la fiche Wikipédia…</div>}
+
+              {/* Résumé Wikipédia */}
+              {wikiExtract && (
+                <div style={{ marginTop: 10, borderTop: `1px solid ${bdr}`, paddingTop: 8 }}>
+                  <div style={{ color: txt, fontSize: 11, fontWeight: 600, marginBottom: 4 }}>Résumé Wikipédia</div>
+                  <div style={{ color: mut, fontSize: 11, fontStyle: "italic", lineHeight: 1.4, maxHeight: 96, overflowY: "auto", marginBottom: 6 }}>{wikiExtract}</div>
+                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                    <button onClick={() => { onEdit(g.id, "style", wikiExtract); setWikiExtract(null); }} style={{ background: "#22c55e22", border: "1px solid #22c55e", color: "#22c55e", borderRadius: 5, padding: "3px 8px", fontSize: 10, cursor: "pointer" }}>Utiliser ce résumé</button>
+                    <button onClick={() => setWikiExtract(null)} style={{ background: "transparent", border: `1px solid ${bdr}`, color: mut, borderRadius: 5, padding: "3px 8px", fontSize: 10, cursor: "pointer" }}>Garder la description actuelle</button>
+                  </div>
+                </div>
+              )}
+
+              {/* Jaquette Wikipédia */}
+              {wikiImage && (
+                <div style={{ marginTop: 10, borderTop: `1px solid ${bdr}`, paddingTop: 8 }}>
+                  <div style={{ color: txt, fontSize: 11, fontWeight: 600, marginBottom: 4 }}>Jaquette Wikipédia</div>
+                  <img src={wikiImage} alt="" style={{ maxWidth: 120, maxHeight: 160, objectFit: "contain", borderRadius: 6, border: `1px solid ${bdr}`, display: "block", marginBottom: 6 }} />
+                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                    <button onClick={() => { onEdit(g.id, "cover", wikiImage); setWikiImage(null); }} style={{ background: "#22c55e22", border: "1px solid #22c55e", color: "#22c55e", borderRadius: 5, padding: "3px 8px", fontSize: 10, cursor: "pointer" }}>Utiliser cette jaquette</button>
+                    <button onClick={() => setWikiImage(null)} style={{ background: "transparent", border: `1px solid ${bdr}`, color: mut, borderRadius: 5, padding: "3px 8px", fontSize: 10, cursor: "pointer" }}>Garder la jaquette actuelle</button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
             <div style={{ color: mut, fontSize: 10 }}>Ajouté le {new Date(g.addedDate).toLocaleDateString("fr-FR")}</div>
-            <div style={{ display: "flex", gap: 6 }}>
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap", justifyContent: "flex-end" }}>
               <button onClick={() => { setRawgOpen(o => !o); if (!rawgOpen) { setRawgQ(g.title); rawgQuery(g.title); } }} style={{ background: "transparent", border: "1px solid #5493FF", color: "#5493FF", borderRadius: 5, padding: "3px 8px", fontSize: 10, cursor: "pointer" }}>🔄 Rechercher sur RAWG</button>
+              <button onClick={() => { setWikiOpen(o => !o); if (!wikiOpen) { setWikiQ(g.title); setWikiDone(false); wikiQuery(g.title); } }} style={{ background: "transparent", border: "1px solid #5493FF", color: "#5493FF", borderRadius: 5, padding: "3px 8px", fontSize: 10, cursor: "pointer" }}>🇫🇷 Titre français</button>
               <button onClick={() => onDelete(g)} style={{ background: "transparent", border: "1px solid #ef4444", color: "#ef4444", borderRadius: 5, padding: "3px 8px", fontSize: 10, cursor: "pointer" }}>Supprimer</button>
             </div>
           </div>
