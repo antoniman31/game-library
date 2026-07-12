@@ -37,6 +37,21 @@ async function wikiFrenchTitles(q) {
   } catch { return []; }
 }
 
+// Normalise un titre pour comparaison (minuscules, sans accents ni ponctuation).
+const normTitle = (s) => (s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, " ").trim();
+
+// Choisit le meilleur candidat Wikipédia pour un titre de jeu : correspondance exacte,
+// sinon préfixe, sinon le premier résultat (pertinence). Évite de tomber sur la page
+// "série" au lieu de la page du jeu (ex. Assassin's Creed Unity).
+function pickBestWikiTitle(query, results) {
+  if (!results.length) return null;
+  const q = normTitle(query);
+  const exact = results.find(r => normTitle(r.title) === q);
+  if (exact) return exact;
+  const prefix = results.find(r => { const t = normTitle(r.title); return t.startsWith(q) || q.startsWith(t); });
+  return prefix || results[0];
+}
+
 // Résumé (intro) + image principale d'un article Wikipédia FR. Sans clé.
 // Retourne { extract, image } ; valeurs vides/null si absentes ou erreur.
 async function wikiArticleData(title) {
@@ -51,6 +66,52 @@ async function wikiArticleData(title) {
       image: page.original?.source || page.thumbnail?.source || null,
     };
   } catch { return { extract: "", image: null }; }
+}
+
+// Infobox structurée via Wikidata (à partir du titre de l'article Wikipédia FR).
+// Développeur, éditeur, dates de sortie par plateforme, mode de jeu, série (+ précédent/
+// suivant). PAS le moteur (exclu). Retourne null si rien d'exploitable. Sans clé.
+async function wikidataInfobox(wikiTitle) {
+  try {
+    // 1) Qid de l'article
+    const pp = await (await fetch(`https://fr.wikipedia.org/w/api.php?action=query&prop=pageprops&ppprop=wikibase_item&redirects=1&titles=${encodeURIComponent(wikiTitle)}&format=json&origin=*`)).json();
+    const qid = Object.values(pp?.query?.pages || {})[0]?.pageprops?.wikibase_item;
+    if (!qid) return null;
+    // 2) claims de l'entité
+    const ent = await (await fetch(`https://www.wikidata.org/w/api.php?action=wbgetentities&ids=${qid}&props=claims&format=json&origin=*`)).json();
+    const claims = ent?.entities?.[qid]?.claims || {};
+    const ids = (p) => (claims[p] || []).map(c => c.mainsnak?.datavalue?.value?.id).filter(Boolean);
+    const rawDates = (claims["P577"] || []).map(c => ({
+      date: (c.mainsnak?.datavalue?.value?.time || "").slice(1, 11),
+      plat: c.qualifiers?.["P400"]?.[0]?.datavalue?.value?.id || null,
+    })).filter(d => d.date);
+    // 3) résolution des libellés (fr -> en -> mul -> id)
+    const need = [...new Set([...ids("P178"), ...ids("P123"), ...ids("P404"), ...ids("P179"), ...ids("P155"), ...ids("P156"), ...rawDates.map(d => d.plat).filter(Boolean)])];
+    const labels = {};
+    if (need.length) {
+      const lab = await (await fetch(`https://www.wikidata.org/w/api.php?action=wbgetentities&ids=${need.join("|")}&props=labels&languages=fr|en|mul&format=json&origin=*`)).json();
+      for (const id of need) { const e = lab?.entities?.[id]?.labels; labels[id] = e?.fr?.value || e?.en?.value || e?.mul?.value || null; }
+    }
+    const L = (arr) => arr.map(id => labels[id]).filter(Boolean);
+    // dédoublonne les sorties par (plateforme, date), garde la plus ancienne par plateforme
+    const relMap = new Map();
+    for (const d of rawDates) {
+      const key = d.plat || "_";
+      if (!relMap.has(key) || d.date < relMap.get(key).date) relMap.set(key, { date: d.date, platform: d.plat ? labels[d.plat] : null });
+    }
+    const releases = [...relMap.values()].sort((a, b) => a.date.localeCompare(b.date));
+    const info = {
+      developers: L(ids("P178")),
+      publishers: L(ids("P123")),
+      modes: L(ids("P404")),
+      series: L(ids("P179"))[0] || null,
+      follows: L(ids("P155"))[0] || null,
+      followedBy: L(ids("P156"))[0] || null,
+      releases,
+    };
+    const hasAny = info.developers.length || info.publishers.length || info.modes.length || info.series || info.releases.length;
+    return hasAny ? info : null;
+  } catch { return null; }
 }
 
 // SteamGridDB n'expose pas de CORS : on passe par le proxy du serveur de dev
@@ -77,50 +138,6 @@ async function sgdbGrids(id) {
   } catch { return []; }
 }
 
-// Découpe un texte en segments de ≤500 caractères en coupant sur des fins de phrase
-// (". ") pour ne jamais couper au milieu d'un mot.
-function splitIntoSegments(text, max = 500) {
-  if (text.length <= max) return [text];
-  const segments = [];
-  let rest = text;
-  while (rest.length > max) {
-    let cut = rest.lastIndexOf(". ", max - 1);
-    if (cut <= 0) cut = rest.lastIndexOf(" ", max - 1); // pas de fin de phrase : coupe sur un espace
-    if (cut <= 0) cut = max; // aucun espace : coupe dur
-    else cut += 1; // inclut le "." ou l'espace dans le segment courant
-    segments.push(rest.slice(0, cut).trim());
-    rest = rest.slice(cut).trim();
-  }
-  if (rest) segments.push(rest);
-  return segments;
-}
-
-async function mymemoryTranslate(text) {
-  const r = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=en|fr`);
-  if (!r.ok) throw new Error("mymemory http " + r.status);
-  const d = await r.json();
-  const out = d?.responseData?.translatedText?.trim();
-  if (!out) throw new Error("mymemory empty");
-  return out;
-}
-
-// Traduit en français une description RAWG (anglais) via l'API gratuite MyMemory.
-// Les textes >500 caractères sont découpés en segments traduits séquentiellement
-// (délai 150ms entre appels) puis recollés.
-// Fallback : description anglaise brute non tronquée si un des appels échoue.
-async function frenchDescription(descRaw) {
-  const clean = (descRaw || "").replace(/<[^>]+>/g, "").trim();
-  if (!clean) return "";
-  const segments = splitIntoSegments(clean, 500);
-  try {
-    const translated = [];
-    for (let i = 0; i < segments.length; i++) {
-      translated.push(await mymemoryTranslate(segments[i]));
-      if (i < segments.length - 1) await new Promise(res => setTimeout(res, 150));
-    }
-    return translated.join(" ");
-  } catch { return clean; }
-}
 
 const GAMES_INIT = [
   { id: 1, title: "Watch Dogs", platform: "Xbox", format: "physique", addedDate: "2014-05-27", genre: ["Action", "Aventure", "Open World"], style: "Hack & slash en monde ouvert, Chicago fictionnel", status: "terminé", note: null, lentA: null, lentDate: null, cover: null, metacritic: null, hltb: null, playedMinutes: 0, manualMinutes: 0, sessions: [], myLinks: ["","",""], tips: "", tag: "", progression: "" },
@@ -221,7 +238,23 @@ const GAMES_INIT = [
 
 const STATUS_COLORS = { "non commencé": "#64748b", "en cours": "#5493FF", "terminé": "#22c55e", "platine": "#a855f7", "abandonné": "#ef4444", "prêté": "#f59e0b" };
 const STATUTS = ["non commencé", "en cours", "terminé", "platine", "abandonné", "prêté"];
-const PLATFORMS = ["tous", "Xbox", "Switch 2", "Switch 1"];
+const PLATFORMS = ["tous", "Xbox Series X", "Xbox One", "Switch 2", "Switch 1"];
+// S4 : Series X vert vif (marque Xbox), One vert plus foncé, Switch rouge.
+const PLATFORM_COLORS = { "Xbox Series X": "#107C10", "Xbox One": "#0a5c0a", "Switch 2": "#e4000f", "Switch 1": "#e4000f" };
+
+// Sépare l'ancienne plateforme "Xbox" en "Xbox One" / "Xbox Series X" selon la date
+// (seuil 10/11/2020, sortie Series X ; addedDate sert de proxy de date de sortie).
+// Ajoute backCompat (true par défaut pour Xbox One). Idempotent (ne re-migre pas).
+const XBOX_SERIES_CUTOFF = "2020-11-10";
+function migrateGames(list) {
+  return (list || []).map(g => {
+    const ng = { ...g };
+    if (ng.platform === "Xbox") ng.platform = (ng.addedDate || "") >= XBOX_SERIES_CUTOFF ? "Xbox Series X" : "Xbox One";
+    if (ng.backCompat === undefined) ng.backCompat = ng.platform === "Xbox One";
+    if (ng.infobox === undefined) ng.infobox = null;
+    return ng;
+  });
+}
 
 function fmtTime(mins) {
   if (!mins) return "0h";
@@ -261,8 +294,30 @@ function Cover({ src, title, size = 72 }) {
   return <img src={src} alt={title} onError={() => setErr(true)} style={{ ...box, objectFit: "cover", borderRadius: 8, display: "block" }} />;
 }
 
-function GameCard({ g, onEdit, onDelete, onEnrich, activeTimer, onStartTimer, onStopTimer, dark }) {
-  const [open, setOpen] = useState(false);
+// Affiche les infos structurées Wikidata (développeur, éditeur, sorties, mode, série).
+function InfoboxView({ info, dark }) {
+  if (!info) return null;
+  const txt = dark ? "#e2e8f0" : "#1e2a4a";
+  const mut = dark ? "#64748b" : "#8090b0";
+  const row = (label, val) => val ? <div style={{ fontSize: 11, color: mut, marginBottom: 3, lineHeight: 1.35 }}><span style={{ color: txt, fontWeight: 600 }}>{label} : </span>{val}</div> : null;
+  const rel = info.releases?.length ? info.releases.map(r => r.platform ? `${r.date} (${r.platform})` : r.date).join(" · ") : null;
+  const serieExtra = [info.follows && `après ${info.follows}`, info.followedBy && `puis ${info.followedBy}`].filter(Boolean).join(", ");
+  const serie = info.series ? info.series + (serieExtra ? ` (${serieExtra})` : "") : null;
+  return (
+    <div>
+      {row("Développeur", info.developers?.join(", "))}
+      {row("Éditeur", info.publishers?.join(", "))}
+      {row("Sortie", rel)}
+      {row("Mode", info.modes?.join(", "))}
+      {row("Série", serie)}
+    </div>
+  );
+}
+
+function GameCard({ g, onEdit, onDelete, onEnrich, activeTimer, onStartTimer, onStopTimer, dark, autoOpen }) {
+  const [open, setOpen] = useState(!!autoOpen);
+  const rootRef = useRef(null);
+  useEffect(() => { if (autoOpen) rootRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }); }, []); // eslint-disable-line
   const [loanName, setLoanName] = useState(g.lentA || "");
   const [rawgOpen, setRawgOpen] = useState(false);
   const [rawgQ, setRawgQ] = useState(g.title);
@@ -277,6 +332,7 @@ function GameCard({ g, onEdit, onDelete, onEnrich, activeTimer, onStartTimer, on
   const [wikiPicked, setWikiPicked] = useState(null);
   const [wikiExtract, setWikiExtract] = useState(null);
   const [wikiImage, setWikiImage] = useState(null);
+  const [wikiInfo, setWikiInfo] = useState(null);
   const [wikiFetching, setWikiFetching] = useState(false);
   const wikiDebRef = useRef(null);
   const [sgdbOpen, setSgdbOpen] = useState(false);
@@ -318,12 +374,11 @@ function GameCard({ g, onEdit, onDelete, onEnrich, activeTimer, onStartTimer, on
     setRawgBusy(true);
     const d = await rawgDetail(s.id);
     if (d) {
-      const style = await frenchDescription(d.description_raw);
+      // RAWG fournit cover/metacritic/genre ; la description vient de Wikipédia.
       onEnrich(g.id, {
         cover: d.background_image || g.cover,
         metacritic: d.metacritic ?? g.metacritic,
         genre: d.genres?.map(x => x.name) || g.genre,
-        style: style || g.style,
       });
     }
     setRawgBusy(false);
@@ -336,6 +391,7 @@ function GameCard({ g, onEdit, onDelete, onEnrich, activeTimer, onStartTimer, on
     setWikiPicked(null);
     setWikiExtract(null);
     setWikiImage(null);
+    setWikiInfo(null);
     clearTimeout(wikiDebRef.current);
     wikiDebRef.current = setTimeout(async () => {
       setWikiBusy(true);
@@ -351,10 +407,12 @@ function GameCard({ g, onEdit, onDelete, onEnrich, activeTimer, onStartTimer, on
     setWikiSugg([]);
     setWikiExtract(null);
     setWikiImage(null);
+    setWikiInfo(null);
     setWikiFetching(true);
-    const { extract, image } = await wikiArticleData(title);
+    const [{ extract, image }, info] = await Promise.all([wikiArticleData(title), wikidataInfobox(title)]);
     setWikiExtract(extract || null);
     setWikiImage(image || null);
+    setWikiInfo(info);
     setWikiFetching(false);
   };
 
@@ -388,7 +446,7 @@ function GameCard({ g, onEdit, onDelete, onEnrich, activeTimer, onStartTimer, on
   );
 
   return (
-    <div style={{ background: card, border: `1px ${dusty ? "dashed" : "solid"} ${baseBorder}`, borderRadius: 12, overflow: "hidden", opacity: dusty ? 0.72 : 1, transition: "border-color 0.2s, opacity 0.2s" }}
+    <div ref={rootRef} style={{ background: card, border: `1px ${dusty ? "dashed" : "solid"} ${baseBorder}`, borderRadius: 12, overflow: "hidden", opacity: dusty ? 0.72 : 1, transition: "border-color 0.2s, opacity 0.2s" }}
       onMouseEnter={e => { e.currentTarget.style.borderColor = "#5493FF"; e.currentTarget.style.opacity = 1; }}
       onMouseLeave={e => { e.currentTarget.style.borderColor = baseBorder; e.currentTarget.style.opacity = dusty ? 0.72 : 1; }}>
 
@@ -396,9 +454,10 @@ function GameCard({ g, onEdit, onDelete, onEnrich, activeTimer, onStartTimer, on
         <Cover src={g.cover} title={g.title} size={72} />
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginBottom: 4 }}>
-            <span style={{ background: g.platform === "Xbox" ? "#107C10" : "#e4000f", color: "#fff", fontSize: 9, fontWeight: 700, borderRadius: 3, padding: "1px 5px" }}>{g.platform}</span>
+            <span style={{ background: PLATFORM_COLORS[g.platform] || "#5493FF", color: "#fff", fontSize: 9, fontWeight: 700, borderRadius: 3, padding: "1px 5px" }}>{g.platform}</span>
             <span key={g.status} style={{ border: `1px solid ${STATUS_COLORS[g.status]}`, color: STATUS_COLORS[g.status], fontSize: 9, borderRadius: 3, padding: "1px 5px", display: "inline-block", animation: "statusPop 200ms ease" }}>{g.status}</span>
             {g.format === "démat" && <span style={{ background: dark ? "#1e3a5f" : "#ddeeff", color: "#5493FF", fontSize: 9, borderRadius: 3, padding: "1px 5px" }}>démat</span>}
+            {g.platform === "Xbox One" && g.backCompat && <span title="Rétrocompatible Xbox Series X" style={{ background: "#107C1022", color: "#22c55e", fontSize: 9, borderRadius: 3, padding: "1px 5px" }}>🔄 Compatible Series X</span>}
             {g.lentA && <span style={{ background: "#7c320044", color: "#f59e0b", fontSize: 9, borderRadius: 3, padding: "1px 5px" }}>📤 {g.lentA}</span>}
             {isActive && <span style={{ background: "#22c55e22", color: "#22c55e", fontSize: 9, borderRadius: 3, padding: "1px 5px" }}>▶ {String(Math.floor(elapsed/60)).padStart(2,"0")}:{String(elapsed%60).padStart(2,"0")}</span>}
           </div>
@@ -427,9 +486,22 @@ function GameCard({ g, onEdit, onDelete, onEnrich, activeTimer, onStartTimer, on
             {g.genre.map(x => <span key={x} style={{ background: dark ? "#0f0f1a" : "#e8eef8", color: mut, fontSize: 10, borderRadius: 4, padding: "2px 7px", border: `1px solid ${bdr}` }}>{x}</span>)}
           </div>
 
+          {/* Infos Wikidata (si présentes) */}
+          {g.infobox && (
+            <div style={{ background: fill, border: `1px solid ${bdr}`, borderRadius: 8, padding: "8px 10px", marginBottom: 12 }}>
+              <InfoboxView info={g.infobox} dark={dark} />
+            </div>
+          )}
+
           {/* Statut */}
           <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginBottom: 12 }}>
             {STATUTS.map(s => <button key={s} onClick={() => onEdit(g.id, "status", s)} style={{ background: g.status === s ? STATUS_COLORS[s] + "33" : "transparent", border: `1px solid ${g.status === s ? STATUS_COLORS[s] : bdr}`, color: g.status === s ? STATUS_COLORS[s] : mut, borderRadius: 5, padding: "3px 8px", fontSize: 10, cursor: "pointer" }}>{s}</button>)}
+          </div>
+
+          {/* Format physique / démat */}
+          <div style={{ display: "flex", gap: 5, alignItems: "center", marginBottom: 12 }}>
+            <span style={{ color: mut, fontSize: 11 }}>Format :</span>
+            {["physique", "démat"].map(f => <button key={f} onClick={() => onEdit(g.id, "format", f)} style={{ background: g.format === f ? "#5493FF22" : "transparent", border: `1px solid ${g.format === f ? "#5493FF" : bdr}`, color: g.format === f ? "#5493FF" : mut, borderRadius: 5, padding: "3px 10px", fontSize: 10, cursor: "pointer" }}>{f}</button>)}
           </div>
 
           {/* Chrono */}
@@ -552,6 +624,18 @@ function GameCard({ g, onEdit, onDelete, onEnrich, activeTimer, onStartTimer, on
                   </div>
                 </div>
               )}
+
+              {/* Infos Wikidata */}
+              {wikiInfo && (
+                <div style={{ marginTop: 10, borderTop: `1px solid ${bdr}`, paddingTop: 8 }}>
+                  <div style={{ color: txt, fontSize: 11, fontWeight: 600, marginBottom: 4 }}>ℹ️ Infos (Wikidata)</div>
+                  <div style={{ marginBottom: 6 }}><InfoboxView info={wikiInfo} dark={dark} /></div>
+                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                    <button onClick={() => { onEdit(g.id, "infobox", wikiInfo); setWikiInfo(null); }} style={{ background: "#22c55e22", border: "1px solid #22c55e", color: "#22c55e", borderRadius: 5, padding: "3px 8px", fontSize: 10, cursor: "pointer" }}>Utiliser ces infos</button>
+                    <button onClick={() => setWikiInfo(null)} style={{ background: "transparent", border: `1px solid ${bdr}`, color: mut, borderRadius: 5, padding: "3px 8px", fontSize: 10, cursor: "pointer" }}>Ignorer</button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
           {/* Jaquettes SteamGridDB */}
@@ -593,20 +677,38 @@ function GameCard({ g, onEdit, onDelete, onEnrich, activeTimer, onStartTimer, on
 
 function AddModal({ dark, onAdd, onClose }) {
   const [title, setTitle] = useState("");
-  const [platform, setPlatform] = useState("Xbox");
+  const [platform, setPlatform] = useState("Xbox Series X");
   const [fmt, setFmt] = useState("physique");
   const [date, setDate] = useState("");
   const [status, setStatus] = useState("non commencé");
   const [loading, setLoading] = useState(false);
   const [sugg, setSugg] = useState([]);
   const [rawg, setRawg] = useState(null);
-  const [styleFr, setStyleFr] = useState("");
   const debRef = useRef(null);
+  // Wikipédia (titre + description)
+  const [wikiOpen, setWikiOpen] = useState(false);
+  const [wikiSugg, setWikiSugg] = useState([]);
+  const [wikiBusy, setWikiBusy] = useState(false);
+  const [wikiDone, setWikiDone] = useState(false);
+  const [wikiExtract, setWikiExtract] = useState("");
+  const [wikiInfo, setWikiInfo] = useState(null);
+  const wikiDebRef = useRef(null);
+  // SteamGridDB (jaquette)
+  const [sgOpen, setSgOpen] = useState(false);
+  const [sgGrids, setSgGrids] = useState([]);
+  const [sgBusy, setSgBusy] = useState(false);
+  const [sgDone, setSgDone] = useState(false);
+  const [sgMatch, setSgMatch] = useState(null);
+  const [cover, setCover] = useState(null);
+  const sgDebRef = useRef(null);
 
   const bg = dark ? "#1a1a2e" : "#f0f4ff";
+  const card = dark ? "#0f0f1a" : "#e8eef8";
   const bdr = dark ? "#2a2a4a" : "#d0d8f0";
   const txt = dark ? "#e2e8f0" : "#1e2a4a";
+  const mut = dark ? "#64748b" : "#8090b0";
   const inp = { background: dark ? "#0f0f1a" : "#e8eef8", border: `1px solid ${bdr}`, borderRadius: 8, color: txt, padding: "8px 12px", fontSize: 13, outline: "none", width: "100%", boxSizing: "border-box" };
+  const srcBtn = { background: "transparent", border: "1px solid #5493FF", color: "#5493FF", borderRadius: 6, padding: "5px 8px", fontSize: 11, cursor: "pointer" };
 
   const search = async (q) => setSugg(await rawgSearch(q));
 
@@ -618,9 +720,47 @@ function AddModal({ dark, onAdd, onClose }) {
     if (d) {
       setRawg(d);
       if (d.released) setDate(d.released);
-      setStyleFr(await frenchDescription(d.description_raw));
+      if (!cover && d.background_image) setCover(d.background_image);
     }
     setLoading(false);
+  };
+
+  // Wikipédia
+  const wikiQuery = (q) => {
+    setWikiDone(false);
+    clearTimeout(wikiDebRef.current);
+    wikiDebRef.current = setTimeout(async () => {
+      setWikiBusy(true);
+      setWikiSugg(await wikiFrenchTitles(q));
+      setWikiBusy(false);
+      setWikiDone(true);
+    }, 350);
+  };
+  const wikiPick = async (t) => {
+    setTitle(t);
+    setWikiSugg([]);
+    setWikiBusy(true);
+    const [{ extract }, info] = await Promise.all([wikiArticleData(t), wikidataInfobox(t)]);
+    setWikiExtract(extract || "");
+    setWikiInfo(info);
+    setWikiBusy(false);
+  };
+
+  // SteamGridDB
+  const sgQuery = (q) => {
+    setSgDone(false);
+    clearTimeout(sgDebRef.current);
+    sgDebRef.current = setTimeout(async () => {
+      setSgBusy(true);
+      setSgGrids([]);
+      setSgMatch(null);
+      const results = await sgdbSearch(q);
+      const match = results[0] || null;
+      setSgMatch(match ? match.name : null);
+      setSgGrids(match ? await sgdbGrids(match.id) : []);
+      setSgBusy(false);
+      setSgDone(true);
+    }, 400);
   };
 
   const handleAdd = () => {
@@ -629,12 +769,13 @@ function AddModal({ dark, onAdd, onClose }) {
       id: Date.now(), title: title.trim(), platform, format: fmt,
       addedDate: date || new Date().toISOString().slice(0, 10),
       genre: rawg?.genres?.map(g => g.name) || [],
-      style: styleFr || rawg?.description_raw?.replace(/<[^>]+>/g, "") || "",
+      style: wikiExtract || "",
       status, note: null, lentA: null, lentDate: null,
-      cover: rawg?.background_image || null,
+      cover: cover || rawg?.background_image || null,
       metacritic: rawg?.metacritic || null,
       hltb: null, playedMinutes: 0, manualMinutes: 0, sessions: [],
-      myLinks: ["","",""], tips: "", tag: "", progression: ""
+      myLinks: ["","",""], tips: "", tag: "", progression: "",
+      backCompat: platform === "Xbox One", infobox: wikiInfo || null,
     });
   };
 
@@ -660,15 +801,66 @@ function AddModal({ dark, onAdd, onClose }) {
           )}
         </div>
 
-        {rawg && (
-          <div style={{ background: dark ? "#0f0f1a" : "#e8eef8", borderRadius: 8, padding: "8px 10px", marginBottom: 10, display: "flex", gap: 10, alignItems: "center" }}>
-            {rawg.background_image && <img src={rawg.background_image} style={{ width: 40, height: 60, minWidth: 40, objectFit: "cover", borderRadius: 6 }} />}
-            <div><div style={{ color: txt, fontSize: 12, fontWeight: 600 }}>{rawg.name}</div><div style={{ color: "#64748b", fontSize: 10 }}>{rawg.genres?.map(g => g.name).join(", ")} {rawg.metacritic ? `· MC ${rawg.metacritic}` : ""}</div></div>
+        {/* Récap des sources choisies */}
+        {(cover || rawg || wikiExtract) && (
+          <div style={{ background: card, borderRadius: 8, padding: "8px 10px", marginBottom: 10, display: "flex", gap: 10 }}>
+            {cover && <img src={cover} style={{ width: 40, height: 60, minWidth: 40, objectFit: "cover", borderRadius: 6 }} />}
+            <div style={{ minWidth: 0 }}>
+              {rawg && <div style={{ color: mut, fontSize: 10 }}>{rawg.genres?.map(g => g.name).join(", ")}{rawg.metacritic ? ` · MC ${rawg.metacritic}` : ""}</div>}
+              {wikiExtract && <div style={{ color: mut, fontSize: 10, marginTop: 2, maxHeight: 40, overflow: "hidden" }}>📝 {wikiExtract.slice(0, 90)}…</div>}
+              {!wikiExtract && !rawg && cover && <div style={{ color: mut, fontSize: 10 }}>Jaquette sélectionnée</div>}
+            </div>
+          </div>
+        )}
+
+        {/* Sources : Wikipédia + SteamGridDB */}
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 10 }}>
+          <button onClick={() => { setWikiOpen(o => !o); if (!wikiOpen && title.trim()) { setWikiDone(false); wikiQuery(title); } }} style={srcBtn}>🇫🇷 Wikipédia (titre + desc.)</button>
+          <button onClick={() => { setSgOpen(o => !o); if (!sgOpen && title.trim()) { setSgDone(false); sgQuery(title); } }} style={srcBtn}>📦 Jaquette SteamGridDB</button>
+        </div>
+
+        {wikiOpen && (
+          <div style={{ background: card, border: `1px solid ${bdr}`, borderRadius: 8, padding: "10px 12px", marginBottom: 10 }}>
+            <div style={{ color: txt, fontSize: 11, fontWeight: 600, marginBottom: 6 }}>Titre + description (Wikipédia)</div>
+            <input defaultValue={title} onChange={e => wikiQuery(e.target.value)} placeholder="Titre du jeu…" style={{ ...inp, fontSize: 12, padding: "6px 8px" }} />
+            {wikiBusy && <div style={{ color: "#5493FF", fontSize: 11, marginTop: 4 }}>Recherche…</div>}
+            {!wikiBusy && wikiSugg.length > 0 && (
+              <div style={{ marginTop: 6, background: bg, border: `1px solid ${bdr}`, borderRadius: 8, maxHeight: 260, overflowY: "auto" }}>
+                {wikiSugg.map((s, i) => (
+                  <div key={i} style={{ display: "flex", gap: 8, padding: "7px 9px", borderBottom: `1px solid ${bdr}`, alignItems: "center" }}
+                    onMouseEnter={e => e.currentTarget.style.background = "#5493FF22"} onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+                    <div onClick={() => wikiPick(s.title)} style={{ flex: 1, minWidth: 0, cursor: "pointer", color: txt, fontSize: 12, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.title}</div>
+                    {s.url && <a href={s.url} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()} style={{ color: "#5493FF", fontSize: 10, textDecoration: "none", flexShrink: 0 }}>↗</a>}
+                  </div>
+                ))}
+              </div>
+            )}
+            {!wikiBusy && wikiDone && wikiSugg.length === 0 && <div style={{ color: mut, fontSize: 11, marginTop: 6 }}>Aucun résultat Wikipédia</div>}
+          </div>
+        )}
+
+        {sgOpen && (
+          <div style={{ background: card, border: `1px solid ${bdr}`, borderRadius: 8, padding: "10px 12px", marginBottom: 10 }}>
+            <div style={{ color: txt, fontSize: 11, fontWeight: 600, marginBottom: 6 }}>Jaquette SteamGridDB</div>
+            <input defaultValue={title} onChange={e => sgQuery(e.target.value)} placeholder="Titre du jeu…" style={{ ...inp, fontSize: 12, padding: "6px 8px" }} />
+            {sgBusy && <div style={{ color: "#5493FF", fontSize: 11, marginTop: 6 }}>Recherche des jaquettes…</div>}
+            {!sgBusy && sgGrids.length > 0 && (
+              <>
+                {sgMatch && <div style={{ color: mut, fontSize: 11, marginTop: 6 }}>Trouvé : <span style={{ color: txt, fontWeight: 600 }}>{sgMatch}</span></div>}
+                <div style={{ marginTop: 8, display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 6, maxHeight: 300, overflowY: "auto" }}>
+                  {sgGrids.map((grid, i) => (
+                    <img key={i} src={grid.thumb} alt="" loading="lazy" onClick={() => { setCover(grid.url); setSgOpen(false); }} title="Choisir cette jaquette"
+                      style={{ width: "100%", aspectRatio: "2 / 3", objectFit: "cover", borderRadius: 6, border: cover === grid.url ? "2px solid #5493FF" : `1px solid ${bdr}`, cursor: "pointer", display: "block" }} />
+                  ))}
+                </div>
+              </>
+            )}
+            {!sgBusy && sgDone && sgGrids.length === 0 && <div style={{ color: mut, fontSize: 11, marginTop: 6 }}>Aucune jaquette trouvée sur SteamGridDB</div>}
           </div>
         )}
 
         <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
-          <select value={platform} onChange={e => setPlatform(e.target.value)} style={{ ...inp, flex: 1 }}><option>Xbox</option><option>Switch 2</option><option>Switch 1</option></select>
+          <select value={platform} onChange={e => setPlatform(e.target.value)} style={{ ...inp, flex: 1 }}>{PLATFORMS.filter(p => p !== "tous").map(p => <option key={p}>{p}</option>)}</select>
           <select value={fmt} onChange={e => setFmt(e.target.value)} style={{ ...inp, flex: 1 }}><option>physique</option><option>démat</option></select>
         </div>
         <input type="date" value={date} onChange={e => setDate(e.target.value)} style={{ ...inp, marginBottom: 10 }} />
@@ -684,7 +876,7 @@ function AddModal({ dark, onAdd, onClose }) {
 }
 
 export default function App() {
-  const [games, setGames] = useState(() => { try { const s = localStorage.getItem("gl_v2"); return s ? JSON.parse(s) : GAMES_INIT; } catch { return GAMES_INIT; } });
+  const [games, setGames] = useState(() => { try { const s = localStorage.getItem("gl_v2"); return migrateGames(s ? JSON.parse(s) : GAMES_INIT); } catch { return migrateGames(GAMES_INIT); } });
   const [search, setSearch] = useState("");
   const [plat, setPlat] = useState("tous");
   const [statFil, setStatFil] = useState("tous");
@@ -692,42 +884,53 @@ export default function App() {
   const [view, setView] = useState("liste");
   const [tab, setTab] = useState("library");
   const [showAdd, setShowAdd] = useState(false);
+  const [lastAddedId, setLastAddedId] = useState(null);
   const [activeTimer, setActiveTimer] = useState(null);
   const [timerStart, setTimerStart] = useState(null);
   const [dark, setDark] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [refreshProg, setRefreshProg] = useState(0);
+  const [refreshMsg, setRefreshMsg] = useState(null); // bilan de fin de refresh (S1)
+  const refreshCancelRef = useRef(false); // annulation du refresh global (S6)
   const [deleted, setDeleted] = useState(null); // { game, index } pour l'undo
   const undoRef = useRef(null);
   const importRef = useRef(null);
 
   useEffect(() => { try { localStorage.setItem("gl_v2", JSON.stringify(games)); } catch {} }, [games]);
 
-  // Force la (re)traduction FR de toutes les descriptions : récupère la description
-  // anglaise RAWG de chaque jeu puis la traduit via frenchDescription (découpage inclus).
+  // Actualise la description de tous les jeux depuis Wikipédia FR :
+  // recherche full-text -> résumé (extract) du 1er article -> champ style.
+  // Annulable (S6) ; garde un délai anti-rate-limit ; log des jeux sans page (S1).
   const refreshAllDescriptions = async () => {
     if (refreshing) return;
+    refreshCancelRef.current = false;
     setRefreshing(true);
     setRefreshProg(0);
+    setRefreshMsg(null);
     const list = [...games];
+    const notFound = [];
+    let done = 0;
     for (let i = 0; i < list.length; i++) {
+      if (refreshCancelRef.current) break;
       const g = list[i];
       try {
-        const results = await rawgSearch(g.title);
-        const first = results[0];
-        if (first) {
-          const d = await rawgDetail(first.id);
-          if (d?.description_raw) {
-            const fr = await frenchDescription(d.description_raw);
-            if (fr) setGames(gs => gs.map(x => x.id === g.id ? { ...x, style: fr } : x));
-          }
-        }
-      } catch {}
+        const titles = await wikiFrenchTitles(g.title);
+        const best = pickBestWikiTitle(g.title, titles);
+        const { extract } = best ? await wikiArticleData(best.title) : { extract: "" };
+        if (extract) { setGames(gs => gs.map(x => x.id === g.id ? { ...x, style: extract } : x)); done++; }
+        else notFound.push(g.title);
+      } catch { notFound.push(g.title); }
       setRefreshProg(i + 1);
       await new Promise(res => setTimeout(res, 150));
     }
     setRefreshing(false);
+    const stopped = refreshCancelRef.current;
+    setRefreshMsg({
+      done, total: list.length, notFound, stopped,
+      text: `${stopped ? "Interrompu — " : ""}${done} description(s) actualisée(s)` + (notFound.length ? ` · ${notFound.length} sans page Wikipédia` : ""),
+    });
   };
+  const cancelRefresh = () => { refreshCancelRef.current = true; };
 
   // Fetch covers + metacritic manquants au démarrage
   useEffect(() => {
@@ -744,14 +947,6 @@ export default function App() {
               cover: result.background_image || x.cover,
               metacritic: result.metacritic || x.metacritic,
             } : x));
-            // Complète la description en français uniquement si absente (préserve les styles curatés)
-            if (!g.style) {
-              const detail = await rawgDetail(result.id);
-              if (detail?.description_raw) {
-                const style = await frenchDescription(detail.description_raw);
-                if (style) setGames(gs => gs.map(x => x.id === g.id ? { ...x, style } : x));
-              }
-            }
           }
           await new Promise(res => setTimeout(res, 120)); // ~8 req/s, sous la limite RAWG
         } catch {}
@@ -768,7 +963,17 @@ export default function App() {
     if (mins > 0) setGames(gs => gs.map(g => g.id === id ? { ...g, playedMinutes: g.playedMinutes + mins, sessions: [...(g.sessions || []), { date: new Date().toISOString(), minutes: mins }] } : g));
     setActiveTimer(null); setTimerStart(null);
   };
-  const addGame = (g) => { setGames(gs => [g, ...gs]); setShowAdd(false); };
+  // Ajoute le jeu puis l'ouvre directement en fiche complète (parité fiche/ajout).
+  const addGame = (g) => {
+    setGames(gs => [g, ...gs]);
+    setShowAdd(false);
+    setLastAddedId(g.id);
+    setTab("library");
+    setView("liste");
+    setPlat("tous");
+    setStatFil("tous");
+    setSearch("");
+  };
   const deleteGame = (g) => {
     const index = games.findIndex(x => x.id === g.id);
     setGames(gs => gs.filter(x => x.id !== g.id));
@@ -864,13 +1069,24 @@ export default function App() {
             <div style={{ fontSize: 10, color: mut, marginTop: 2 }}>{stats.total} jeux · {stats.termines} terminés · {stats.enCours} en cours</div>
           </div>
           <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-            <button onClick={refreshAllDescriptions} disabled={refreshing} title="Actualiser toutes les descriptions (traduction FR via RAWG)" style={{ background: "transparent", border: `1px solid ${bdr}`, color: refreshing ? "#5493FF" : mut, borderRadius: 6, padding: "5px 8px", fontSize: 11, cursor: refreshing ? "default" : "pointer", opacity: refreshing ? 0.8 : 1, whiteSpace: "nowrap" }}>
-              {refreshing ? `⏳ ${refreshProg}/${games.length} traduits` : "🌐 Actualiser descriptions"}
+            <button onClick={refreshAllDescriptions} disabled={refreshing} title="Actualiser toutes les descriptions depuis Wikipédia FR" style={{ background: "transparent", border: `1px solid ${bdr}`, color: refreshing ? "#5493FF" : mut, borderRadius: 6, padding: "5px 8px", fontSize: 11, cursor: refreshing ? "default" : "pointer", opacity: refreshing ? 0.8 : 1, whiteSpace: "nowrap" }}>
+              {refreshing ? `⏳ ${refreshProg}/${games.length} actualisés` : "🌐 Actualiser descriptions"}
             </button>
+            {refreshing && <button onClick={cancelRefresh} title="Annuler l'actualisation" style={{ background: "#ef444422", border: "1px solid #ef4444", color: "#ef4444", borderRadius: 6, padding: "5px 8px", fontSize: 11, cursor: "pointer", whiteSpace: "nowrap" }}>Annuler</button>}
             <button onClick={() => setDark(!dark)} style={{ background: "transparent", border: `1px solid ${bdr}`, color: mut, borderRadius: 6, padding: "5px 8px", fontSize: 12, cursor: "pointer" }}>{dark ? "☀️" : "🌙"}</button>
             <button onClick={() => setShowAdd(true)} style={{ background: "#5493FF", color: "#fff", border: "none", borderRadius: 8, padding: "7px 12px", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>+ Ajouter</button>
           </div>
         </div>
+
+        {refreshMsg && (
+          <div style={{ display: "flex", alignItems: "flex-start", gap: 8, background: dark ? "#1a1a2e" : "#f0f4ff", border: `1px solid ${bdr}`, borderRadius: 8, padding: "8px 10px", marginBottom: 10 }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ color: txt, fontSize: 11, fontWeight: 600 }}>{refreshMsg.text}</div>
+              {refreshMsg.notFound.length > 0 && <div style={{ color: mut, fontSize: 10, marginTop: 3, maxHeight: 54, overflowY: "auto" }}>Sans page : {refreshMsg.notFound.join(", ")}</div>}
+            </div>
+            <button onClick={() => setRefreshMsg(null)} style={{ background: "transparent", border: "none", color: mut, fontSize: 14, cursor: "pointer", lineHeight: 1, padding: 0 }}>✕</button>
+          </div>
+        )}
 
         {/* Tabs */}
         <div style={{ display: "flex", gap: 4, marginBottom: 10 }}>
@@ -917,7 +1133,7 @@ export default function App() {
           </div>
         ) : (
           <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
-            {filtered.map(g => <GameCard key={g.id} g={g} onEdit={edit} onDelete={deleteGame} onEnrich={enrichGame} activeTimer={activeTimer} onStartTimer={startTimer} onStopTimer={stopTimer} dark={dark} />)}
+            {filtered.map(g => <GameCard key={g.id} g={g} onEdit={edit} onDelete={deleteGame} onEnrich={enrichGame} activeTimer={activeTimer} onStartTimer={startTimer} onStopTimer={stopTimer} dark={dark} autoOpen={g.id === lastAddedId} />)}
           </div>
         ))}
 
