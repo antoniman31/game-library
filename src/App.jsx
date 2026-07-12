@@ -53,6 +53,30 @@ async function wikiArticleData(title) {
   } catch { return { extract: "", image: null }; }
 }
 
+// SteamGridDB n'expose pas de CORS : on passe par le proxy du serveur de dev
+// (voir vite.config.js) qui relaie /sgdb/* vers l'API avec le token Authorization.
+// Recherche un jeu sur SteamGridDB (autocomplete) -> [{ id, name }].
+async function sgdbSearch(term) {
+  if (!term || term.trim().length < 2) return [];
+  try {
+    const r = await fetch(`/sgdb/search/autocomplete/${encodeURIComponent(term)}`);
+    if (!r.ok) return [];
+    const d = await r.json();
+    return d?.data || [];
+  } catch { return []; }
+}
+
+// Grids verticales (600x900, format boîte) d'un jeu SteamGridDB.
+// -> [{ thumb, url }] : thumb pour l'aperçu (léger), url pour la cover finale.
+async function sgdbGrids(id) {
+  try {
+    const r = await fetch(`/sgdb/grids/game/${id}?dimensions=600x900`);
+    if (!r.ok) return [];
+    const d = await r.json();
+    return (d?.data || []).map(x => ({ thumb: x.thumb || x.url, url: x.url })).filter(g => g.url);
+  } catch { return []; }
+}
+
 // Découpe un texte en segments de ≤500 caractères en coupant sur des fins de phrase
 // (". ") pour ne jamais couper au milieu d'un mot.
 function splitIntoSegments(text, max = 500) {
@@ -223,13 +247,18 @@ function staleKey(g) {
   return (last || new Date(g.addedDate)).getTime();
 }
 
+// Jaquette au format boîte de jeu : rectangle vertical ~2:3.
 function Cover({ src, title, size = 72 }) {
   const [err, setErr] = useState(false);
   const bg = ["#1a2a4a","#2a1a4a","#1a4a2a","#4a2a1a","#2a4a4a"][title.charCodeAt(0) % 5];
+  const isFull = size === "100%";
+  const box = isFull
+    ? { width: "100%", aspectRatio: "2 / 3", minWidth: 0 }
+    : { width: size, height: size * 1.5, minWidth: size };
   if (!src || err) return (
-    <div style={{ width: size, height: size, minWidth: size, background: bg, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", fontSize: size * 0.3 }}>🎮</div>
+    <div style={{ ...box, background: bg, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", fontSize: isFull ? 40 : size * 0.4 }}>🎮</div>
   );
-  return <img src={src} alt={title} onError={() => setErr(true)} style={{ width: size, height: size, minWidth: size, objectFit: "cover", borderRadius: 8 }} />;
+  return <img src={src} alt={title} onError={() => setErr(true)} style={{ ...box, objectFit: "cover", borderRadius: 8, display: "block" }} />;
 }
 
 function GameCard({ g, onEdit, onDelete, onEnrich, activeTimer, onStartTimer, onStopTimer, dark }) {
@@ -250,6 +279,13 @@ function GameCard({ g, onEdit, onDelete, onEnrich, activeTimer, onStartTimer, on
   const [wikiImage, setWikiImage] = useState(null);
   const [wikiFetching, setWikiFetching] = useState(false);
   const wikiDebRef = useRef(null);
+  const [sgdbOpen, setSgdbOpen] = useState(false);
+  const [sgdbQ, setSgdbQ] = useState(g.title);
+  const [sgdbGridsList, setSgdbGridsList] = useState([]);
+  const [sgdbMatch, setSgdbMatch] = useState(null);
+  const [sgdbBusy, setSgdbBusy] = useState(false);
+  const [sgdbDone, setSgdbDone] = useState(false);
+  const sgdbDebRef = useRef(null);
   const [descOpen, setDescOpen] = useState(false);
   const [manH, setManH] = useState(0);
   const [manM, setManM] = useState(0);
@@ -321,6 +357,25 @@ function GameCard({ g, onEdit, onDelete, onEnrich, activeTimer, onStartTimer, on
     setWikiImage(image || null);
     setWikiFetching(false);
   };
+
+  const sgdbQuery = (q) => {
+    setSgdbQ(q);
+    setSgdbDone(false);
+    clearTimeout(sgdbDebRef.current);
+    sgdbDebRef.current = setTimeout(async () => {
+      setSgdbBusy(true);
+      setSgdbGridsList([]);
+      setSgdbMatch(null);
+      const results = await sgdbSearch(q);
+      const match = results[0] || null;
+      setSgdbMatch(match ? match.name : null);
+      const grids = match ? await sgdbGrids(match.id) : [];
+      setSgdbGridsList(grids);
+      setSgdbBusy(false);
+      setSgdbDone(true);
+    }, 400);
+  };
+  const sgdbPick = (url) => { onEdit(g.id, "cover", url); setSgdbOpen(false); };
 
   const acc = (id, title, content) => (
     <div style={{ marginBottom: 8 }}>
@@ -444,7 +499,7 @@ function GameCard({ g, onEdit, onDelete, onEnrich, activeTimer, onStartTimer, on
                     <div key={s.id} onClick={() => rawgPick(s)} style={{ display: "flex", gap: 8, padding: "7px 9px", cursor: "pointer", borderBottom: `1px solid ${bdr}`, alignItems: "center" }}
                       onMouseEnter={e => e.currentTarget.style.background = "#5493FF22"}
                       onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
-                      {s.background_image && <img src={s.background_image} style={{ width: 34, height: 34, minWidth: 34, objectFit: "cover", borderRadius: 4 }} />}
+                      {s.background_image && <img src={s.background_image} style={{ width: 34, height: 51, minWidth: 34, objectFit: "cover", borderRadius: 4 }} />}
                       <div style={{ minWidth: 0 }}><div style={{ color: txt, fontSize: 12, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.name}</div><div style={{ color: mut, fontSize: 10 }}>{s.released}{s.metacritic ? ` · MC ${s.metacritic}` : ""}</div></div>
                     </div>
                   ))}
@@ -499,11 +554,34 @@ function GameCard({ g, onEdit, onDelete, onEnrich, activeTimer, onStartTimer, on
               )}
             </div>
           )}
+          {/* Jaquettes SteamGridDB */}
+          {sgdbOpen && (
+            <div style={{ background: fill, border: `1px solid ${bdr}`, borderRadius: 8, padding: "10px 12px", marginBottom: 10 }}>
+              <div style={{ color: txt, fontSize: 11, fontWeight: 600, marginBottom: 6 }}>Jaquette SteamGridDB</div>
+              <input value={sgdbQ} onChange={e => sgdbQuery(e.target.value)} placeholder="Titre du jeu…" autoFocus style={{ width: "100%", boxSizing: "border-box", background: "transparent", border: `1px solid ${bdr}`, borderRadius: 6, color: txt, padding: "6px 8px", fontSize: 12, outline: "none" }} />
+              {sgdbBusy && <div style={{ color: "#5493FF", fontSize: 11, marginTop: 6 }}>Recherche des jaquettes…</div>}
+              {!sgdbBusy && sgdbGridsList.length > 0 && (
+                <>
+                  {sgdbMatch && <div style={{ color: mut, fontSize: 11, marginTop: 6 }}>Trouvé : <span style={{ color: txt, fontWeight: 600 }}>{sgdbMatch}</span></div>}
+                  <div style={{ marginTop: 8, display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 6, maxHeight: 320, overflowY: "auto" }}>
+                    {sgdbGridsList.map((grid, i) => (
+                      <img key={i} src={grid.thumb} alt="" loading="lazy" onClick={() => sgdbPick(grid.url)} title="Utiliser cette jaquette"
+                        style={{ width: "100%", aspectRatio: "2 / 3", objectFit: "cover", borderRadius: 6, border: `1px solid ${bdr}`, cursor: "pointer", display: "block" }}
+                        onMouseEnter={e => e.currentTarget.style.borderColor = "#5493FF"}
+                        onMouseLeave={e => e.currentTarget.style.borderColor = bdr} />
+                    ))}
+                  </div>
+                </>
+              )}
+              {!sgdbBusy && sgdbDone && sgdbGridsList.length === 0 && <div style={{ color: mut, fontSize: 11, marginTop: 6 }}>Aucune jaquette trouvée sur SteamGridDB</div>}
+            </div>
+          )}
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
             <div style={{ color: mut, fontSize: 10 }}>Ajouté le {new Date(g.addedDate).toLocaleDateString("fr-FR")}</div>
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap", justifyContent: "flex-end" }}>
               <button onClick={() => { setRawgOpen(o => !o); if (!rawgOpen) { setRawgQ(g.title); rawgQuery(g.title); } }} style={{ background: "transparent", border: "1px solid #5493FF", color: "#5493FF", borderRadius: 5, padding: "3px 8px", fontSize: 10, cursor: "pointer" }}>🔄 Rechercher sur RAWG</button>
               <button onClick={() => { setWikiOpen(o => !o); if (!wikiOpen) { setWikiQ(g.title); setWikiDone(false); wikiQuery(g.title); } }} style={{ background: "transparent", border: "1px solid #5493FF", color: "#5493FF", borderRadius: 5, padding: "3px 8px", fontSize: 10, cursor: "pointer" }}>🇫🇷 Titre français</button>
+              <button onClick={() => { setSgdbOpen(o => !o); if (!sgdbOpen) { setSgdbQ(g.title); setSgdbDone(false); sgdbQuery(g.title); } }} style={{ background: "transparent", border: "1px solid #5493FF", color: "#5493FF", borderRadius: 5, padding: "3px 8px", fontSize: 10, cursor: "pointer" }}>📦 Jaquette SteamGridDB</button>
               <button onClick={() => onDelete(g)} style={{ background: "transparent", border: "1px solid #ef4444", color: "#ef4444", borderRadius: 5, padding: "3px 8px", fontSize: 10, cursor: "pointer" }}>Supprimer</button>
             </div>
           </div>
@@ -574,7 +652,7 @@ function AddModal({ dark, onAdd, onClose }) {
                 <div key={s.id} onClick={() => pick(s)} style={{ display: "flex", gap: 8, padding: "8px 10px", cursor: "pointer", borderBottom: `1px solid ${bdr}` }}
                   onMouseEnter={e => e.currentTarget.style.background = "#5493FF22"}
                   onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
-                  {s.background_image && <img src={s.background_image} style={{ width: 36, height: 36, objectFit: "cover", borderRadius: 4 }} />}
+                  {s.background_image && <img src={s.background_image} style={{ width: 34, height: 51, minWidth: 34, objectFit: "cover", borderRadius: 4 }} />}
                   <div><div style={{ color: txt, fontSize: 12, fontWeight: 600 }}>{s.name}</div><div style={{ color: "#64748b", fontSize: 10 }}>{s.released}{s.metacritic ? ` · MC ${s.metacritic}` : ""}</div></div>
                 </div>
               ))}
@@ -584,7 +662,7 @@ function AddModal({ dark, onAdd, onClose }) {
 
         {rawg && (
           <div style={{ background: dark ? "#0f0f1a" : "#e8eef8", borderRadius: 8, padding: "8px 10px", marginBottom: 10, display: "flex", gap: 10, alignItems: "center" }}>
-            {rawg.background_image && <img src={rawg.background_image} style={{ width: 48, height: 48, objectFit: "cover", borderRadius: 6 }} />}
+            {rawg.background_image && <img src={rawg.background_image} style={{ width: 40, height: 60, minWidth: 40, objectFit: "cover", borderRadius: 6 }} />}
             <div><div style={{ color: txt, fontSize: 12, fontWeight: 600 }}>{rawg.name}</div><div style={{ color: "#64748b", fontSize: 10 }}>{rawg.genres?.map(g => g.name).join(", ")} {rawg.metacritic ? `· MC ${rawg.metacritic}` : ""}</div></div>
           </div>
         )}
