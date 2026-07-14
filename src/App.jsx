@@ -138,6 +138,31 @@ async function sgdbGrids(id) {
   } catch { return []; }
 }
 
+// xbl.io n'expose pas de CORS : appels via le proxy Vite /xbl/* (token côté serveur).
+// Historique des jeux Xbox du compte lié à la clé -> [{ name, devices, image, lastPlayed }].
+// Filtré aux vrais jeux console Xbox (exclut PC-only / Win32 et apps/launchers).
+const XBL_CONSOLE_DEVICES = ["XboxSeries", "XboxOne", "Xbox360"];
+const XBL_APP_BLOCKLIST = /\b(app on pc|launcher|xbox app|windows edition|for windows)\b/i;
+async function xblTitleHistory() {
+  try {
+    const r = await fetch(`/xbl/player/titleHistory`);
+    if (!r.ok) return [];
+    const d = await r.json();
+    const titles = d?.content?.titles || [];
+    return titles
+      .filter(t => t.type === "Game")
+      .filter(t => Array.isArray(t.devices) && t.devices.some(dev => XBL_CONSOLE_DEVICES.includes(dev)))
+      .filter(t => !XBL_APP_BLOCKLIST.test(t.name || ""))
+      .map(t => ({
+        name: (t.name || "").trim(),
+        devices: t.devices || [],
+        image: t.displayImage || null,
+        lastPlayed: t.titleHistory?.lastTimePlayed || null,
+      }))
+      .filter(t => t.name);
+  } catch { return []; }
+}
+
 
 const GAMES_INIT = [
   { id: 1, title: "Watch Dogs", platform: "Xbox", format: "physique", addedDate: "2014-05-27", genre: ["Action", "Aventure", "Open World"], style: "Hack & slash en monde ouvert, Chicago fictionnel", status: "terminé", note: null, lentA: null, lentDate: null, cover: null, metacritic: null, hltb: null, playedMinutes: 0, manualMinutes: 0, sessions: [], myLinks: ["","",""], tips: "", tag: "", progression: "" },
@@ -875,6 +900,126 @@ function AddModal({ dark, onAdd, onClose }) {
   );
 }
 
+// Import de la bibliothèque Xbox (xbl.io) avec écran de prévisualisation.
+function ImportModal({ dark, games, onImportGames, onClose }) {
+  const [list, setList] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [checked, setChecked] = useState({});
+  const [importing, setImporting] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const cancelRef = useRef(false);
+
+  const bg = dark ? "#1a1a2e" : "#f0f4ff";
+  const card = dark ? "#0f0f1a" : "#e8eef8";
+  const bdr = dark ? "#2a2a4a" : "#d0d8f0";
+  const txt = dark ? "#e2e8f0" : "#1e2a4a";
+  const mut = dark ? "#64748b" : "#8090b0";
+
+  useEffect(() => {
+    (async () => {
+      const raw = await xblTitleHistory();
+      const existing = new Set(games.map(g => normTitle(g.title)));
+      // dédoublonne aussi la liste xbl elle-même (par titre normalisé)
+      const seen = new Set();
+      const enriched = [];
+      for (const t of raw) {
+        const key = normTitle(t.name);
+        if (seen.has(key)) continue;
+        seen.add(key);
+        enriched.push({ ...t, isNew: !existing.has(key) });
+      }
+      enriched.sort((a, b) => (a.isNew === b.isNew ? a.name.localeCompare(b.name) : a.isNew ? -1 : 1));
+      const init = {};
+      enriched.forEach(t => { if (t.isNew) init[t.name] = true; });
+      setList(enriched);
+      setChecked(init);
+      setLoading(false);
+    })();
+  }, []); // eslint-disable-line
+
+  const newOnes = list ? list.filter(t => t.isNew) : [];
+  const existingCount = list ? list.length - newOnes.length : 0;
+  const selectedCount = Object.values(checked).filter(Boolean).length;
+  const allChecked = newOnes.length > 0 && newOnes.every(t => checked[t.name]);
+  const toggleAll = () => { const v = !allChecked; const c = {}; newOnes.forEach(t => c[t.name] = v); setChecked(c); };
+
+  const doImport = async () => {
+    const selected = list.filter(t => t.isNew && checked[t.name]);
+    if (!selected.length) return;
+    setImporting(true);
+    cancelRef.current = false;
+    setProgress(0);
+    const created = [];
+    for (let i = 0; i < selected.length; i++) {
+      if (cancelRef.current) break;
+      const t = selected[i];
+      // Date d'ajout = date de sortie officielle (croisement RAWG), fallback lastPlayed / aujourd'hui.
+      let released = null;
+      try { const res = await rawgSearch(t.name); released = res[0]?.released || null; } catch {}
+      const addedDate = released || (t.lastPlayed ? t.lastPlayed.slice(0, 10) : new Date().toISOString().slice(0, 10));
+      const platform = addedDate >= XBOX_SERIES_CUTOFF ? "Xbox Series X" : "Xbox One";
+      created.push({
+        id: Date.now() + i, title: t.name, platform, format: "démat", addedDate,
+        genre: [], style: "", status: "non commencé", note: null, lentA: null, lentDate: null,
+        cover: t.image || null, metacritic: null, hltb: null, playedMinutes: 0, manualMinutes: 0,
+        sessions: [], myLinks: ["", "", ""], tips: "", tag: "", progression: "",
+        backCompat: platform === "Xbox One", infobox: null,
+      });
+      setProgress(i + 1);
+      await new Promise(r => setTimeout(r, 200)); // ménage le rate-limit RAWG
+    }
+    onImportGames(created);
+  };
+
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "#000b", zIndex: 300, display: "flex", alignItems: "flex-end" }} onClick={importing ? undefined : onClose}>
+      <div style={{ background: bg, border: `1px solid ${bdr}`, borderRadius: "16px 16px 0 0", padding: 20, width: "100%", maxWidth: 500, margin: "0 auto", maxHeight: "85vh", display: "flex", flexDirection: "column" }} onClick={e => e.stopPropagation()}>
+        <div style={{ fontWeight: 700, fontSize: 15, color: txt, marginBottom: 4 }}>🎮 Importer ma bibliothèque Xbox</div>
+        {loading && <div style={{ color: "#5493FF", fontSize: 12, padding: "16px 0" }}>Récupération de l'historique Xbox…</div>}
+
+        {!loading && list && (
+          <>
+            <div style={{ color: mut, fontSize: 11, marginBottom: 10 }}>
+              {newOnes.length} nouveau(x) · {existingCount} déjà présent(s) · {list.length} jeux Xbox détectés
+            </div>
+            {newOnes.length > 0 && (
+              <button onClick={toggleAll} disabled={importing} style={{ alignSelf: "flex-start", background: "transparent", border: `1px solid ${bdr}`, color: mut, borderRadius: 5, padding: "3px 8px", fontSize: 10, cursor: "pointer", marginBottom: 8 }}>
+                {allChecked ? "Tout décocher" : "Tout cocher"}
+              </button>
+            )}
+            <div style={{ overflowY: "auto", flex: 1, border: `1px solid ${bdr}`, borderRadius: 8, marginBottom: 12 }}>
+              {list.map((t, i) => (
+                <label key={i} style={{ display: "flex", gap: 8, alignItems: "center", padding: "6px 9px", borderBottom: i < list.length - 1 ? `1px solid ${bdr}` : "none", cursor: t.isNew ? "pointer" : "default", opacity: t.isNew ? 1 : 0.5 }}>
+                  <input type="checkbox" disabled={!t.isNew || importing} checked={!!checked[t.name]} onChange={e => setChecked(c => ({ ...c, [t.name]: e.target.checked }))} style={{ accentColor: "#5493FF" }} />
+                  {t.image && <img src={t.image} alt="" style={{ width: 30, height: 45, minWidth: 30, objectFit: "cover", borderRadius: 3 }} />}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ color: txt, fontSize: 12, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.name}</div>
+                    <div style={{ color: mut, fontSize: 9 }}>{t.devices.join(", ")}</div>
+                  </div>
+                  <span style={{ fontSize: 9, color: t.isNew ? "#22c55e" : mut, border: `1px solid ${t.isNew ? "#22c55e" : bdr}`, borderRadius: 3, padding: "1px 5px", whiteSpace: "nowrap" }}>{t.isNew ? "Nouveau" : "Déjà présent"}</span>
+                </label>
+              ))}
+            </div>
+            {importing && <div style={{ color: "#5493FF", fontSize: 11, marginBottom: 8 }}>Import en cours… {progress}/{selectedCount} (récupération des dates de sortie)</div>}
+            <div style={{ display: "flex", gap: 8 }}>
+              {!importing
+                ? <>
+                    <button onClick={onClose} style={{ flex: 1, background: "transparent", border: `1px solid ${bdr}`, color: "#94a3b8", borderRadius: 8, padding: 10, cursor: "pointer", fontSize: 13 }}>Annuler</button>
+                    <button onClick={doImport} disabled={selectedCount === 0} style={{ flex: 2, background: "#5493FF", border: "none", color: "#fff", borderRadius: 8, padding: 10, cursor: selectedCount ? "pointer" : "default", opacity: selectedCount ? 1 : 0.5, fontSize: 13, fontWeight: 600 }}>Importer {selectedCount} jeu(x)</button>
+                  </>
+                : <button onClick={() => { cancelRef.current = true; }} style={{ flex: 1, background: "#ef444422", border: "1px solid #ef4444", color: "#ef4444", borderRadius: 8, padding: 10, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>Arrêter l'import</button>}
+            </div>
+          </>
+        )}
+
+        {!loading && list && list.length === 0 && (
+          <div style={{ color: mut, fontSize: 12, padding: "8px 0 16px" }}>Aucun jeu Xbox détecté (ou connexion xbl.io indisponible).</div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
   const [games, setGames] = useState(() => { try { const s = localStorage.getItem("gl_v2"); return migrateGames(s ? JSON.parse(s) : GAMES_INIT); } catch { return migrateGames(GAMES_INIT); } });
   const [search, setSearch] = useState("");
@@ -884,6 +1029,11 @@ export default function App() {
   const [view, setView] = useState("liste");
   const [tab, setTab] = useState("library");
   const [showAdd, setShowAdd] = useState(false);
+  const [showImport, setShowImport] = useState(false);
+  const [importedIds, setImportedIds] = useState([]); // pour l'enrichissement post-import (E)
+  const [enriching, setEnriching] = useState(false);
+  const [enrichProg, setEnrichProg] = useState(0);
+  const enrichCancelRef = useRef(false);
   const [lastAddedId, setLastAddedId] = useState(null);
   const [activeTimer, setActiveTimer] = useState(null);
   const [timerStart, setTimerStart] = useState(null);
@@ -974,6 +1124,51 @@ export default function App() {
     setStatFil("tous");
     setSearch("");
   };
+
+  // Import Xbox : ajoute les jeux créés, ferme le modal, propose l'enrichissement (E).
+  const importGames = (created) => {
+    setShowImport(false);
+    if (!created.length) return;
+    setGames(gs => [...created, ...gs]);
+    setImportedIds(created.map(g => g.id));
+    setTab("library");
+    setView("liste");
+    setPlat("tous");
+    setStatFil("tous");
+    setSearch("");
+  };
+
+  // Enrichissement best-effort des jeux importés : RAWG (cover/metacritic/genre si manquants)
+  // + description Wikipédia. Annulable, avec délai anti-rate-limit.
+  const enrichImported = async () => {
+    if (enriching || !importedIds.length) return;
+    enrichCancelRef.current = false;
+    setEnriching(true);
+    setEnrichProg(0);
+    const ids = [...importedIds];
+    for (let i = 0; i < ids.length; i++) {
+      if (enrichCancelRef.current) break;
+      const g = games.find(x => x.id === ids[i]) || null;
+      const title = g?.title;
+      if (title) {
+        try {
+          const res = await rawgSearch(title);
+          if (res[0]) {
+            const d = await rawgDetail(res[0].id);
+            if (d) setGames(gs => gs.map(x => x.id === ids[i] ? { ...x, cover: x.cover || d.background_image || null, metacritic: x.metacritic ?? d.metacritic ?? null, genre: x.genre?.length ? x.genre : (d.genres?.map(z => z.name) || []) } : x));
+          }
+          const titles = await wikiFrenchTitles(title);
+          const best = pickBestWikiTitle(title, titles);
+          if (best) { const { extract } = await wikiArticleData(best.title); if (extract) setGames(gs => gs.map(x => x.id === ids[i] ? { ...x, style: x.style || extract } : x)); }
+        } catch {}
+      }
+      setEnrichProg(i + 1);
+      await new Promise(r => setTimeout(r, 200));
+    }
+    setEnriching(false);
+    setImportedIds([]);
+  };
+  const cancelEnrich = () => { enrichCancelRef.current = true; };
   const deleteGame = (g) => {
     const index = games.findIndex(x => x.id === g.id);
     setGames(gs => gs.filter(x => x.id !== g.id));
@@ -1073,6 +1268,7 @@ export default function App() {
               {refreshing ? `⏳ ${refreshProg}/${games.length} actualisés` : "🌐 Actualiser descriptions"}
             </button>
             {refreshing && <button onClick={cancelRefresh} title="Annuler l'actualisation" style={{ background: "#ef444422", border: "1px solid #ef4444", color: "#ef4444", borderRadius: 6, padding: "5px 8px", fontSize: 11, cursor: "pointer", whiteSpace: "nowrap" }}>Annuler</button>}
+            <button onClick={() => setShowImport(true)} title="Importer la bibliothèque Xbox (xbl.io)" style={{ background: "transparent", border: `1px solid ${bdr}`, color: mut, borderRadius: 6, padding: "5px 8px", fontSize: 11, cursor: "pointer", whiteSpace: "nowrap" }}>🎮 Importer Xbox</button>
             <button onClick={() => setDark(!dark)} style={{ background: "transparent", border: `1px solid ${bdr}`, color: mut, borderRadius: 6, padding: "5px 8px", fontSize: 12, cursor: "pointer" }}>{dark ? "☀️" : "🌙"}</button>
             <button onClick={() => setShowAdd(true)} style={{ background: "#5493FF", color: "#fff", border: "none", borderRadius: 8, padding: "7px 12px", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>+ Ajouter</button>
           </div>
@@ -1085,6 +1281,20 @@ export default function App() {
               {refreshMsg.notFound.length > 0 && <div style={{ color: mut, fontSize: 10, marginTop: 3, maxHeight: 54, overflowY: "auto" }}>Sans page : {refreshMsg.notFound.join(", ")}</div>}
             </div>
             <button onClick={() => setRefreshMsg(null)} style={{ background: "transparent", border: "none", color: mut, fontSize: 14, cursor: "pointer", lineHeight: 1, padding: 0 }}>✕</button>
+          </div>
+        )}
+
+        {(importedIds.length > 0 || enriching) && (
+          <div style={{ display: "flex", alignItems: "center", gap: 8, background: dark ? "#1a1a2e" : "#f0f4ff", border: `1px solid ${bdr}`, borderRadius: 8, padding: "8px 10px", marginBottom: 10 }}>
+            <div style={{ flex: 1, minWidth: 0, color: txt, fontSize: 11, fontWeight: 600 }}>
+              {enriching ? `Enrichissement… ${enrichProg}/${importedIds.length}` : `${importedIds.length} jeu(x) importé(s) — enrichir via RAWG + Wikipédia ?`}
+            </div>
+            {enriching
+              ? <button onClick={cancelEnrich} style={{ background: "#ef444422", border: "1px solid #ef4444", color: "#ef4444", borderRadius: 5, padding: "3px 8px", fontSize: 10, cursor: "pointer" }}>Arrêter</button>
+              : <>
+                  <button onClick={enrichImported} style={{ background: "#5493FF22", border: "1px solid #5493FF", color: "#5493FF", borderRadius: 5, padding: "3px 8px", fontSize: 10, cursor: "pointer" }}>Enrichir</button>
+                  <button onClick={() => setImportedIds([])} style={{ background: "transparent", border: "none", color: mut, fontSize: 14, cursor: "pointer", lineHeight: 1, padding: 0 }}>✕</button>
+                </>}
           </div>
         )}
 
@@ -1190,6 +1400,7 @@ export default function App() {
       </div>
 
       {showAdd && <AddModal dark={dark} onAdd={addGame} onClose={() => setShowAdd(false)} />}
+      {showImport && <ImportModal dark={dark} games={games} onImportGames={importGames} onClose={() => setShowImport(false)} />}
 
       {deleted && (
         <div style={{ position:"fixed", bottom:20, left:"50%", transform:"translateX(-50%)", zIndex:400, display:"flex", alignItems:"center", gap:14, background:dark?"#1a1a2e":"#f0f4ff", border:`1px solid ${bdr}`, borderRadius:10, padding:"10px 14px", boxShadow:"0 8px 24px rgba(0,0,0,0.4)", animation:"toastIn 200ms ease" }}>
