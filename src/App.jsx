@@ -1025,6 +1025,7 @@ export default function App() {
   const [search, setSearch] = useState("");
   const [plat, setPlat] = useState("tous");
   const [statFil, setStatFil] = useState("tous");
+  const [fmtFil, setFmtFil] = useState("tous");
   const [sort, setSort] = useState("titre");
   const [view, setView] = useState("liste");
   const [tab, setTab] = useState("library");
@@ -1208,13 +1209,25 @@ export default function App() {
   };
 
   const filtered = useMemo(() => {
+    // Recherche insensible à la casse et aux accents (S1), sur titre + genre + tag
+    // uniquement : la description (style) est exclue pour éviter les faux positifs.
+    const q = normTitle(search);
     let list = games.filter(g => {
-      const q = search.toLowerCase();
+      const searchMatch = !q
+        || normTitle(g.title).includes(q)
+        || g.genre.some(x => normTitle(x).includes(q))
+        || normTitle(g.tag).includes(q);
+      // "Xbox Series X" inclut les jeux Xbox One rétrocompatibles ; les autres
+      // plateformes restent strictes.
+      const platMatch = plat === "tous" ? true
+        : plat === "Xbox Series X" ? (g.platform === "Xbox Series X" || (g.platform === "Xbox One" && g.backCompat))
+        : g.platform === plat;
       const statusMatch = statFil === "tous" ? true
         : statFil === "à finir" ? (g.status === "en cours" || g.status === "non commencé")
         : g.status === statFil;
-      return (!q || g.title.toLowerCase().includes(q) || g.genre.some(x => x.toLowerCase().includes(q)) || g.style.toLowerCase().includes(q))
-        && (plat === "tous" || g.platform === plat)
+      return searchMatch
+        && platMatch
+        && (fmtFil === "tous" || g.format === fmtFil)
         && statusMatch;
     });
     return list.sort((a, b) => {
@@ -1224,7 +1237,7 @@ export default function App() {
       if (sort === "temps") return (b.playedMinutes+b.manualMinutes) - (a.playedMinutes+a.manualMinutes);
       return a.title.localeCompare(b.title);
     });
-  }, [games, search, plat, statFil, sort]);
+  }, [games, search, plat, statFil, fmtFil, sort]);
 
   const stats = useMemo(() => {
     const total = games.length, termines = games.filter(g => g.status === "terminé").length;
@@ -1312,6 +1325,9 @@ export default function App() {
           </div>
           <div style={{ display:"flex", gap:4, flexWrap:"wrap", marginBottom:6 }}>
             {["tous",...STATUTS,"à finir"].map(s => <button key={s} onClick={() => setStatFil(s)} style={{ background:statFil===s?(STATUS_COLORS[s]||"#5493FF")+"22":"transparent", border:`1px solid ${statFil===s?(STATUS_COLORS[s]||"#5493FF"):bdr}`, color:statFil===s?(STATUS_COLORS[s]||"#5493FF"):mut, borderRadius:5, padding:"3px 7px", fontSize:10, cursor:"pointer" }}>{s==="tous"?"Tous":s==="à finir"?"🎯 à finir":s}</button>)}
+          </div>
+          <div style={{ display:"flex", gap:4, flexWrap:"wrap", marginBottom:6 }}>
+            {[["tous","Tous"],["physique","Physique"],["démat","Démat"]].map(([k,l]) => <button key={k} onClick={() => setFmtFil(k)} style={{ background:fmtFil===k?"#5493FF22":"transparent", border:`1px solid ${fmtFil===k?"#5493FF":bdr}`, color:fmtFil===k?"#5493FF":mut, borderRadius:5, padding:"3px 8px", fontSize:10, cursor:"pointer" }}>{l}</button>)}
           </div>
           <div style={{ display:"flex", gap:4, alignItems:"center", flexWrap:"wrap" }}>
             <span style={{ color:mut, fontSize:10 }}>Tri:</span>
