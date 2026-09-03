@@ -55,8 +55,11 @@ jobs:
       - name: Vérifier le code
         run: npm run lint
 
-      - name: Tester le Worker
-        run: npm run test:worker
+      - name: Tests
+        # Le Worker et les fonctions qui décident du sort de la bibliothèque :
+        # migration jouée à chaque chargement, validation des imports,
+        # rétrocompatibilité. C'est là qu'une régression mange des données.
+        run: npm test
 
       - name: Construire le site
         run: npm run build

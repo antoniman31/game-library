@@ -38,19 +38,26 @@ export function genererCode() {
 // Les deux appels partagent la même mécanique d'erreur : on veut un message
 // lisible à l'écran, pas une promesse rejetée qui finit dans la console d'un
 // téléphone que personne n'ouvrira.
-async function appeler(proxy, code, methode, corps) {
+async function appeler(proxy, code, methode, corps, base) {
   if (!proxy) return { ok: false, erreur: "Renseigne d'abord l'URL du relais CORS ci-dessus." };
   if (!code) return { ok: false, erreur: "Génère d'abord un code de synchronisation." };
   try {
     const r = await fetch(`${proxy.replace(/\/+$/, "")}/sync`, {
       method: methode,
-      headers: { "X-Sync-Code": code, ...(corps ? { "Content-Type": "application/json" } : {}) },
+      headers: {
+        "X-Sync-Code": code,
+        ...(base ? { "X-Sync-Base": base } : {}),
+        ...(corps ? { "Content-Type": "application/json" } : {}),
+      },
       body: corps,
     });
     let data = null;
     try { data = await r.json(); } catch { /* réponse non JSON : on s'en tient au statut */ }
     if (!r.ok) {
       if (r.status === 404) return { ok: false, erreur: "Aucune sauvegarde pour ce code." };
+      // 409 : un autre appareil a envoyé depuis notre dernière synchronisation.
+      // Ce n'est pas une erreur à afficher sèchement, c'est un choix à poser.
+      if (r.status === 409) return { ok: false, conflit: true, data, erreur: data?.erreur || "Conflit de synchronisation." };
       return { ok: false, erreur: data?.erreur || `Le relais a répondu ${r.status}.` };
     }
     return { ok: true, data };
@@ -59,8 +66,12 @@ async function appeler(proxy, code, methode, corps) {
   }
 }
 
-export const envoyer = (proxy, code, games) =>
-  appeler(proxy, code, "PUT", JSON.stringify({ games }));
+// `base` = l'horodatage de la sauvegarde vue en dernier par cet appareil. Le
+// Worker refuse l'envoi s'il ne correspond plus, plutôt que d'écraser le
+// travail d'un autre appareil en silence. `"force"` passe outre — l'app ne
+// l'envoie qu'après une confirmation explicite.
+export const envoyer = (proxy, code, games, base) =>
+  appeler(proxy, code, "PUT", JSON.stringify({ games }), base);
 
 export const recuperer = (proxy, code) =>
   appeler(proxy, code, "GET", null);

@@ -14,10 +14,14 @@ const kv = new Map();
 const env = { SYNC: { get: async k => (kv.has(k) ? kv.get(k) : null), put: async (k, v) => void kv.set(k, v) } };
 const ORIG = "https://antoniman31.github.io";
 
-const appel = (methode, chemin, { origin = ORIG, code, corps, env: e = env } = {}) =>
+const appel = (methode, chemin, { origin = ORIG, code, base, corps, env: e = env } = {}) =>
   worker.fetch(new Request("https://w.dev" + chemin, {
     method: methode,
-    headers: { Origin: origin, ...(code ? { "X-Sync-Code": code } : {}) },
+    headers: {
+      Origin: origin,
+      ...(code ? { "X-Sync-Code": code } : {}),
+      ...(base ? { "X-Sync-Base": base } : {}),
+    },
     body: corps,
   }), e);
 
@@ -65,6 +69,39 @@ test("champ games manquant refusé", r.status === 400);
 r = await appel("PUT", "/sync", { code: CODE, corps: JSON.stringify({ games: ["x".repeat(2 * 1024 * 1024)] }) });
 test("corps trop gros refusé", r.status === 413);
 
+// ── Concurrence ────────────────────────────────────────────────────────────
+// Le cœur du sujet : deux appareils qui envoient chacun de leur côté ne
+// doivent pas pouvoir se détruire mutuellement sans le savoir.
+const CODE2 = "MNPQRSTUVWXYZ23456789ABCDE";
+r = await appel("PUT", "/sync", { code: CODE2, corps: JSON.stringify({ games: [{ id: 1, title: "Depuis le PC" }] }) });
+const v1 = await r.json();
+test("premier envoi accepté sans base", r.status === 200);
+
+// Le téléphone envoie en annonçant la base qu'il connaît : accepté.
+r = await appel("PUT", "/sync", { code: CODE2, base: v1.updatedAt, corps: JSON.stringify({ games: [{ id: 1, title: "A" }, { id: 2, title: "B" }] }) });
+const v2 = await r.json();
+test("envoi avec la bonne base accepté", r.status === 200 && v2.count === 2, `count=${v2.count}`);
+
+// Le PC, resté sur l'ancienne base, essaie d'envoyer : refusé.
+r = await appel("PUT", "/sync", { code: CODE2, base: v1.updatedAt, corps: JSON.stringify({ games: [{ id: 9, title: "Écrasement" }] }) });
+const conflit = await r.json();
+test("envoi avec une base périmée refusé (409)", r.status === 409, conflit.erreur);
+test("le conflit rend l'état courant", conflit.count === 2 && conflit.updatedAt === v2.updatedAt);
+
+// Et la sauvegarde n'a pas bougé.
+r = await appel("GET", "/sync", { code: CODE2 });
+j = await r.json();
+test("la sauvegarde est intacte après un conflit", j.count === 2 && j.games[1].title === "B");
+
+// Un envoi sans base du tout sur une sauvegarde existante est aussi refusé :
+// c'est le cas de l'appareil qui n'a jamais récupéré.
+r = await appel("PUT", "/sync", { code: CODE2, corps: JSON.stringify({ games: [] }) });
+test("envoi sans base sur une sauvegarde existante refusé", r.status === 409);
+
+// L'écrasement délibéré reste possible, mais il faut le demander.
+r = await appel("PUT", "/sync", { code: CODE2, base: "force", corps: JSON.stringify({ games: [{ id: 5, title: "Choix assumé" }] }) });
+test("écrasement explicite accepté avec base=force", r.status === 200 && (await r.json()).count === 1);
+
 // Méthode
 r = await appel("DELETE", "/sync", { code: CODE });
 test("DELETE refusé", r.status === 405);
@@ -73,7 +110,8 @@ test("DELETE refusé", r.status === 405);
 r = await appel("OPTIONS", "/sync");
 test("preflight autorise PUT et X-Sync-Code",
   r.status === 204 && r.headers.get("Access-Control-Allow-Methods").includes("PUT")
-  && r.headers.get("Access-Control-Allow-Headers").includes("X-Sync-Code"));
+  && r.headers.get("Access-Control-Allow-Headers").includes("X-Sync-Code")
+  && r.headers.get("Access-Control-Allow-Headers").includes("X-Sync-Base"));
 
 // KV absent : le relais doit continuer de vivre
 r = await appel("GET", "/sync", { code: CODE, env: {} });

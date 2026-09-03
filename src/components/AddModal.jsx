@@ -117,7 +117,7 @@ function AddModal({ onAdd, onClose }) {
             <div style={{ position: "absolute", top: "100%", left: 0, right: 0, background: card, border: `1px solid ${bdr}`, borderRadius: 8, zIndex: 10, overflow: "hidden", boxShadow: "0 8px 24px #0008" }}>
               {sugg.map(s => (
                 <div key={s.id} className="gl-row" onClick={() => pick(s)} style={{ display: "flex", gap: 8, padding: "8px 10px", cursor: "pointer", borderBottom: `1px solid ${bdr}` }}>
-                  {s.background_image && <img src={s.background_image} style={{ width: 34, height: 51, minWidth: 34, objectFit: "cover", borderRadius: 4 }} />}
+                  {s.background_image && <img src={s.background_image} alt="" style={{ width: 34, height: 51, minWidth: 34, objectFit: "cover", borderRadius: 4 }} />}
                   <div><div style={{ color: txt, fontSize: 12, fontWeight: 600 }}>{s.name}</div><div style={{ color: "#64748b", fontSize: 10 }}>{s.released}{s.metacritic ? ` · MC ${s.metacritic}` : ""}</div></div>
                 </div>
               ))}
@@ -128,7 +128,7 @@ function AddModal({ onAdd, onClose }) {
         {/* Récap des sources choisies */}
         {(cover || rawg || wikiExtract) && (
           <div style={{ background: card, borderRadius: 8, padding: "8px 10px", marginBottom: 10, display: "flex", gap: 10 }}>
-            {cover && <img src={cover} style={{ width: 40, height: 60, minWidth: 40, objectFit: "cover", borderRadius: 6 }} />}
+            {cover && <img src={cover} alt="Jaquette sélectionnée" style={{ width: 40, height: 60, minWidth: 40, objectFit: "cover", borderRadius: 6 }} />}
             <div style={{ minWidth: 0 }}>
               {rawg && <div style={{ color: mut, fontSize: 10 }}>{rawg.genres?.map(g => g.name).join(", ")}{rawg.metacritic ? ` · MC ${rawg.metacritic}` : ""}</div>}
               {wikiExtract && <div style={{ color: mut, fontSize: 10, marginTop: 2, maxHeight: 40, overflow: "hidden" }}>📝 {wikiExtract.slice(0, 90)}…</div>}

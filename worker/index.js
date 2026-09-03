@@ -35,7 +35,7 @@ const TAILLE_MAX = 2 * 1024 * 1024;
 const corsHeaders = (origine) => ({
   "Access-Control-Allow-Origin": origine,
   "Access-Control-Allow-Methods": "GET, PUT, OPTIONS",
-  "Access-Control-Allow-Headers": "Authorization, X-Authorization, X-Sync-Code, Content-Type",
+  "Access-Control-Allow-Headers": "Authorization, X-Authorization, X-Sync-Code, X-Sync-Base, Content-Type",
   "Access-Control-Max-Age": "86400",
   Vary: "Origin",
 });
@@ -94,6 +94,35 @@ async function sauvegarde(request, env, origine) {
   if (!Array.isArray(charge?.games)) {
     return new Response(JSON.stringify({ erreur: "Le champ `games` doit être une liste." }),
       { status: 400, headers: { ...entetes, "Content-Type": "application/json" } });
+  }
+
+  // ── Concurrence ────────────────────────────────────────────────────────
+  // Le PUT écrasait la sauvegarde sans condition. Deux appareils qui envoient
+  // chacun de leur côté, et le second détruit le travail du premier sans que
+  // personne ne le sache — le pire des défauts, celui qui perd des données en
+  // silence.
+  //
+  // Le client annonce donc dans `X-Sync-Base` l'horodatage de la sauvegarde
+  // qu'il a vue en dernier. S'il ne correspond pas à celle qui est stockée,
+  // c'est qu'un autre appareil est passé entre-temps : on refuse, et on rend
+  // l'état courant pour que l'app puisse présenter le choix.
+  //
+  // `X-Sync-Base: force` reste possible, mais il faut le vouloir : l'app ne
+  // l'envoie qu'après une confirmation explicite.
+  const existant = await env.SYNC.get(cle);
+  const base = request.headers.get("X-Sync-Base") || "";
+
+  if (existant !== null && base !== "force") {
+    let actuel = null;
+    try { actuel = JSON.parse(existant); } catch { /* enregistrement illisible : on laisse écraser */ }
+    if (actuel && actuel.updatedAt !== base) {
+      return new Response(JSON.stringify({
+        erreur: "La sauvegarde a changé depuis ta dernière synchronisation.",
+        conflit: true,
+        updatedAt: actuel.updatedAt,
+        count: actuel.count,
+      }), { status: 409, headers: { ...entetes, "Content-Type": "application/json" } });
+    }
   }
 
   // L'horodatage est posé par le serveur : l'horloge d'un appareil peut être
