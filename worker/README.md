@@ -25,20 +25,40 @@ Si l'application est servie depuis une autre adresse, ajouter celle-ci dans
 `ORIGINES` (dans `index.js`) puis redéployer. Sans cela, le navigateur renverra
 une erreur CORS.
 
+## Déploiement
+
+Le Worker se déploie tout seul quand `worker/` change sur `main`, via
+[`.github/workflows/worker.yml`](../.github/workflows/worker.yml). Les tests
+tournent avant : un Worker cassé en production couperait à la fois la
+synchronisation et le relais des jaquettes.
+
+Un seul secret est nécessaire dans le dépôt GitHub (Settings → Secrets and
+variables → Actions) : **`CLOUDFLARE_API_TOKEN`**, créé depuis Cloudflare
+(Mon profil → Jetons d'API → modèle « Modifier les Workers Cloudflare »).
+L'identifiant de compte, lui, est dans `wrangler.toml` : il figure dans l'URL
+du tableau de bord et n'est pas un secret.
+
+Il se déploie aussi à la main depuis l'onglet Actions du dépôt
+(« Déploiement du Worker » → Run workflow), ou en local :
+
+```bash
+cd worker
+npx wrangler login
+npx wrangler deploy
+```
+
+Cette automatisation répond à un incident concret : le code de `/sync` est
+resté plusieurs heures dans le dépôt sans jamais atteindre la production,
+parce que personne n'avait relancé `wrangler deploy` — et rien ne le signalait.
+
 ## Sauvegarde et synchronisation (`/sync`)
 
 La bibliothèque ne vivait que dans le `localStorage` d'un navigateur : un
 stockage par appareil, sans pont entre le téléphone et le PC, et effacé avec
-les données de site. Le Worker peut désormais la déposer dans un espace KV.
+les données de site. Le Worker la dépose dans l'espace KV `SYNC`, déclaré dans
+`wrangler.toml`.
 
-```bash
-npx wrangler kv namespace create SYNC
-```
-
-Recopier l'identifiant renvoyé dans `wrangler.toml` (décommenter le bloc
-`[[kv_namespaces]]`), puis `npx wrangler deploy`.
-
-Tant que l'espace n'est pas configuré, le relais CORS continue de fonctionner
+Tant qu'aucun espace KV n'est lié, le relais CORS continue de fonctionner
 normalement et `/sync` répond `501` avec un message explicite.
 
 ### Comment ça marche
@@ -48,6 +68,11 @@ normalement et `/sync` répond `501` avec un message explicite.
   d'un appareil peut être fausse, et c'est lui qui arbitre qui est le plus
   récent.
 - `GET /sync` avec le même en-tête la rend.
+- `X-Sync-Base` porte l'horodatage de la sauvegarde que l'appareil a vue en
+  dernier. S'il ne correspond plus à celle du relais, le Worker répond `409`
+  avec l'état courant plutôt que d'écraser le travail d'un autre appareil en
+  silence. `X-Sync-Base: force` passe outre, mais l'application ne l'envoie
+  qu'après une confirmation explicite de l'utilisateur.
 
 **Le code de synchronisation est le seul secret.** Qui le détient lit et écrit
 la bibliothèque. Il est généré par l'application (26 caractères aléatoires),

@@ -128,10 +128,10 @@ partir dans l'Export JSON). Un bouton « Tester » valide chaque clé.
 
 ## Prochaines étapes
 
-- **Créer l'espace KV du Worker** puis redéployer, pour activer la
-  synchronisation : `npx wrangler kv namespace create SYNC`, recopier
-  l'identifiant dans `worker/wrangler.toml`, `npx wrangler deploy`.
-  Tant que ce n'est pas fait, le relais fonctionne et `/sync` répond 501.
+- **Ajouter le secret `CLOUDFLARE_API_TOKEN`** au dépôt GitHub (Settings →
+  Secrets and variables → Actions) : sans lui, le déploiement automatique du
+  Worker échoue et `/sync` reste inactif. L'espace KV `SYNC` est créé et
+  déclaré dans `worker/wrangler.toml`.
 - **Relais déployé** : `https://game-library-proxy.antoniman31.workers.dev`
   — à coller dans ⚙️ sur chaque nouvel appareil (il n'est pas dans l'export JSON).
 - Éventuellement : rappel local à l'ouverture pour les prêts > 30 j. Les
