@@ -35,6 +35,7 @@ export default function ActionsSheet({
   onClose,
   onRefreshDescriptions, refreshing, refreshProg, refreshTotal, onCancelRefresh,
   onImportXbox,
+  onCompleterScores, scoresEnCours, scoresProg, scoresTotal, onAnnulerScores, scoresManquants,
 }) {
   return (
     <Sheet title="Actions" onClose={onClose}>
@@ -52,6 +53,24 @@ export default function ActionsSheet({
           titre="Actualiser les descriptions"
           detail="Recharge chaque résumé depuis Wikipédia FR"
           onClick={() => { onClose(); onRefreshDescriptions(); }}
+        />
+      )}
+      {scoresEnCours ? (
+        <Action
+          icone="⏳"
+          titre={`Recherche des notes… ${scoresProg}/${scoresTotal}`}
+          detail="Toucher pour arrêter"
+          onClick={onAnnulerScores}
+          danger
+        />
+      ) : (
+        <Action
+          icone="🎯"
+          titre="Compléter les notes manquantes"
+          detail={scoresManquants > 0
+            ? `${scoresManquants} jeu${scoresManquants > 1 ? "x" : ""} sans note · cherche sur RAWG`
+            : "Tous les jeux ont déjà une note"}
+          onClick={() => { onClose(); onCompleterScores(); }}
         />
       )}
       <Action

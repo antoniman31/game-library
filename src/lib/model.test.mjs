@@ -15,6 +15,7 @@ import {
   migrateGames, validerJeuxImportes, compterFiltres,
   joursDePret, pretEnRetard, isBackCompatPlatform,
   brouillonDepuisJeu, validerEdition, sortiesDepuisTexte, sortiesVersTexte, listeDepuisTexte,
+  normTitle, rapprochementDouteux, jeuxSansScore,
   BACK_COMPAT, XBOX_SERIES_CUTOFF, PRET_LONG_JOURS,
 } from "./model.js";
 
@@ -226,4 +227,29 @@ test("les sorties se relisent ligne par ligne, avec ou sans plateforme", () => {
 test("une liste séparée par des virgules ignore les vides et les espaces", () => {
   assert.deepEqual(listeDepuisTexte(" Action , , Aventure "), ["Action", "Aventure"]);
   assert.deepEqual(listeDepuisTexte(""), []);
+});
+
+
+// ── Complétion des notes Metacritic ────────────────────────────────────────
+// La note vient du premier résultat RAWG pour le titre : c'est le point où
+// l'application écrit, sur cent jeux d'un coup, une donnée qu'elle n'a pas
+// vérifiée.
+
+test("un jeu sans note est visé, un jeu noté est laissé tranquille", () => {
+  const liste = [jeu({ id: 1, metacritic: 87 }), jeu({ id: 2, metacritic: null }), jeu({ id: 3 }), jeu({ id: 4, metacritic: 0 })];
+  assert.deepEqual(jeuxSansScore(liste).map(g => g.id), [2, 3, 4], "0 compte comme absent");
+  assert.deepEqual(jeuxSansScore(null), []);
+});
+
+test("normTitle ignore casse, accents et ponctuation", () => {
+  assert.equal(normTitle("Assassin's Creed: Odyssée"), "assassin s creed odyssee");
+  assert.equal(normTitle(null), "");
+});
+
+test("un rapprochement est douteux quand les titres ne se recouvrent pas", () => {
+  assert.equal(rapprochementDouteux("Halo Infinite", "Halo Infinite"), false);
+  assert.equal(rapprochementDouteux("HALO INFINITE", "Halo: Infinite"), false, "casse et ponctuation ne comptent pas");
+  assert.equal(rapprochementDouteux("Halo", "Halo Infinite"), false, "une édition plus précise reste plausible");
+  assert.equal(rapprochementDouteux("Halo Infinite", "Doom Eternal"), true);
+  assert.equal(rapprochementDouteux("Halo Infinite", ""), true, "sans titre en face, rien ne prouve le rapprochement");
 });
