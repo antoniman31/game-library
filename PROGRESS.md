@@ -1,5 +1,8 @@
 # Game Library — État du projet
 
+> Pour l'historique des décisions, les bugs rencontrés et les approches abandonnées,
+> voir [`JOURNAL.md`](JOURNAL.md).
+
 Application de gestion de bibliothèque de jeux vidéo (Xbox / Switch), usage perso.
 Dernière mise à jour : 2026-09-03.
 

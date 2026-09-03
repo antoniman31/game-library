@@ -337,7 +337,8 @@ Worker pour travailler en local**.
 │   └── index.css
 ├── index.html
 ├── vite.config.js                 base, PWA, proxys de dev
-└── PROGRESS.md                    Journal détaillé de l'évolution du projet
+├── PROGRESS.md                    État des fonctionnalités
+└── JOURNAL.md                     Journal de développement : décisions, bugs, impasses
 ```
 
 ---
@@ -372,6 +373,12 @@ automatiquement au chargement suivant.
   sans contenu tiers.
 
 ---
+
+## Aller plus loin
+
+- [`PROGRESS.md`](PROGRESS.md) — état détaillé des fonctionnalités
+- [`JOURNAL.md`](JOURNAL.md) — journal de développement : chronologie, décisions et leurs
+  raisons, bugs rencontrés et leurs causes réelles, approches abandonnées
 
 ## Licence
 
