@@ -344,7 +344,7 @@ export default function App() {
       {/* Body */}
       <div style={{ padding:"14px calc(14px + var(--safe-right)) calc(60px + var(--safe-bottom)) calc(14px + var(--safe-left))" }}>
         {tab === "library" && (filtered.length === 0 ? emptyState : view === "grille" ? (
-          <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-bg,minmax(120px,1fr))", gap:10 }}>
+          <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(120px,1fr))", gap:10 }}>
             {filtered.map(g => (
               <div key={g.id} className="gl-tile" style={{ background:card, border:`1px solid ${bdr}`, borderRadius:10, overflow:"hidden", cursor:"pointer" }}
                 onClick={() => { setView("liste"); setSearch(g.title); setTimeout(()=>setSearch(""),2000); }}>
