@@ -29,7 +29,10 @@ jobs:
           cache: npm
 
       - name: Installer les dépendances
-        run: npm ci
+        # npm install (et non npm ci) : le lockfile ne réconcilie pas les binaires
+        # natifs transitifs (@emnapi, tirés de Rollup) entre Windows et Linux, ce
+        # qui fait échouer la validation stricte de npm ci.
+        run: npm install --no-audit --no-fund
 
       - name: Construire le site
         run: npm run build
