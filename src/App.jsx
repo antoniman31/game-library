@@ -538,8 +538,8 @@ export default function App() {
           </>
         ) : (
           <>
-          <div style={{ display:"flex", flexDirection:"column", gap: view === "compact" ? 6 : 8 }}>
-            {visible.map(g => <GameCard key={g.id} g={g} onEdit={edit} onDelete={deleteGame} onEnrich={enrichGame} activeTimer={activeTimer} timerStart={timerStart} onStartTimer={startTimer} onStopTimer={stopTimer} autoOpen={g.id === lastAddedId || g.id === focusId} compact={view === "compact"} />)}
+          <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
+            {visible.map(g => <GameCard key={g.id} g={g} onEdit={edit} onDelete={deleteGame} onEnrich={enrichGame} activeTimer={activeTimer} timerStart={timerStart} onStartTimer={startTimer} onStopTimer={stopTimer} autoOpen={g.id === lastAddedId || g.id === focusId} />)}
           </div>
           {chargerPlus}
           </>
