@@ -1,7 +1,7 @@
 # Game Library — État du projet
 
 Application de gestion de bibliothèque de jeux vidéo (Xbox / Switch), usage perso.
-Dernière mise à jour : 2026-07-27.
+Dernière mise à jour : 2026-09-03.
 
 ## Stack & lancement
 
@@ -14,13 +14,23 @@ Dernière mise à jour : 2026-07-27.
   npm run dev   # http://localhost:5173
   ```
 - Build de prod : `npm run build`.
+- **En ligne (PWA installable)** : https://antoniman31.github.io/game-library/
+  — déploiement automatique par GitHub Actions à chaque push sur `main`.
 
 ## Sources de données & clés
 
-- **RAWG** (jeux : covers, Metacritic, genres) — clé dans la constante `RAWG_KEY` en haut de `src/App.jsx`.
-- **SteamGridDB** (jaquettes verticales format boîte) — clé dans la constante `SGDB_KEY` de `vite.config.js` (côté serveur, jamais exposée au navigateur). ⚠️ passe par un **proxy Vite** (`/sgdb/*` → API, avec le token injecté côté serveur) car l'API n'expose pas de CORS : **fonctionne uniquement en `npm run dev`**, pas en build statique / preview.
-- **Wikipédia FR** (titre officiel + description) et **Wikidata** (infobox structurée) — sans clé, appels navigateur directs (`origin=*`).
-- **xbl.io** (bibliothèque Xbox Live du compte) — clé dans la constante `XBL_KEY` de `vite.config.js` (côté serveur). ⚠️ même contrainte que SteamGridDB : **proxy Vite** (`/xbl/*` → `api.xbl.io`, header `X-Authorization` injecté côté serveur), donc **`npm run dev` uniquement**.
+⚠️ **Aucune clé n'est présente dans le code ni dans le dépôt.** Chacun saisit les
+siennes dans l'onglet **⚙️ Réglages** ; elles sont stockées sur l'appareil
+(`localStorage` clé `gl_keys`, volontairement séparée de `gl_v2` pour ne jamais
+partir dans l'Export JSON). Un bouton « Tester » valide chaque clé.
+
+- **RAWG** (jaquettes, Metacritic, genres, dates de sortie) — appels directs, CORS ouvert.
+- **Wikipédia FR** (titre officiel + description) et **Wikidata** (infobox) — sans clé, CORS ouvert.
+- **SteamGridDB** (jaquettes verticales) et **xbl.io** (bibliothèque Xbox) — ces deux API
+  refusent les appels navigateur (pas de CORS). Elles passent par un **relais Cloudflare
+  Worker** (`worker/`) qui **ne détient aucun secret** : il ne fait que transmettre la clé
+  envoyée par le client, avec liste blanche d'origines *et* de cibles. Son URL se règle
+  dans ⚙️. En développement, le proxy Vite joue le même rôle (sans clé lui non plus).
 
 ## Fonctionnalités livrées
 
@@ -87,16 +97,26 @@ Dernière mise à jour : 2026-07-27.
 
 ## Limites connues
 
-- **SteamGridDB et xbl.io via proxy dev** : ces deux sources ne marchent qu'en `npm run dev` (le proxy Vite injecte le token côté serveur ; aucune des deux API n'expose de CORS). Un build statique ne pourra pas y accéder sans backend/proxy équivalent.
+- **SteamGridDB et xbl.io nécessitent le relais** : sans Worker déployé (et son URL renseignée dans ⚙️), ces deux sources restent indisponibles en ligne. Tout le reste fonctionne.
 - **xbl.io** : historique joué ≠ bibliothèque achetée (voir section Import Xbox) ; pas de temps de jeu exposé.
 - **Wikidata** : certains champs d'infobox sont parfois absents (jeux Nintendo/récents) → affichage best-effort, sans casser l'UI.
 
-## Prochaine étape
+## Fait récemment
 
-- **Déploiement en PWA** (Vercel ou Netlify) pour un accès mobile.
-  - Manifest + service worker (installable sur écran d'accueil).
-  - Prévoir un proxy/serveur pour SteamGridDB **et xbl.io** (sinon désactiver ces sources en prod).
-  - Vérifier que localStorage suffit ou prévoir une synchro multi-appareils.
+- **PWA en ligne sur GitHub Pages** (manifest, service worker Workbox, icônes
+  192/512 + maskable, installable sur écran d'accueil).
+- **Clés API sorties du code** et purgées de tout l'historique git avant le premier
+  push (aucune clé n'a jamais été publiée → inutile de les régénérer).
+- **Relais CORS sans secret** pour SteamGridDB et xbl.io.
+
+## Prochaines étapes
+
+- Déployer le Worker (`worker/README.md`) et coller son URL dans ⚙️ pour activer
+  SteamGridDB et l'import Xbox en ligne.
+- Transférer la bibliothèque sur mobile via **Export / Import JSON**.
+- Éventuellement : notifications push pour les prêts > 30 j (pattern VAPID déjà
+  éprouvé dans `gta6-backend`) ; synchro multi-appareils si le localStorage par
+  appareil devient gênant.
 
 ## Structure
 
@@ -104,10 +124,12 @@ Dernière mise à jour : 2026-07-27.
 GameLibrary/
 ├── index.html
 ├── package.json
-├── vite.config.js        ← proxys /sgdb (SteamGridDB) et /xbl (xbl.io) + tokens SGDB_KEY / XBL_KEY
+├── .github/workflows/    ← deploy.yml : build + publication GitHub Pages
+├── worker/               ← relais CORS Cloudflare (sans secret) + sa doc
+├── vite.config.js        ← base '/game-library/', PWA, proxys de dev (sans clé)
 ├── PROGRESS.md           ← ce fichier
 └── src/
-    ├── App.jsx           ← toute l'application (constante RAWG_KEY en tête)
+    ├── App.jsx           ← toute l'application (aucune clé : cf. onglet ⚙️)
     ├── main.jsx
     └── index.css
 ```
