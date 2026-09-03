@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { memo, useState, useEffect, useRef } from "react";
 import Cover from "./Cover.jsx";
 import InfoboxView from "./InfoboxView.jsx";
 import { bg, card, bdr, txt, mut, demat } from "../lib/theme.js";
@@ -228,6 +228,19 @@ function GameCard({ g, onEdit, onDelete, onEnrich, activeTimer, timerStart, onSt
               <button onClick={() => { const add = manH * 60 + manM; if (add <= 0) return; onEdit(g.id, "manualMinutes", (g.manualMinutes || 0) + add); setManH(0); setManM(0); }} style={{ background: "#5493FF22", border: "1px solid #5493FF", color: "#5493FF", borderRadius: 4, padding: "2px 8px", fontSize: 11, cursor: "pointer" }}>+</button>
               <button onClick={() => { const sub = manH * 60 + manM; if (sub <= 0) return; onEdit(g.id, "manualMinutes", Math.max(0, (g.manualMinutes || 0) - sub)); setManH(0); setManM(0); }} style={{ background: "#ef444422", border: "1px solid #ef4444", color: "#ef4444", borderRadius: 4, padding: "2px 8px", fontSize: 11, cursor: "pointer" }}>−</button>
             </div>
+            {/* Durée de référence. Le champ `hltb` existait dans le modèle et
+                pilotait la jauge de progression et le badge « % HLtB », mais
+                aucune interface ne permettait de le renseigner : les deux
+                étaient donc du code mort, incapable de s'afficher un jour. */}
+            <div style={{ display: "flex", gap: 6, alignItems: "center", marginTop: 8 }}>
+              <span style={{ color: mut, fontSize: 11 }}>Durée annoncée :</span>
+              <input type="number" min="0" step="1" value={g.hltb ?? ""} placeholder="—"
+                onChange={e => { const v = parseInt(e.target.value, 10); onEdit(g.id, "hltb", Number.isFinite(v) && v > 0 ? v : null); }}
+                aria-label="Durée annoncée du jeu, en heures"
+                style={{ width: 56, minHeight: 32, background: "transparent", border: `1px solid ${bdr}`, borderRadius: 4, color: txt, padding: "2px 6px", fontSize: 11 }} />
+              <span style={{ color: mut, fontSize: 11 }}>h</span>
+              {hltbPct !== null && <span style={{ color: mut, fontSize: 10 }}>→ {hltbPct} % parcourus</span>}
+            </div>
             {g.sessions.slice(-3).reverse().map((s, i) => <div key={i} style={{ color: mut, fontSize: 10, marginTop: 4 }}>{new Date(s.date).toLocaleDateString("fr-FR")} — {fmtTime(s.minutes)}</div>)}
           </div>
 
@@ -263,7 +276,19 @@ function GameCard({ g, onEdit, onDelete, onEnrich, activeTimer, timerStart, onSt
 
           {/* Notes (accordéon) */}
           {acc("notes", "📝 Notes", (
-            <textarea value={g.tips || ""} onChange={e => onEdit(g.id, "tips", e.target.value)} placeholder="Notes & tips perso…" rows={2} style={{ width: "100%", background: "transparent", border: `1px solid ${bdr}`, borderRadius: 6, color: txt, padding: "6px 8px", fontSize: 11, outline: "none", resize: "vertical", boxSizing: "border-box" }} />
+            <>
+              <textarea value={g.tips || ""} onChange={e => onEdit(g.id, "tips", e.target.value)} placeholder="Notes & tips perso…" rows={2} style={{ width: "100%", background: "transparent", border: `1px solid ${bdr}`, borderRadius: 6, color: txt, padding: "6px 8px", fontSize: 11, outline: "none", resize: "vertical", boxSizing: "border-box" }} />
+              {/* La recherche interrogeait déjà `g.tag`, mais rien ne permettait
+                  de l'écrire : chercher par tag ne pouvait par construction rien
+                  trouver. */}
+              <div style={{ display: "flex", gap: 6, alignItems: "center", marginTop: 6 }}>
+                <span style={{ color: mut, fontSize: 11, flexShrink: 0 }}>Tag :</span>
+                <input value={g.tag || ""} onChange={e => onEdit(g.id, "tag", e.target.value)}
+                  placeholder="coop, à revendre, prêt à Paul…"
+                  aria-label="Tag libre, utilisable dans la recherche"
+                  style={{ flex: 1, minWidth: 0, minHeight: 32, background: "transparent", border: `1px solid ${bdr}`, borderRadius: 6, color: txt, padding: "2px 8px", fontSize: 11, outline: "none" }} />
+              </div>
+            </>
           ))}
           {/* Re-association RAWG */}
           {rawgOpen && (
@@ -275,7 +300,7 @@ function GameCard({ g, onEdit, onDelete, onEnrich, activeTimer, timerStart, onSt
                 <div style={{ marginTop: 6, background: card, border: `1px solid ${bdr}`, borderRadius: 8, maxHeight: 300, overflowY: "auto", boxShadow: "0 8px 24px #0008" }}>
                   {rawgSugg.map(s => (
                     <div key={s.id} className="gl-row" onClick={() => rawgPick(s)} style={{ display: "flex", gap: 8, padding: "7px 9px", cursor: "pointer", borderBottom: `1px solid ${bdr}`, alignItems: "center" }}>
-                      {s.background_image && <img src={s.background_image} style={{ width: 34, height: 51, minWidth: 34, objectFit: "cover", borderRadius: 4 }} />}
+                      {s.background_image && <img src={s.background_image} alt="" style={{ width: 34, height: 51, minWidth: 34, objectFit: "cover", borderRadius: 4 }} />}
                       <div style={{ minWidth: 0 }}><div style={{ color: txt, fontSize: 12, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.name}</div><div style={{ color: mut, fontSize: 10 }}>{s.released}{s.metacritic ? ` · MC ${s.metacritic}` : ""}</div></div>
                     </div>
                   ))}
@@ -375,4 +400,8 @@ function GameCard({ g, onEdit, onDelete, onEnrich, activeTimer, timerStart, onSt
   );
 }
 
-export default GameCard;
+// Mémoïsé : le moindre changement dans la bibliothèque rerendait les 30 fiches
+// visibles, chacune portant une vingtaine de useState. Les fonctions passées en
+// props sont stables (useCallback côté App), donc la comparaison par défaut
+// suffit — seule la fiche réellement modifiée se rerend.
+export default memo(GameCard);

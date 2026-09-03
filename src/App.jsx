@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef } from "react";
+import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 
 import Cover from "./components/Cover.jsx";
 import GameCard from "./components/GameCard.jsx";
@@ -26,6 +26,9 @@ import {
 // rendu : à 94 jeux, autant de GameCard portant chacun ~25 useState, soit
 // plusieurs milliers de hooks et autant d'objets de style recréés.
 const PAGE_SIZE = 30;
+
+// Jaquettes rattrapées au démarrage, par ouverture de l'application.
+const RATTRAPAGE_MAX = 12;
 
 const ACCENT = "#5493FF";
 
@@ -63,6 +66,11 @@ export default function App() {
   const [enrichProg, setEnrichProg] = useState(0);
   const enrichCancelRef = useRef(false);
   const [lastAddedId, setLastAddedId] = useState(null);
+  // Fiche à ouvrir et à faire défiler à l'écran. Un clic sur une vignette de la
+  // vue grille écrivait auparavant le titre du jeu dans la recherche puis
+  // l'effaçait deux secondes plus tard : si on commençait à taper pendant ce
+  // délai, le texte disparaissait sous les doigts.
+  const [focusId, setFocusId] = useState(null);
   // Le chrono ne vivait que dans la mémoire de React : Android tue
   // régulièrement une PWA laissée en arrière-plan, et la session en cours
   // disparaissait avec elle. Il est donc relu au démarrage.
@@ -161,7 +169,11 @@ export default function App() {
   useEffect(() => {
     const fetchCovers = async () => {
       if (!hasRawgKey()) return;   // pas de clé RAWG configurée -> on ne tente rien
-      const missing = games.filter(g => !g.cover);
+      // Plafonné : sans limite, une bibliothèque fraîchement importée lançait
+      // une centaine de requêtes séquentielles à CHAQUE ouverture de l'app,
+      // soit une dizaine de secondes de réseau, y compris après dix échecs.
+      // Le reste se rattrape à l'ouverture suivante, ou via « Actualiser ».
+      const missing = games.filter(g => !g.cover).slice(0, RATTRAPAGE_MAX);
       for (const g of missing) {
         try {
           const result = await rawgFirstResult(g.title);
@@ -179,21 +191,23 @@ export default function App() {
     fetchCovers();
   }, []); // eslint-disable-line
 
-  const edit = (id, field, val) => setGames(gs => gs.map(g => g.id === id ? { ...g, [field]: val } : g));
-  const enrichGame = (id, data) => setGames(gs => gs.map(g => g.id === id ? { ...g, ...data } : g));
-  const startTimer = (id) => {
+  // Références stables : sans ça, chaque rendu d'App fabriquerait de nouvelles
+  // fonctions et le memo() des fiches ne servirait à rien.
+  const edit = useCallback((id, field, val) => setGames(gs => gs.map(g => g.id === id ? { ...g, [field]: val } : g)), []);
+  const enrichGame = useCallback((id, data) => setGames(gs => gs.map(g => g.id === id ? { ...g, ...data } : g)), []);
+  const startTimer = useCallback((id) => {
     const debut = Date.now();
     setActiveTimer(id); setTimerStart(debut);
     enregistrerChrono({ id, debut });
-  };
-  const stopTimer = (id) => {
+  }, []);
+  const stopTimer = useCallback((id) => {
     // Garde : sans début connu, `Date.now() - null` vaut Date.now() et
     // ajouterait une cinquantaine d'années de temps de jeu.
     const mins = timerStart ? Math.round((Date.now() - timerStart) / 60000) : 0;
     if (mins > 0) setGames(gs => gs.map(g => g.id === id ? { ...g, playedMinutes: g.playedMinutes + mins, sessions: [...(g.sessions || []), { date: new Date().toISOString(), minutes: mins }] } : g));
     setActiveTimer(null); setTimerStart(null);
     enregistrerChrono(null);
-  };
+  }, [timerStart]);
   // Ajoute le jeu puis l'ouvre directement en fiche complète (parité fiche/ajout).
   const addGame = (g) => {
     setGames(gs => [g, ...gs]);
@@ -250,13 +264,13 @@ export default function App() {
     setImportedIds([]);
   };
   const cancelEnrich = () => { enrichCancelRef.current = true; };
-  const deleteGame = (g) => {
+  const deleteGame = useCallback((g) => {
     const index = games.findIndex(x => x.id === g.id);
     setGames(gs => gs.filter(x => x.id !== g.id));
     setDeleted({ game: g, index });
     clearTimeout(undoRef.current);
     undoRef.current = setTimeout(() => setDeleted(null), 5000);
-  };
+  }, [games]);
   const undoDelete = () => {
     if (!deleted) return;
     clearTimeout(undoRef.current);
@@ -510,7 +524,7 @@ export default function App() {
           <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(120px,1fr))", gap:10 }}>
             {visible.map(g => (
               <div key={g.id} className="gl-tile" style={{ background:card, border:`1px solid ${bdr}`, borderRadius:10, overflow:"hidden", cursor:"pointer" }}
-                onClick={() => { setView("liste"); applySearch(g.title); setTimeout(() => applySearch(""), 2000); }}>
+                onClick={() => { setView("liste"); setFocusId(g.id); }}>
                 <Cover src={g.cover} title={g.title} size="100%" />
                 <div style={{ height:3, background:STATUS_COLORS[g.status]+"88" }} />
                 <div style={{ padding:"6px 7px" }}>
@@ -525,7 +539,7 @@ export default function App() {
         ) : (
           <>
           <div style={{ display:"flex", flexDirection:"column", gap: view === "compact" ? 6 : 8 }}>
-            {visible.map(g => <GameCard key={g.id} g={g} onEdit={edit} onDelete={deleteGame} onEnrich={enrichGame} activeTimer={activeTimer} timerStart={timerStart} onStartTimer={startTimer} onStopTimer={stopTimer} autoOpen={g.id === lastAddedId} compact={view === "compact"} />)}
+            {visible.map(g => <GameCard key={g.id} g={g} onEdit={edit} onDelete={deleteGame} onEnrich={enrichGame} activeTimer={activeTimer} timerStart={timerStart} onStartTimer={startTimer} onStopTimer={stopTimer} autoOpen={g.id === lastAddedId || g.id === focusId} compact={view === "compact"} />)}
           </div>
           {chargerPlus}
           </>
@@ -665,7 +679,7 @@ export default function App() {
         {tab === "stats" && (
           <div>
             <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:16 }}>
-              {[["Total",stats.total,"#5493FF"],["Terminés",`${stats.termines} (${Math.round(stats.termines/stats.total*100)}%)`,"#22c55e"],["En cours",stats.enCours,"#5493FF"],["Prêtés",stats.pretes,"#f59e0b"],["Temps total",fmtTime(stats.totalTime),"#a855f7"]].map(([l,v,c]) => (
+              {[["Total",stats.total,"#5493FF"],["Terminés",stats.total ? `${stats.termines} (${Math.round(stats.termines/stats.total*100)}%)` : "0","#22c55e"],["En cours",stats.enCours,"#5493FF"],["Prêtés",stats.pretes,"#f59e0b"],["Temps total",fmtTime(stats.totalTime),"#a855f7"]].map(([l,v,c]) => (
                 <div key={l} style={{ background:card, border:`1px solid ${bdr}`, borderRadius:10, padding:"12px 14px" }}>
                   <div style={{ color:mut, fontSize:10 }}>{l}</div>
                   <div style={{ color:c, fontSize:20, fontWeight:700, marginTop:2 }}>{v}</div>
@@ -677,7 +691,7 @@ export default function App() {
               {stats.topGenres.map(([genre,count]) => (
                 <div key={genre} style={{ marginBottom:8 }}>
                   <div style={{ display:"flex", justifyContent:"space-between", marginBottom:3 }}><span style={{ color:txt, fontSize:12 }}>{genre}</span><span style={{ color:mut, fontSize:11 }}>{count}</span></div>
-                  <div style={{ height:4, background:bdr, borderRadius:2 }}><div style={{ width:`${count/stats.total*100}%`, height:"100%", background:"#5493FF", borderRadius:2 }} /></div>
+                  <div style={{ height:4, background:bdr, borderRadius:2 }}><div style={{ width:`${stats.total ? count/stats.total*100 : 0}%`, height:"100%", background:"#5493FF", borderRadius:2 }} /></div>
                 </div>
               ))}
             </div>

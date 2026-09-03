@@ -20,7 +20,10 @@
   --card: #1a1a2e;      /* cartes, modales, champs de saisie */
   --bdr: #2a2a4a;       /* toutes les bordures */
   --txt: #e2e8f0;
-  --mut: #64748b;
+  /* Éclairci depuis #64748b : le contraste tombait à 4,00:1 sur le fond et
+     3,58:1 sur les cartes, pour du texte de 9 à 11 px. WCAG AA demande 4,5:1.
+     Cette teinte donne 6,17:1 et 5,52:1. */
+  --mut: #93a3bb;
   --demat: #1e3a5f;     /* fond du badge « démat » */
 
   --accent: #5493ff;
@@ -52,7 +55,9 @@ html[data-theme="light"] {
   --card: #f0f4ff;
   --bdr: #d0d8f0;
   --txt: #1e2a4a;
-  --mut: #8090b0;
+  /* Assombri depuis #8090b0, qui ne donnait que 2,76:1 — nettement sous la
+     limite, et c'est la couleur de la majorité du petit texte. */
+  --mut: #5a6b87;
   --demat: #ddeeff;
 
   --accent: #5493ff;
