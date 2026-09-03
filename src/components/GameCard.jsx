@@ -1,8 +1,9 @@
 import { memo, useState, useEffect, useRef } from "react";
 import Cover from "./Cover.jsx";
 import InfoboxView from "./InfoboxView.jsx";
+import Sheet from "./Sheet.jsx";
 import { bg, card, bdr, txt, mut, demat } from "../lib/theme.js";
-import { PLATFORM_COLORS, BACK_COMPAT_PARENT, joursDePret, pretEnRetard } from "../lib/model.js";
+import { PLATFORM_COLORS, BACK_COMPAT_PARENT, PLATFORMES_JEU, estUrlImage, joursDePret, pretEnRetard, brouillonDepuisJeu, validerEdition } from "../lib/model.js";
 import {
   rawgSearch, rawgDetail, wikiFrenchTitles, wikiArticleData, wikidataInfobox,
   sgdbSearch, sgdbGrids,
@@ -41,6 +42,9 @@ function GameCard({ g, onEdit, onDelete, onEnrich, autoOpen }) {
   const [descOpen, setDescOpen] = useState(false);
   const [pretOuvert, setPretOuvert] = useState(false);
   const [sourcesOuvertes, setSourcesOuvertes] = useState(false);
+  const [editionOuverte, setEditionOuverte] = useState(false);
+  const [brouillon, setBrouillon] = useState(null);
+  const [erreurs, setErreurs] = useState({});
   const [section, setSection] = useState(null);
   const toggle = s => setSection(c => c === s ? null : s);
 
@@ -119,6 +123,42 @@ function GameCard({ g, onEdit, onDelete, onEnrich, autoOpen }) {
   };
   const sgdbPick = (url) => { onEdit(g.id, "cover", url); setSgdbOpen(false); };
 
+  // Édition manuelle. La saisie va dans un brouillon local, pas dans la
+  // bibliothèque : « Annuler » retrouve vraiment l'état d'avant, et taper une
+  // description n'écrit pas dans le stockage à chaque lettre.
+  const ouvrirEdition = () => { setBrouillon(brouillonDepuisJeu(g)); setErreurs({}); setEditionOuverte(true); };
+  const fermerEdition = () => { setEditionOuverte(false); setBrouillon(null); setErreurs({}); };
+  // Le fond de la feuille se ferme au clic : sans garde-fou, un doigt à côté
+  // jetterait une correction en cours sans rien dire.
+  const brouillonModifie = () => !!brouillon && JSON.stringify(brouillon) !== JSON.stringify(brouillonDepuisJeu(g));
+  const demanderFermeture = () => { if (brouillonModifie() && !window.confirm("Abandonner les modifications ?")) return; fermerEdition(); };
+  const champ = (k, v) => setBrouillon(b => ({ ...b, [k]: v }));
+  const enregistrer = () => {
+    const { erreurs: err, valeurs } = validerEdition(brouillon);
+    setErreurs(err);
+    if (Object.keys(err).length) return;
+    onEnrich(g.id, valeurs);
+    fermerEdition();
+  };
+
+  const champStyle = (k) => ({
+    // Fond plus sombre que la feuille, comme les champs de la fenêtre d'ajout :
+    // sur fond `card`, un champ `card` ne se distinguait que par son liseré.
+    width: "100%", boxSizing: "border-box", background: bg,
+    border: `1px solid ${erreurs[k] ? "#ef4444" : bdr}`, borderRadius: 6,
+    color: txt, padding: "7px 9px", fontSize: 12, outline: "none",
+    fontFamily: "inherit", // sans quoi textarea et champ date passent en monospace
+  });
+  const ligneEdition = (label, cle, controle, aide) => (
+    <label style={{ display: "block", marginBottom: 10 }}>
+      <span style={{ display: "block", color: mut, fontSize: 11, marginBottom: 4 }}>
+        {label}{aide ? <span style={{ opacity: 0.75 }}> · {aide}</span> : null}
+      </span>
+      {controle}
+      {erreurs[cle] && <span style={{ display: "block", color: "#ef4444", fontSize: 11, marginTop: 3 }}>{erreurs[cle]}</span>}
+    </label>
+  );
+
   const acc = (id, title, content) => (
     // Un filet suffit à séparer : encadrer chaque section donnait six
     // rectangles de poids identique, et donc aucune hiérarchie.
@@ -160,28 +200,35 @@ function GameCard({ g, onEdit, onDelete, onEnrich, autoOpen }) {
 
       {open && (
         <div style={{ padding: "12px 14px", borderTop: `1px solid ${bdr}` }} onClick={e => e.stopPropagation()}>
-          {/* Identité. La jaquette flotte : le sous-titre puis la description
-              l'habillent. Un simple flex laissait un vide de plusieurs dizaines
-              de pixels sous le texte, à côté d'une jaquette bien plus haute. */}
-          <div style={{ overflow: "hidden", marginBottom: 14 }}>
-            <div style={{ float: "left", margin: "0 14px 8px 0" }}>
-              <Cover src={g.cover} title={g.title} size={96} />
+          {/* Identité. La jaquette et les informations courtes en deux colonnes,
+              la description en pleine largeur dessous.
+              Le texte habillait auparavant la jaquette : ses dernières lignes
+              repassaient sous l'image, ce qui cassait la colonne. Mettre la
+              description DANS la colonne de droite corrigeait ça mais laissait,
+              sur un texte long, une bande vide sous la jaquette. Pleine largeur
+              règle les deux, et donne des lignes de ~55 caractères au lieu
+              de ~38. */}
+          <div style={{ display: "flex", gap: 14, marginBottom: g.style ? 12 : 16 }}>
+            <Cover src={g.cover} title={g.title} size={96} />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 17, fontWeight: 700, lineHeight: 1.25, color: txt, marginBottom: 6 }}>{g.title}</div>
+              <div style={{ color: mut, fontSize: 11, lineHeight: 1.7 }}>
+                <b style={{ color: txt, fontWeight: 600 }}>{g.platform}</b> · {g.format}
+                {g.genre.length > 0 && <><br />{g.genre.join(" · ")}</>}
+                {g.metacritic ? <><br />Metacritic <b style={{ color: noteCouleur, fontWeight: 700 }}>{g.metacritic}</b></> : null}
+                <br />Ajouté le {new Date(g.addedDate).toLocaleDateString("fr-FR")}
+              </div>
             </div>
-            <div style={{ fontSize: 17, fontWeight: 700, lineHeight: 1.25, color: txt, marginBottom: 6 }}>{g.title}</div>
-            <div style={{ color: mut, fontSize: 11, lineHeight: 1.7, marginBottom: g.style ? 10 : 0 }}>
-              <b style={{ color: txt, fontWeight: 600 }}>{g.platform}</b> · {g.format}
-              {g.genre.length > 0 && <><br />{g.genre.join(" · ")}</>}
-              <br />Ajouté le {new Date(g.addedDate).toLocaleDateString("fr-FR")}
-            </div>
-            {g.style && (
-              <>
-                {/* En italique gris coupé à deux lignes, le seul texte qu'on ait
-                    envie de lire était le plus pénible de la fiche. */}
-                <div style={{ color: txt, fontSize: 13, lineHeight: 1.5, ...(descOpen ? {} : { overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 4, WebkitBoxOrient: "vertical" }) }}>{g.style}</div>
-                {g.style.length > 160 && <button onClick={() => setDescOpen(o => !o)} style={{ background: "transparent", border: "none", color: "#5493FF", fontSize: 11, cursor: "pointer", padding: "6px 0 0" }}>{descOpen ? "▴ Réduire" : "▾ Lire la suite"}</button>}
-              </>
-            )}
           </div>
+
+          {g.style && (
+            <div style={{ marginBottom: 16 }}>
+              {/* En italique gris coupé à deux lignes, le seul texte qu'on ait
+                  envie de lire était le plus pénible de la fiche. */}
+              <div style={{ color: txt, fontSize: 13, lineHeight: 1.5, ...(descOpen ? {} : { overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 4, WebkitBoxOrient: "vertical" }) }}>{g.style}</div>
+              {g.style.length > 160 && <button onClick={() => setDescOpen(o => !o)} style={{ background: "transparent", border: "none", color: "#5493FF", fontSize: 11, cursor: "pointer", padding: "6px 0 0" }}>{descOpen ? "▴ Réduire" : "▾ Lire la suite"}</button>}
+            </div>
+          )}
 
           {/* Infos Wikidata : des filets, plus un cadre (voir InfoboxView). */}
           {g.infobox && <div style={{ marginBottom: 16 }}><InfoboxView info={g.infobox} /></div>}
@@ -283,8 +330,7 @@ function GameCard({ g, onEdit, onDelete, onEnrich, autoOpen }) {
           ))}
           {/* Re-association RAWG */}
           {rawgOpen && (
-            <div style={{ position: "relative", background: bg, border: `1px solid ${bdr}`, borderRadius: 8, padding: "10px 12px", marginBottom: 10 }}>
-              <div style={{ color: txt, fontSize: 11, fontWeight: 600, marginBottom: 6 }}>Ré-associer depuis RAWG</div>
+            <Sheet title="Ré-associer depuis RAWG" onClose={() => setRawgOpen(false)}>
               <input value={rawgQ} onChange={e => rawgQuery(e.target.value)} placeholder="Titre du jeu…" autoFocus style={{ width: "100%", boxSizing: "border-box", background: "transparent", border: `1px solid ${bdr}`, borderRadius: 6, color: txt, padding: "6px 8px", fontSize: 12, outline: "none" }} />
               {rawgBusy && <div style={{ color: "#5493FF", fontSize: 11, marginTop: 4 }}>Récupération & traduction…</div>}
               {rawgSugg.length > 0 && !rawgBusy && (
@@ -297,12 +343,11 @@ function GameCard({ g, onEdit, onDelete, onEnrich, autoOpen }) {
                   ))}
                 </div>
               )}
-            </div>
+            </Sheet>
           )}
           {/* Titre français via Wikipédia FR */}
           {wikiOpen && (
-            <div style={{ background: bg, border: `1px solid ${bdr}`, borderRadius: 8, padding: "10px 12px", marginBottom: 10 }}>
-              <div style={{ color: txt, fontSize: 11, fontWeight: 600, marginBottom: 6 }}>Titre français (Wikipédia)</div>
+            <Sheet title="Titre français (Wikipédia)" onClose={() => setWikiOpen(false)}>
               <input value={wikiQ} onChange={e => wikiQuery(e.target.value)} placeholder="Titre du jeu…" autoFocus style={{ width: "100%", boxSizing: "border-box", background: "transparent", border: `1px solid ${bdr}`, borderRadius: 6, color: txt, padding: "6px 8px", fontSize: 12, outline: "none" }} />
               {wikiBusy && <div style={{ color: "#5493FF", fontSize: 11, marginTop: 4 }}>Recherche…</div>}
               {!wikiBusy && wikiSugg.length > 0 && (
@@ -354,12 +399,11 @@ function GameCard({ g, onEdit, onDelete, onEnrich, autoOpen }) {
                   </div>
                 </div>
               )}
-            </div>
+            </Sheet>
           )}
           {/* Jaquettes SteamGridDB */}
           {sgdbOpen && (
-            <div style={{ background: bg, border: `1px solid ${bdr}`, borderRadius: 8, padding: "10px 12px", marginBottom: 10 }}>
-              <div style={{ color: txt, fontSize: 11, fontWeight: 600, marginBottom: 6 }}>Jaquette SteamGridDB</div>
+            <Sheet title="Choisir une jaquette" onClose={() => setSgdbOpen(false)}>
               <input value={sgdbQ} onChange={e => sgdbQuery(e.target.value)} placeholder="Titre du jeu…" autoFocus style={{ width: "100%", boxSizing: "border-box", background: "transparent", border: `1px solid ${bdr}`, borderRadius: 6, color: txt, padding: "6px 8px", fontSize: 12, outline: "none" }} />
               {sgdbBusy && <div style={{ color: "#5493FF", fontSize: 11, marginTop: 6 }}>Recherche des jaquettes…</div>}
               {!sgdbBusy && sgdbGridsList.length > 0 && (
@@ -374,17 +418,18 @@ function GameCard({ g, onEdit, onDelete, onEnrich, autoOpen }) {
                 </>
               )}
               {!sgdbBusy && sgdbDone && sgdbGridsList.length === 0 && <div style={{ color: mut, fontSize: 11, marginTop: 6 }}>Aucune jaquette trouvée sur SteamGridDB</div>}
-            </div>
+            </Sheet>
           )}
           {/* Outils. « Ajouté le » était orphelin en bas à gauche, calé contre
               quatre boutons qui débordaient sur deux lignes — et Supprimer,
               irréversible, partageait le groupe de trois actions d'enrichissement.
-              La date est remontée dans l'identité ; les sources se rangent
-              derrière un bouton, puisqu'on enrichit un jeu une fois. */}
+              La date est remontée dans l'identité ; correction manuelle et
+              re-recherches se rangent derrière un bouton, puisqu'on ne retouche
+              un jeu qu'une fois. */}
           <div style={{ display: "flex", gap: 8, alignItems: "center", paddingTop: 12, borderTop: `1px solid ${bdr}` }}>
             <button onClick={() => setSourcesOuvertes(o => !o)}
               style={{ height: 38, padding: "0 14px", background: sourcesOuvertes ? "#5493FF22" : "transparent", border: `1px solid ${sourcesOuvertes ? "#5493FF" : bdr}`, color: sourcesOuvertes ? "#5493FF" : mut, borderRadius: 8, fontSize: 12, cursor: "pointer" }}>
-              ⋯ Sources
+              ⋯ Modifier la fiche
             </button>
             <button onClick={() => onDelete(g)}
               style={{ marginLeft: "auto", height: 38, padding: "0 10px", background: "transparent", border: "none", color: "#ef4444", fontSize: 12, cursor: "pointer", opacity: 0.85 }}>
@@ -394,10 +439,64 @@ function GameCard({ g, onEdit, onDelete, onEnrich, autoOpen }) {
 
           {sourcesOuvertes && (
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 10 }}>
-              <button onClick={() => { setRawgOpen(o => !o); if (!rawgOpen) { setRawgQ(g.title); rawgQuery(g.title); } }} style={boutonSource}>🔄 RAWG</button>
-              <button onClick={() => { setWikiOpen(o => !o); if (!wikiOpen) { setWikiQ(g.title); setWikiDone(false); wikiQuery(g.title); } }} style={boutonSource}>🇫🇷 Titre français</button>
-              <button onClick={() => { setSgdbOpen(o => !o); if (!sgdbOpen) { setSgdbQ(g.title); setSgdbDone(false); sgdbQuery(g.title); } }} style={boutonSource}>📦 Jaquette</button>
+              <button onClick={() => { setSourcesOuvertes(false); ouvrirEdition(); }}
+                style={{ ...boutonSource, background: "#5493FF22", fontWeight: 600 }}>✏️ À la main</button>
+              <button onClick={() => { setSourcesOuvertes(false); setRawgOpen(true); setRawgQ(g.title); rawgQuery(g.title); }} style={boutonSource}>🔄 RAWG</button>
+              <button onClick={() => { setSourcesOuvertes(false); setWikiOpen(true); setWikiQ(g.title); setWikiDone(false); wikiQuery(g.title); }} style={boutonSource}>🇫🇷 Titre français</button>
+              <button onClick={() => { setSourcesOuvertes(false); setSgdbOpen(true); setSgdbQ(g.title); setSgdbDone(false); sgdbQuery(g.title); }} style={boutonSource}>📦 Jaquette</button>
             </div>
+          )}
+
+          {/* Édition manuelle. Les sources automatiques écrivent le titre, la
+              plateforme, les genres, la note, la jaquette, la description et
+              l'infobox ; rien ne permettait de les corriger quand elles se
+              trompaient, sinon supprimer le jeu et le recréer. */}
+          {editionOuverte && brouillon && (
+            <Sheet title="Corriger les informations" onClose={demanderFermeture}>
+
+              {ligneEdition("Titre", "title", <input value={brouillon.title} onChange={e => champ("title", e.target.value)} style={champStyle("title")} />)}
+
+              {ligneEdition("Plateforme", "platform", (
+                <select value={brouillon.platform} onChange={e => champ("platform", e.target.value)} style={{ ...champStyle("platform"), height: 34 }}>
+                  {PLATFORMES_JEU.map(p => <option key={p} value={p}>{p}</option>)}
+                </select>
+              ))}
+
+              {ligneEdition("Genres", "genre", <input value={brouillon.genre} onChange={e => champ("genre", e.target.value)} placeholder="Action, Aventure…" style={champStyle("genre")} />, "séparés par des virgules")}
+
+              {ligneEdition("Metacritic", "metacritic", <input value={brouillon.metacritic} onChange={e => champ("metacritic", e.target.value)} inputMode="numeric" placeholder="vide = aucune note" style={champStyle("metacritic")} />)}
+
+              {ligneEdition("Ajouté le", "addedDate", <input type="date" value={brouillon.addedDate} onChange={e => champ("addedDate", e.target.value)} style={champStyle("addedDate")} />)}
+
+              {ligneEdition("Description", "style", <textarea value={brouillon.style} onChange={e => champ("style", e.target.value)} rows={6} style={{ ...champStyle("style"), resize: "vertical", lineHeight: 1.45 }} />)}
+
+              {ligneEdition("Jaquette", "cover", (
+                <div style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
+                  <input value={brouillon.cover} onChange={e => champ("cover", e.target.value)} placeholder="https://… (vide = aucune)" style={{ ...champStyle("cover"), flex: 1, minWidth: 0 }} />
+                  {estUrlImage(brouillon.cover) && <img src={brouillon.cover.trim()} alt="" style={{ width: 40, height: 60, objectFit: "cover", borderRadius: 4, border: `1px solid ${bdr}`, flexShrink: 0 }} />}
+                </div>
+              ))}
+
+              <div style={{ color: mut, fontSize: 11, fontWeight: 600, margin: "14px 0 8px", paddingTop: 10, borderTop: `1px solid ${bdr}` }}>Fiche Wikidata</div>
+              {ligneEdition("Développeur", "developers", <input value={brouillon.developers} onChange={e => champ("developers", e.target.value)} style={champStyle("developers")} />, "séparés par des virgules")}
+              {ligneEdition("Éditeur", "publishers", <input value={brouillon.publishers} onChange={e => champ("publishers", e.target.value)} style={champStyle("publishers")} />, "séparés par des virgules")}
+              {ligneEdition("Sorties", "releases", <textarea value={brouillon.releases} onChange={e => champ("releases", e.target.value)} rows={3} placeholder={"2020-11-10 (Xbox Series X)"} style={{ ...champStyle("releases"), resize: "vertical" }} />, "une par ligne")}
+              {ligneEdition("Mode", "modes", <input value={brouillon.modes} onChange={e => champ("modes", e.target.value)} placeholder="Solo, Multijoueur…" style={champStyle("modes")} />, "séparés par des virgules")}
+              {ligneEdition("Série", "series", <input value={brouillon.series} onChange={e => champ("series", e.target.value)} style={champStyle("series")} />)}
+              {ligneEdition("Épisode précédent", "follows", <input value={brouillon.follows} onChange={e => champ("follows", e.target.value)} style={champStyle("follows")} />)}
+              {ligneEdition("Épisode suivant", "followedBy", <input value={brouillon.followedBy} onChange={e => champ("followedBy", e.target.value)} style={champStyle("followedBy")} />)}
+
+              <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
+                <button onClick={enregistrer} style={{ height: 38, padding: "0 16px", background: "#5493FF22", border: "1px solid #5493FF", color: "#5493FF", borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>Enregistrer</button>
+                <button onClick={fermerEdition} style={{ height: 38, padding: "0 14px", background: "transparent", border: `1px solid ${bdr}`, color: mut, borderRadius: 8, fontSize: 12, cursor: "pointer" }}>Annuler</button>
+              </div>
+              {/* Le champ fautif peut être remonté hors de l'écran au moment
+                  où on appuie sur Enregistrer : sans ce rappel, le bouton
+                  paraît sans effet. */}
+              {Object.keys(erreurs).length > 0 && (
+                <div role="alert" style={{ color: "#ef4444", fontSize: 11, marginTop: 8 }}>Rien n'a été enregistré : corrige les champs en rouge.</div>
+              )}
+            </Sheet>
           )}
         </div>
       )}

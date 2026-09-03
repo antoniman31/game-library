@@ -14,6 +14,7 @@ import assert from "node:assert/strict";
 import {
   migrateGames, validerJeuxImportes, compterFiltres,
   joursDePret, pretEnRetard, isBackCompatPlatform,
+  brouillonDepuisJeu, validerEdition, sortiesDepuisTexte, sortiesVersTexte, listeDepuisTexte,
   BACK_COMPAT, XBOX_SERIES_CUTOFF, PRET_LONG_JOURS,
 } from "./model.js";
 
@@ -156,4 +157,73 @@ test("la migration retire les champs de progression et de temps de jeu", () => {
     assert.equal(mort in g, false, `${mort} aurait dû disparaître`);
   }
   assert.equal(g.title, "Jeu", "le reste du jeu est intact");
+});
+
+
+// ── Édition manuelle ───────────────────────────────────────────────────────
+// La fiche laisse désormais réécrire ce que les sources automatiques ont
+// posé. Une validation trop laxiste met un NaN dans la note ou une date
+// invalide dans le stock, et le jeu devient illisible pour toujours.
+
+const brouillonValide = (p = {}) => ({
+  ...brouillonDepuisJeu(jeu({ title: "Halo", addedDate: "2022-01-01" })), ...p,
+});
+
+test("un aller-retour brouillon → valeurs ne perd rien", () => {
+  const g = jeu({
+    title: "Halo Infinite", genre: ["FPS", "Action"], metacritic: 87, cover: "https://x/y.jpg",
+    style: "Un jeu de tir.", infobox: { developers: ["343"], publishers: ["Xbox"], releases: [{ date: "2021-12-08", platform: "Xbox Series X" }], modes: ["Solo", "Multijoueur"], series: "Halo", follows: "Halo 5", followedBy: "" },
+  });
+  const { erreurs, valeurs } = validerEdition(brouillonDepuisJeu(g));
+  assert.deepEqual(erreurs, {});
+  for (const k of ["title", "platform", "genre", "metacritic", "addedDate", "style", "cover"]) {
+    assert.deepEqual(valeurs[k], g[k], `${k} a changé en passant par le brouillon`);
+  }
+  assert.deepEqual(valeurs.infobox, g.infobox);
+});
+
+test("un titre vide est refusé", () => {
+  const { erreurs } = validerEdition(brouillonValide({ title: "   " }));
+  assert.ok(erreurs.title);
+});
+
+test("le Metacritic accepte le vide mais pas n'importe quoi", () => {
+  assert.equal(validerEdition(brouillonValide({ metacritic: "" })).valeurs.metacritic, null);
+  assert.equal(validerEdition(brouillonValide({ metacritic: "87" })).valeurs.metacritic, 87);
+  for (const mauvais of ["abc", "-1", "101", "87.5"]) {
+    assert.ok(validerEdition(brouillonValide({ metacritic: mauvais })).erreurs.metacritic, `${mauvais} aurait dû être refusé`);
+  }
+});
+
+test("une date d'ajout invalide est refusée", () => {
+  for (const mauvais of ["", "01/01/2022", "2022-13-45"]) {
+    assert.ok(validerEdition(brouillonValide({ addedDate: mauvais })).erreurs.addedDate, `${mauvais} aurait dû être refusé`);
+  }
+  assert.deepEqual(validerEdition(brouillonValide({ addedDate: "2022-01-01" })).erreurs, {});
+});
+
+test("la jaquette veut une URL d'image, et le vide efface", () => {
+  assert.equal(validerEdition(brouillonValide({ cover: "  " })).valeurs.cover, null);
+  assert.ok(validerEdition(brouillonValide({ cover: "javascript:alert(1)" })).erreurs.cover);
+  assert.equal(validerEdition(brouillonValide({ cover: "https://x/y.jpg" })).erreurs.cover, undefined);
+});
+
+test("une plateforme hors liste est refusée", () => {
+  assert.ok(validerEdition(brouillonValide({ platform: "PlayStation 5" })).erreurs.platform);
+});
+
+test("vider tous les champs Wikidata fait disparaître la section", () => {
+  const b = brouillonValide({ developers: "", publishers: "", releases: "", modes: "", series: "", follows: "", followedBy: "" });
+  assert.equal(validerEdition(b).valeurs.infobox, null);
+});
+
+test("les sorties se relisent ligne par ligne, avec ou sans plateforme", () => {
+  const rel = sortiesDepuisTexte("2021-12-08 (Xbox Series X)\n2022-03-01\n\n  ");
+  assert.deepEqual(rel, [{ date: "2021-12-08", platform: "Xbox Series X" }, { date: "2022-03-01" }]);
+  assert.deepEqual(sortiesDepuisTexte(sortiesVersTexte(rel)), rel, "l'aller-retour doit être stable");
+});
+
+test("une liste séparée par des virgules ignore les vides et les espaces", () => {
+  assert.deepEqual(listeDepuisTexte(" Action , , Aventure "), ["Action", "Aventure"]);
+  assert.deepEqual(listeDepuisTexte(""), []);
 });

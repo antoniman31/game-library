@@ -69,6 +69,90 @@ export function compterFiltres({ plat, pretFil, fmtFil }) {
   return [plat, pretFil, fmtFil].filter(v => v !== "tous").length;
 }
 
+// ── Édition manuelle d'une fiche ────────────────────────────────────────────
+// Tout ce que les sources automatiques écrivent (titre, plateforme, genres,
+// note, jaquette, description, infobox Wikidata) était en lecture seule : une
+// erreur de RAWG ou un mauvais article Wikipédia ne se corrigeait qu'en
+// supprimant le jeu pour le recréer. La saisie passe par un brouillon de
+// chaînes ; ces fonctions le traduisent en champs du modèle, et disent ce qui
+// ne va pas plutôt que d'écrire n'importe quoi.
+export const PLATFORMES_JEU = PLATFORMS.slice(1); // sans le "tous" du filtre
+
+export function listeDepuisTexte(t) {
+  return String(t || "").split(",").map(x => x.trim()).filter(Boolean);
+}
+export const listeVersTexte = (l) => (Array.isArray(l) ? l : []).join(", ");
+
+// Une sortie par ligne : "2020-11-10 (Xbox Series X)", ou la date seule.
+export function sortiesDepuisTexte(t) {
+  return String(t || "").split("\n").map(l => l.trim()).filter(Boolean).map(l => {
+    const m = l.match(/^(.*?)\s*\((.+)\)$/);
+    return m ? { date: m[1].trim(), platform: m[2].trim() } : { date: l };
+  });
+}
+export function sortiesVersTexte(rel) {
+  return (Array.isArray(rel) ? rel : []).map(r => (r.platform ? `${r.date} (${r.platform})` : r.date)).join("\n");
+}
+
+// Brouillon (toutes les valeurs sont des chaînes) -> champs du jeu.
+export function brouillonDepuisJeu(g) {
+  const i = g.infobox || {};
+  return {
+    title: g.title || "", platform: g.platform || PLATFORMES_JEU[0],
+    genre: listeVersTexte(g.genre), metacritic: g.metacritic == null ? "" : String(g.metacritic),
+    addedDate: g.addedDate || "", style: g.style || "", cover: g.cover || "",
+    developers: listeVersTexte(i.developers), publishers: listeVersTexte(i.publishers),
+    releases: sortiesVersTexte(i.releases), modes: listeVersTexte(i.modes),
+    series: i.series || "", follows: i.follows || "", followedBy: i.followedBy || "",
+  };
+}
+
+const URL_JAQUETTE = /^(https?:\/\/|data:image\/)/;
+export const estUrlImage = (u) => URL_JAQUETTE.test(String(u || "").trim());
+
+// Retourne { erreurs, valeurs }. `valeurs` n'est exploitable que si `erreurs`
+// est vide : mieux vaut un champ en rouge qu'un Metacritic à NaN dans le stock.
+export function validerEdition(b) {
+  const erreurs = {};
+  const titre = String(b.title || "").trim();
+  if (!titre) erreurs.title = "Titre obligatoire";
+  if (!PLATFORMES_JEU.includes(b.platform)) erreurs.platform = "Plateforme inconnue";
+
+  let mc = null;
+  const mcBrut = String(b.metacritic || "").trim();
+  if (mcBrut) {
+    const n = Number(mcBrut);
+    if (!Number.isInteger(n) || n < 0 || n > 100) erreurs.metacritic = "Entre 0 et 100, ou vide";
+    else mc = n;
+  }
+
+  const date = String(b.addedDate || "").trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || Number.isNaN(Date.parse(date))) erreurs.addedDate = "Date invalide";
+
+  const cover = String(b.cover || "").trim();
+  if (cover && !URL_JAQUETTE.test(cover)) erreurs.cover = "URL d'image attendue (https://…)";
+
+  // Une infobox vidée de tous ses champs redevient null : la section disparaît
+  // au lieu d'afficher un cadre vide.
+  const info = {
+    developers: listeDepuisTexte(b.developers), publishers: listeDepuisTexte(b.publishers),
+    releases: sortiesDepuisTexte(b.releases), modes: listeDepuisTexte(b.modes),
+    series: String(b.series || "").trim(), follows: String(b.follows || "").trim(),
+    followedBy: String(b.followedBy || "").trim(),
+  };
+  const infoVide = !info.developers.length && !info.publishers.length && !info.releases.length
+    && !info.modes.length && !info.series && !info.follows && !info.followedBy;
+
+  return {
+    erreurs,
+    valeurs: {
+      title: titre, platform: b.platform, genre: listeDepuisTexte(b.genre),
+      metacritic: mc, addedDate: date, style: String(b.style || "").trim(),
+      cover: cover || null, infobox: infoVide ? null : info,
+    },
+  };
+}
+
 // ── Import d'un fichier JSON ────────────────────────────────────────────────
 // L'import faisait `JSON.parse` puis vérifiait seulement que le résultat était
 // un tableau : un fichier au bon format mais au mauvais contenu (un export
