@@ -59,7 +59,7 @@ partir dans l'Export JSON). Un bouton « Tester » valide chaque clé.
 
 ### Ajout d'un jeu (AddModal) — parité totale avec les fiches
 - **3 sources avant validation** : RAWG (autocomplete), Wikipédia (titre + description + infobox), SteamGridDB (jaquette), en plus de plateforme / format / statut / date.
-- **Après ajout, le jeu s'ouvre automatiquement en fiche complète** (scroll + dépliage) : toutes les actions (chrono, prêt, liens, notes, sources, format…) sont immédiatement disponibles, exactement comme pour un jeu existant.
+- **Après ajout, le jeu s'ouvre automatiquement en fiche complète** (scroll + dépliage) : toutes les actions (prêt, liens, notes, sources, format…) sont immédiatement disponibles, exactement comme pour un jeu existant.
 
 ### Import de la bibliothèque Xbox Live (xbl.io)
 - Bouton header **« 🎮 Importer Xbox »** → récupère l'historique de jeux du compte lié à la clé (`player/titleHistory`).
@@ -82,19 +82,19 @@ partir dans l'Export JSON). Un bouton « Tester » valide chaque clé.
 
 ### Suivi de jeu
 - **Chrono de session** (Jouer/Stop) + **temps manuel** (h/min, boutons **+** / **−** borné à 0) + **historique des 3 dernières sessions**.
-- **Barre HowLongToBeat** (`% HLtB`) si le champ `hltb` est renseigné.
+- **Bande de prêt** : orange sous la jaquette quand le jeu est prêté, bordure en pointillés au-delà de 30 jours.
 - **Format physique / démat éditable directement dans la fiche** (toggle), plus seulement à l'ajout.
 - **Jeux « poussiéreux »** : un « en cours » sans activité depuis > 30 j est estompé (bordure grisée).
 - **Compteur « jours depuis dernière session »** sur les jeux en cours.
 
 ### Prêts
-- Marquer un jeu prêté (nom + date) → statut « prêté ».
+- Prêter un jeu (nom + date), le marquer rendu, relancer par SMS depuis la fiche.
 - Onglet **Prêts** : **alerte si prêt > 30 jours** (« ⚠️ Prêt long ! »), bouton **SMS** de relance (lien `sms:` pré-rempli).
 
 ### Organisation & UI
-- **Stats** : total, terminés, en cours, prêtés, temps total, top genres. **Export / Import JSON** de la bibliothèque (remplacer ou fusionner).
+- **Stats** : total, prêtés, top genres. L'**Export / Import JSON** est passé dans ⚙️ Réglages, avec la synchronisation.
 - **Tri** : A-Z / Date / Metacritic / Temps. **Filtre « 🎯 à finir »** (en cours + non commencé, triés par ancienneté).
-- **Filtres** (combinables entre eux et avec la recherche) : **plateforme**, **statut**, et **format** (Tous / Physique / Démat).
+- **Filtres** (combinables entre eux et avec la recherche) : **plateforme**, **prêt** (Tous / Chez moi / Prêtés), et **format** (Tous / Physique / Démat).
 - **Recherche texte** sur **titre + genre + tag**, **insensible à la casse et aux accents** (« creatif » trouve le genre « Créatif »). La **description est volontairement exclue** de la recherche : elle générait trop de faux positifs (un mot du résumé remontait des jeux sans rapport).
 - **Vues** liste et grille (jaquettes **format boîte vertical 2:3**), **thème clair / sombre**.
 - **Suppression** via **toast « Annuler »** (5 s) au lieu d'une confirmation bloquante.
