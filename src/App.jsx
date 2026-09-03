@@ -411,7 +411,7 @@ function GameCard({ g, onEdit, onDelete, onEnrich, activeTimer, onStartTimer, on
   const [descOpen, setDescOpen] = useState(false);
   const [manH, setManH] = useState(0);
   const [manM, setManM] = useState(0);
-  const [tick, setTick] = useState(0);
+  const [, setTick] = useState(0); // force le re-rendu du chrono chaque seconde
   const startRef = useRef(null);
   const isActive = activeTimer === g.id;
   const [section, setSection] = useState(null);
@@ -780,7 +780,6 @@ function AddModal({ dark, onAdd, onClose }) {
   const sgDebRef = useRef(null);
 
   const bg = dark ? "#1a1a2e" : "#f0f4ff";
-  const card = dark ? "#0f0f1a" : "#e8eef8";
   const bdr = dark ? "#2a2a4a" : "#d0d8f0";
   const txt = dark ? "#e2e8f0" : "#1e2a4a";
   const mut = dark ? "#64748b" : "#8090b0";
@@ -962,7 +961,6 @@ function ImportModal({ dark, games, onImportGames, onClose }) {
   const cancelRef = useRef(false);
 
   const bg = dark ? "#1a1a2e" : "#f0f4ff";
-  const card = dark ? "#0f0f1a" : "#e8eef8";
   const bdr = dark ? "#2a2a4a" : "#d0d8f0";
   const txt = dark ? "#e2e8f0" : "#1e2a4a";
   const mut = dark ? "#64748b" : "#8090b0";

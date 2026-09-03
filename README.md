@@ -1,56 +1,368 @@
 # Game Library
 
 Bibliothèque de jeux vidéo personnelle (Xbox / Switch) : suivi de progression,
-temps de jeu, prêts, statistiques. Application React + Vite, installable en PWA.
+chronomètre de session, prêts, statistiques, et enrichissement automatique des
+fiches depuis plusieurs bases de données publiques.
 
-**➡️ https://antoniman31.github.io/game-library/**
+**➡️ [antoniman31.github.io/game-library](https://antoniman31.github.io/game-library/)** — installable en PWA sur mobile.
 
-## Configuration (indispensable au premier lancement)
+Application **React + Vite**, sans backend : tout tient dans un composant
+(`src/App.jsx`, ~1550 lignes, styles inline) et les données vivent dans le
+`localStorage` du navigateur.
 
-L'application ne contient **aucune clé API**. Chacun saisit les siennes dans
-l'onglet **⚙️** ; elles sont stockées **sur l'appareil** (stockage local du
-navigateur) et ne quittent jamais celui-ci, hormis vers les services concernés.
+---
 
-| Service | Rôle | Obtenir une clé |
-|---|---|---|
-| RAWG | Jaquettes, Metacritic, genres, dates de sortie | https://rawg.io/apidocs |
-| SteamGridDB | Jaquettes verticales format boîte | https://www.steamgriddb.com/profile/preferences/api |
-| xbl.io | Import de la bibliothèque Xbox | https://xbl.io/console |
+## Sommaire
 
-Wikipédia et Wikidata (titres français, descriptions, développeur/éditeur, dates
-par plateforme) ne demandent aucune clé.
+- [Démarrage rapide](#démarrage-rapide)
+- [Configuration des clés API](#configuration-des-clés-api)
+- [Le relais CORS](#le-relais-cors-worker-cloudflare)
+- [Fonctionnalités](#fonctionnalités)
+- [Sources de données](#sources-de-données)
+- [Modèle de données](#modèle-de-données)
+- [Architecture et choix techniques](#architecture-et-choix-techniques)
+- [Développement](#développement)
+- [Déploiement](#déploiement)
+- [Limites connues](#limites-connues)
 
-### Relais CORS
+---
 
-SteamGridDB et xbl.io refusent les appels directs depuis un navigateur. Un petit
-relais Cloudflare Worker (dossier [`worker/`](worker/)) rétablit les en-têtes
-CORS. Il **ne contient aucun secret** : la clé est transmise par le client à
-chaque requête. Déploiement et procédure : [`worker/README.md`](worker/README.md).
-Une fois déployé, coller son URL dans ⚙️ → « Relais CORS ».
+## Démarrage rapide
 
-Sans ce relais, tout le reste fonctionne : RAWG, Wikipédia, Wikidata.
+1. Ouvrir **[l'application](https://antoniman31.github.io/game-library/)**.
+2. Aller dans l'onglet **⚙️** et saisir ses clés API (voir ci-dessous).
+   Sans clé, l'application fonctionne mais sans jaquettes ni enrichissement.
+3. Sur mobile : menu du navigateur → **« Installer l'application »** / « Ajouter à
+   l'écran d'accueil ».
+4. Pour transférer une bibliothèque existante : **Stats → Exporter** sur l'ancien
+   appareil, **Stats → Importer** sur le nouveau.
 
-## Données
+---
 
-Tout est stocké **en local** (`localStorage`) : rien n'est envoyé sur un serveur.
-Les données sont donc **propres à chaque appareil**. Pour les transférer,
-utiliser **Export / Import JSON** dans l'onglet Stats. L'export contient les jeux
-mais **jamais les clés API**, afin de pouvoir être partagé sans risque.
+## Configuration des clés API
+
+⚠️ **Le dépôt ne contient aucune clé.** Chacun saisit les siennes dans l'onglet
+**⚙️** ; elles sont enregistrées **sur l'appareil** (`localStorage`, entrée
+`gl_keys`) et ne transitent que vers les services concernés.
+
+| Service | À quoi ça sert | Obtenir une clé | Obligatoire ? |
+|---|---|---|---|
+| **RAWG** | Jaquettes, score Metacritic, genres, dates de sortie | [rawg.io/apidocs](https://rawg.io/apidocs) | Recommandé |
+| **SteamGridDB** | Jaquettes verticales format boîte (2:3) | [steamgriddb.com](https://www.steamgriddb.com/profile/preferences/api) | Optionnel |
+| **xbl.io** | Import de la bibliothèque Xbox Live | [xbl.io/console](https://xbl.io/console) | Optionnel |
+
+**Wikipédia** et **Wikidata** ne demandent aucune clé.
+
+Un bouton **« Tester »** valide chaque clé (✅ / ❌) sans quitter l'écran.
+
+### Pourquoi les clés sont-elles saisies à la main ?
+
+Une application 100 % statique n'a pas de serveur où cacher un secret : toute clé
+embarquée dans le code se retrouverait lisible dans le bundle JavaScript **et**
+dans le dépôt public. Les faire saisir par l'utilisateur règle le problème à la
+racine — chacun utilise son propre quota, et le dépôt reste sain.
+
+L'**Export JSON contient les jeux mais jamais les clés**, afin qu'une sauvegarde
+puisse être partagée ou stockée sans fuite. Conséquence : sur un nouvel appareil,
+il faut importer l'export **et** ressaisir les clés.
+
+---
+
+## Le relais CORS (Worker Cloudflare)
+
+**SteamGridDB** et **xbl.io** ne renvoient pas d'en-tête
+`Access-Control-Allow-Origin` : un navigateur refuse donc de lire leurs réponses,
+**même avec une clé valide**. Ce n'est pas un problème d'authentification mais une
+règle du navigateur — la clé, où qu'elle soit stockée, n'y change rien.
+
+Le dossier [`worker/`](worker/) contient un petit relais Cloudflare Worker qui
+rétablit ces en-têtes. Points importants :
+
+- **Il ne contient aucun secret.** La clé est envoyée par le client à chaque
+  requête et simplement retransmise. Rien à faire tourner, rien à renouveler.
+- **Ce n'est pas un proxy ouvert** : double liste blanche, sur les **origines**
+  autorisées à l'appeler *et* sur les **cibles** qu'il accepte de relayer
+  (uniquement `steamgriddb.com` et `xbl.io`).
+
+### Déploiement (gratuit, ~2 minutes)
+
+```bash
+cd worker
+npx wrangler login     # compte Cloudflare gratuit, plan Workers gratuit
+npx wrangler deploy
+```
+
+Wrangler affiche une URL du type `https://game-library-proxy.<compte>.workers.dev`.
+La coller dans **⚙️ → « Relais CORS »** → Enregistrer.
+
+> Sans ce relais, **tout le reste fonctionne** : RAWG, Wikipédia et Wikidata
+> autorisent les appels directs. Seuls SteamGridDB et l'import Xbox sont
+> indisponibles en ligne.
+
+Si l'application est servie depuis une autre adresse, ajouter celle-ci dans
+`ORIGINES` (`worker/index.js`) et redéployer, sinon le navigateur renverra une
+erreur CORS.
+
+---
+
+## Fonctionnalités
+
+### Bibliothèque
+
+- **94 jeux** pré-remplis en données de départ ; ajout, édition et suppression libres.
+- **Vues liste et grille**, jaquettes au **format boîte vertical 2:3**.
+- **Recherche** sur titre + genre + tag, **insensible à la casse et aux accents**
+  (« creatif » trouve le genre « Créatif »). La description est volontairement
+  exclue : un mot du résumé faisait remonter des jeux sans rapport.
+- **Filtres combinables** : plateforme, statut, format (physique / démat).
+- **Tri** : A-Z, date, Metacritic, temps de jeu.
+- **Filtre « 🎯 à finir »** : « en cours » + « non commencé », triés par ancienneté
+  de dernière session — pour attaquer la pile par le plus vieux.
+- **Statuts** : non commencé, en cours, terminé, platine, abandonné, prêté.
+- **Thème clair / sombre**.
+- **Suppression avec toast « Annuler »** (5 s) au lieu d'une popup bloquante.
+
+### Suivi de jeu
+
+- **Chronomètre de session** (Jouer / Stop) qui alimente le temps total et
+  l'historique des 3 dernières sessions.
+- **Saisie manuelle** du temps déjà joué (heures / minutes, boutons **+** et **−**,
+  borné à 0).
+- **Barre HowLongToBeat** : pourcentage d'avancement si le champ `hltb` est rempli.
+- **Jeux « poussiéreux »** : un jeu « en cours » sans activité depuis plus de 30
+  jours est affiché estompé, bordure en pointillés.
+- **Compteur « jours depuis la dernière session »** sur les jeux en cours.
+
+### Prêts
+
+- Marquer un jeu comme prêté (nom de l'emprunteur + date) bascule son statut.
+- Onglet **Prêts** : **alerte au-delà de 30 jours** et bouton **SMS** de relance
+  (lien `sms:` pré-rempli).
+
+### Fiche de jeu
+
+Chaque fiche se déplie et regroupe, en accordéons repliés par défaut :
+**📤 Prêt**, **🔗 Liens & contenu** (recherches YouTube / JVC / IGN + 3 liens
+personnels), **📝 Notes**. Restent toujours visibles : genres, statut, format,
+rétrocompatibilité et bloc « Temps de jeu ». La description est repliée à deux
+lignes avec un « Lire la suite ».
+
+### Enrichissement automatique
+
+Trois sources, activables jeu par jeu depuis la fiche :
+
+| Bouton | Ce qu'il remplace |
+|---|---|
+| **🔄 Rechercher sur RAWG** | Jaquette, Metacritic, genres — utile quand un jeu a été mal associé |
+| **🇫🇷 Titre français (Wikipédia)** | Titre commercial officiel FR, puis au choix : résumé, jaquette d'infobox, infos Wikidata |
+| **📦 Jaquette SteamGridDB** | Jaquette verticale 600×900 choisie parmi une grille de vignettes |
+
+**Infobox Wikidata** : développeur, éditeur, dates de sortie par plateforme, mode
+de jeu (solo / multi / coop), série et jeux précédent/suivant. Le moteur de jeu
+est volontairement exclu. Les libellés sont résolus en `fr` → `en` → `mul`
+(Wikidata range les noms propres sous `mul`, ce qui explique que certains
+éditeurs ne remontent pas si on ne demande que `fr`/`en`).
+
+**Bouton « 🌐 Actualiser descriptions »** (en-tête) : régénère la description de
+toute la bibliothèque depuis Wikipédia. Il est **annulable en cours de route**,
+respecte un délai anti-rate-limit (~150 ms) et affiche en fin de course la
+**liste des jeux sans page Wikipédia trouvée**. Il retient le **meilleur titre**
+(exact → préfixe → premier résultat) pour éviter de récupérer la page de la
+*série* au lieu de celle du jeu — sans quoi « Assassin's Creed Unity » héritait
+de la description générique d'« Assassin's Creed ».
+
+### Import de la bibliothèque Xbox Live
+
+Bouton **« 🎮 Importer Xbox »** → récupère l'historique de jeux du compte associé
+à la clé xbl.io.
+
+- **Filtrage** : sur ~164 titres renvoyés, seuls les vrais jeux console sont
+  gardés (~150). Les entrées PC-only / Win32 et les applications (Xbox App,
+  Minecraft Launcher, Solitaire…) sont écartées.
+- **Écran de prévisualisation obligatoire** : chaque titre est marqué
+  **« Nouveau »** ou **« Déjà présent »** (comparaison de titre normalisée), avec
+  compteurs, « tout cocher / décocher » et cases individuelles — indispensable
+  pour écarter les doublons FR/EN que la normalisation ne rattrape pas.
+- **À l'import** : `format: "démat"`, jaquette xbl.io immédiate, **date d'ajout =
+  date de sortie officielle** récupérée via RAWG (repli : dernière session, puis
+  date du jour), plateforme Xbox One / Series X déduite, `backCompat` cohérent.
+  Progression affichée et **arrêt possible**.
+- **Enrichissement post-import** proposé en bannière (RAWG + Wikipédia),
+  best-effort et annulable.
+
+> ⚠️ L'API expose l'**historique joué**, pas la liste des achats : un jeu acheté
+> mais jamais lancé n'apparaît pas, un jeu Game Pass lancé une fois apparaît.
+> Aucun temps de jeu n'est importé (absent de l'endpoint).
+
+### Plateformes et rétrocompatibilité
+
+L'ancienne plateforme « Xbox » est séparée en **Xbox One** / **Xbox Series X**
+selon la date (seuil du **10/11/2020**, sortie de la Series X), via une migration
+idempotente au chargement.
+
+La règle est déclarative (constante `BACK_COMPAT`) : **une plateforme récente
+affiche ses jeux natifs plus ceux de la génération précédente marqués
+`backCompat`**.
+
+- **Xbox Series X** → natifs + Xbox One rétrocompatibles
+- **Switch 2** → natifs + Switch 1 rétrocompatibles
+- **Xbox One** et **Switch 1** restent **stricts**
+
+Badge discret **« 🔄 Compatible Series X »** / **« 🔄 Compatible Switch 2 »**, et
+un toggle **« Jouable sur … : oui / non »** dans la fiche pour les rares
+exceptions. Ce choix manuel est protégé par une **migration versionnée par jeu**
+(`bcV`) : le rattrapage automatique ne s'applique qu'une fois, il n'écrase donc
+jamais une décision prise à la main.
+
+### Sauvegarde
+
+**Export / Import JSON** dans l'onglet Stats, en mode *remplacer* ou *fusionner*.
+C'est le seul moyen de transférer sa bibliothèque d'un appareil à l'autre.
+
+---
+
+## Sources de données
+
+| Source | Clé | CORS | Usage |
+|---|---|---|---|
+| RAWG | oui | ✅ direct | Jaquettes, Metacritic, genres, dates de sortie |
+| Wikipédia FR | non | ✅ direct | Titre officiel français, résumé, image d'infobox |
+| Wikidata | non | ✅ direct | Développeur, éditeur, sorties, mode de jeu, série |
+| SteamGridDB | oui | ❌ via relais | Jaquettes verticales format boîte |
+| xbl.io | oui | ❌ via relais | Historique de la bibliothèque Xbox |
+
+---
+
+## Modèle de données
+
+Un jeu est un objet simple, persisté dans `localStorage` sous la clé `gl_v2` :
+
+```js
+{
+  id, title, platform, format,       // "physique" | "démat"
+  addedDate,                         // sert aussi de date de sortie (proxy)
+  genre: [], style,                  // style = description
+  status,                            // cf. STATUTS
+  note, lentA, lentDate,             // prêt
+  cover, metacritic, hltb,
+  playedMinutes, manualMinutes, sessions: [{ date, minutes }],
+  myLinks: ["", "", ""], tips, tag, progression,
+  backCompat, bcV,                   // rétrocompatibilité + version de migration
+  infobox                            // données Wikidata, ou null
+}
+```
+
+Les champs `note`, `tag` et `progression` ne sont plus affichés mais restent
+présents pour ne pas casser les anciennes sauvegardes.
+
+Les clés API sont stockées séparément, sous `gl_keys`, précisément pour qu'elles
+n'entrent jamais dans l'export.
+
+---
+
+## Architecture et choix techniques
+
+### Pourquoi un seul fichier ?
+
+Le projet est né d'un artefact autonome et a grandi par ajouts successifs. Tout
+est resté dans `src/App.jsx` avec des styles inline : pas de dépendance UI, pas
+de build CSS, un seul endroit à lire.
+
+### Où sont passées les traductions automatiques ?
+
+Les descriptions ont d'abord été traduites de l'anglais via l'API MyMemory
+(gratuite, 500 caractères par requête, avec découpage en segments et recollage).
+Cette approche a été **entièrement retirée** au profit de **Wikipédia FR**, qui
+fournit directement un texte français rédigé, sans quota ni découpage.
+
+### Décisions notables
+
+- **Pas de `npm ci` en CI.** Le lockfile ne réconcilie pas les binaires natifs
+  transitifs (`@emnapi`, tirés de Rollup) entre une génération sous Windows et
+  une exécution sous Linux ; `npm ci` échoue à la validation stricte même après
+  régénération du lockfile. Le workflow utilise `npm install`, qui produit le
+  même build.
+- **Déploiement par artefact**, pas de dossier `docs/` commité : aucun fichier
+  généré n'entre dans le dépôt.
+- **`addedDate` sert de proxy de date de sortie** pour classer Xbox One /
+  Series X. C'est approximatif pour quelques titres anciens (Halo 4, sorti en
+  2012 sur Xbox 360, se retrouve classé Xbox One) — assumé pour rester simple.
+- **Le service worker ne met jamais les appels d'API en cache**, uniquement la
+  coquille de l'application et les jaquettes distantes : les données doivent
+  rester fraîches et échouer proprement hors ligne.
+- **Historique git purgé avant la première publication.** Les clés avaient été
+  committées pendant le développement local ; elles ont été retirées de tous les
+  commits avec `git-filter-repo` **avant** le premier push. Elles ne sont donc
+  jamais sorties de la machine de développement.
+
+---
 
 ## Développement
 
 ```bash
 npm install
-npm run dev     # http://localhost:5173/game-library/
+npm run dev      # http://localhost:5173/game-library/
 npm run build
+npm run preview
+npm run lint     # oxlint
 ```
 
-En développement, le proxy du serveur Vite joue le rôle du Worker (il relaie
-sans détenir de clé), il n'est donc pas nécessaire de déployer le Worker pour
-travailler en local.
+En développement, le proxy du serveur Vite joue exactement le rôle du Worker : il
+relaie `/sgdb/*` et `/xbl/*` **sans détenir de clé** (c'est le client qui envoie
+l'en-tête d'authentification). Il n'est donc **pas nécessaire de déployer le
+Worker pour travailler en local**.
+
+### Structure
+
+```
+├── .github/workflows/deploy.yml   Build + publication GitHub Pages
+├── worker/                        Relais CORS Cloudflare (sans secret) + sa doc
+│   ├── index.js
+│   ├── wrangler.toml
+│   └── README.md
+├── public/                        Icônes PWA (192/512, any + maskable), favicon
+├── src/
+│   ├── App.jsx                    Toute l'application
+│   ├── main.jsx
+│   └── index.css
+├── index.html
+├── vite.config.js                 base, PWA, proxys de dev
+└── PROGRESS.md                    Journal détaillé de l'évolution du projet
+```
+
+---
 
 ## Déploiement
 
-Automatique via GitHub Actions à chaque push sur `main`
-([`.github/workflows/deploy.yml`](.github/workflows/deploy.yml)) : build Vite
-puis publication sur GitHub Pages. Aucun secret n'est requis dans le dépôt.
+Automatique à chaque push sur `main`
+([`.github/workflows/deploy.yml`](.github/workflows/deploy.yml)) : `npm install`,
+`npm run build`, puis publication de `dist/` sur GitHub Pages via les actions
+officielles `configure-pages` / `upload-pages-artifact` / `deploy-pages`.
+
+**Aucun secret n'est nécessaire** dans le dépôt — c'est toute la raison d'être du
+choix « clés saisies par l'utilisateur ».
+
+Le service worker est en `autoUpdate` : une nouvelle version est récupérée
+automatiquement au chargement suivant.
+
+---
+
+## Limites connues
+
+- **Données par appareil.** Tout est en `localStorage` : pas de synchronisation.
+  Le transfert se fait via Export / Import JSON, et les clés sont à ressaisir.
+- **SteamGridDB et l'import Xbox exigent le relais** déployé et renseigné dans ⚙️.
+- **xbl.io** expose l'historique joué, pas les achats, et aucun temps de jeu.
+- **Wikidata est incomplet** sur certains jeux (souvent les titres Nintendo ou
+  très récents) : l'infobox s'affiche alors partiellement, sans casser la fiche.
+- **Le classement Xbox One / Series X repose sur `addedDate`**, faute de date de
+  sortie stockée séparément.
+- **`localStorage` n'est pas un coffre-fort** : les clés y sont lisibles par tout
+  script s'exécutant sur la page. Acceptable pour une application personnelle
+  sans contenu tiers.
+
+---
+
+## Licence
+
+[MIT](LICENSE)
