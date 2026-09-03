@@ -19,6 +19,7 @@ import {
   rendreJeu, preterJeu, emprunteurs, dureeEntreeHistorique, MAX_HISTORIQUE_PRET, aujourdhuiISO,
   BACK_COMPAT, XBOX_SERIES_CUTOFF, PRET_LONG_JOURS,
 } from "./model.js";
+import { ecouterMiseAJour } from "./maj.js";
 
 const jeu = (p = {}) => ({
   id: 1, title: "Jeu", platform: "Xbox Series X", format: "physique",
@@ -346,4 +347,44 @@ test("les emprunteurs comptent le prêt en cours avec les anciens", () => {
   assert.equal(e[0].prets, 2);
   assert.equal(e[0].jours, 14, "10 jours rendus + 4 jours en cours");
   assert.deepEqual(emprunteurs(null), []);
+});
+
+// ── Détection de mise à jour ───────────────────────────────────────────────
+// Le service worker prend le contrôle tout seul, mais l'onglet ouvert exécute
+// encore l'ancien code. La distinction qui compte : une installation initiale
+// n'est pas une mise à jour, et un bandeau qui crierait à la nouveauté au
+// premier lancement serait pire que pas de bandeau du tout.
+
+test("un changement de contrôleur signale une mise à jour, sauf à la première visite", () => {
+  const faireSW = () => {
+    const abonnes = new Set();
+    return {
+      addEventListener: (_, fn) => abonnes.add(fn),
+      removeEventListener: (_, fn) => abonnes.delete(fn),
+      declencher: () => abonnes.forEach(fn => fn()),
+      get nbAbonnes() { return abonnes.size; },
+    };
+  };
+
+  let vues = 0;
+  const avec = faireSW();
+  const stop = ecouterMiseAJour(avec, true, () => vues++);
+  avec.declencher();
+  assert.equal(vues, 1);
+
+  // Première visite : le contrôleur apparaît, ce n'est pas une mise à jour.
+  let vuesPremiere = 0;
+  const sans = faireSW();
+  ecouterMiseAJour(sans, false, () => vuesPremiere++);
+  sans.declencher();
+  assert.equal(vuesPremiere, 0);
+
+  // Le désabonnement rend la main : pas d'écouteur qui survit à l'app.
+  stop();
+  assert.equal(avec.nbAbonnes, 0);
+  avec.declencher();
+  assert.equal(vues, 1);
+
+  // Sans service worker (navigateur qui n'en veut pas), rien ne casse.
+  assert.doesNotThrow(() => ecouterMiseAJour(null, true, () => {})());
 });

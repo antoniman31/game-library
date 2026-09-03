@@ -14,6 +14,7 @@ import { BACK_COMPAT, migrateGames, compterFiltres, validerJeuxImportes, pretEnR
   dureeEntreeHistorique, emprunteurs } from "./lib/model.js";
 import { lire, ecrire, surEchecStockage } from "./lib/storage.js";
 import { chargerSync, enregistrerSync, genererCode, envoyer, recuperer } from "./lib/sync.js";
+import { surMiseAJour } from "./lib/maj.js";
 import {
   loadKeys, setApiKeys, normTitle, hasRawgKey, rawgFirstResult,
   rawgSearch, rawgDetail, wikiFrenchTitles, wikiArticleData, pickBestWikiTitle,
@@ -86,6 +87,7 @@ export default function App() {
   const scoresCancelRef = useRef(false);
   const [deleted, setDeleted] = useState(null); // { game, index } pour l'undo
   const [alerteStockage, setAlerteStockage] = useState(null);
+  const [majDispo, setMajDispo] = useState(false);
   const [sync, setSync] = useState(() => chargerSync());
   const [syncEtat, setSyncEtat] = useState(null);   // { type: "ok" | "ko" | "…", texte }
   const undoRef = useRef(null);
@@ -206,6 +208,10 @@ export default function App() {
     setGames(gs => gs.map(g => g.id === id ? { ...g, metacritic: null } : g));
     setScoresBilan(b => (b?.trouves ? { ...b, trouves: b.trouves.filter(t => t.id !== id) } : b));
   }, []);
+
+  // Une version plus récente est déjà installée, mais cet onglet exécute
+  // encore l'ancienne : le seul remède est un rechargement, autant le dire.
+  useEffect(() => surMiseAJour(() => setMajDispo(true)), []);
 
   // Fetch covers + metacritic manquants au démarrage
   useEffect(() => {
@@ -861,6 +867,16 @@ export default function App() {
       {scoresBilan && (scoresBilan.message
         ? null
         : <ScoresSheet bilan={scoresBilan} onAnnulerScore={retirerScore} onClose={() => setScoresBilan(null)} />)}
+
+      {majDispo && (
+        <div role="status" style={{ position:"fixed", bottom:20, left:"50%", transform:"translateX(-50%)", zIndex:401, display:"flex", alignItems:"center", gap:10, maxWidth:"calc(100vw - 24px)", background:card, border:"1px solid #5493FF", borderRadius:10, padding:"10px 14px", boxShadow:"0 8px 24px rgba(0,0,0,0.4)", animation:"toastIn 200ms ease" }}>
+          {/* Sur 412 px, les trois éléments ne tiennent que si le libellé ne
+              se casse pas : « installée » partait à la ligne, seul. */}
+          <span style={{ color:txt, fontSize:13, whiteSpace:"nowrap" }}>✨ Nouvelle version</span>
+          <button onClick={() => location.reload()} style={{ background:"#5493FF22", border:"1px solid #5493FF", color:"#5493FF", borderRadius:6, padding:"4px 12px", fontSize:12, fontWeight:600, cursor:"pointer" }}>Recharger</button>
+          <button onClick={() => setMajDispo(false)} aria-label="Plus tard" style={{ background:"transparent", border:"none", color:mut, fontSize:14, cursor:"pointer", lineHeight:1, padding:0 }}>✕</button>
+        </div>
+      )}
 
       {deleted && (
         <div style={{ position:"fixed", bottom:20, left:"50%", transform:"translateX(-50%)", zIndex:400, display:"flex", alignItems:"center", gap:14, background:card, border:`1px solid ${bdr}`, borderRadius:10, padding:"10px 14px", boxShadow:"0 8px 24px rgba(0,0,0,0.4)", animation:"toastIn 200ms ease" }}>
