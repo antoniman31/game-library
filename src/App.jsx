@@ -14,6 +14,7 @@ import {
   migrateGames, fmtTime, staleKey, compterFiltres, validerJeuxImportes,
 } from "./lib/model.js";
 import { lire, ecrire, surEchecStockage } from "./lib/storage.js";
+import { chargerSync, enregistrerSync, genererCode, envoyer, recuperer } from "./lib/sync.js";
 import {
   loadKeys, setApiKeys, normTitle, hasRawgKey, rawgFirstResult,
   rawgSearch, rawgDetail, wikiFrenchTitles, wikiArticleData, pickBestWikiTitle,
@@ -74,6 +75,8 @@ export default function App() {
   const refreshCancelRef = useRef(false); // annulation du refresh global (S6)
   const [deleted, setDeleted] = useState(null); // { game, index } pour l'undo
   const [alerteStockage, setAlerteStockage] = useState(null);
+  const [sync, setSync] = useState(() => chargerSync());
+  const [syncEtat, setSyncEtat] = useState(null);   // { type: "ok" | "ko" | "…", texte }
   const undoRef = useRef(null);
   const importRef = useRef(null);
 
@@ -233,6 +236,43 @@ export default function App() {
     clearTimeout(undoRef.current);
     setGames(gs => { const c = [...gs]; c.splice(Math.min(deleted.index, c.length), 0, deleted.game); return c; });
     setDeleted(null);
+  };
+
+  // ── Sauvegarde sur le Worker ───────────────────────────────────────────
+  const majSync = (v) => { setSync(v); enregistrerSync(v); };
+
+  const envoyerAuCloud = async () => {
+    setSyncEtat({ type: "…", texte: "Envoi en cours…" });
+    const r = await envoyer(keys.proxy, sync.code, games);
+    if (!r.ok) { setSyncEtat({ type: "ko", texte: r.erreur }); return; }
+    majSync({ ...sync, majLe: r.data?.updatedAt || new Date().toISOString() });
+    setSyncEtat({ type: "ok", texte: `${games.length} jeux sauvegardés.` });
+  };
+
+  const recupererDuCloud = async () => {
+    setSyncEtat({ type: "…", texte: "Récupération…" });
+    const r = await recuperer(keys.proxy, sync.code);
+    if (!r.ok) { setSyncEtat({ type: "ko", texte: r.erreur }); return; }
+
+    const distants = Array.isArray(r.data?.games) ? r.data.games : null;
+    if (!distants) { setSyncEtat({ type: "ko", texte: "Sauvegarde illisible." }); return; }
+
+    // On valide la sauvegarde distante comme un import de fichier : elle a été
+    // écrite par une autre version de l'app, peut-être plus ancienne.
+    const { jeux, rejetes } = validerJeuxImportes(distants);
+    const quand = r.data.updatedAt ? new Date(r.data.updatedAt).toLocaleString("fr-FR") : "date inconnue";
+
+    // Un remplacement écrase du travail local : il se confirme, chiffres en main.
+    const ok = window.confirm(
+      `Sauvegarde du ${quand} : ${jeux.length} jeu(x).\n` +
+      `Cet appareil en compte ${games.length}.` +
+      (rejetes ? `\n\n⚠️ ${rejetes} entrée(s) ignorée(s).` : "") +
+      `\n\nRemplacer la bibliothèque de cet appareil ?`
+    );
+    if (!ok) { setSyncEtat({ type: "ko", texte: "Récupération annulée." }); return; }
+    setGames(jeux);
+    majSync({ ...sync, majLe: r.data.updatedAt || null });
+    setSyncEtat({ type: "ok", texte: `${jeux.length} jeux récupérés.` });
   };
 
   const exportJSON = () => {
@@ -527,9 +567,53 @@ export default function App() {
                   {savedMsg && <span style={{ color:"#22c55e", fontSize:11 }}>Enregistré ✓</span>}
                 </div>
               </div>
+              <div style={{ background: card, border:`1px solid ${bdr}`, borderRadius:10, padding:14, marginBottom:12 }}>
+                <div style={{ color:txt, fontWeight:600, fontSize:13, marginBottom:4 }}>Synchronisation</div>
+                <div style={{ color:mut, fontSize:11, marginBottom:12, lineHeight:1.5 }}>
+                  Dépose la bibliothèque sur ton relais Cloudflare, pour la retrouver sur un autre
+                  appareil et ne plus dépendre du seul stockage de ce navigateur.
+                  Saisis <strong>le même code</strong> sur chaque appareil. Il reste ici et ne part
+                  jamais dans l'export JSON.
+                </div>
+
+                <div style={{ color:txt, fontSize:12, fontWeight:600, marginBottom:3 }}>Code de synchronisation</div>
+                <div style={{ display:"flex", gap:6, alignItems:"center", flexWrap:"wrap", marginBottom:10 }}>
+                  <input type={showKeys ? "text" : "password"} value={sync.code} placeholder="aucun code"
+                    onChange={e => majSync({ ...sync, code: e.target.value.trim() })}
+                    style={{ ...champStyle, flex:"1 1 180px", width:"auto" }} />
+                  <button onClick={() => {
+                      if (sync.code && !window.confirm("Remplacer le code actuel ? La sauvegarde qui lui est liée deviendra inaccessible sans lui.")) return;
+                      majSync({ ...sync, code: genererCode() });
+                      setSyncEtat(null);
+                    }}
+                    style={{ background:"transparent", border:`1px solid ${bdr}`, color:txt, borderRadius:8, minHeight:38, padding:"0 12px", fontSize:11, cursor:"pointer", whiteSpace:"nowrap" }}>Générer</button>
+                  <button onClick={() => { navigator.clipboard?.writeText(sync.code); setSyncEtat({ type:"ok", texte:"Code copié." }); }}
+                    disabled={!sync.code}
+                    style={{ background:"transparent", border:`1px solid ${bdr}`, color:txt, borderRadius:8, minHeight:38, padding:"0 12px", fontSize:11, cursor: sync.code ? "pointer":"default", opacity: sync.code ? 1:0.5, whiteSpace:"nowrap" }}>Copier</button>
+                </div>
+
+                <div style={{ display:"flex", gap:8, marginBottom:8 }}>
+                  <button onClick={envoyerAuCloud} disabled={syncEtat?.type === "…"}
+                    style={{ flex:1, minHeight:"var(--tap)", background:"#5493FF22", border:"1px solid #5493FF", color:"#5493FF", borderRadius:8, fontSize:12, fontWeight:600, cursor:"pointer" }}>⬆ Envoyer</button>
+                  <button onClick={recupererDuCloud} disabled={syncEtat?.type === "…"}
+                    style={{ flex:1, minHeight:"var(--tap)", background:"transparent", border:`1px solid ${bdr}`, color:txt, borderRadius:8, fontSize:12, fontWeight:600, cursor:"pointer" }}>⬇ Récupérer</button>
+                </div>
+
+                {syncEtat && (
+                  <div style={{ color: syncEtat.type === "ko" ? "#ef4444" : syncEtat.type === "ok" ? "#22c55e" : mut, fontSize:11, lineHeight:1.4 }}>
+                    {syncEtat.type === "ok" ? "✓ " : syncEtat.type === "ko" ? "✕ " : "⏳ "}{syncEtat.texte}
+                  </div>
+                )}
+                {sync.majLe && syncEtat?.type !== "…" && (
+                  <div style={{ color:mut, fontSize:10, marginTop:4 }}>
+                    Dernière synchronisation : {new Date(sync.majLe).toLocaleString("fr-FR")}
+                  </div>
+                )}
+              </div>
+
               <div style={{ background: card, border:`1px solid ${bdr}`, borderRadius:10, padding:14, color:mut, fontSize:11, lineHeight:1.5 }}>
-                ⚠️ L'<strong>Export JSON</strong> (onglet Stats) contient tes jeux mais <strong>pas tes clés</strong> — c'est volontaire, pour pouvoir partager ou sauvegarder un export sans fuite.
-                Sur un nouvel appareil, il faut donc importer l'export <em>et</em> resaisir les clés ici.
+                ⚠️ L'<strong>Export JSON</strong> (onglet Stats) contient tes jeux mais <strong>ni tes clés ni ton code de synchronisation</strong> — c'est volontaire, pour pouvoir partager ou sauvegarder un export sans fuite.
+                Sur un nouvel appareil, il faut donc récupérer la bibliothèque <em>et</em> resaisir ces valeurs ici.
               </div>
             </div>
           );
