@@ -1,0 +1,5 @@
+name = "game-library-proxy"
+main = "index.js"
+compatibility_date = "2026-01-01"
+
+# Aucun secret ni variable : les clés API sont fournies par le client à chaque requête.
