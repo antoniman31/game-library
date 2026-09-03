@@ -8,6 +8,8 @@ import {
   sgdbSearch, sgdbGrids,
 } from "../lib/api.js";
 
+const boutonSource = { height: 36, padding: "0 12px", background: "transparent", border: "1px solid #5493FF", color: "#5493FF", borderRadius: 8, fontSize: 11, cursor: "pointer" };
+
 function GameCard({ g, onEdit, onDelete, onEnrich, autoOpen }) {
   const [open, setOpen] = useState(!!autoOpen);
   const rootRef = useRef(null);
@@ -37,6 +39,8 @@ function GameCard({ g, onEdit, onDelete, onEnrich, autoOpen }) {
   const [sgdbDone, setSgdbDone] = useState(false);
   const sgdbDebRef = useRef(null);
   const [descOpen, setDescOpen] = useState(false);
+  const [pretOuvert, setPretOuvert] = useState(false);
+  const [sourcesOuvertes, setSourcesOuvertes] = useState(false);
   const [section, setSection] = useState(null);
   const toggle = s => setSection(c => c === s ? null : s);
 
@@ -46,6 +50,7 @@ function GameCard({ g, onEdit, onDelete, onEnrich, autoOpen }) {
   const enRetard = pretEnRetard(g);
   const jours = joursDePret(g);
   const baseBorder = enRetard ? "#f59e0b" : bdr;
+  const noteCouleur = g.metacritic >= 80 ? "#22c55e" : g.metacritic >= 60 ? "#f59e0b" : "#ef4444";
 
   const rawgQuery = (q) => { setRawgQ(q); clearTimeout(rawgDebRef.current); rawgDebRef.current = setTimeout(async () => setRawgSugg(await rawgSearch(q)), 350); };
   const rawgPick = async (s) => {
@@ -115,12 +120,14 @@ function GameCard({ g, onEdit, onDelete, onEnrich, autoOpen }) {
   const sgdbPick = (url) => { onEdit(g.id, "cover", url); setSgdbOpen(false); };
 
   const acc = (id, title, content) => (
-    <div style={{ marginBottom: 8 }}>
-      <button onClick={() => toggle(id)} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%", boxSizing: "border-box", background: bg, border: `1px solid ${bdr}`, borderRadius: section === id ? "8px 8px 0 0" : 8, padding: "8px 12px", color: txt, fontSize: 12, fontWeight: 600, cursor: "pointer", textAlign: "left" }}>
+    // Un filet suffit à séparer : encadrer chaque section donnait six
+    // rectangles de poids identique, et donc aucune hiérarchie.
+    <div>
+      <button onClick={() => toggle(id)} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%", boxSizing: "border-box", background: "transparent", border: "none", borderTop: `1px solid ${bdr}`, padding: "13px 2px", color: txt, fontSize: 12, fontWeight: 600, cursor: "pointer", textAlign: "left" }}>
         <span>{title}</span>
         <span style={{ color: mut }}>{section === id ? "▾" : "▸"}</span>
       </button>
-      {section === id && <div style={{ background: bg, border: `1px solid ${bdr}`, borderTop: "none", borderRadius: "0 0 8px 8px", padding: "10px 12px" }}>{content}</div>}
+      {section === id && <div style={{ padding: "0 2px 12px" }}>{content}</div>}
     </div>
   );
 
@@ -135,10 +142,15 @@ function GameCard({ g, onEdit, onDelete, onEnrich, autoOpen }) {
             {g.format === "démat" && <span style={{ background: demat, color: "#5493FF", fontSize: 9, borderRadius: 3, padding: "1px 5px" }}>démat</span>}
             {BACK_COMPAT_PARENT[g.platform] && g.backCompat && <span title={`Rétrocompatible ${BACK_COMPAT_PARENT[g.platform]}`} style={{ background: "#107C1022", color: "#22c55e", fontSize: 9, borderRadius: 3, padding: "1px 5px" }}>🔄 Compatible {BACK_COMPAT_PARENT[g.platform].replace("Xbox ", "")}</span>}
             {g.lentA && <span key={g.lentA} style={{ background: "#7c320044", color: "#f59e0b", fontSize: 9, borderRadius: 3, padding: "1px 5px", animation: "statusPop 200ms ease" }}>📤 {g.lentA}{jours !== null ? ` · ${jours}j` : ""}</span>}
+            {/* Rien d'autre ici : les badges disent l'exemplaire, pas le contenu. */}
           </div>
-          <div style={{ fontWeight: 600, fontSize: 13, color: txt, marginBottom: 3, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 1, WebkitBoxOrient: "vertical" }}>{g.title}</div>
-          <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-            {g.metacritic && <span style={{ color: g.metacritic >= 80 ? "#22c55e" : g.metacritic >= 60 ? "#f59e0b" : "#ef4444", fontSize: 11, fontWeight: 700 }}>MC {g.metacritic}</span>}
+          <div style={{ fontWeight: 600, fontSize: 13, color: txt, marginBottom: 2, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 1, WebkitBoxOrient: "vertical" }}>{g.title}</div>
+          {/* Le titre laissait un grand vide à sa droite ; la note, le genre et
+              la date d'ajout le remplissent, et la liste se lit sans déplier. */}
+          <div style={{ display: "flex", gap: 8, alignItems: "center", overflow: "hidden", whiteSpace: "nowrap", fontSize: 11, color: mut }}>
+            {g.metacritic && <span style={{ color: noteCouleur, fontWeight: 700 }}>MC {g.metacritic}</span>}
+            {g.genre[0] && <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{g.genre[0]}</span>}
+            <span style={{ flexShrink: 0 }}>{new Date(g.addedDate).toLocaleDateString("fr-FR")}</span>
           </div>
         </div>
         <span style={{ color: mut, alignSelf: "center" }}>{open ? "▲" : "▼"}</span>
@@ -148,77 +160,91 @@ function GameCard({ g, onEdit, onDelete, onEnrich, autoOpen }) {
 
       {open && (
         <div style={{ padding: "12px 14px", borderTop: `1px solid ${bdr}` }} onClick={e => e.stopPropagation()}>
-          {g.style && (
-            <div style={{ marginBottom: 10 }}>
-              <div style={{ color: mut, fontSize: 12, fontStyle: "italic", lineHeight: 1.4, ...(descOpen ? {} : { overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }) }}>{g.style}</div>
-              {g.style.length > 90 && <button onClick={() => setDescOpen(o => !o)} style={{ background: "transparent", border: "none", color: "#5493FF", fontSize: 10, cursor: "pointer", padding: "2px 0 0", marginTop: 2 }}>{descOpen ? "▴ Réduire" : "▾ Lire la suite"}</button>}
+          {/* Identité. La jaquette flotte : le sous-titre puis la description
+              l'habillent. Un simple flex laissait un vide de plusieurs dizaines
+              de pixels sous le texte, à côté d'une jaquette bien plus haute. */}
+          <div style={{ overflow: "hidden", marginBottom: 14 }}>
+            <div style={{ float: "left", margin: "0 14px 8px 0" }}>
+              <Cover src={g.cover} title={g.title} size={96} />
             </div>
-          )}
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginBottom: 12 }}>
-            {g.genre.map(x => <span key={x} style={{ background: bg, color: mut, fontSize: 10, borderRadius: 4, padding: "2px 7px", border: `1px solid ${bdr}` }}>{x}</span>)}
-          </div>
-
-          {/* Infos Wikidata (si présentes) */}
-          {g.infobox && (
-            <div style={{ background: bg, border: `1px solid ${bdr}`, borderRadius: 8, padding: "8px 10px", marginBottom: 12 }}>
-              <InfoboxView info={g.infobox} />
+            <div style={{ fontSize: 17, fontWeight: 700, lineHeight: 1.25, color: txt, marginBottom: 6 }}>{g.title}</div>
+            <div style={{ color: mut, fontSize: 11, lineHeight: 1.7, marginBottom: g.style ? 10 : 0 }}>
+              <b style={{ color: txt, fontWeight: 600 }}>{g.platform}</b> · {g.format}
+              {g.genre.length > 0 && <><br />{g.genre.join(" · ")}</>}
+              <br />Ajouté le {new Date(g.addedDate).toLocaleDateString("fr-FR")}
             </div>
-          )}
-
-          {/* Format physique / démat */}
-          <div style={{ display: "flex", gap: 5, alignItems: "center", marginBottom: 12 }}>
-            <span style={{ color: mut, fontSize: 11 }}>Format :</span>
-            {["physique", "démat"].map(f => <button key={f} onClick={() => onEdit(g.id, "format", f)} style={{ background: g.format === f ? "#5493FF22" : "transparent", border: `1px solid ${g.format === f ? "#5493FF" : bdr}`, color: g.format === f ? "#5493FF" : mut, borderRadius: 6, padding: "0 12px", minHeight: 36, fontSize: 11, cursor: "pointer" }}>{f}</button>)}
-          </div>
-
-          {/* Rétrocompatibilité : exception au cas par cas (jeux Xbox One / Switch 1) */}
-          {BACK_COMPAT_PARENT[g.platform] && (
-            <div style={{ display: "flex", gap: 5, alignItems: "center", marginBottom: 12, flexWrap: "wrap" }}>
-              <span style={{ color: mut, fontSize: 11 }}>Jouable sur {BACK_COMPAT_PARENT[g.platform]} :</span>
-              {[["oui", true], ["non", false]].map(([label, val]) => (
-                <button key={label} onClick={() => onEdit(g.id, "backCompat", val)}
-                  style={{ background: !!g.backCompat === val ? (val ? "#22c55e22" : "#ef444422") : "transparent", border: `1px solid ${!!g.backCompat === val ? (val ? "#22c55e" : "#ef4444") : bdr}`, color: !!g.backCompat === val ? (val ? "#22c55e" : "#ef4444") : mut, borderRadius: 6, padding: "0 12px", minHeight: 36, fontSize: 11, cursor: "pointer" }}>{label}</button>
-              ))}
-            </div>
-          )}
-
-          {/* Prêt (accordéon) */}
-          {/* Prêt — l'une des deux raisons d'être de l'application, donc
-              déplié d'office plutôt qu'enfermé dans un accordéon. Marquer un
-              jeu rendu supposait auparavant de vider le champ du nom puis de
-              valider : personne ne devinait ce geste, d'où un bouton explicite. */}
-          <div style={{ background: bg, border: `1px solid ${g.lentA ? "#f59e0b" : bdr}`, borderRadius: 8, padding: "10px 12px", marginBottom: 12 }}>
-            {g.lentA ? (
+            {g.style && (
               <>
-                <div style={{ color: "#f59e0b", fontSize: 12, fontWeight: 600, marginBottom: 2 }}>📤 Prêté à {g.lentA}</div>
-                <div style={{ color: enRetard ? "#f59e0b" : mut, fontSize: 11, marginBottom: 8 }}>
-                  Depuis le {new Date(g.lentDate).toLocaleDateString("fr-FR")}
-                  {jours !== null ? ` · ${jours} jour${jours > 1 ? "s" : ""}` : ""}
-                  {enRetard ? " ⚠️" : ""}
-                </div>
-                <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                  <button onClick={() => { onEdit(g.id, "lentA", null); onEdit(g.id, "lentDate", null); setLoanName(""); }}
-                    style={{ minHeight: 38, padding: "0 14px", background: "#22c55e22", border: "1px solid #22c55e", color: "#22c55e", borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
-                    ✓ Rendu
-                  </button>
-                  <a href={`sms:?body=${encodeURIComponent(`Salut ! Tu penses à me rendre ${g.title} ? 😊`)}`}
-                    style={{ minHeight: 38, padding: "0 14px", display: "inline-flex", alignItems: "center", background: "transparent", border: `1px solid ${bdr}`, color: txt, borderRadius: 6, fontSize: 12, textDecoration: "none" }}>
-                    Relancer par SMS
-                  </a>
-                </div>
+                {/* En italique gris coupé à deux lignes, le seul texte qu'on ait
+                    envie de lire était le plus pénible de la fiche. */}
+                <div style={{ color: txt, fontSize: 13, lineHeight: 1.5, ...(descOpen ? {} : { overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 4, WebkitBoxOrient: "vertical" }) }}>{g.style}</div>
+                {g.style.length > 160 && <button onClick={() => setDescOpen(o => !o)} style={{ background: "transparent", border: "none", color: "#5493FF", fontSize: 11, cursor: "pointer", padding: "6px 0 0" }}>{descOpen ? "▴ Réduire" : "▾ Lire la suite"}</button>}
               </>
-            ) : (
-              <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                <input value={loanName} onChange={e => setLoanName(e.target.value)} placeholder="Prêter à…"
-                  aria-label="Nom de la personne à qui prêter ce jeu"
-                  style={{ flex: 1, minWidth: 0, minHeight: 38, background: "transparent", border: `1px solid ${bdr}`, borderRadius: 6, color: txt, padding: "0 8px", fontSize: 12, outline: "none" }} />
-                <button onClick={() => { const n = loanName.trim(); if (!n) return; onEdit(g.id, "lentA", n); onEdit(g.id, "lentDate", new Date().toISOString().slice(0, 10)); }}
-                  disabled={!loanName.trim()}
-                  style={{ minHeight: 38, padding: "0 14px", background: loanName.trim() ? "#f59e0b22" : "transparent", border: `1px solid ${loanName.trim() ? "#f59e0b" : bdr}`, color: loanName.trim() ? "#f59e0b" : mut, borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: loanName.trim() ? "pointer" : "default" }}>
-                  Prêter
-                </button>
+            )}
+          </div>
+
+          {/* Infos Wikidata : des filets, plus un cadre (voir InfoboxView). */}
+          {g.infobox && <div style={{ marginBottom: 16 }}><InfoboxView info={g.infobox} /></div>}
+
+          {/* Possession : format, rétrocompatibilité et prêt réunis, puisque
+              c'est le même sujet — mon exemplaire. Un fond, pas une bordure :
+              six blocs encadrés de poids égal ne hiérarchisaient rien. */}
+          <div style={{ background: bg, borderRadius: 10, padding: 12, marginBottom: 4 }}>
+            <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+              <span style={{ color: mut, fontSize: 11, flex: "0 0 52px", paddingTop: 10 }}>Format</span>
+              <div style={{ display: "flex", border: `1px solid ${bdr}`, borderRadius: 8, overflow: "hidden" }}>
+                {["physique", "démat"].map(f => (
+                  <button key={f} onClick={() => onEdit(g.id, "format", f)} aria-pressed={g.format === f}
+                    style={{ background: g.format === f ? "#5493FF22" : "transparent", border: "none", color: g.format === f ? "#5493FF" : mut, fontWeight: g.format === f ? 600 : 400, fontSize: 12, padding: "0 14px", height: 36, cursor: "pointer" }}>{f}</button>
+                ))}
+              </div>
+            </div>
+
+            {BACK_COMPAT_PARENT[g.platform] && (
+              <div style={{ display: "flex", gap: 10, alignItems: "flex-start", marginTop: 12 }}>
+                <span style={{ color: mut, fontSize: 11, flex: "0 0 52px", paddingTop: 10 }}>Sur {BACK_COMPAT_PARENT[g.platform].replace("Xbox ", "")}</span>
+                <div style={{ display: "flex", border: `1px solid ${bdr}`, borderRadius: 8, overflow: "hidden" }}>
+                  {[["oui", true], ["non", false]].map(([label, val]) => (
+                    <button key={label} onClick={() => onEdit(g.id, "backCompat", val)} aria-pressed={!!g.backCompat === val}
+                      style={{ background: !!g.backCompat === val ? (val ? "#22c55e22" : "#ef444422") : "transparent", border: "none", color: !!g.backCompat === val ? (val ? "#22c55e" : "#ef4444") : mut, fontWeight: !!g.backCompat === val ? 600 : 400, fontSize: 12, padding: "0 16px", height: 36, cursor: "pointer" }}>{label}</button>
+                  ))}
+                </div>
               </div>
             )}
+
+            {/* Le prêt était enfermé dans un accordéon, et « rendu » se devinait
+                en vidant le champ du nom. */}
+            <div style={{ display: "flex", gap: 10, alignItems: "flex-start", marginTop: 12 }}>
+              <span style={{ color: mut, fontSize: 11, flex: "0 0 52px", paddingTop: 10 }}>Prêt</span>
+              {g.lentA ? (
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ color: "#f59e0b", fontSize: 12, fontWeight: 600, paddingTop: 2 }}>📤 Prêté à {g.lentA}</div>
+                  <div style={{ color: "#f59e0b", fontSize: 11, margin: "2px 0 8px" }}>
+                    Depuis le {new Date(g.lentDate).toLocaleDateString("fr-FR")}
+                    {jours !== null ? ` · ${jours} jour${jours > 1 ? "s" : ""}` : ""}
+                    {enRetard ? " ⚠️" : ""}
+                  </div>
+                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                    <button onClick={() => { onEdit(g.id, "lentA", null); onEdit(g.id, "lentDate", null); setLoanName(""); }}
+                      style={{ height: 36, padding: "0 14px", background: "#22c55e22", border: "1px solid #22c55e", color: "#22c55e", borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>✓ Rendu</button>
+                    <a href={`sms:?body=${encodeURIComponent(`Salut ! Tu penses à me rendre ${g.title} ? 😊`)}`}
+                      style={{ height: 36, padding: "0 14px", display: "inline-flex", alignItems: "center", background: "transparent", border: `1px solid ${bdr}`, color: txt, borderRadius: 8, fontSize: 12, textDecoration: "none" }}>Relancer par SMS</a>
+                  </div>
+                </div>
+              ) : pretOuvert ? (
+                <div style={{ flex: 1, minWidth: 0, display: "flex", gap: 6 }}>
+                  <input value={loanName} onChange={e => setLoanName(e.target.value)} placeholder="Nom…" autoFocus
+                    aria-label="Nom de la personne à qui prêter ce jeu"
+                    style={{ flex: 1, minWidth: 0, height: 36, background: "transparent", border: `1px solid ${bdr}`, borderRadius: 8, color: txt, padding: "0 10px", fontSize: 12, outline: "none" }} />
+                  <button onClick={() => { const n = loanName.trim(); if (!n) return; onEdit(g.id, "lentA", n); onEdit(g.id, "lentDate", new Date().toISOString().slice(0, 10)); setPretOuvert(false); }}
+                    disabled={!loanName.trim()}
+                    style={{ height: 36, padding: "0 14px", background: loanName.trim() ? "#f59e0b22" : "transparent", border: `1px solid ${loanName.trim() ? "#f59e0b" : bdr}`, color: loanName.trim() ? "#f59e0b" : mut, borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: loanName.trim() ? "pointer" : "default" }}>Prêter</button>
+                </div>
+              ) : (
+                <button onClick={() => setPretOuvert(true)}
+                  style={{ height: 36, padding: "0 14px", background: "transparent", border: `1px solid ${bdr}`, color: txt, borderRadius: 8, fontSize: 12, cursor: "pointer" }}>📤 Prêter ce jeu</button>
+              )}
+            </div>
           </div>
 
           {/* Liens & contenu (accordéon) */}
@@ -350,15 +376,29 @@ function GameCard({ g, onEdit, onDelete, onEnrich, autoOpen }) {
               {!sgdbBusy && sgdbDone && sgdbGridsList.length === 0 && <div style={{ color: mut, fontSize: 11, marginTop: 6 }}>Aucune jaquette trouvée sur SteamGridDB</div>}
             </div>
           )}
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
-            <div style={{ color: mut, fontSize: 10 }}>Ajouté le {new Date(g.addedDate).toLocaleDateString("fr-FR")}</div>
-            <div style={{ display: "flex", gap: 6, flexWrap: "wrap", justifyContent: "flex-end" }}>
-              <button onClick={() => { setRawgOpen(o => !o); if (!rawgOpen) { setRawgQ(g.title); rawgQuery(g.title); } }} style={{ background: "transparent", border: "1px solid #5493FF", color: "#5493FF", borderRadius: 6, padding: "0 10px", minHeight: 38, fontSize: 11, cursor: "pointer" }}>🔄 Rechercher sur RAWG</button>
-              <button onClick={() => { setWikiOpen(o => !o); if (!wikiOpen) { setWikiQ(g.title); setWikiDone(false); wikiQuery(g.title); } }} style={{ background: "transparent", border: "1px solid #5493FF", color: "#5493FF", borderRadius: 6, padding: "0 10px", minHeight: 38, fontSize: 11, cursor: "pointer" }}>🇫🇷 Titre français</button>
-              <button onClick={() => { setSgdbOpen(o => !o); if (!sgdbOpen) { setSgdbQ(g.title); setSgdbDone(false); sgdbQuery(g.title); } }} style={{ background: "transparent", border: "1px solid #5493FF", color: "#5493FF", borderRadius: 6, padding: "0 10px", minHeight: 38, fontSize: 11, cursor: "pointer" }}>📦 Jaquette SteamGridDB</button>
-              <button onClick={() => onDelete(g)} style={{ background: "transparent", border: "1px solid #ef4444", color: "#ef4444", borderRadius: 6, padding: "0 10px", minHeight: 38, fontSize: 11, cursor: "pointer" }}>Supprimer</button>
-            </div>
+          {/* Outils. « Ajouté le » était orphelin en bas à gauche, calé contre
+              quatre boutons qui débordaient sur deux lignes — et Supprimer,
+              irréversible, partageait le groupe de trois actions d'enrichissement.
+              La date est remontée dans l'identité ; les sources se rangent
+              derrière un bouton, puisqu'on enrichit un jeu une fois. */}
+          <div style={{ display: "flex", gap: 8, alignItems: "center", paddingTop: 12, borderTop: `1px solid ${bdr}` }}>
+            <button onClick={() => setSourcesOuvertes(o => !o)}
+              style={{ height: 38, padding: "0 14px", background: sourcesOuvertes ? "#5493FF22" : "transparent", border: `1px solid ${sourcesOuvertes ? "#5493FF" : bdr}`, color: sourcesOuvertes ? "#5493FF" : mut, borderRadius: 8, fontSize: 12, cursor: "pointer" }}>
+              ⋯ Sources
+            </button>
+            <button onClick={() => onDelete(g)}
+              style={{ marginLeft: "auto", height: 38, padding: "0 10px", background: "transparent", border: "none", color: "#ef4444", fontSize: 12, cursor: "pointer", opacity: 0.85 }}>
+              Supprimer
+            </button>
           </div>
+
+          {sourcesOuvertes && (
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 10 }}>
+              <button onClick={() => { setRawgOpen(o => !o); if (!rawgOpen) { setRawgQ(g.title); rawgQuery(g.title); } }} style={boutonSource}>🔄 RAWG</button>
+              <button onClick={() => { setWikiOpen(o => !o); if (!wikiOpen) { setWikiQ(g.title); setWikiDone(false); wikiQuery(g.title); } }} style={boutonSource}>🇫🇷 Titre français</button>
+              <button onClick={() => { setSgdbOpen(o => !o); if (!sgdbOpen) { setSgdbQ(g.title); setSgdbDone(false); sgdbQuery(g.title); } }} style={boutonSource}>📦 Jaquette</button>
+            </div>
+          )}
         </div>
       )}
     </div>
