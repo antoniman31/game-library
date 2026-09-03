@@ -668,8 +668,39 @@ export default function App() {
                 )}
               </div>
 
+              {/* La copie hors ligne, juste sous la synchronisation : les deux
+                  répondent au même besoin — sortir la bibliothèque de cet
+                  appareil et l'y ramener. Le bloc vivait dans l'onglet Stats,
+                  au point que l'avertissement ci-dessous devait donner des
+                  indications routières vers un autre onglet. */}
+              <div style={{ background: card, border:`1px solid ${bdr}`, borderRadius:10, padding:14, marginBottom:12 }}>
+                <div style={{ color:txt, fontWeight:600, fontSize:13, marginBottom:4 }}>Copie hors ligne</div>
+                <div style={{ color:mut, fontSize:11, marginBottom:10, lineHeight:1.5 }}>
+                  Un fichier JSON sur cet appareil, utile avant une manipulation risquée
+                  ou quand le relais n'est pas configuré.
+                </div>
+                <div style={{ display:"flex", gap:8 }}>
+                  <button onClick={exportJSON} style={{ flex:1, minHeight:"var(--tap)", background:"#5493FF22", border:"1px solid #5493FF", color:"#5493FF", borderRadius:8, fontSize:12, fontWeight:600, cursor:"pointer" }}>⬇ Exporter</button>
+                  <button onClick={() => importRef.current?.click()} style={{ flex:1, minHeight:"var(--tap)", background:"transparent", border:`1px solid ${bdr}`, color:txt, borderRadius:8, fontSize:12, fontWeight:600, cursor:"pointer" }}>⬆ Importer</button>
+                  <input ref={importRef} type="file" accept="application/json,.json" onChange={importJSON} style={{ display:"none" }} />
+                </div>
+              </div>
+
+              {/* Le thème est une préférence, pas une action : il quitte le
+                  panneau « ⋯ », qui ne garde que les opérations ponctuelles. */}
+              <div style={{ background: card, border:`1px solid ${bdr}`, borderRadius:10, padding:14, marginBottom:12, display:"flex", alignItems:"center", gap:12 }}>
+                <div style={{ flex:1, minWidth:0 }}>
+                  <div style={{ color:txt, fontWeight:600, fontSize:13 }}>Thème</div>
+                  <div style={{ color:mut, fontSize:11, marginTop:2 }}>{theme === "dark" ? "Sombre" : "Clair"}</div>
+                </div>
+                <button onClick={() => setTheme(t => (t === "dark" ? "light" : "dark"))}
+                  style={{ minHeight:"var(--tap)", padding:"0 14px", background:"transparent", border:`1px solid ${bdr}`, color:txt, borderRadius:8, fontSize:12, cursor:"pointer", whiteSpace:"nowrap" }}>
+                  {theme === "dark" ? "☀️ Passer en clair" : "🌙 Passer en sombre"}
+                </button>
+              </div>
+
               <div style={{ background: card, border:`1px solid ${bdr}`, borderRadius:10, padding:14, color:mut, fontSize:11, lineHeight:1.5 }}>
-                ⚠️ L'<strong>Export JSON</strong> (onglet Stats) contient tes jeux mais <strong>ni tes clés ni ton code de synchronisation</strong> — c'est volontaire, pour pouvoir partager ou sauvegarder un export sans fuite.
+                ⚠️ L'<strong>export JSON</strong> contient tes jeux mais <strong>ni tes clés ni ton code de synchronisation</strong> — c'est volontaire, pour pouvoir partager ou sauvegarder un export sans fuite.
                 Sur un nouvel appareil, il faut donc récupérer la bibliothèque <em>et</em> resaisir ces valeurs ici.
               </div>
             </div>
@@ -695,15 +726,6 @@ export default function App() {
                 </div>
               ))}
             </div>
-            <div style={{ background:card, border:`1px solid ${bdr}`, borderRadius:10, padding:14 }}>
-              <div style={{ color:txt, fontWeight:600, fontSize:13, marginBottom:4 }}>Sauvegarde</div>
-              <div style={{ color:mut, fontSize:11, marginBottom:10 }}>Exporte ou restaure toute la bibliothèque au format JSON.</div>
-              <div style={{ display:"flex", gap:8 }}>
-                <button onClick={exportJSON} style={{ flex:1, background:"#5493FF22", border:"1px solid #5493FF", color:"#5493FF", borderRadius:8, padding:"8px 12px", fontSize:12, fontWeight:600, cursor:"pointer" }}>⬇ Exporter</button>
-                <button onClick={() => importRef.current?.click()} style={{ flex:1, background:"transparent", border:`1px solid ${bdr}`, color:txt, borderRadius:8, padding:"8px 12px", fontSize:12, fontWeight:600, cursor:"pointer" }}>⬆ Importer</button>
-                <input ref={importRef} type="file" accept="application/json,.json" onChange={importJSON} style={{ display:"none" }} />
-              </div>
-            </div>
           </div>
         )}
       </div>
@@ -724,8 +746,6 @@ export default function App() {
       {showActions && (
         <ActionsSheet
           onClose={() => setShowActions(false)}
-          theme={theme}
-          onToggleTheme={() => setTheme(t => (t === "dark" ? "light" : "dark"))}
           onRefreshDescriptions={refreshAllDescriptions}
           refreshing={refreshing}
           refreshProg={refreshProg}
