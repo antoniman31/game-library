@@ -15,6 +15,7 @@ import {
 } from "./lib/model.js";
 import { lire, ecrire, surEchecStockage } from "./lib/storage.js";
 import { chargerSync, enregistrerSync, genererCode, envoyer, recuperer } from "./lib/sync.js";
+import { chargerChrono, enregistrerChrono } from "./lib/chrono.js";
 import {
   loadKeys, setApiKeys, normTitle, hasRawgKey, rawgFirstResult,
   rawgSearch, rawgDetail, wikiFrenchTitles, wikiArticleData, pickBestWikiTitle,
@@ -62,8 +63,11 @@ export default function App() {
   const [enrichProg, setEnrichProg] = useState(0);
   const enrichCancelRef = useRef(false);
   const [lastAddedId, setLastAddedId] = useState(null);
-  const [activeTimer, setActiveTimer] = useState(null);
-  const [timerStart, setTimerStart] = useState(null);
+  // Le chrono ne vivait que dans la mémoire de React : Android tue
+  // régulièrement une PWA laissée en arrière-plan, et la session en cours
+  // disparaissait avec elle. Il est donc relu au démarrage.
+  const [activeTimer, setActiveTimer] = useState(() => chargerChrono().id);
+  const [timerStart, setTimerStart] = useState(() => chargerChrono().debut);
   // Le thème est persisté : il repartait en sombre à chaque rechargement.
   // index.html le pose sur <html> avant le premier rendu pour éviter le clignotement.
   const [theme, setTheme] = useState(() => {
@@ -80,7 +84,22 @@ export default function App() {
   const undoRef = useRef(null);
   const importRef = useRef(null);
 
-  useEffect(() => { ecrire("gl_v2", JSON.stringify(games)); }, [games]);
+  // La bibliothèque entière était sérialisée à chaque changement de `games`.
+  // Taper une note de 200 caractères déclenchait 200 écritures d'environ
+  // 136 Ko, soit 27 Mo poussés dans le stockage pour une phrase. Un délai de
+  // 400 ms ramène ça à une écriture par pause de frappe.
+  //
+  // `pagehide` complète le délai : sans lui, fermer l'onglet dans les 400 ms
+  // qui suivent la dernière frappe perdrait la modification. Il se déclenche
+  // aussi quand Android met la PWA en arrière-plan, cas le plus fréquent.
+  const gamesRef = useRef(games);
+  gamesRef.current = games;
+  useEffect(() => {
+    const enregistrer = () => ecrire("gl_v2", JSON.stringify(gamesRef.current));
+    const t = setTimeout(enregistrer, 400);
+    window.addEventListener("pagehide", enregistrer);
+    return () => { clearTimeout(t); window.removeEventListener("pagehide", enregistrer); };
+  }, [games]);
 
   // Une écriture qui échoue doit se voir : sinon on continue à noter et à
   // chronométrer dans une app qui ne garde plus rien.
@@ -162,11 +181,18 @@ export default function App() {
 
   const edit = (id, field, val) => setGames(gs => gs.map(g => g.id === id ? { ...g, [field]: val } : g));
   const enrichGame = (id, data) => setGames(gs => gs.map(g => g.id === id ? { ...g, ...data } : g));
-  const startTimer = (id) => { setActiveTimer(id); setTimerStart(Date.now()); };
+  const startTimer = (id) => {
+    const debut = Date.now();
+    setActiveTimer(id); setTimerStart(debut);
+    enregistrerChrono({ id, debut });
+  };
   const stopTimer = (id) => {
-    const mins = Math.round((Date.now() - timerStart) / 60000);
+    // Garde : sans début connu, `Date.now() - null` vaut Date.now() et
+    // ajouterait une cinquantaine d'années de temps de jeu.
+    const mins = timerStart ? Math.round((Date.now() - timerStart) / 60000) : 0;
     if (mins > 0) setGames(gs => gs.map(g => g.id === id ? { ...g, playedMinutes: g.playedMinutes + mins, sessions: [...(g.sessions || []), { date: new Date().toISOString(), minutes: mins }] } : g));
     setActiveTimer(null); setTimerStart(null);
+    enregistrerChrono(null);
   };
   // Ajoute le jeu puis l'ouvre directement en fiche complète (parité fiche/ajout).
   const addGame = (g) => {
@@ -499,7 +525,7 @@ export default function App() {
         ) : (
           <>
           <div style={{ display:"flex", flexDirection:"column", gap: view === "compact" ? 6 : 8 }}>
-            {visible.map(g => <GameCard key={g.id} g={g} onEdit={edit} onDelete={deleteGame} onEnrich={enrichGame} activeTimer={activeTimer} onStartTimer={startTimer} onStopTimer={stopTimer} autoOpen={g.id === lastAddedId} compact={view === "compact"} />)}
+            {visible.map(g => <GameCard key={g.id} g={g} onEdit={edit} onDelete={deleteGame} onEnrich={enrichGame} activeTimer={activeTimer} timerStart={timerStart} onStartTimer={startTimer} onStopTimer={stopTimer} autoOpen={g.id === lastAddedId} compact={view === "compact"} />)}
           </div>
           {chargerPlus}
           </>

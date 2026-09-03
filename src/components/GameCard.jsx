@@ -11,7 +11,7 @@ import {
   sgdbSearch, sgdbGrids,
 } from "../lib/api.js";
 
-function GameCard({ g, onEdit, onDelete, onEnrich, activeTimer, onStartTimer, onStopTimer, autoOpen, compact = false }) {
+function GameCard({ g, onEdit, onDelete, onEnrich, activeTimer, timerStart, onStartTimer, onStopTimer, autoOpen, compact = false }) {
   const [open, setOpen] = useState(!!autoOpen);
   const rootRef = useRef(null);
   useEffect(() => { if (autoOpen) rootRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }); }, []); // eslint-disable-line
@@ -43,16 +43,21 @@ function GameCard({ g, onEdit, onDelete, onEnrich, activeTimer, onStartTimer, on
   const [manH, setManH] = useState(0);
   const [manM, setManM] = useState(0);
   const [, setTick] = useState(0); // force le re-rendu du chrono chaque seconde
-  const startRef = useRef(null);
   const isActive = activeTimer === g.id;
   const [section, setSection] = useState(null);
   const toggle = s => setSection(c => c === s ? null : s);
 
+  // Le début de la session vient de l'état global, pas d'une référence posée à
+  // l'activation : après un rechargement, le chrono restauré repartait
+  // visuellement de 00:00 alors que le temps réellement comptabilisé, lui,
+  // partait du vrai début. Deux vérités pour la même session.
   useEffect(() => {
-    if (isActive) { startRef.current = Date.now(); const t = setInterval(() => setTick(x => x + 1), 1000); return () => clearInterval(t); }
+    if (!isActive) return;
+    const t = setInterval(() => setTick(x => x + 1), 1000);
+    return () => clearInterval(t);
   }, [isActive]);
 
-  const elapsed = isActive && startRef.current ? Math.floor((Date.now() - startRef.current) / 1000) : 0;
+  const elapsed = isActive && timerStart ? Math.floor((Date.now() - timerStart) / 1000) : 0;
   const total = g.playedMinutes + g.manualMinutes;
   const hltbPct = g.hltb && total ? Math.min(100, Math.round(total / (g.hltb * 60) * 100)) : null;
   const dusty = isDusty(g);
