@@ -67,7 +67,7 @@ export default function FiltersSheet({
       />
       <Groupe
         label="Tri"
-        options={[["titre", "A → Z"], ["date", "Date"], ["metacritic", "Metacritic"], ["temps", "Temps de jeu"]]}
+        options={[["titre", "A → Z"], ["date", "Date"], ["metacritic", "Metacritic"]]}
         value={sort}
         onChange={setSort}
       />

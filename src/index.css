@@ -15,7 +15,7 @@
 :root {
   color-scheme: dark;
 
-  --bg: #0f0f1a;        /* fond de l'app, fond des accordéons et du bloc chrono */
+  --bg: #0f0f1a;        /* fond de l'app et des accordéons */
   --hdr: #12122a;       /* en-tête collant */
   --card: #1a1a2e;      /* cartes, modales, champs de saisie */
   --bdr: #2a2a4a;       /* toutes les bordures */

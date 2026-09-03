@@ -11,11 +11,10 @@ import { hdr, card, bdr, txt, mut } from "./lib/theme.js";
 import { GAMES_INIT } from "./lib/seed.js";
 import {
   STATUS_COLORS, BACK_COMPAT,
-  migrateGames, fmtTime, staleKey, compterFiltres, validerJeuxImportes,
+  migrateGames, staleKey, compterFiltres, validerJeuxImportes,
 } from "./lib/model.js";
 import { lire, ecrire, surEchecStockage } from "./lib/storage.js";
 import { chargerSync, enregistrerSync, genererCode, envoyer, recuperer } from "./lib/sync.js";
-import { chargerChrono, enregistrerChrono } from "./lib/chrono.js";
 import {
   loadKeys, setApiKeys, normTitle, hasRawgKey, rawgFirstResult,
   rawgSearch, rawgDetail, wikiFrenchTitles, wikiArticleData, pickBestWikiTitle,
@@ -71,11 +70,6 @@ export default function App() {
   // l'effaçait deux secondes plus tard : si on commençait à taper pendant ce
   // délai, le texte disparaissait sous les doigts.
   const [focusId, setFocusId] = useState(null);
-  // Le chrono ne vivait que dans la mémoire de React : Android tue
-  // régulièrement une PWA laissée en arrière-plan, et la session en cours
-  // disparaissait avec elle. Il est donc relu au démarrage.
-  const [activeTimer, setActiveTimer] = useState(() => chargerChrono().id);
-  const [timerStart, setTimerStart] = useState(() => chargerChrono().debut);
   // Le thème est persisté : il repartait en sombre à chaque rechargement.
   // index.html le pose sur <html> avant le premier rendu pour éviter le clignotement.
   const [theme, setTheme] = useState(() => {
@@ -195,19 +189,6 @@ export default function App() {
   // fonctions et le memo() des fiches ne servirait à rien.
   const edit = useCallback((id, field, val) => setGames(gs => gs.map(g => g.id === id ? { ...g, [field]: val } : g)), []);
   const enrichGame = useCallback((id, data) => setGames(gs => gs.map(g => g.id === id ? { ...g, ...data } : g)), []);
-  const startTimer = useCallback((id) => {
-    const debut = Date.now();
-    setActiveTimer(id); setTimerStart(debut);
-    enregistrerChrono({ id, debut });
-  }, []);
-  const stopTimer = useCallback((id) => {
-    // Garde : sans début connu, `Date.now() - null` vaut Date.now() et
-    // ajouterait une cinquantaine d'années de temps de jeu.
-    const mins = timerStart ? Math.round((Date.now() - timerStart) / 60000) : 0;
-    if (mins > 0) setGames(gs => gs.map(g => g.id === id ? { ...g, playedMinutes: g.playedMinutes + mins, sessions: [...(g.sessions || []), { date: new Date().toISOString(), minutes: mins }] } : g));
-    setActiveTimer(null); setTimerStart(null);
-    enregistrerChrono(null);
-  }, [timerStart]);
   // Ajoute le jeu puis l'ouvre directement en fiche complète (parité fiche/ajout).
   const addGame = (g) => {
     setGames(gs => [g, ...gs]);
@@ -391,7 +372,6 @@ export default function App() {
       if (statFil === "à finir") return staleKey(a) - staleKey(b); // plus anciennes d'abord
       if (sort === "date") return new Date(b.addedDate) - new Date(a.addedDate);
       if (sort === "metacritic") return (b.metacritic||0) - (a.metacritic||0);
-      if (sort === "temps") return (b.playedMinutes+b.manualMinutes) - (a.playedMinutes+a.manualMinutes);
       return a.title.localeCompare(b.title);
     });
   }, [games, search, plat, statFil, fmtFil, sort]);
@@ -399,10 +379,9 @@ export default function App() {
   const stats = useMemo(() => {
     const total = games.length, termines = games.filter(g => g.status === "terminé").length;
     const enCours = games.filter(g => g.status === "en cours").length, pretes = games.filter(g => g.lentA).length;
-    const totalTime = games.reduce((a, g) => a + g.playedMinutes + g.manualMinutes, 0);
     const byGenre = {}; games.forEach(g => g.genre.forEach(x => byGenre[x] = (byGenre[x]||0) + 1));
     const topGenres = Object.entries(byGenre).sort((a,b) => b[1]-a[1]).slice(0,6);
-    return { total, termines, enCours, pretes, totalTime, topGenres };
+    return { total, termines, enCours, pretes, topGenres };
   }, [games]);
 
   const lentGames = games.filter(g => g.lentA);
@@ -539,7 +518,7 @@ export default function App() {
         ) : (
           <>
           <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
-            {visible.map(g => <GameCard key={g.id} g={g} onEdit={edit} onDelete={deleteGame} onEnrich={enrichGame} activeTimer={activeTimer} timerStart={timerStart} onStartTimer={startTimer} onStopTimer={stopTimer} autoOpen={g.id === lastAddedId || g.id === focusId} />)}
+            {visible.map(g => <GameCard key={g.id} g={g} onEdit={edit} onDelete={deleteGame} onEnrich={enrichGame} autoOpen={g.id === lastAddedId || g.id === focusId} />)}
           </div>
           {chargerPlus}
           </>
@@ -710,7 +689,7 @@ export default function App() {
         {tab === "stats" && (
           <div>
             <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:16 }}>
-              {[["Total",stats.total,"#5493FF"],["Terminés",stats.total ? `${stats.termines} (${Math.round(stats.termines/stats.total*100)}%)` : "0","#22c55e"],["En cours",stats.enCours,"#5493FF"],["Prêtés",stats.pretes,"#f59e0b"],["Temps total",fmtTime(stats.totalTime),"#a855f7"]].map(([l,v,c]) => (
+              {[["Total",stats.total,"#5493FF"],["Terminés",stats.total ? `${stats.termines} (${Math.round(stats.termines/stats.total*100)}%)` : "0","#22c55e"],["En cours",stats.enCours,"#5493FF"],["Prêtés",stats.pretes,"#f59e0b"]].map(([l,v,c]) => (
                 <div key={l} style={{ background:card, border:`1px solid ${bdr}`, borderRadius:10, padding:"12px 14px" }}>
                   <div style={{ color:mut, fontSize:10 }}>{l}</div>
                   <div style={{ color:c, fontSize:20, fontWeight:700, marginTop:2 }}>{v}</div>

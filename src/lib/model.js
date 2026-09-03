@@ -38,12 +38,6 @@ export function migrateGames(list) {
   });
 }
 
-export function fmtTime(mins) {
-  if (!mins) return "0h";
-  const h = Math.floor(mins / 60), m = mins % 60;
-  return h > 0 ? `${h}h${m > 0 ? m + "m" : ""}` : `${m}m`;
-}
-
 // Date de la dernière session jouée, ou null si aucune.
 export function lastSessionDate(g) {
   const s = g.sessions;

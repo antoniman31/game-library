@@ -13,7 +13,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   migrateGames, validerJeuxImportes, compterFiltres,
-  fmtTime, isDusty, staleKey, isBackCompatPlatform,
+  isDusty, staleKey, isBackCompatPlatform,
   BACK_COMPAT, XBOX_SERIES_CUTOFF,
 } from "./model.js";
 
@@ -136,12 +136,4 @@ test("sans session, l'ancienneté se compte depuis la date d'ajout", () => {
   const g = jeu({ status: "en cours", addedDate: "2020-01-01", sessions: [] });
   assert.equal(isDusty(g), true);
   assert.equal(staleKey(g), new Date("2020-01-01").getTime());
-});
-
-test("fmtTime rend des durées lisibles", () => {
-  assert.equal(fmtTime(0), "0h");
-  assert.equal(fmtTime(null), "0h");
-  assert.equal(fmtTime(45), "45m");
-  assert.equal(fmtTime(60), "1h");
-  assert.equal(fmtTime(125), "2h5m");
 });
