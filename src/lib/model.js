@@ -61,3 +61,9 @@ export function staleKey(g) {
   const last = lastSessionDate(g);
   return (last || new Date(g.addedDate)).getTime();
 }
+
+// Compte les filtres réellement appliqués. Le tri et le mode d'affichage n'en
+// sont pas : ils changent l'ordre ou la densité, jamais ce qui est montré.
+export function compterFiltres({ plat, statFil, fmtFil }) {
+  return [plat, statFil, fmtFil].filter(v => v !== "tous").length;
+}

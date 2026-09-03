@@ -11,7 +11,7 @@ import {
   sgdbSearch, sgdbGrids,
 } from "../lib/api.js";
 
-function GameCard({ g, onEdit, onDelete, onEnrich, activeTimer, onStartTimer, onStopTimer, autoOpen }) {
+function GameCard({ g, onEdit, onDelete, onEnrich, activeTimer, onStartTimer, onStopTimer, autoOpen, compact = false }) {
   const [open, setOpen] = useState(!!autoOpen);
   const rootRef = useRef(null);
   useEffect(() => { if (autoOpen) rootRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }); }, []); // eslint-disable-line
@@ -140,8 +140,8 @@ function GameCard({ g, onEdit, onDelete, onEnrich, activeTimer, onStartTimer, on
   return (
     <div ref={rootRef} className="gl-card" style={{ background: card, border: `1px ${dusty ? "dashed" : "solid"} ${baseBorder}`, borderRadius: 12, overflow: "hidden", opacity: dusty ? 0.72 : 1, transition: "border-color 0.2s, opacity 0.2s" }}>
 
-      <div style={{ display: "flex", gap: 10, padding: 12, cursor: "pointer" }} onClick={() => setOpen(!open)}>
-        <Cover src={g.cover} title={g.title} size={72} />
+      <div style={{ display: "flex", gap: compact ? 8 : 10, padding: compact ? "8px 10px" : 12, cursor: "pointer" }} onClick={() => setOpen(!open)}>
+        <Cover src={g.cover} title={g.title} size={compact ? 46 : 72} />
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginBottom: 4 }}>
             <span style={{ background: PLATFORM_COLORS[g.platform] || "#5493FF", color: "#fff", fontSize: 9, fontWeight: 700, borderRadius: 3, padding: "1px 5px" }}>{g.platform}</span>
@@ -151,14 +151,14 @@ function GameCard({ g, onEdit, onDelete, onEnrich, activeTimer, onStartTimer, on
             {g.lentA && <span style={{ background: "#7c320044", color: "#f59e0b", fontSize: 9, borderRadius: 3, padding: "1px 5px" }}>📤 {g.lentA}</span>}
             {isActive && <span style={{ background: "#22c55e22", color: "#22c55e", fontSize: 9, borderRadius: 3, padding: "1px 5px" }}>▶ {String(Math.floor(elapsed/60)).padStart(2,"0")}:{String(elapsed%60).padStart(2,"0")}</span>}
           </div>
-          <div style={{ fontWeight: 600, fontSize: 13, color: txt, marginBottom: 3 }}>{g.title}</div>
+          <div style={{ fontWeight: 600, fontSize: 13, color: txt, marginBottom: 3, ...(compact ? { overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 1, WebkitBoxOrient: "vertical" } : {}) }}>{g.title}</div>
           <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
             {g.metacritic && <span style={{ color: g.metacritic >= 80 ? "#22c55e" : g.metacritic >= 60 ? "#f59e0b" : "#ef4444", fontSize: 11, fontWeight: 700 }}>MC {g.metacritic}</span>}
             {total > 0 && <span style={{ color: mut, fontSize: 11 }}>{fmtTime(total)}</span>}
             {hltbPct !== null && <span style={{ color: hltbPct >= 100 ? "#22c55e" : "#5493FF", fontSize: 11 }}>{hltbPct}% HLtB</span>}
-            {idleDays !== null && <span style={{ color: idleDays > 30 ? "#f59e0b" : mut, fontSize: 11 }}>💤 {idleDays}j depuis dernière session</span>}
+            {!compact && idleDays !== null && <span style={{ color: idleDays > 30 ? "#f59e0b" : mut, fontSize: 11 }}>💤 {idleDays}j depuis dernière session</span>}
           </div>
-          {hltbPct !== null && <div style={{ marginTop: 4, height: 3, background: bdr, borderRadius: 2 }}><div style={{ width: `${Math.min(100, hltbPct)}%`, height: "100%", background: hltbPct >= 100 ? "#22c55e" : "#5493FF", borderRadius: 2 }} /></div>}
+          {!compact && hltbPct !== null && <div style={{ marginTop: 4, height: 3, background: bdr, borderRadius: 2 }}><div style={{ width: `${Math.min(100, hltbPct)}%`, height: "100%", background: hltbPct >= 100 ? "#22c55e" : "#5493FF", borderRadius: 2 }} /></div>}
         </div>
         <span style={{ color: mut, alignSelf: "center" }}>{open ? "▲" : "▼"}</span>
       </div>
@@ -185,13 +185,13 @@ function GameCard({ g, onEdit, onDelete, onEnrich, activeTimer, onStartTimer, on
 
           {/* Statut */}
           <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginBottom: 12 }}>
-            {STATUTS.map(s => <button key={s} onClick={() => onEdit(g.id, "status", s)} style={{ background: g.status === s ? STATUS_COLORS[s] + "33" : "transparent", border: `1px solid ${g.status === s ? STATUS_COLORS[s] : bdr}`, color: g.status === s ? STATUS_COLORS[s] : mut, borderRadius: 5, padding: "3px 8px", fontSize: 10, cursor: "pointer" }}>{s}</button>)}
+            {STATUTS.map(s => <button key={s} onClick={() => onEdit(g.id, "status", s)} style={{ background: g.status === s ? STATUS_COLORS[s] + "33" : "transparent", border: `1px solid ${g.status === s ? STATUS_COLORS[s] : bdr}`, color: g.status === s ? STATUS_COLORS[s] : mut, borderRadius: 6, padding: "0 10px", minHeight: 36, fontSize: 11, cursor: "pointer" }}>{s}</button>)}
           </div>
 
           {/* Format physique / démat */}
           <div style={{ display: "flex", gap: 5, alignItems: "center", marginBottom: 12 }}>
             <span style={{ color: mut, fontSize: 11 }}>Format :</span>
-            {["physique", "démat"].map(f => <button key={f} onClick={() => onEdit(g.id, "format", f)} style={{ background: g.format === f ? "#5493FF22" : "transparent", border: `1px solid ${g.format === f ? "#5493FF" : bdr}`, color: g.format === f ? "#5493FF" : mut, borderRadius: 5, padding: "3px 10px", fontSize: 10, cursor: "pointer" }}>{f}</button>)}
+            {["physique", "démat"].map(f => <button key={f} onClick={() => onEdit(g.id, "format", f)} style={{ background: g.format === f ? "#5493FF22" : "transparent", border: `1px solid ${g.format === f ? "#5493FF" : bdr}`, color: g.format === f ? "#5493FF" : mut, borderRadius: 6, padding: "0 12px", minHeight: 36, fontSize: 11, cursor: "pointer" }}>{f}</button>)}
           </div>
 
           {/* Rétrocompatibilité : exception au cas par cas (jeux Xbox One / Switch 1) */}
@@ -200,7 +200,7 @@ function GameCard({ g, onEdit, onDelete, onEnrich, activeTimer, onStartTimer, on
               <span style={{ color: mut, fontSize: 11 }}>Jouable sur {BACK_COMPAT_PARENT[g.platform]} :</span>
               {[["oui", true], ["non", false]].map(([label, val]) => (
                 <button key={label} onClick={() => onEdit(g.id, "backCompat", val)}
-                  style={{ background: !!g.backCompat === val ? (val ? "#22c55e22" : "#ef444422") : "transparent", border: `1px solid ${!!g.backCompat === val ? (val ? "#22c55e" : "#ef4444") : bdr}`, color: !!g.backCompat === val ? (val ? "#22c55e" : "#ef4444") : mut, borderRadius: 5, padding: "3px 10px", fontSize: 10, cursor: "pointer" }}>{label}</button>
+                  style={{ background: !!g.backCompat === val ? (val ? "#22c55e22" : "#ef444422") : "transparent", border: `1px solid ${!!g.backCompat === val ? (val ? "#22c55e" : "#ef4444") : bdr}`, color: !!g.backCompat === val ? (val ? "#22c55e" : "#ef4444") : mut, borderRadius: 6, padding: "0 12px", minHeight: 36, fontSize: 11, cursor: "pointer" }}>{label}</button>
               ))}
             </div>
           )}
@@ -304,8 +304,8 @@ function GameCard({ g, onEdit, onDelete, onEnrich, activeTimer, onStartTimer, on
                   <div style={{ color: txt, fontSize: 11, fontWeight: 600, marginBottom: 4 }}>Résumé Wikipédia</div>
                   <div style={{ color: mut, fontSize: 11, fontStyle: "italic", lineHeight: 1.4, maxHeight: 96, overflowY: "auto", marginBottom: 6 }}>{wikiExtract}</div>
                   <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                    <button onClick={() => { onEdit(g.id, "style", wikiExtract); setWikiExtract(null); }} style={{ background: "#22c55e22", border: "1px solid #22c55e", color: "#22c55e", borderRadius: 5, padding: "3px 8px", fontSize: 10, cursor: "pointer" }}>Utiliser ce résumé</button>
-                    <button onClick={() => setWikiExtract(null)} style={{ background: "transparent", border: `1px solid ${bdr}`, color: mut, borderRadius: 5, padding: "3px 8px", fontSize: 10, cursor: "pointer" }}>Garder la description actuelle</button>
+                    <button onClick={() => { onEdit(g.id, "style", wikiExtract); setWikiExtract(null); }} style={{ background: "#22c55e22", border: "1px solid #22c55e", color: "#22c55e", borderRadius: 6, padding: "0 10px", minHeight: 38, fontSize: 11, cursor: "pointer" }}>Utiliser ce résumé</button>
+                    <button onClick={() => setWikiExtract(null)} style={{ background: "transparent", border: `1px solid ${bdr}`, color: mut, borderRadius: 6, padding: "0 10px", minHeight: 38, fontSize: 11, cursor: "pointer" }}>Garder la description actuelle</button>
                   </div>
                 </div>
               )}
@@ -316,8 +316,8 @@ function GameCard({ g, onEdit, onDelete, onEnrich, activeTimer, onStartTimer, on
                   <div style={{ color: txt, fontSize: 11, fontWeight: 600, marginBottom: 4 }}>Jaquette Wikipédia</div>
                   <img src={wikiImage} alt="" style={{ maxWidth: 120, maxHeight: 160, objectFit: "contain", borderRadius: 6, border: `1px solid ${bdr}`, display: "block", marginBottom: 6 }} />
                   <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                    <button onClick={() => { onEdit(g.id, "cover", wikiImage); setWikiImage(null); }} style={{ background: "#22c55e22", border: "1px solid #22c55e", color: "#22c55e", borderRadius: 5, padding: "3px 8px", fontSize: 10, cursor: "pointer" }}>Utiliser cette jaquette</button>
-                    <button onClick={() => setWikiImage(null)} style={{ background: "transparent", border: `1px solid ${bdr}`, color: mut, borderRadius: 5, padding: "3px 8px", fontSize: 10, cursor: "pointer" }}>Garder la jaquette actuelle</button>
+                    <button onClick={() => { onEdit(g.id, "cover", wikiImage); setWikiImage(null); }} style={{ background: "#22c55e22", border: "1px solid #22c55e", color: "#22c55e", borderRadius: 6, padding: "0 10px", minHeight: 38, fontSize: 11, cursor: "pointer" }}>Utiliser cette jaquette</button>
+                    <button onClick={() => setWikiImage(null)} style={{ background: "transparent", border: `1px solid ${bdr}`, color: mut, borderRadius: 6, padding: "0 10px", minHeight: 38, fontSize: 11, cursor: "pointer" }}>Garder la jaquette actuelle</button>
                   </div>
                 </div>
               )}
@@ -328,8 +328,8 @@ function GameCard({ g, onEdit, onDelete, onEnrich, activeTimer, onStartTimer, on
                   <div style={{ color: txt, fontSize: 11, fontWeight: 600, marginBottom: 4 }}>ℹ️ Infos (Wikidata)</div>
                   <div style={{ marginBottom: 6 }}><InfoboxView info={wikiInfo} /></div>
                   <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                    <button onClick={() => { onEdit(g.id, "infobox", wikiInfo); setWikiInfo(null); }} style={{ background: "#22c55e22", border: "1px solid #22c55e", color: "#22c55e", borderRadius: 5, padding: "3px 8px", fontSize: 10, cursor: "pointer" }}>Utiliser ces infos</button>
-                    <button onClick={() => setWikiInfo(null)} style={{ background: "transparent", border: `1px solid ${bdr}`, color: mut, borderRadius: 5, padding: "3px 8px", fontSize: 10, cursor: "pointer" }}>Ignorer</button>
+                    <button onClick={() => { onEdit(g.id, "infobox", wikiInfo); setWikiInfo(null); }} style={{ background: "#22c55e22", border: "1px solid #22c55e", color: "#22c55e", borderRadius: 6, padding: "0 10px", minHeight: 38, fontSize: 11, cursor: "pointer" }}>Utiliser ces infos</button>
+                    <button onClick={() => setWikiInfo(null)} style={{ background: "transparent", border: `1px solid ${bdr}`, color: mut, borderRadius: 6, padding: "0 10px", minHeight: 38, fontSize: 11, cursor: "pointer" }}>Ignorer</button>
                   </div>
                 </div>
               )}
@@ -358,10 +358,10 @@ function GameCard({ g, onEdit, onDelete, onEnrich, activeTimer, onStartTimer, on
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
             <div style={{ color: mut, fontSize: 10 }}>Ajouté le {new Date(g.addedDate).toLocaleDateString("fr-FR")}</div>
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap", justifyContent: "flex-end" }}>
-              <button onClick={() => { setRawgOpen(o => !o); if (!rawgOpen) { setRawgQ(g.title); rawgQuery(g.title); } }} style={{ background: "transparent", border: "1px solid #5493FF", color: "#5493FF", borderRadius: 5, padding: "3px 8px", fontSize: 10, cursor: "pointer" }}>🔄 Rechercher sur RAWG</button>
-              <button onClick={() => { setWikiOpen(o => !o); if (!wikiOpen) { setWikiQ(g.title); setWikiDone(false); wikiQuery(g.title); } }} style={{ background: "transparent", border: "1px solid #5493FF", color: "#5493FF", borderRadius: 5, padding: "3px 8px", fontSize: 10, cursor: "pointer" }}>🇫🇷 Titre français</button>
-              <button onClick={() => { setSgdbOpen(o => !o); if (!sgdbOpen) { setSgdbQ(g.title); setSgdbDone(false); sgdbQuery(g.title); } }} style={{ background: "transparent", border: "1px solid #5493FF", color: "#5493FF", borderRadius: 5, padding: "3px 8px", fontSize: 10, cursor: "pointer" }}>📦 Jaquette SteamGridDB</button>
-              <button onClick={() => onDelete(g)} style={{ background: "transparent", border: "1px solid #ef4444", color: "#ef4444", borderRadius: 5, padding: "3px 8px", fontSize: 10, cursor: "pointer" }}>Supprimer</button>
+              <button onClick={() => { setRawgOpen(o => !o); if (!rawgOpen) { setRawgQ(g.title); rawgQuery(g.title); } }} style={{ background: "transparent", border: "1px solid #5493FF", color: "#5493FF", borderRadius: 6, padding: "0 10px", minHeight: 38, fontSize: 11, cursor: "pointer" }}>🔄 Rechercher sur RAWG</button>
+              <button onClick={() => { setWikiOpen(o => !o); if (!wikiOpen) { setWikiQ(g.title); setWikiDone(false); wikiQuery(g.title); } }} style={{ background: "transparent", border: "1px solid #5493FF", color: "#5493FF", borderRadius: 6, padding: "0 10px", minHeight: 38, fontSize: 11, cursor: "pointer" }}>🇫🇷 Titre français</button>
+              <button onClick={() => { setSgdbOpen(o => !o); if (!sgdbOpen) { setSgdbQ(g.title); setSgdbDone(false); sgdbQuery(g.title); } }} style={{ background: "transparent", border: "1px solid #5493FF", color: "#5493FF", borderRadius: 6, padding: "0 10px", minHeight: 38, fontSize: 11, cursor: "pointer" }}>📦 Jaquette SteamGridDB</button>
+              <button onClick={() => onDelete(g)} style={{ background: "transparent", border: "1px solid #ef4444", color: "#ef4444", borderRadius: 6, padding: "0 10px", minHeight: 38, fontSize: 11, cursor: "pointer" }}>Supprimer</button>
             </div>
           </div>
         </div>

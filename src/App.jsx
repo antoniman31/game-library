@@ -4,12 +4,14 @@ import Cover from "./components/Cover.jsx";
 import GameCard from "./components/GameCard.jsx";
 import AddModal from "./components/AddModal.jsx";
 import ImportModal from "./components/ImportModal.jsx";
+import FiltersSheet from "./components/FiltersSheet.jsx";
+import ActionsSheet from "./components/ActionsSheet.jsx";
 
 import { hdr, card, bdr, txt, mut } from "./lib/theme.js";
 import { GAMES_INIT } from "./lib/seed.js";
 import {
-  STATUTS, STATUS_COLORS, PLATFORMS, BACK_COMPAT,
-  migrateGames, fmtTime, staleKey,
+  STATUS_COLORS, BACK_COMPAT,
+  migrateGames, fmtTime, staleKey, compterFiltres,
 } from "./lib/model.js";
 import {
   loadKeys, setApiKeys, normTitle, hasRawgKey, rawgFirstResult,
@@ -17,8 +19,26 @@ import {
   sgdbSearch, xblTitleHistory,
 } from "./lib/api.js";
 
+// Nombre de jeux rendus d'un coup. La liste entière était montée à chaque
+// rendu : à 94 jeux, autant de GameCard portant chacun ~25 useState, soit
+// plusieurs milliers de hooks et autant d'objets de style recréés.
+const PAGE_SIZE = 30;
+
+const ACCENT = "#5493FF";
+
+// Bouton d'en-tête : même gabarit pour tous, à la hauteur de cible tactile.
+const btnHdr = {
+  minHeight: "var(--tap)", minWidth: "var(--tap)", background: "transparent",
+  border: `1px solid ${bdr}`, color: txt, borderRadius: 10, padding: "0 12px",
+  fontSize: 14, cursor: "pointer", display: "inline-flex", alignItems: "center",
+  justifyContent: "center", gap: 6, flexShrink: 0,
+};
+
 export default function App() {
   const [games, setGames] = useState(() => { try { const s = localStorage.getItem("gl_v2"); return migrateGames(s ? JSON.parse(s) : GAMES_INIT); } catch { return migrateGames(GAMES_INIT); } });
+  // `searchInput` suit la frappe, `search` ne la rattrape qu'après 180 ms :
+  // sans ce délai, chaque caractère refiltrait et remontait toute la liste.
+  const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
   const [plat, setPlat] = useState("tous");
   const [statFil, setStatFil] = useState("tous");
@@ -28,6 +48,9 @@ export default function App() {
   const [tab, setTab] = useState("library");
   const [showAdd, setShowAdd] = useState(false);
   const [showImport, setShowImport] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
+  const [showActions, setShowActions] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const [keys, setKeys] = useState(() => loadKeys());   // clés API saisies par l'utilisateur
   const [showKeys, setShowKeys] = useState(false);      // afficher/masquer les valeurs
   const [keyTest, setKeyTest] = useState({});           // résultat du bouton « Tester »
@@ -58,6 +81,19 @@ export default function App() {
     document.documentElement.dataset.theme = theme;
     try { localStorage.setItem("gl_theme", theme); } catch {}
   }, [theme]);
+
+  useEffect(() => {
+    const t = setTimeout(() => setSearch(searchInput), 180);
+    return () => clearTimeout(t);
+  }, [searchInput]);
+
+  // Toute pagination repart du début quand le contenu de la liste change :
+  // sinon « Charger 30 de plus » resterait déplié sur un résultat de 3 jeux.
+  useEffect(() => { setVisibleCount(PAGE_SIZE); }, [search, plat, statFil, fmtFil, sort, tab, view]);
+
+  // Recherche posée par le code (clic sur une vignette, retour d'un ajout) :
+  // les deux états doivent bouger ensemble, sans attendre le délai de frappe.
+  const applySearch = (v) => { setSearchInput(v); setSearch(v); };
 
   // Actualise la description de tous les jeux depuis Wikipédia FR :
   // recherche full-text -> résumé (extract) du 1er article -> champ style.
@@ -132,7 +168,7 @@ export default function App() {
     setView("liste");
     setPlat("tous");
     setStatFil("tous");
-    setSearch("");
+    applySearch("");
   };
 
   // Import Xbox : ajoute les jeux créés, ferme le modal, propose l'enrichissement (E).
@@ -145,7 +181,7 @@ export default function App() {
     setView("liste");
     setPlat("tous");
     setStatFil("tous");
-    setSearch("");
+    applySearch("");
   };
 
   // Enrichissement best-effort des jeux importés : RAWG (cover/metacritic/genre si manquants)
@@ -259,6 +295,22 @@ export default function App() {
   }, [games]);
 
   const lentGames = games.filter(g => g.lentA);
+  const filtresActifs = compterFiltres({ plat, statFil, fmtFil });
+
+  // Ce qui est réellement monté. Le reste attend « Charger 30 de plus ».
+  const visible = filtered.slice(0, visibleCount);
+  const restants = filtered.length - visible.length;
+  const chargerPlus = restants > 0 && (
+    <button
+      onClick={() => setVisibleCount(c => c + PAGE_SIZE)}
+      style={{
+        width: "100%", minHeight: "var(--tap)", marginTop: 12, background: "transparent",
+        border: `1px solid ${bdr}`, color: txt, borderRadius: 10, fontSize: 13, cursor: "pointer",
+      }}
+    >
+      Charger {Math.min(PAGE_SIZE, restants)} de plus ({restants} restant{restants > 1 ? "s" : ""})
+    </button>
+  );
 
   const emptyState = (
     <div style={{ textAlign: "center", padding: "70px 20px", color: mut }}>
@@ -273,19 +325,23 @@ export default function App() {
 
       {/* Header */}
       <div style={{ background: hdr, borderBottom: `1px solid ${bdr}`, padding: "calc(12px + var(--safe-top)) calc(14px + var(--safe-right)) 12px calc(14px + var(--safe-left))", position: "sticky", top: 0, zIndex: 100 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-          <div>
-            <div style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 11, color: "#5493FF", lineHeight: 1.4 }}>GAME LIBRARY</div>
-            <div style={{ fontSize: 10, color: mut, marginTop: 2 }}>{stats.total} jeux · {stats.termines} terminés · {stats.enCours} en cours</div>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, marginBottom: 10 }}>
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 11, color: ACCENT, lineHeight: 1.4 }}>GAME LIBRARY</div>
+            <div style={{ fontSize: 10, color: mut, marginTop: 3 }}>{stats.total} jeux · {stats.termines} terminés · {stats.enCours} en cours</div>
           </div>
-          <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-            <button onClick={refreshAllDescriptions} disabled={refreshing} title="Actualiser toutes les descriptions depuis Wikipédia FR" style={{ background: "transparent", border: `1px solid ${bdr}`, color: refreshing ? "#5493FF" : mut, borderRadius: 6, padding: "5px 8px", fontSize: 11, cursor: refreshing ? "default" : "pointer", opacity: refreshing ? 0.8 : 1, whiteSpace: "nowrap" }}>
-              {refreshing ? `⏳ ${refreshProg}/${games.length} actualisés` : "🌐 Actualiser descriptions"}
+          {/* Deux boutons seulement. Les quatre actions à libellé complet qui
+              tenaient ici débordaient de l'écran de 13 px : elles sont passées
+              dans le panneau « Actions ». */}
+          <div style={{ display: "flex", gap: 8, alignItems: "center", flexShrink: 0 }}>
+            <button onClick={() => setShowActions(true)} aria-label="Actions" title="Actions"
+              style={{ ...btnHdr, color: refreshing || enriching ? ACCENT : txt, borderColor: refreshing || enriching ? ACCENT : bdr }}>
+              {refreshing || enriching ? "⏳" : "⋯"}
             </button>
-            {refreshing && <button onClick={cancelRefresh} title="Annuler l'actualisation" style={{ background: "#ef444422", border: "1px solid #ef4444", color: "#ef4444", borderRadius: 6, padding: "5px 8px", fontSize: 11, cursor: "pointer", whiteSpace: "nowrap" }}>Annuler</button>}
-            <button onClick={() => setShowImport(true)} title="Importer la bibliothèque Xbox (xbl.io)" style={{ background: "transparent", border: `1px solid ${bdr}`, color: mut, borderRadius: 6, padding: "5px 8px", fontSize: 11, cursor: "pointer", whiteSpace: "nowrap" }}>🎮 Importer Xbox</button>
-            <button onClick={() => setTheme(t => (t === "dark" ? "light" : "dark"))} style={{ background: "transparent", border: `1px solid ${bdr}`, color: mut, borderRadius: 6, padding: "5px 8px", fontSize: 12, cursor: "pointer" }}>{theme === "dark" ? "☀️" : "🌙"}</button>
-            <button onClick={() => setShowAdd(true)} style={{ background: "#5493FF", color: "#fff", border: "none", borderRadius: 8, padding: "7px 12px", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>+ Ajouter</button>
+            <button onClick={() => setShowAdd(true)}
+              style={{ ...btnHdr, background: ACCENT, border: "none", color: "#fff", fontSize: 13, fontWeight: 600 }}>
+              + Ajouter
+            </button>
           </div>
         </div>
 
@@ -313,41 +369,44 @@ export default function App() {
           </div>
         )}
 
-        {/* Tabs */}
-        <div style={{ display: "flex", gap: 4, marginBottom: 10 }}>
+        {/* Onglets : pleine largeur, à la hauteur de cible tactile. */}
+        <div style={{ display: "flex", gap: 6, marginBottom: tab === "library" ? 10 : 0 }}>
           {[["library","Bibliothèque"],["loans",`Prêts${lentGames.length ? ` (${lentGames.length})` : ""}`],["stats","Stats"],["settings","⚙️"]].map(([k,l]) => (
-            <button key={k} onClick={() => setTab(k)} style={{ background: tab===k?"#5493FF":"transparent", border:`1px solid ${tab===k?"#5493FF":bdr}`, color: tab===k?"#fff":mut, borderRadius:6, padding:"4px 10px", fontSize:11, cursor:"pointer" }}>{l}</button>
+            <button key={k} onClick={() => setTab(k)} aria-pressed={tab === k}
+              style={{
+                flex: k === "settings" ? "0 0 auto" : 1, minWidth: k === "settings" ? "var(--tap)" : 0,
+                minHeight: "var(--tap)", background: tab===k ? ACCENT : "transparent",
+                border: `1px solid ${tab===k ? ACCENT : bdr}`, color: tab===k ? "#fff" : mut,
+                borderRadius: 10, padding: "0 8px", fontSize: 12, fontWeight: tab===k ? 600 : 400,
+                cursor: "pointer", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
+              }}>{l}</button>
           ))}
         </div>
 
-        {tab === "library" && <>
-          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Rechercher titre, genre, tag…" style={{ background: card, border:`1px solid ${bdr}`, borderRadius:8, color:txt, padding:"7px 12px", fontSize:13, outline:"none", width:"100%", marginBottom:8 }} />
-          <div style={{ display:"flex", gap:4, flexWrap:"wrap", marginBottom:6 }}>
-            {PLATFORMS.map(p => <button key={p} onClick={() => setPlat(p)} style={{ background:plat===p?"#5493FF22":"transparent", border:`1px solid ${plat===p?"#5493FF":bdr}`, color:plat===p?"#5493FF":mut, borderRadius:5, padding:"3px 8px", fontSize:10, cursor:"pointer" }}>{p==="tous"?"Toutes":p}</button>)}
+        {/* Recherche + accès aux filtres. Les quatre rangées de puces qui
+            occupaient cette place sont dans le panneau « Filtres » ; le badge
+            dit combien sont appliquées sans avoir à l'ouvrir. */}
+        {tab === "library" && (
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            <input value={searchInput} onChange={e => setSearchInput(e.target.value)} type="search"
+              placeholder="Rechercher titre, genre, tag…"
+              style={{ flex: 1, minWidth: 0, minHeight: "var(--tap)", background: card, border: `1px solid ${bdr}`, borderRadius: 10, color: txt, padding: "0 12px", fontSize: 14, outline: "none" }} />
+            <button onClick={() => setShowFilters(true)}
+              style={{ ...btnHdr, borderColor: filtresActifs ? ACCENT : bdr, color: filtresActifs ? ACCENT : txt, fontSize: 13 }}>
+              Filtres{filtresActifs > 0 && <span style={{ background: ACCENT, color: "#fff", borderRadius: 9, padding: "1px 6px", fontSize: 11, fontWeight: 700 }}>{filtresActifs}</span>}
+            </button>
           </div>
-          <div style={{ display:"flex", gap:4, flexWrap:"wrap", marginBottom:6 }}>
-            {["tous",...STATUTS,"à finir"].map(s => <button key={s} onClick={() => setStatFil(s)} style={{ background:statFil===s?(STATUS_COLORS[s]||"#5493FF")+"22":"transparent", border:`1px solid ${statFil===s?(STATUS_COLORS[s]||"#5493FF"):bdr}`, color:statFil===s?(STATUS_COLORS[s]||"#5493FF"):mut, borderRadius:5, padding:"3px 7px", fontSize:10, cursor:"pointer" }}>{s==="tous"?"Tous":s==="à finir"?"🎯 à finir":s}</button>)}
-          </div>
-          <div style={{ display:"flex", gap:4, flexWrap:"wrap", marginBottom:6 }}>
-            {[["tous","Tous"],["physique","Physique"],["démat","Démat"]].map(([k,l]) => <button key={k} onClick={() => setFmtFil(k)} style={{ background:fmtFil===k?"#5493FF22":"transparent", border:`1px solid ${fmtFil===k?"#5493FF":bdr}`, color:fmtFil===k?"#5493FF":mut, borderRadius:5, padding:"3px 8px", fontSize:10, cursor:"pointer" }}>{l}</button>)}
-          </div>
-          <div style={{ display:"flex", gap:4, alignItems:"center", flexWrap:"wrap" }}>
-            <span style={{ color:mut, fontSize:10 }}>Tri:</span>
-            {[["titre","A-Z"],["date","Date"],["metacritic","MC"],["temps","Temps"]].map(([k,l]) => <button key={k} onClick={() => setSort(k)} style={{ background:sort===k?"#5493FF22":"transparent", border:`1px solid ${sort===k?"#5493FF":bdr}`, color:sort===k?"#5493FF":mut, borderRadius:5, padding:"3px 7px", fontSize:10, cursor:"pointer" }}>{l}</button>)}
-            <div style={{ marginLeft:"auto", display:"flex", gap:4 }}>
-              {[["liste","☰"],["grille","⊞"]].map(([m,ic]) => <button key={m} onClick={() => setView(m)} style={{ background:view===m?"#5493FF22":"transparent", border:`1px solid ${view===m?"#5493FF":bdr}`, color:view===m?"#5493FF":mut, borderRadius:5, padding:"3px 8px", fontSize:13, cursor:"pointer" }}>{ic}</button>)}
-            </div>
-          </div>
-        </>}
+        )}
       </div>
 
       {/* Body */}
       <div style={{ padding:"14px calc(14px + var(--safe-right)) calc(60px + var(--safe-bottom)) calc(14px + var(--safe-left))" }}>
         {tab === "library" && (filtered.length === 0 ? emptyState : view === "grille" ? (
+          <>
           <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(120px,1fr))", gap:10 }}>
-            {filtered.map(g => (
+            {visible.map(g => (
               <div key={g.id} className="gl-tile" style={{ background:card, border:`1px solid ${bdr}`, borderRadius:10, overflow:"hidden", cursor:"pointer" }}
-                onClick={() => { setView("liste"); setSearch(g.title); setTimeout(()=>setSearch(""),2000); }}>
+                onClick={() => { setView("liste"); applySearch(g.title); setTimeout(() => applySearch(""), 2000); }}>
                 <Cover src={g.cover} title={g.title} size="100%" />
                 <div style={{ height:3, background:STATUS_COLORS[g.status]+"88" }} />
                 <div style={{ padding:"6px 7px" }}>
@@ -357,10 +416,15 @@ export default function App() {
               </div>
             ))}
           </div>
+          {chargerPlus}
+          </>
         ) : (
-          <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
-            {filtered.map(g => <GameCard key={g.id} g={g} onEdit={edit} onDelete={deleteGame} onEnrich={enrichGame} activeTimer={activeTimer} onStartTimer={startTimer} onStopTimer={stopTimer} autoOpen={g.id === lastAddedId} />)}
+          <>
+          <div style={{ display:"flex", flexDirection:"column", gap: view === "compact" ? 6 : 8 }}>
+            {visible.map(g => <GameCard key={g.id} g={g} onEdit={edit} onDelete={deleteGame} onEnrich={enrichGame} activeTimer={activeTimer} onStartTimer={startTimer} onStopTimer={stopTimer} autoOpen={g.id === lastAddedId} compact={view === "compact"} />)}
           </div>
+          {chargerPlus}
+          </>
         ))}
 
         {tab === "loans" && (
@@ -484,6 +548,30 @@ export default function App() {
 
       {showAdd && <AddModal onAdd={addGame} onClose={() => setShowAdd(false)} />}
       {showImport && <ImportModal games={games} onImportGames={importGames} onClose={() => setShowImport(false)} />}
+      {showFilters && (
+        <FiltersSheet
+          plat={plat} setPlat={setPlat}
+          statFil={statFil} setStatFil={setStatFil}
+          fmtFil={fmtFil} setFmtFil={setFmtFil}
+          sort={sort} setSort={setSort}
+          view={view} setView={setView}
+          resultats={filtered.length}
+          onClose={() => setShowFilters(false)}
+        />
+      )}
+      {showActions && (
+        <ActionsSheet
+          onClose={() => setShowActions(false)}
+          theme={theme}
+          onToggleTheme={() => setTheme(t => (t === "dark" ? "light" : "dark"))}
+          onRefreshDescriptions={refreshAllDescriptions}
+          refreshing={refreshing}
+          refreshProg={refreshProg}
+          refreshTotal={games.length}
+          onCancelRefresh={cancelRefresh}
+          onImportXbox={() => setShowImport(true)}
+        />
+      )}
 
       {deleted && (
         <div style={{ position:"fixed", bottom:20, left:"50%", transform:"translateX(-50%)", zIndex:400, display:"flex", alignItems:"center", gap:14, background:card, border:`1px solid ${bdr}`, borderRadius:10, padding:"10px 14px", boxShadow:"0 8px 24px rgba(0,0,0,0.4)", animation:"toastIn 200ms ease" }}>
