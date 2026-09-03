@@ -1,0 +1,46 @@
+name: Déploiement du Worker
+
+# Le Worker se déployait à la main, depuis un PC, avec `npx wrangler deploy`.
+# Résultat : le code de `/sync` a passé plusieurs heures dans le dépôt sans
+# jamais atteindre la production, et l'oubli n'était visible nulle part. Il se
+# déploie désormais tout seul dès que `worker/` change.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "worker/**"
+      - ".github/workflows/worker.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: worker-deploy
+  cancel-in-progress: false
+
+jobs:
+  deployer:
+    name: Tester puis déployer
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Installer les dépendances
+        run: npm ci --no-audit --no-fund
+
+      # Les tests d'abord : un Worker cassé en production coupe la
+      # synchronisation ET le relais des jaquettes.
+      - name: Tests
+        run: npm test
+
+      - name: Déployer
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          workingDirectory: worker

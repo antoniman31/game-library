@@ -2,14 +2,17 @@ name = "game-library-proxy"
 main = "index.js"
 compatibility_date = "2026-01-01"
 
-# Aucun secret ni variable : les clés API sont fournies par le client à chaque
-# requête, et le code de synchronisation ne quitte pas l'appareil de son
-# propriétaire (seule son empreinte SHA-256 sert de clé de stockage).
+# L'identifiant de compte n'est pas un secret : il figure dans l'URL du tableau
+# de bord Cloudflare et sert seulement à désigner le compte cible. Le jeton
+# d'API, lui, vit dans les secrets GitHub et nulle part ailleurs.
+account_id = "6b0e920b47a3ff6e9b19486f9ed43df0"
 
-# Sauvegarde de la bibliothèque. Créer l'espace une fois :
-#   npx wrangler kv namespace create SYNC
-# puis recopier l'identifiant renvoyé ci-dessous et décommenter les deux lignes.
-# Sans cela, le relais CORS fonctionne, et /sync répond 501 en le disant.
-# [[kv_namespaces]]
-# binding = "SYNC"
-# id = "à-remplacer-par-l-identifiant-renvoyé-par-wrangler"
+# Aucune clé d'API n'est stockée ici : les clés des services externes sont
+# fournies par le client à chaque requête, et le code de synchronisation ne
+# quitte pas l'appareil de son propriétaire (seule son empreinte SHA-256 sert
+# de clé de stockage).
+
+# Sauvegarde de la bibliothèque.
+[[kv_namespaces]]
+binding = "SYNC"
+id = "f973a16a432a40e085b681d9aa3e88ba"
