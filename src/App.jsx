@@ -267,15 +267,33 @@ const PLATFORMS = ["tous", "Xbox Series X", "Xbox One", "Switch 2", "Switch 1"];
 // S4 : Series X vert vif (marque Xbox), One vert plus foncé, Switch rouge.
 const PLATFORM_COLORS = { "Xbox Series X": "#107C10", "Xbox One": "#0a5c0a", "Switch 2": "#e4000f", "Switch 1": "#e4000f" };
 
+// Rétrocompatibilité : plateforme récente -> plateforme précédente dont les jeux
+// marqués backCompat sont aussi jouables dessus. Sert au filtre (platMatch) et à la
+// valeur par défaut de backCompat à la création/migration d'un jeu.
+const BACK_COMPAT = { "Xbox Series X": "Xbox One", "Switch 2": "Switch 1" };
+const BACK_COMPAT_CHILDREN = new Set(Object.values(BACK_COMPAT)); // "Xbox One", "Switch 1"
+const isBackCompatPlatform = (p) => BACK_COMPAT_CHILDREN.has(p);
+// Plateforme "récente" qui accueille les jeux rétrocompatibles d'une plateforme donnée.
+const BACK_COMPAT_PARENT = Object.fromEntries(Object.entries(BACK_COMPAT).map(([parent, child]) => [child, parent]));
+
 // Sépare l'ancienne plateforme "Xbox" en "Xbox One" / "Xbox Series X" selon la date
 // (seuil 10/11/2020, sortie Series X ; addedDate sert de proxy de date de sortie).
-// Ajoute backCompat (true par défaut pour Xbox One). Idempotent (ne re-migre pas).
+// Renseigne backCompat (true par défaut pour Xbox One et Switch 1). Pure et idempotente.
+//
+// bcV = version de migration de backCompat, stockée PAR JEU :
+//   v1 (ou absent) : backCompat ne concernait que Xbox One, les Switch 1 valaient false
+//   v2             : Switch 1 rétrocompatibles Switch 2 -> rattrapage une seule fois
+// Une fois bcV=2 posé, le champ n'est plus jamais forcé : le toggle manuel de la fiche
+// (exception au cas par cas) survit donc aux rechargements.
 const XBOX_SERIES_CUTOFF = "2020-11-10";
+const BACK_COMPAT_VERSION = 2;
 function migrateGames(list) {
   return (list || []).map(g => {
     const ng = { ...g };
     if (ng.platform === "Xbox") ng.platform = (ng.addedDate || "") >= XBOX_SERIES_CUTOFF ? "Xbox Series X" : "Xbox One";
-    if (ng.backCompat === undefined) ng.backCompat = ng.platform === "Xbox One";
+    if (ng.backCompat === undefined) ng.backCompat = isBackCompatPlatform(ng.platform);
+    else if ((ng.bcV || 1) < 2 && ng.platform === "Switch 1" && ng.backCompat === false) ng.backCompat = true;
+    ng.bcV = BACK_COMPAT_VERSION;
     if (ng.infobox === undefined) ng.infobox = null;
     return ng;
   });
@@ -482,7 +500,7 @@ function GameCard({ g, onEdit, onDelete, onEnrich, activeTimer, onStartTimer, on
             <span style={{ background: PLATFORM_COLORS[g.platform] || "#5493FF", color: "#fff", fontSize: 9, fontWeight: 700, borderRadius: 3, padding: "1px 5px" }}>{g.platform}</span>
             <span key={g.status} style={{ border: `1px solid ${STATUS_COLORS[g.status]}`, color: STATUS_COLORS[g.status], fontSize: 9, borderRadius: 3, padding: "1px 5px", display: "inline-block", animation: "statusPop 200ms ease" }}>{g.status}</span>
             {g.format === "démat" && <span style={{ background: dark ? "#1e3a5f" : "#ddeeff", color: "#5493FF", fontSize: 9, borderRadius: 3, padding: "1px 5px" }}>démat</span>}
-            {g.platform === "Xbox One" && g.backCompat && <span title="Rétrocompatible Xbox Series X" style={{ background: "#107C1022", color: "#22c55e", fontSize: 9, borderRadius: 3, padding: "1px 5px" }}>🔄 Compatible Series X</span>}
+            {BACK_COMPAT_PARENT[g.platform] && g.backCompat && <span title={`Rétrocompatible ${BACK_COMPAT_PARENT[g.platform]}`} style={{ background: "#107C1022", color: "#22c55e", fontSize: 9, borderRadius: 3, padding: "1px 5px" }}>🔄 Compatible {BACK_COMPAT_PARENT[g.platform].replace("Xbox ", "")}</span>}
             {g.lentA && <span style={{ background: "#7c320044", color: "#f59e0b", fontSize: 9, borderRadius: 3, padding: "1px 5px" }}>📤 {g.lentA}</span>}
             {isActive && <span style={{ background: "#22c55e22", color: "#22c55e", fontSize: 9, borderRadius: 3, padding: "1px 5px" }}>▶ {String(Math.floor(elapsed/60)).padStart(2,"0")}:{String(elapsed%60).padStart(2,"0")}</span>}
           </div>
@@ -528,6 +546,17 @@ function GameCard({ g, onEdit, onDelete, onEnrich, activeTimer, onStartTimer, on
             <span style={{ color: mut, fontSize: 11 }}>Format :</span>
             {["physique", "démat"].map(f => <button key={f} onClick={() => onEdit(g.id, "format", f)} style={{ background: g.format === f ? "#5493FF22" : "transparent", border: `1px solid ${g.format === f ? "#5493FF" : bdr}`, color: g.format === f ? "#5493FF" : mut, borderRadius: 5, padding: "3px 10px", fontSize: 10, cursor: "pointer" }}>{f}</button>)}
           </div>
+
+          {/* Rétrocompatibilité : exception au cas par cas (jeux Xbox One / Switch 1) */}
+          {BACK_COMPAT_PARENT[g.platform] && (
+            <div style={{ display: "flex", gap: 5, alignItems: "center", marginBottom: 12, flexWrap: "wrap" }}>
+              <span style={{ color: mut, fontSize: 11 }}>Jouable sur {BACK_COMPAT_PARENT[g.platform]} :</span>
+              {[["oui", true], ["non", false]].map(([label, val]) => (
+                <button key={label} onClick={() => onEdit(g.id, "backCompat", val)}
+                  style={{ background: !!g.backCompat === val ? (val ? "#22c55e22" : "#ef444422") : "transparent", border: `1px solid ${!!g.backCompat === val ? (val ? "#22c55e" : "#ef4444") : bdr}`, color: !!g.backCompat === val ? (val ? "#22c55e" : "#ef4444") : mut, borderRadius: 5, padding: "3px 10px", fontSize: 10, cursor: "pointer" }}>{label}</button>
+              ))}
+            </div>
+          )}
 
           {/* Chrono */}
           <div style={{ background: dark ? "#0f0f1a" : "#e8eef8", borderRadius: 8, padding: "10px 12px", marginBottom: 12 }}>
@@ -800,7 +829,7 @@ function AddModal({ dark, onAdd, onClose }) {
       metacritic: rawg?.metacritic || null,
       hltb: null, playedMinutes: 0, manualMinutes: 0, sessions: [],
       myLinks: ["","",""], tips: "", tag: "", progression: "",
-      backCompat: platform === "Xbox One", infobox: wikiInfo || null,
+      backCompat: isBackCompatPlatform(platform), infobox: wikiInfo || null,
     });
   };
 
@@ -963,7 +992,7 @@ function ImportModal({ dark, games, onImportGames, onClose }) {
         genre: [], style: "", status: "non commencé", note: null, lentA: null, lentDate: null,
         cover: t.image || null, metacritic: null, hltb: null, playedMinutes: 0, manualMinutes: 0,
         sessions: [], myLinks: ["", "", ""], tips: "", tag: "", progression: "",
-        backCompat: platform === "Xbox One", infobox: null,
+        backCompat: isBackCompatPlatform(platform), infobox: null,
       });
       setProgress(i + 1);
       await new Promise(r => setTimeout(r, 200)); // ménage le rate-limit RAWG
@@ -1217,11 +1246,12 @@ export default function App() {
         || normTitle(g.title).includes(q)
         || g.genre.some(x => normTitle(x).includes(q))
         || normTitle(g.tag).includes(q);
-      // "Xbox Series X" inclut les jeux Xbox One rétrocompatibles ; les autres
-      // plateformes restent strictes.
-      const platMatch = plat === "tous" ? true
-        : plat === "Xbox Series X" ? (g.platform === "Xbox Series X" || (g.platform === "Xbox One" && g.backCompat))
-        : g.platform === plat;
+      // Une plateforme récente affiche ses jeux natifs + ceux de la plateforme
+      // précédente marqués backCompat (voir BACK_COMPAT) : "Xbox Series X" inclut les
+      // Xbox One rétrocompatibles, "Switch 2" les Switch 1. Les plateformes
+      // "anciennes" ("Xbox One", "Switch 1") restent strictes.
+      const platMatch = plat === "tous" || g.platform === plat
+        || (BACK_COMPAT[plat] === g.platform && !!g.backCompat);
       const statusMatch = statFil === "tous" ? true
         : statFil === "à finir" ? (g.status === "en cours" || g.status === "non commencé")
         : g.status === statFil;

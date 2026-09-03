@@ -53,11 +53,16 @@ Dernière mise à jour : 2026-07-27.
 - **Enrichissement post-import** (bannière « Enrichir », best-effort et **annulable**) : complète cover/Metacritic/genres via RAWG et la description via Wikipédia sur les jeux fraîchement importés.
 - ⚠️ L'API expose l'**historique joué**, pas la liste des achats : un jeu acheté mais jamais lancé n'apparaît pas ; un jeu Game Pass/démo lancé apparaît. Aucun temps de jeu n'est importé (absent de l'endpoint) — le chrono manuel reste la source.
 
-### Plateformes — Xbox One / Xbox Series X
+### Plateformes & rétrocompatibilité
 - L'ancienne plateforme « Xbox » est **séparée automatiquement** en **Xbox One** / **Xbox Series X** selon la date (`addedDate`, seuil **10/11/2020**). Migration **idempotente** (au chargement, seed + localStorage ; ne re-migre pas un jeu déjà séparé). `addedDate` sert de proxy de date de sortie — approximatif pour quelques titres anciens (ex. Halo 4 classé Xbox One).
-- Champ booléen **`backCompat`** (rétrocompatible Series X, `true` par défaut pour les Xbox One) → badge discret **« 🔄 Compatible Series X »**.
-- Couleurs de badge distinctes (Series X vert vif, One vert foncé, Switch rouge). Filtres de plateforme et select d'AddModal mis à jour.
-- Le filtre **« Xbox Series X » inclut aussi les jeux Xbox One `backCompat`** (jouables sur Series X) ; le filtre **« Xbox One » reste strict**.
+- Champ booléen **`backCompat`**, `true` par défaut pour les plateformes « anciennes » (**Xbox One** et **Switch 1**) → badge discret **« 🔄 Compatible Series X »** / **« 🔄 Compatible Switch 2 »** selon la plateforme.
+- **Modifiable au cas par cas** : un toggle « Jouable sur … : oui / non » dans la fiche permet de marquer les rares exceptions (titres nécessitant un accessoire spécifique, etc.).
+- La valeur par défaut est posée par une **migration versionnée par jeu** (`bcV`) : le rattrapage ne s'applique qu'une fois, donc un choix manuel n'est **jamais réécrasé** au rechargement.
+- **Règle de rétrocompatibilité déclarative** (constante `BACK_COMPAT` dans `src/App.jsx`) : une plateforme récente affiche ses jeux natifs **+** ceux de la plateforme précédente marqués `backCompat`.
+  - **« Xbox Series X »** → natifs + **Xbox One** `backCompat`.
+  - **« Switch 2 »** → natifs + **Switch 1** `backCompat` (tous par défaut : la Switch 2 lit quasiment toute la ludothèque Switch 1).
+  - Les plateformes « anciennes » (**« Xbox One »**, **« Switch 1 »**) restent **strictes**.
+- Couleurs de badge distinctes (Series X vert vif, One vert foncé, Switch rouge). Filtres de plateforme et select d'AddModal alignés.
 
 ### Suivi de jeu
 - **Chrono de session** (Jouer/Stop) + **temps manuel** (h/min, boutons **+** / **−** borné à 0) + **historique des 3 dernières sessions**.
