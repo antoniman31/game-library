@@ -11,6 +11,28 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Game Library" />
+
+    <!-- Les polices étaient chargées par un @import placé dans une balise <style>
+         injectée par React au moment du rendu : la requête ne partait qu'une fois
+         l'application montée, et le texte sautait de la police système à Inter.
+         Ici, le navigateur les découvre dès l'analyse du document.
+         Inter était de surcroît déclarée dans index.css sans jamais être chargée :
+         tout le texte retombait sur Segoe UI. -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Press+Start+2P&display=swap"
+    />
+
+    <!-- Le thème est appliqué avant le premier rendu : posé par React dans un
+         effet, l'app s'affichait un instant en sombre avant de basculer en clair. -->
+    <script>
+      try {
+        var t = localStorage.getItem("gl_theme");
+        if (t === "light") document.documentElement.dataset.theme = "light";
+      } catch (e) { /* stockage indisponible : on reste sur le thème sombre */ }
+    </script>
   </head>
   <body>
     <div id="root"></div>

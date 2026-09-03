@@ -353,6 +353,19 @@ function staleKey(g) {
   return (last || new Date(g.addedDate)).getTime();
 }
 
+// ── Palette ─────────────────────────────────────────────────────────────────
+// Les couleurs sont définies dans src/index.css et basculées par l'attribut
+// data-theme sur <html>. Ces constantes ne sont que des alias : les styles
+// inline continuent de s'écrire `color: txt`, mais la valeur est résolue par
+// le navigateur au lieu d'être recalculée à chaque rendu depuis une prop.
+const bg = "var(--bg)";        // fond de l'app, des accordéons et du bloc chrono
+const hdr = "var(--hdr)";      // en-tête collant
+const card = "var(--card)";    // cartes, modales, champs
+const bdr = "var(--bdr)";      // toutes les bordures
+const txt = "var(--txt)";
+const mut = "var(--mut)";
+const demat = "var(--demat)";  // fond du badge « démat »
+
 // Jaquette au format boîte de jeu : rectangle vertical ~2:3.
 function Cover({ src, title, size = 72 }) {
   const [err, setErr] = useState(false);
@@ -368,10 +381,8 @@ function Cover({ src, title, size = 72 }) {
 }
 
 // Affiche les infos structurées Wikidata (développeur, éditeur, sorties, mode, série).
-function InfoboxView({ info, dark }) {
+function InfoboxView({ info }) {
   if (!info) return null;
-  const txt = dark ? "#e2e8f0" : "#1e2a4a";
-  const mut = dark ? "#64748b" : "#8090b0";
   const row = (label, val) => val ? <div style={{ fontSize: 11, color: mut, marginBottom: 3, lineHeight: 1.35 }}><span style={{ color: txt, fontWeight: 600 }}>{label} : </span>{val}</div> : null;
   const rel = info.releases?.length ? info.releases.map(r => r.platform ? `${r.date} (${r.platform})` : r.date).join(" · ") : null;
   const serieExtra = [info.follows && `après ${info.follows}`, info.followedBy && `puis ${info.followedBy}`].filter(Boolean).join(", ");
@@ -387,7 +398,7 @@ function InfoboxView({ info, dark }) {
   );
 }
 
-function GameCard({ g, onEdit, onDelete, onEnrich, activeTimer, onStartTimer, onStopTimer, dark, autoOpen }) {
+function GameCard({ g, onEdit, onDelete, onEnrich, activeTimer, onStartTimer, onStopTimer, autoOpen }) {
   const [open, setOpen] = useState(!!autoOpen);
   const rootRef = useRef(null);
   useEffect(() => { if (autoOpen) rootRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }); }, []); // eslint-disable-line
@@ -431,11 +442,6 @@ function GameCard({ g, onEdit, onDelete, onEnrich, activeTimer, onStartTimer, on
   const elapsed = isActive && startRef.current ? Math.floor((Date.now() - startRef.current) / 1000) : 0;
   const total = g.playedMinutes + g.manualMinutes;
   const hltbPct = g.hltb && total ? Math.min(100, Math.round(total / (g.hltb * 60) * 100)) : null;
-  const card = dark ? "#1a1a2e" : "#f0f4ff";
-  const bdr = dark ? "#2a2a4a" : "#d0d8f0";
-  const txt = dark ? "#e2e8f0" : "#1e2a4a";
-  const mut = dark ? "#64748b" : "#8090b0";
-  const fill = dark ? "#0f0f1a" : "#e8eef8";
   const dusty = isDusty(g);
   const last = lastSessionDate(g);
   const idleDays = last && g.status === "en cours" ? daysSince(last) : null;
@@ -510,18 +516,16 @@ function GameCard({ g, onEdit, onDelete, onEnrich, activeTimer, onStartTimer, on
 
   const acc = (id, title, content) => (
     <div style={{ marginBottom: 8 }}>
-      <button onClick={() => toggle(id)} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%", boxSizing: "border-box", background: fill, border: `1px solid ${bdr}`, borderRadius: section === id ? "8px 8px 0 0" : 8, padding: "8px 12px", color: txt, fontSize: 12, fontWeight: 600, cursor: "pointer", textAlign: "left" }}>
+      <button onClick={() => toggle(id)} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%", boxSizing: "border-box", background: bg, border: `1px solid ${bdr}`, borderRadius: section === id ? "8px 8px 0 0" : 8, padding: "8px 12px", color: txt, fontSize: 12, fontWeight: 600, cursor: "pointer", textAlign: "left" }}>
         <span>{title}</span>
         <span style={{ color: mut }}>{section === id ? "▾" : "▸"}</span>
       </button>
-      {section === id && <div style={{ background: fill, border: `1px solid ${bdr}`, borderTop: "none", borderRadius: "0 0 8px 8px", padding: "10px 12px" }}>{content}</div>}
+      {section === id && <div style={{ background: bg, border: `1px solid ${bdr}`, borderTop: "none", borderRadius: "0 0 8px 8px", padding: "10px 12px" }}>{content}</div>}
     </div>
   );
 
   return (
-    <div ref={rootRef} style={{ background: card, border: `1px ${dusty ? "dashed" : "solid"} ${baseBorder}`, borderRadius: 12, overflow: "hidden", opacity: dusty ? 0.72 : 1, transition: "border-color 0.2s, opacity 0.2s" }}
-      onMouseEnter={e => { e.currentTarget.style.borderColor = "#5493FF"; e.currentTarget.style.opacity = 1; }}
-      onMouseLeave={e => { e.currentTarget.style.borderColor = baseBorder; e.currentTarget.style.opacity = dusty ? 0.72 : 1; }}>
+    <div ref={rootRef} className="gl-card" style={{ background: card, border: `1px ${dusty ? "dashed" : "solid"} ${baseBorder}`, borderRadius: 12, overflow: "hidden", opacity: dusty ? 0.72 : 1, transition: "border-color 0.2s, opacity 0.2s" }}>
 
       <div style={{ display: "flex", gap: 10, padding: 12, cursor: "pointer" }} onClick={() => setOpen(!open)}>
         <Cover src={g.cover} title={g.title} size={72} />
@@ -529,7 +533,7 @@ function GameCard({ g, onEdit, onDelete, onEnrich, activeTimer, onStartTimer, on
           <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginBottom: 4 }}>
             <span style={{ background: PLATFORM_COLORS[g.platform] || "#5493FF", color: "#fff", fontSize: 9, fontWeight: 700, borderRadius: 3, padding: "1px 5px" }}>{g.platform}</span>
             <span key={g.status} style={{ border: `1px solid ${STATUS_COLORS[g.status]}`, color: STATUS_COLORS[g.status], fontSize: 9, borderRadius: 3, padding: "1px 5px", display: "inline-block", animation: "statusPop 200ms ease" }}>{g.status}</span>
-            {g.format === "démat" && <span style={{ background: dark ? "#1e3a5f" : "#ddeeff", color: "#5493FF", fontSize: 9, borderRadius: 3, padding: "1px 5px" }}>démat</span>}
+            {g.format === "démat" && <span style={{ background: demat, color: "#5493FF", fontSize: 9, borderRadius: 3, padding: "1px 5px" }}>démat</span>}
             {BACK_COMPAT_PARENT[g.platform] && g.backCompat && <span title={`Rétrocompatible ${BACK_COMPAT_PARENT[g.platform]}`} style={{ background: "#107C1022", color: "#22c55e", fontSize: 9, borderRadius: 3, padding: "1px 5px" }}>🔄 Compatible {BACK_COMPAT_PARENT[g.platform].replace("Xbox ", "")}</span>}
             {g.lentA && <span style={{ background: "#7c320044", color: "#f59e0b", fontSize: 9, borderRadius: 3, padding: "1px 5px" }}>📤 {g.lentA}</span>}
             {isActive && <span style={{ background: "#22c55e22", color: "#22c55e", fontSize: 9, borderRadius: 3, padding: "1px 5px" }}>▶ {String(Math.floor(elapsed/60)).padStart(2,"0")}:{String(elapsed%60).padStart(2,"0")}</span>}
@@ -541,7 +545,7 @@ function GameCard({ g, onEdit, onDelete, onEnrich, activeTimer, onStartTimer, on
             {hltbPct !== null && <span style={{ color: hltbPct >= 100 ? "#22c55e" : "#5493FF", fontSize: 11 }}>{hltbPct}% HLtB</span>}
             {idleDays !== null && <span style={{ color: idleDays > 30 ? "#f59e0b" : mut, fontSize: 11 }}>💤 {idleDays}j depuis dernière session</span>}
           </div>
-          {hltbPct !== null && <div style={{ marginTop: 4, height: 3, background: dark ? "#2a2a4a" : "#d0d8f0", borderRadius: 2 }}><div style={{ width: `${Math.min(100, hltbPct)}%`, height: "100%", background: hltbPct >= 100 ? "#22c55e" : "#5493FF", borderRadius: 2 }} /></div>}
+          {hltbPct !== null && <div style={{ marginTop: 4, height: 3, background: bdr, borderRadius: 2 }}><div style={{ width: `${Math.min(100, hltbPct)}%`, height: "100%", background: hltbPct >= 100 ? "#22c55e" : "#5493FF", borderRadius: 2 }} /></div>}
         </div>
         <span style={{ color: mut, alignSelf: "center" }}>{open ? "▲" : "▼"}</span>
       </div>
@@ -556,13 +560,13 @@ function GameCard({ g, onEdit, onDelete, onEnrich, activeTimer, onStartTimer, on
             </div>
           )}
           <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginBottom: 12 }}>
-            {g.genre.map(x => <span key={x} style={{ background: dark ? "#0f0f1a" : "#e8eef8", color: mut, fontSize: 10, borderRadius: 4, padding: "2px 7px", border: `1px solid ${bdr}` }}>{x}</span>)}
+            {g.genre.map(x => <span key={x} style={{ background: bg, color: mut, fontSize: 10, borderRadius: 4, padding: "2px 7px", border: `1px solid ${bdr}` }}>{x}</span>)}
           </div>
 
           {/* Infos Wikidata (si présentes) */}
           {g.infobox && (
-            <div style={{ background: fill, border: `1px solid ${bdr}`, borderRadius: 8, padding: "8px 10px", marginBottom: 12 }}>
-              <InfoboxView info={g.infobox} dark={dark} />
+            <div style={{ background: bg, border: `1px solid ${bdr}`, borderRadius: 8, padding: "8px 10px", marginBottom: 12 }}>
+              <InfoboxView info={g.infobox} />
             </div>
           )}
 
@@ -589,7 +593,7 @@ function GameCard({ g, onEdit, onDelete, onEnrich, activeTimer, onStartTimer, on
           )}
 
           {/* Chrono */}
-          <div style={{ background: dark ? "#0f0f1a" : "#e8eef8", borderRadius: 8, padding: "10px 12px", marginBottom: 12 }}>
+          <div style={{ background: bg, borderRadius: 8, padding: "10px 12px", marginBottom: 12 }}>
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
               <span style={{ color: txt, fontSize: 12, fontWeight: 600 }}>Temps de jeu</span>
               <span style={{ color: "#5493FF", fontSize: 12, fontWeight: 700 }}>{fmtTime(total)}{g.hltb ? ` / ${g.hltb}h` : ""}</span>
@@ -645,16 +649,14 @@ function GameCard({ g, onEdit, onDelete, onEnrich, activeTimer, onStartTimer, on
           ))}
           {/* Re-association RAWG */}
           {rawgOpen && (
-            <div style={{ position: "relative", background: fill, border: `1px solid ${bdr}`, borderRadius: 8, padding: "10px 12px", marginBottom: 10 }}>
+            <div style={{ position: "relative", background: bg, border: `1px solid ${bdr}`, borderRadius: 8, padding: "10px 12px", marginBottom: 10 }}>
               <div style={{ color: txt, fontSize: 11, fontWeight: 600, marginBottom: 6 }}>Ré-associer depuis RAWG</div>
               <input value={rawgQ} onChange={e => rawgQuery(e.target.value)} placeholder="Titre du jeu…" autoFocus style={{ width: "100%", boxSizing: "border-box", background: "transparent", border: `1px solid ${bdr}`, borderRadius: 6, color: txt, padding: "6px 8px", fontSize: 12, outline: "none" }} />
               {rawgBusy && <div style={{ color: "#5493FF", fontSize: 11, marginTop: 4 }}>Récupération & traduction…</div>}
               {rawgSugg.length > 0 && !rawgBusy && (
                 <div style={{ marginTop: 6, background: card, border: `1px solid ${bdr}`, borderRadius: 8, maxHeight: 300, overflowY: "auto", boxShadow: "0 8px 24px #0008" }}>
                   {rawgSugg.map(s => (
-                    <div key={s.id} onClick={() => rawgPick(s)} style={{ display: "flex", gap: 8, padding: "7px 9px", cursor: "pointer", borderBottom: `1px solid ${bdr}`, alignItems: "center" }}
-                      onMouseEnter={e => e.currentTarget.style.background = "#5493FF22"}
-                      onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+                    <div key={s.id} className="gl-row" onClick={() => rawgPick(s)} style={{ display: "flex", gap: 8, padding: "7px 9px", cursor: "pointer", borderBottom: `1px solid ${bdr}`, alignItems: "center" }}>
                       {s.background_image && <img src={s.background_image} style={{ width: 34, height: 51, minWidth: 34, objectFit: "cover", borderRadius: 4 }} />}
                       <div style={{ minWidth: 0 }}><div style={{ color: txt, fontSize: 12, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.name}</div><div style={{ color: mut, fontSize: 10 }}>{s.released}{s.metacritic ? ` · MC ${s.metacritic}` : ""}</div></div>
                     </div>
@@ -665,16 +667,14 @@ function GameCard({ g, onEdit, onDelete, onEnrich, activeTimer, onStartTimer, on
           )}
           {/* Titre français via Wikipédia FR */}
           {wikiOpen && (
-            <div style={{ background: fill, border: `1px solid ${bdr}`, borderRadius: 8, padding: "10px 12px", marginBottom: 10 }}>
+            <div style={{ background: bg, border: `1px solid ${bdr}`, borderRadius: 8, padding: "10px 12px", marginBottom: 10 }}>
               <div style={{ color: txt, fontSize: 11, fontWeight: 600, marginBottom: 6 }}>Titre français (Wikipédia)</div>
               <input value={wikiQ} onChange={e => wikiQuery(e.target.value)} placeholder="Titre du jeu…" autoFocus style={{ width: "100%", boxSizing: "border-box", background: "transparent", border: `1px solid ${bdr}`, borderRadius: 6, color: txt, padding: "6px 8px", fontSize: 12, outline: "none" }} />
               {wikiBusy && <div style={{ color: "#5493FF", fontSize: 11, marginTop: 4 }}>Recherche…</div>}
               {!wikiBusy && wikiSugg.length > 0 && (
                 <div style={{ marginTop: 6, background: card, border: `1px solid ${bdr}`, borderRadius: 8, maxHeight: 300, overflowY: "auto", boxShadow: "0 8px 24px #0008" }}>
                   {wikiSugg.map((s, i) => (
-                    <div key={i} style={{ display: "flex", gap: 8, padding: "7px 9px", borderBottom: `1px solid ${bdr}`, alignItems: "center" }}
-                      onMouseEnter={e => e.currentTarget.style.background = "#5493FF22"}
-                      onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+                    <div key={i} className="gl-row" style={{ display: "flex", gap: 8, padding: "7px 9px", borderBottom: `1px solid ${bdr}`, alignItems: "center" }}>
                       <div onClick={() => wikiPick(s.title)} style={{ flex: 1, minWidth: 0, cursor: "pointer", color: txt, fontSize: 12, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.title}</div>
                       {s.url && <a href={s.url} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()} title="Voir la page Wikipédia" style={{ color: "#5493FF", fontSize: 10, textDecoration: "none", flexShrink: 0 }}>↗ page</a>}
                     </div>
@@ -713,7 +713,7 @@ function GameCard({ g, onEdit, onDelete, onEnrich, activeTimer, onStartTimer, on
               {wikiInfo && (
                 <div style={{ marginTop: 10, borderTop: `1px solid ${bdr}`, paddingTop: 8 }}>
                   <div style={{ color: txt, fontSize: 11, fontWeight: 600, marginBottom: 4 }}>ℹ️ Infos (Wikidata)</div>
-                  <div style={{ marginBottom: 6 }}><InfoboxView info={wikiInfo} dark={dark} /></div>
+                  <div style={{ marginBottom: 6 }}><InfoboxView info={wikiInfo} /></div>
                   <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                     <button onClick={() => { onEdit(g.id, "infobox", wikiInfo); setWikiInfo(null); }} style={{ background: "#22c55e22", border: "1px solid #22c55e", color: "#22c55e", borderRadius: 5, padding: "3px 8px", fontSize: 10, cursor: "pointer" }}>Utiliser ces infos</button>
                     <button onClick={() => setWikiInfo(null)} style={{ background: "transparent", border: `1px solid ${bdr}`, color: mut, borderRadius: 5, padding: "3px 8px", fontSize: 10, cursor: "pointer" }}>Ignorer</button>
@@ -724,7 +724,7 @@ function GameCard({ g, onEdit, onDelete, onEnrich, activeTimer, onStartTimer, on
           )}
           {/* Jaquettes SteamGridDB */}
           {sgdbOpen && (
-            <div style={{ background: fill, border: `1px solid ${bdr}`, borderRadius: 8, padding: "10px 12px", marginBottom: 10 }}>
+            <div style={{ background: bg, border: `1px solid ${bdr}`, borderRadius: 8, padding: "10px 12px", marginBottom: 10 }}>
               <div style={{ color: txt, fontSize: 11, fontWeight: 600, marginBottom: 6 }}>Jaquette SteamGridDB</div>
               <input value={sgdbQ} onChange={e => sgdbQuery(e.target.value)} placeholder="Titre du jeu…" autoFocus style={{ width: "100%", boxSizing: "border-box", background: "transparent", border: `1px solid ${bdr}`, borderRadius: 6, color: txt, padding: "6px 8px", fontSize: 12, outline: "none" }} />
               {sgdbBusy && <div style={{ color: "#5493FF", fontSize: 11, marginTop: 6 }}>Recherche des jaquettes…</div>}
@@ -733,10 +733,8 @@ function GameCard({ g, onEdit, onDelete, onEnrich, activeTimer, onStartTimer, on
                   {sgdbMatch && <div style={{ color: mut, fontSize: 11, marginTop: 6 }}>Trouvé : <span style={{ color: txt, fontWeight: 600 }}>{sgdbMatch}</span></div>}
                   <div style={{ marginTop: 8, display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 6, maxHeight: 320, overflowY: "auto" }}>
                     {sgdbGridsList.map((grid, i) => (
-                      <img key={i} src={grid.thumb} alt="" loading="lazy" onClick={() => sgdbPick(grid.url)} title="Utiliser cette jaquette"
-                        style={{ width: "100%", aspectRatio: "2 / 3", objectFit: "cover", borderRadius: 6, border: `1px solid ${bdr}`, cursor: "pointer", display: "block" }}
-                        onMouseEnter={e => e.currentTarget.style.borderColor = "#5493FF"}
-                        onMouseLeave={e => e.currentTarget.style.borderColor = bdr} />
+                      <img key={i} className="gl-thumb" src={grid.thumb} alt="" loading="lazy" onClick={() => sgdbPick(grid.url)} title="Utiliser cette jaquette"
+                        style={{ width: "100%", aspectRatio: "2 / 3", objectFit: "cover", borderRadius: 6, border: `1px solid ${bdr}`, cursor: "pointer", display: "block" }} />
                     ))}
                   </div>
                 </>
@@ -759,7 +757,7 @@ function GameCard({ g, onEdit, onDelete, onEnrich, activeTimer, onStartTimer, on
   );
 }
 
-function AddModal({ dark, onAdd, onClose }) {
+function AddModal({ onAdd, onClose }) {
   const [title, setTitle] = useState("");
   const [platform, setPlatform] = useState("Xbox Series X");
   const [fmt, setFmt] = useState("physique");
@@ -786,11 +784,7 @@ function AddModal({ dark, onAdd, onClose }) {
   const [cover, setCover] = useState(null);
   const sgDebRef = useRef(null);
 
-  const bg = dark ? "#1a1a2e" : "#f0f4ff";
-  const bdr = dark ? "#2a2a4a" : "#d0d8f0";
-  const txt = dark ? "#e2e8f0" : "#1e2a4a";
-  const mut = dark ? "#64748b" : "#8090b0";
-  const inp = { background: dark ? "#0f0f1a" : "#e8eef8", border: `1px solid ${bdr}`, borderRadius: 8, color: txt, padding: "8px 12px", fontSize: 13, outline: "none", width: "100%", boxSizing: "border-box" };
+  const inp = { background: bg, border: `1px solid ${bdr}`, borderRadius: 8, color: txt, padding: "8px 12px", fontSize: 13, outline: "none", width: "100%", boxSizing: "border-box" };
   const srcBtn = { background: "transparent", border: "1px solid #5493FF", color: "#5493FF", borderRadius: 6, padding: "5px 8px", fontSize: 11, cursor: "pointer" };
 
   const search = async (q) => setSugg(await rawgSearch(q));
@@ -864,18 +858,16 @@ function AddModal({ dark, onAdd, onClose }) {
 
   return (
     <div style={{ position: "fixed", inset: 0, background: "#000b", zIndex: 300, display: "flex", alignItems: "flex-end" }} onClick={onClose}>
-      <div style={{ background: bg, border: `1px solid ${bdr}`, borderRadius: "16px 16px 0 0", padding: 20, width: "100%", maxWidth: 500, margin: "0 auto", maxHeight: "85vh", overflowY: "auto" }} onClick={e => e.stopPropagation()}>
+      <div style={{ background: card, border: `1px solid ${bdr}`, borderRadius: "16px 16px 0 0", padding: "20px 20px calc(20px + var(--safe-bottom))", width: "100%", maxWidth: 500, margin: "0 auto", maxHeight: "85vh", overflowY: "auto" }} onClick={e => e.stopPropagation()}>
         <div style={{ fontWeight: 700, fontSize: 15, color: txt, marginBottom: 14 }}>Ajouter un jeu</div>
 
         <div style={{ position: "relative", marginBottom: 10 }}>
           <input value={title} onChange={e => { setTitle(e.target.value); clearTimeout(debRef.current); debRef.current = setTimeout(() => search(e.target.value), 350); }} placeholder="Titre du jeu *" style={inp} />
           {loading && <div style={{ color: "#5493FF", fontSize: 11, marginTop: 3 }}>Recherche RAWG…</div>}
           {sugg.length > 0 && (
-            <div style={{ position: "absolute", top: "100%", left: 0, right: 0, background: bg, border: `1px solid ${bdr}`, borderRadius: 8, zIndex: 10, overflow: "hidden", boxShadow: "0 8px 24px #0008" }}>
+            <div style={{ position: "absolute", top: "100%", left: 0, right: 0, background: card, border: `1px solid ${bdr}`, borderRadius: 8, zIndex: 10, overflow: "hidden", boxShadow: "0 8px 24px #0008" }}>
               {sugg.map(s => (
-                <div key={s.id} onClick={() => pick(s)} style={{ display: "flex", gap: 8, padding: "8px 10px", cursor: "pointer", borderBottom: `1px solid ${bdr}` }}
-                  onMouseEnter={e => e.currentTarget.style.background = "#5493FF22"}
-                  onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+                <div key={s.id} className="gl-row" onClick={() => pick(s)} style={{ display: "flex", gap: 8, padding: "8px 10px", cursor: "pointer", borderBottom: `1px solid ${bdr}` }}>
                   {s.background_image && <img src={s.background_image} style={{ width: 34, height: 51, minWidth: 34, objectFit: "cover", borderRadius: 4 }} />}
                   <div><div style={{ color: txt, fontSize: 12, fontWeight: 600 }}>{s.name}</div><div style={{ color: "#64748b", fontSize: 10 }}>{s.released}{s.metacritic ? ` · MC ${s.metacritic}` : ""}</div></div>
                 </div>
@@ -910,8 +902,7 @@ function AddModal({ dark, onAdd, onClose }) {
             {!wikiBusy && wikiSugg.length > 0 && (
               <div style={{ marginTop: 6, background: bg, border: `1px solid ${bdr}`, borderRadius: 8, maxHeight: 260, overflowY: "auto" }}>
                 {wikiSugg.map((s, i) => (
-                  <div key={i} style={{ display: "flex", gap: 8, padding: "7px 9px", borderBottom: `1px solid ${bdr}`, alignItems: "center" }}
-                    onMouseEnter={e => e.currentTarget.style.background = "#5493FF22"} onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+                  <div key={i} className="gl-row" style={{ display: "flex", gap: 8, padding: "7px 9px", borderBottom: `1px solid ${bdr}`, alignItems: "center" }}>
                     <div onClick={() => wikiPick(s.title)} style={{ flex: 1, minWidth: 0, cursor: "pointer", color: txt, fontSize: 12, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.title}</div>
                     {s.url && <a href={s.url} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()} style={{ color: "#5493FF", fontSize: 10, textDecoration: "none", flexShrink: 0 }}>↗</a>}
                   </div>
@@ -959,18 +950,13 @@ function AddModal({ dark, onAdd, onClose }) {
 }
 
 // Import de la bibliothèque Xbox (xbl.io) avec écran de prévisualisation.
-function ImportModal({ dark, games, onImportGames, onClose }) {
+function ImportModal({ games, onImportGames, onClose }) {
   const [list, setList] = useState(null);
   const [loading, setLoading] = useState(true);
   const [checked, setChecked] = useState({});
   const [importing, setImporting] = useState(false);
   const [progress, setProgress] = useState(0);
   const cancelRef = useRef(false);
-
-  const bg = dark ? "#1a1a2e" : "#f0f4ff";
-  const bdr = dark ? "#2a2a4a" : "#d0d8f0";
-  const txt = dark ? "#e2e8f0" : "#1e2a4a";
-  const mut = dark ? "#64748b" : "#8090b0";
 
   useEffect(() => {
     (async () => {
@@ -1030,7 +1016,7 @@ function ImportModal({ dark, games, onImportGames, onClose }) {
 
   return (
     <div style={{ position: "fixed", inset: 0, background: "#000b", zIndex: 300, display: "flex", alignItems: "flex-end" }} onClick={importing ? undefined : onClose}>
-      <div style={{ background: bg, border: `1px solid ${bdr}`, borderRadius: "16px 16px 0 0", padding: 20, width: "100%", maxWidth: 500, margin: "0 auto", maxHeight: "85vh", display: "flex", flexDirection: "column" }} onClick={e => e.stopPropagation()}>
+      <div style={{ background: card, border: `1px solid ${bdr}`, borderRadius: "16px 16px 0 0", padding: "20px 20px calc(20px + var(--safe-bottom))", width: "100%", maxWidth: 500, margin: "0 auto", maxHeight: "85vh", display: "flex", flexDirection: "column" }} onClick={e => e.stopPropagation()}>
         <div style={{ fontWeight: 700, fontSize: 15, color: txt, marginBottom: 4 }}>🎮 Importer ma bibliothèque Xbox</div>
         {loading && <div style={{ color: "#5493FF", fontSize: 12, padding: "16px 0" }}>Récupération de l'historique Xbox…</div>}
 
@@ -1099,7 +1085,11 @@ export default function App() {
   const [lastAddedId, setLastAddedId] = useState(null);
   const [activeTimer, setActiveTimer] = useState(null);
   const [timerStart, setTimerStart] = useState(null);
-  const [dark, setDark] = useState(true);
+  // Le thème est persisté : il repartait en sombre à chaque rechargement.
+  // index.html le pose sur <html> avant le premier rendu pour éviter le clignotement.
+  const [theme, setTheme] = useState(() => {
+    try { return localStorage.getItem("gl_theme") === "light" ? "light" : "dark"; } catch { return "dark"; }
+  });
   const [refreshing, setRefreshing] = useState(false);
   const [refreshProg, setRefreshProg] = useState(0);
   const [refreshMsg, setRefreshMsg] = useState(null); // bilan de fin de refresh (S1)
@@ -1109,6 +1099,11 @@ export default function App() {
   const importRef = useRef(null);
 
   useEffect(() => { try { localStorage.setItem("gl_v2", JSON.stringify(games)); } catch {} }, [games]);
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    try { localStorage.setItem("gl_theme", theme); } catch {}
+  }, [theme]);
 
   // Actualise la description de tous les jeux depuis Wikipédia FR :
   // recherche full-text -> résumé (extract) du 1er article -> champ style.
@@ -1313,13 +1308,6 @@ export default function App() {
 
   const lentGames = games.filter(g => g.lentA);
 
-  const bg = dark ? "#0f0f1a" : "#e8eef8";
-  const hdr = dark ? "#12122a" : "#dde6f8";
-  const bdr = dark ? "#2a2a4a" : "#c8d4ec";
-  const txt = dark ? "#e2e8f0" : "#1e2a4a";
-  const mut = dark ? "#64748b" : "#8090b0";
-  const inpBg = dark ? "#1a1a2e" : "#f0f4ff";
-
   const emptyState = (
     <div style={{ textAlign: "center", padding: "70px 20px", color: mut }}>
       <div style={{ fontSize: 56, marginBottom: 12, opacity: 0.85 }}>🎮</div>
@@ -1329,11 +1317,10 @@ export default function App() {
   );
 
   return (
-    <div style={{ background: bg, minHeight: "100vh", fontFamily: "'Inter','Segoe UI',sans-serif", color: txt }}>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap'); @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}} @keyframes statusPop{from{opacity:0;transform:scale(0.75)}to{opacity:1;transform:scale(1)}} @keyframes toastIn{from{opacity:0;transform:translate(-50%,12px)}to{opacity:1;transform:translate(-50%,0)}} *{box-sizing:border-box}`}</style>
+    <div style={{ minHeight: "100vh" }}>
 
       {/* Header */}
-      <div style={{ background: hdr, borderBottom: `1px solid ${bdr}`, padding: "12px 14px", position: "sticky", top: 0, zIndex: 100 }}>
+      <div style={{ background: hdr, borderBottom: `1px solid ${bdr}`, padding: "calc(12px + var(--safe-top)) calc(14px + var(--safe-right)) 12px calc(14px + var(--safe-left))", position: "sticky", top: 0, zIndex: 100 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
           <div>
             <div style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 11, color: "#5493FF", lineHeight: 1.4 }}>GAME LIBRARY</div>
@@ -1345,13 +1332,13 @@ export default function App() {
             </button>
             {refreshing && <button onClick={cancelRefresh} title="Annuler l'actualisation" style={{ background: "#ef444422", border: "1px solid #ef4444", color: "#ef4444", borderRadius: 6, padding: "5px 8px", fontSize: 11, cursor: "pointer", whiteSpace: "nowrap" }}>Annuler</button>}
             <button onClick={() => setShowImport(true)} title="Importer la bibliothèque Xbox (xbl.io)" style={{ background: "transparent", border: `1px solid ${bdr}`, color: mut, borderRadius: 6, padding: "5px 8px", fontSize: 11, cursor: "pointer", whiteSpace: "nowrap" }}>🎮 Importer Xbox</button>
-            <button onClick={() => setDark(!dark)} style={{ background: "transparent", border: `1px solid ${bdr}`, color: mut, borderRadius: 6, padding: "5px 8px", fontSize: 12, cursor: "pointer" }}>{dark ? "☀️" : "🌙"}</button>
+            <button onClick={() => setTheme(t => (t === "dark" ? "light" : "dark"))} style={{ background: "transparent", border: `1px solid ${bdr}`, color: mut, borderRadius: 6, padding: "5px 8px", fontSize: 12, cursor: "pointer" }}>{theme === "dark" ? "☀️" : "🌙"}</button>
             <button onClick={() => setShowAdd(true)} style={{ background: "#5493FF", color: "#fff", border: "none", borderRadius: 8, padding: "7px 12px", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>+ Ajouter</button>
           </div>
         </div>
 
         {refreshMsg && (
-          <div style={{ display: "flex", alignItems: "flex-start", gap: 8, background: dark ? "#1a1a2e" : "#f0f4ff", border: `1px solid ${bdr}`, borderRadius: 8, padding: "8px 10px", marginBottom: 10 }}>
+          <div style={{ display: "flex", alignItems: "flex-start", gap: 8, background: card, border: `1px solid ${bdr}`, borderRadius: 8, padding: "8px 10px", marginBottom: 10 }}>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ color: txt, fontSize: 11, fontWeight: 600 }}>{refreshMsg.text}</div>
               {refreshMsg.notFound.length > 0 && <div style={{ color: mut, fontSize: 10, marginTop: 3, maxHeight: 54, overflowY: "auto" }}>Sans page : {refreshMsg.notFound.join(", ")}</div>}
@@ -1361,7 +1348,7 @@ export default function App() {
         )}
 
         {(importedIds.length > 0 || enriching) && (
-          <div style={{ display: "flex", alignItems: "center", gap: 8, background: dark ? "#1a1a2e" : "#f0f4ff", border: `1px solid ${bdr}`, borderRadius: 8, padding: "8px 10px", marginBottom: 10 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, background: card, border: `1px solid ${bdr}`, borderRadius: 8, padding: "8px 10px", marginBottom: 10 }}>
             <div style={{ flex: 1, minWidth: 0, color: txt, fontSize: 11, fontWeight: 600 }}>
               {enriching ? `Enrichissement… ${enrichProg}/${importedIds.length}` : `${importedIds.length} jeu(x) importé(s) — enrichir via RAWG + Wikipédia ?`}
             </div>
@@ -1382,7 +1369,7 @@ export default function App() {
         </div>
 
         {tab === "library" && <>
-          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Rechercher titre, genre, tag…" style={{ background: inpBg, border:`1px solid ${bdr}`, borderRadius:8, color:txt, padding:"7px 12px", fontSize:13, outline:"none", width:"100%", marginBottom:8 }} />
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Rechercher titre, genre, tag…" style={{ background: card, border:`1px solid ${bdr}`, borderRadius:8, color:txt, padding:"7px 12px", fontSize:13, outline:"none", width:"100%", marginBottom:8 }} />
           <div style={{ display:"flex", gap:4, flexWrap:"wrap", marginBottom:6 }}>
             {PLATFORMS.map(p => <button key={p} onClick={() => setPlat(p)} style={{ background:plat===p?"#5493FF22":"transparent", border:`1px solid ${plat===p?"#5493FF":bdr}`, color:plat===p?"#5493FF":mut, borderRadius:5, padding:"3px 8px", fontSize:10, cursor:"pointer" }}>{p==="tous"?"Toutes":p}</button>)}
           </div>
@@ -1403,13 +1390,11 @@ export default function App() {
       </div>
 
       {/* Body */}
-      <div style={{ padding:"14px 14px 60px" }}>
+      <div style={{ padding:"14px calc(14px + var(--safe-right)) calc(60px + var(--safe-bottom)) calc(14px + var(--safe-left))" }}>
         {tab === "library" && (filtered.length === 0 ? emptyState : view === "grille" ? (
-          <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(120px,1fr))", gap:10 }}>
+          <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-bg,minmax(120px,1fr))", gap:10 }}>
             {filtered.map(g => (
-              <div key={g.id} style={{ background:dark?"#1a1a2e":"#f0f4ff", border:`1px solid ${bdr}`, borderRadius:10, overflow:"hidden", cursor:"pointer", transition:"transform 0.15s, box-shadow 0.15s" }}
-                onMouseEnter={e => { e.currentTarget.style.transform="scale(1.04)"; e.currentTarget.style.boxShadow="0 10px 24px rgba(0,0,0,0.45)"; e.currentTarget.style.zIndex="1"; e.currentTarget.style.position="relative"; }}
-                onMouseLeave={e => { e.currentTarget.style.transform="scale(1)"; e.currentTarget.style.boxShadow="none"; e.currentTarget.style.zIndex="auto"; }}
+              <div key={g.id} className="gl-tile" style={{ background:card, border:`1px solid ${bdr}`, borderRadius:10, overflow:"hidden", cursor:"pointer" }}
                 onClick={() => { setView("liste"); setSearch(g.title); setTimeout(()=>setSearch(""),2000); }}>
                 <Cover src={g.cover} title={g.title} size="100%" />
                 <div style={{ height:3, background:STATUS_COLORS[g.status]+"88" }} />
@@ -1422,7 +1407,7 @@ export default function App() {
           </div>
         ) : (
           <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
-            {filtered.map(g => <GameCard key={g.id} g={g} onEdit={edit} onDelete={deleteGame} onEnrich={enrichGame} activeTimer={activeTimer} onStartTimer={startTimer} onStopTimer={stopTimer} dark={dark} autoOpen={g.id === lastAddedId} />)}
+            {filtered.map(g => <GameCard key={g.id} g={g} onEdit={edit} onDelete={deleteGame} onEnrich={enrichGame} activeTimer={activeTimer} onStartTimer={startTimer} onStopTimer={stopTimer} autoOpen={g.id === lastAddedId} />)}
           </div>
         ))}
 
@@ -1432,7 +1417,7 @@ export default function App() {
             : lentGames.map(g => {
               const days = g.lentDate ? Math.floor((Date.now()-new Date(g.lentDate))/86400000) : null;
               return (
-                <div key={g.id} style={{ background:dark?"#1a1a2e":"#f0f4ff", border:`1px solid ${days>30?"#ef4444":bdr}`, borderRadius:10, padding:"12px", marginBottom:8, display:"flex", gap:10, alignItems:"center" }}>
+                <div key={g.id} style={{ background:card, border:`1px solid ${days>30?"#ef4444":bdr}`, borderRadius:10, padding:"12px", marginBottom:8, display:"flex", gap:10, alignItems:"center" }}>
                   <Cover src={g.cover} title={g.title} size={52} />
                   <div style={{ flex:1 }}>
                     <div style={{ color:txt, fontWeight:600, fontSize:13 }}>{g.title}</div>
@@ -1462,10 +1447,10 @@ export default function App() {
             } catch {}
             setKeyTest(t => ({ ...t, [id]: ok ? "ok" : "ko" }));
           };
-          const champStyle = { width: "100%", boxSizing: "border-box", background: inpBg, border: `1px solid ${bdr}`, borderRadius: 6, color: txt, padding: "7px 9px", fontSize: 12, outline: "none", fontFamily: "monospace" };
+          const champStyle = { width: "100%", boxSizing: "border-box", background: card, border: `1px solid ${bdr}`, borderRadius: 6, color: txt, padding: "7px 9px", fontSize: 12, outline: "none", fontFamily: "monospace" };
           return (
             <div>
-              <div style={{ background: dark?"#1a1a2e":"#f0f4ff", border:`1px solid ${bdr}`, borderRadius:10, padding:14, marginBottom:12 }}>
+              <div style={{ background: card, border:`1px solid ${bdr}`, borderRadius:10, padding:14, marginBottom:12 }}>
                 <div style={{ color:txt, fontWeight:600, fontSize:13, marginBottom:4 }}>Clés API</div>
                 <div style={{ color:mut, fontSize:11, marginBottom:12 }}>
                   Elles restent <strong>sur cet appareil</strong> (stockage local du navigateur) et ne sont jamais envoyées ailleurs qu'aux services concernés.
@@ -1505,7 +1490,7 @@ export default function App() {
                   {savedMsg && <span style={{ color:"#22c55e", fontSize:11 }}>Enregistré ✓</span>}
                 </div>
               </div>
-              <div style={{ background: dark?"#1a1a2e":"#f0f4ff", border:`1px solid ${bdr}`, borderRadius:10, padding:14, color:mut, fontSize:11, lineHeight:1.5 }}>
+              <div style={{ background: card, border:`1px solid ${bdr}`, borderRadius:10, padding:14, color:mut, fontSize:11, lineHeight:1.5 }}>
                 ⚠️ L'<strong>Export JSON</strong> (onglet Stats) contient tes jeux mais <strong>pas tes clés</strong> — c'est volontaire, pour pouvoir partager ou sauvegarder un export sans fuite.
                 Sur un nouvel appareil, il faut donc importer l'export <em>et</em> resaisir les clés ici.
               </div>
@@ -1517,22 +1502,22 @@ export default function App() {
           <div>
             <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:16 }}>
               {[["Total",stats.total,"#5493FF"],["Terminés",`${stats.termines} (${Math.round(stats.termines/stats.total*100)}%)`,"#22c55e"],["En cours",stats.enCours,"#5493FF"],["Prêtés",stats.pretes,"#f59e0b"],["Temps total",fmtTime(stats.totalTime),"#a855f7"]].map(([l,v,c]) => (
-                <div key={l} style={{ background:dark?"#1a1a2e":"#f0f4ff", border:`1px solid ${bdr}`, borderRadius:10, padding:"12px 14px" }}>
+                <div key={l} style={{ background:card, border:`1px solid ${bdr}`, borderRadius:10, padding:"12px 14px" }}>
                   <div style={{ color:mut, fontSize:10 }}>{l}</div>
                   <div style={{ color:c, fontSize:20, fontWeight:700, marginTop:2 }}>{v}</div>
                 </div>
               ))}
             </div>
-            <div style={{ background:dark?"#1a1a2e":"#f0f4ff", border:`1px solid ${bdr}`, borderRadius:10, padding:14, marginBottom:16 }}>
+            <div style={{ background:card, border:`1px solid ${bdr}`, borderRadius:10, padding:14, marginBottom:16 }}>
               <div style={{ color:txt, fontWeight:600, fontSize:13, marginBottom:10 }}>Top genres</div>
               {stats.topGenres.map(([genre,count]) => (
                 <div key={genre} style={{ marginBottom:8 }}>
                   <div style={{ display:"flex", justifyContent:"space-between", marginBottom:3 }}><span style={{ color:txt, fontSize:12 }}>{genre}</span><span style={{ color:mut, fontSize:11 }}>{count}</span></div>
-                  <div style={{ height:4, background:dark?"#2a2a4a":"#d0d8f0", borderRadius:2 }}><div style={{ width:`${count/stats.total*100}%`, height:"100%", background:"#5493FF", borderRadius:2 }} /></div>
+                  <div style={{ height:4, background:bdr, borderRadius:2 }}><div style={{ width:`${count/stats.total*100}%`, height:"100%", background:"#5493FF", borderRadius:2 }} /></div>
                 </div>
               ))}
             </div>
-            <div style={{ background:dark?"#1a1a2e":"#f0f4ff", border:`1px solid ${bdr}`, borderRadius:10, padding:14 }}>
+            <div style={{ background:card, border:`1px solid ${bdr}`, borderRadius:10, padding:14 }}>
               <div style={{ color:txt, fontWeight:600, fontSize:13, marginBottom:4 }}>Sauvegarde</div>
               <div style={{ color:mut, fontSize:11, marginBottom:10 }}>Exporte ou restaure toute la bibliothèque au format JSON.</div>
               <div style={{ display:"flex", gap:8 }}>
@@ -1545,11 +1530,11 @@ export default function App() {
         )}
       </div>
 
-      {showAdd && <AddModal dark={dark} onAdd={addGame} onClose={() => setShowAdd(false)} />}
-      {showImport && <ImportModal dark={dark} games={games} onImportGames={importGames} onClose={() => setShowImport(false)} />}
+      {showAdd && <AddModal onAdd={addGame} onClose={() => setShowAdd(false)} />}
+      {showImport && <ImportModal games={games} onImportGames={importGames} onClose={() => setShowImport(false)} />}
 
       {deleted && (
-        <div style={{ position:"fixed", bottom:20, left:"50%", transform:"translateX(-50%)", zIndex:400, display:"flex", alignItems:"center", gap:14, background:dark?"#1a1a2e":"#f0f4ff", border:`1px solid ${bdr}`, borderRadius:10, padding:"10px 14px", boxShadow:"0 8px 24px rgba(0,0,0,0.4)", animation:"toastIn 200ms ease" }}>
+        <div style={{ position:"fixed", bottom:20, left:"50%", transform:"translateX(-50%)", zIndex:400, display:"flex", alignItems:"center", gap:14, background:card, border:`1px solid ${bdr}`, borderRadius:10, padding:"10px 14px", boxShadow:"0 8px 24px rgba(0,0,0,0.4)", animation:"toastIn 200ms ease" }}>
           <span style={{ color:txt, fontSize:13 }}>🗑 « {deleted.game.title} » supprimé</span>
           <button onClick={undoDelete} style={{ background:"transparent", border:"1px solid #5493FF", color:"#5493FF", borderRadius:6, padding:"4px 12px", fontSize:12, fontWeight:600, cursor:"pointer" }}>Annuler</button>
         </div>
