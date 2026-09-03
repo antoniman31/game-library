@@ -95,6 +95,10 @@ npx wrangler deploy
 Wrangler affiche une URL du type `https://game-library-proxy.<compte>.workers.dev`.
 La coller dans **⚙️ → « Relais CORS »** → Enregistrer.
 
+> **Relais déjà déployé pour ce projet :**
+> `https://game-library-proxy.antoniman31.workers.dev`
+> Il suffit de le coller dans ⚙️ sur chaque appareil — inutile de redéployer.
+
 > Sans ce relais, **tout le reste fonctionne** : RAWG, Wikipédia et Wikidata
 > autorisent les appels directs. Seuls SteamGridDB et l'import Xbox sont
 > indisponibles en ligne.
@@ -290,6 +294,12 @@ fournit directement un texte français rédigé, sans quota ni découpage.
 - **Le service worker ne met jamais les appels d'API en cache**, uniquement la
   coquille de l'application et les jaquettes distantes : les données doivent
   rester fraîches et échouer proprement hors ligne.
+- **Les jaquettes xbl.io sont réécrites en HTTPS.** L'API les renvoie en `http://`
+  (bloquées en contenu mixte sur un site HTTPS), et une partie vient de
+  `images-eds.xboxlive.com`, hôte qui ne répond pas en TLS — un simple passage en
+  `https` échouait donc aussi. Le helper `httpsImage` bascule vers l'hôte
+  `images-eds-ssl` équivalent avant de forcer le schéma. Bug invisible en
+  développement, où la page est servie en `http://localhost`.
 - **Historique git purgé avant la première publication.** Les clés avaient été
   committées pendant le développement local ; elles ont été retirées de tous les
   commits avec `git-filter-repo` **avant** le premier push. Elles ne sont donc

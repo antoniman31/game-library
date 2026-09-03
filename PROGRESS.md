@@ -99,6 +99,8 @@ partir dans l'Export JSON). Un bouton « Tester » valide chaque clé.
 
 - **SteamGridDB et xbl.io nécessitent le relais** : sans Worker déployé (et son URL renseignée dans ⚙️), ces deux sources restent indisponibles en ligne. Tout le reste fonctionne.
 - **xbl.io** : historique joué ≠ bibliothèque achetée (voir section Import Xbox) ; pas de temps de jeu exposé.
+- **Jaquettes xbl.io réécrites en HTTPS** (`httpsImage`) : l'API les sert en `http://` et une partie via `images-eds.xboxlive.com`, hôte sans TLS. Sans cette réécriture, toute jaquette importée depuis Xbox restait cassée sur le site HTTPS — invisible en dev (`http://localhost`).
+- **Pas d'import Nintendo possible** : Nintendo n'expose aucune API de bibliothèque/achats. Le seul accès (non officiel, `nxapi`) passe par les relevés du contrôle parental — jeux *joués* et temps de jeu, via un login Nintendo interactif. Voir README.
 - **Wikidata** : certains champs d'infobox sont parfois absents (jeux Nintendo/récents) → affichage best-effort, sans casser l'UI.
 
 ## Fait récemment
@@ -111,8 +113,8 @@ partir dans l'Export JSON). Un bouton « Tester » valide chaque clé.
 
 ## Prochaines étapes
 
-- Déployer le Worker (`worker/README.md`) et coller son URL dans ⚙️ pour activer
-  SteamGridDB et l'import Xbox en ligne.
+- **Relais déployé** : `https://game-library-proxy.antoniman31.workers.dev`
+  — à coller dans ⚙️ sur chaque nouvel appareil (il n'est pas dans l'export JSON).
 - Transférer la bibliothèque sur mobile via **Export / Import JSON**.
 - Éventuellement : notifications push pour les prêts > 30 j (pattern VAPID déjà
   éprouvé dans `gta6-backend`) ; synchro multi-appareils si le localStorage par
