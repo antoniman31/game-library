@@ -67,3 +67,59 @@ export function staleKey(g) {
 export function compterFiltres({ plat, statFil, fmtFil }) {
   return [plat, statFil, fmtFil].filter(v => v !== "tous").length;
 }
+
+// ── Import d'un fichier JSON ────────────────────────────────────────────────
+// L'import faisait `JSON.parse` puis vérifiait seulement que le résultat était
+// un tableau : un fichier au bon format mais au mauvais contenu (un export
+// d'autre chose, un fichier tronqué) remplaçait la bibliothèque par des objets
+// sans `genre` ni `sessions`, et la première fiche rendue plantait l'app.
+//
+// Chaque entrée doit avoir un titre exploitable ; tout le reste est complété.
+// Retourne { jeux, rejetes } — `rejetes` sert à le dire à l'utilisateur plutôt
+// qu'à laisser croire à un import complet.
+const JEU_VIDE = {
+  platform: "Xbox Series X", format: "physique", genre: [], style: "",
+  status: "non commencé", note: null, lentA: null, lentDate: null, cover: null,
+  metacritic: null, hltb: null, playedMinutes: 0, manualMinutes: 0, sessions: [],
+  myLinks: ["", "", ""], tips: "", tag: "", progression: "", infobox: null,
+};
+
+const estTexte = (v) => typeof v === "string";
+const nombreOuZero = (v) => (Number.isFinite(v) && v >= 0 ? v : 0);
+
+export function validerJeuxImportes(data) {
+  if (!Array.isArray(data)) return { jeux: null, rejetes: 0 };
+
+  const jeux = [];
+  const idsVus = new Set();
+  let rejetes = 0;
+
+  for (const brut of data) {
+    if (!brut || typeof brut !== "object" || !estTexte(brut.title) || !brut.title.trim()) {
+      rejetes++;
+      continue;
+    }
+    // Deux jeux au même identifiant casseraient les clés React et l'édition,
+    // qui repose entièrement sur `id`.
+    let id = Number.isFinite(brut.id) ? brut.id : Date.now() + jeux.length;
+    while (idsVus.has(id)) id = Date.now() + Math.floor(Math.random() * 1e6);
+    idsVus.add(id);
+
+    jeux.push({
+      ...JEU_VIDE,
+      ...brut,
+      id,
+      title: brut.title.trim(),
+      addedDate: estTexte(brut.addedDate) && brut.addedDate ? brut.addedDate : new Date().toISOString().slice(0, 10),
+      genre: Array.isArray(brut.genre) ? brut.genre.filter(estTexte) : [],
+      sessions: Array.isArray(brut.sessions) ? brut.sessions.filter(s => s && estTexte(s.date)) : [],
+      myLinks: Array.isArray(brut.myLinks) ? [0, 1, 2].map(i => (estTexte(brut.myLinks[i]) ? brut.myLinks[i] : "")) : ["", "", ""],
+      playedMinutes: nombreOuZero(brut.playedMinutes),
+      manualMinutes: nombreOuZero(brut.manualMinutes),
+      style: estTexte(brut.style) ? brut.style : "",
+      tips: estTexte(brut.tips) ? brut.tips : "",
+      tag: estTexte(brut.tag) ? brut.tag : "",
+    });
+  }
+  return { jeux: migrateGames(jeux), rejetes };
+}

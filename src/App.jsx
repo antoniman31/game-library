@@ -11,8 +11,9 @@ import { hdr, card, bdr, txt, mut } from "./lib/theme.js";
 import { GAMES_INIT } from "./lib/seed.js";
 import {
   STATUS_COLORS, BACK_COMPAT,
-  migrateGames, fmtTime, staleKey, compterFiltres,
+  migrateGames, fmtTime, staleKey, compterFiltres, validerJeuxImportes,
 } from "./lib/model.js";
+import { lire, ecrire, surEchecStockage } from "./lib/storage.js";
 import {
   loadKeys, setApiKeys, normTitle, hasRawgKey, rawgFirstResult,
   rawgSearch, rawgDetail, wikiFrenchTitles, wikiArticleData, pickBestWikiTitle,
@@ -35,7 +36,7 @@ const btnHdr = {
 };
 
 export default function App() {
-  const [games, setGames] = useState(() => { try { const s = localStorage.getItem("gl_v2"); return migrateGames(s ? JSON.parse(s) : GAMES_INIT); } catch { return migrateGames(GAMES_INIT); } });
+  const [games, setGames] = useState(() => { try { const s = lire("gl_v2"); return migrateGames(s ? JSON.parse(s) : GAMES_INIT); } catch { return migrateGames(GAMES_INIT); } });
   // `searchInput` suit la frappe, `search` ne la rattrape qu'après 180 ms :
   // sans ce délai, chaque caractère refiltrait et remontait toute la liste.
   const [searchInput, setSearchInput] = useState("");
@@ -65,21 +66,26 @@ export default function App() {
   // Le thème est persisté : il repartait en sombre à chaque rechargement.
   // index.html le pose sur <html> avant le premier rendu pour éviter le clignotement.
   const [theme, setTheme] = useState(() => {
-    try { return localStorage.getItem("gl_theme") === "light" ? "light" : "dark"; } catch { return "dark"; }
+    return lire("gl_theme") === "light" ? "light" : "dark";
   });
   const [refreshing, setRefreshing] = useState(false);
   const [refreshProg, setRefreshProg] = useState(0);
   const [refreshMsg, setRefreshMsg] = useState(null); // bilan de fin de refresh (S1)
   const refreshCancelRef = useRef(false); // annulation du refresh global (S6)
   const [deleted, setDeleted] = useState(null); // { game, index } pour l'undo
+  const [alerteStockage, setAlerteStockage] = useState(null);
   const undoRef = useRef(null);
   const importRef = useRef(null);
 
-  useEffect(() => { try { localStorage.setItem("gl_v2", JSON.stringify(games)); } catch {} }, [games]);
+  useEffect(() => { ecrire("gl_v2", JSON.stringify(games)); }, [games]);
+
+  // Une écriture qui échoue doit se voir : sinon on continue à noter et à
+  // chronométrer dans une app qui ne garde plus rien.
+  useEffect(() => surEchecStockage(setAlerteStockage), []);
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
-    try { localStorage.setItem("gl_theme", theme); } catch {}
+    ecrire("gl_theme", theme);
   }, [theme]);
 
   useEffect(() => {
@@ -241,14 +247,22 @@ export default function App() {
     if (!file) return;
     const reader = new FileReader();
     reader.onload = () => {
-      try {
-        const data = JSON.parse(reader.result);
-        if (!Array.isArray(data)) throw new Error("format");
-        const replace = window.confirm(`Fichier : ${data.length} jeux.\n\nOK = REMPLACER toute la bibliothèque\nAnnuler = FUSIONNER (ajoute uniquement les jeux absents)`);
-        if (replace) setGames(data);
-        else setGames(gs => { const ids = new Set(gs.map(x => x.id)); return [...gs, ...data.filter(x => !ids.has(x.id))]; });
-      } catch { alert("Fichier JSON invalide."); }
+      let data;
+      try { data = JSON.parse(reader.result); }
+      catch { alert("Ce fichier n'est pas du JSON valide."); return; }
+
+      const { jeux, rejetes } = validerJeuxImportes(data);
+      if (!jeux) { alert("Ce fichier ne contient pas une liste de jeux."); return; }
+      if (!jeux.length) { alert(`Aucun jeu exploitable dans ce fichier${rejetes ? ` (${rejetes} entrée(s) ignorée(s))` : ""}.`); return; }
+
+      const avertissement = rejetes ? `\n\n⚠️ ${rejetes} entrée(s) sans titre ont été ignorées.` : "";
+      const replace = window.confirm(
+        `Fichier : ${jeux.length} jeu(x) valides.${avertissement}\n\nOK = REMPLACER toute la bibliothèque\nAnnuler = FUSIONNER (ajoute uniquement les jeux absents)`
+      );
+      if (replace) setGames(jeux);
+      else setGames(gs => { const ids = new Set(gs.map(x => x.id)); return [...gs, ...jeux.filter(x => !ids.has(x.id))]; });
     };
+    reader.onerror = () => alert("Lecture du fichier impossible.");
     reader.readAsText(file);
     e.target.value = "";
   };
@@ -344,6 +358,13 @@ export default function App() {
             </button>
           </div>
         </div>
+
+        {alerteStockage && (
+          <div style={{ display: "flex", alignItems: "flex-start", gap: 8, background: "#ef444422", border: "1px solid #ef4444", borderRadius: 8, padding: "8px 10px", marginBottom: 10 }}>
+            <div style={{ flex: 1, minWidth: 0, color: "#ef4444", fontSize: 11, fontWeight: 600, lineHeight: 1.4 }}>⚠️ {alerteStockage}</div>
+            <button onClick={() => setAlerteStockage(null)} aria-label="Masquer" style={{ background: "transparent", border: "none", color: "#ef4444", fontSize: 14, cursor: "pointer", lineHeight: 1, padding: 0 }}>✕</button>
+          </div>
+        )}
 
         {refreshMsg && (
           <div style={{ display: "flex", alignItems: "flex-start", gap: 8, background: card, border: `1px solid ${bdr}`, borderRadius: 8, padding: "8px 10px", marginBottom: 10 }}>

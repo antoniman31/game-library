@@ -1,3 +1,5 @@
+import { lire, ecrire } from "./storage.js";
+
 // Appels aux sources externes : RAWG, Wikipédia FR, Wikidata, SteamGridDB, xbl.io.
 // Aucune clé n'est embarquée : elles sont saisies dans l'onglet Réglages et
 // stockées sur l'appareil. Ce module est le seul à parler au réseau.
@@ -10,14 +12,14 @@
 const KEYS_STORAGE = "gl_keys";
 const EMPTY_KEYS = { rawg: "", sgdb: "", xbl: "", proxy: "" };
 export function loadKeys() {
-  try { return { ...EMPTY_KEYS, ...(JSON.parse(localStorage.getItem(KEYS_STORAGE)) || {}) }; }
+  try { return { ...EMPTY_KEYS, ...(JSON.parse(lire(KEYS_STORAGE)) || {}) }; }
   catch { return { ...EMPTY_KEYS }; }
 }
 // Copie au niveau module pour que les helpers d'API y accèdent sans passer de paramètre.
 let API_KEYS = loadKeys();
 export function setApiKeys(k) {
   API_KEYS = { ...EMPTY_KEYS, ...k };
-  try { localStorage.setItem(KEYS_STORAGE, JSON.stringify(API_KEYS)); } catch {}
+  ecrire(KEYS_STORAGE, JSON.stringify(API_KEYS));
 }
 // Base des appels relayés : le Worker en prod, le proxy Vite (relatif) en dev.
 const proxyBase = () => (API_KEYS.proxy || "").replace(/\/+$/, "");
