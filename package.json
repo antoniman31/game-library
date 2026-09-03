@@ -8,7 +8,8 @@
     "build": "vite build",
     "lint": "oxlint",
     "preview": "vite preview",
-    "test:worker": "node worker/test.mjs"
+    "test:worker": "node worker/test.mjs",
+    "test": "node --test src/lib/*.test.mjs worker/test.mjs"
   },
   "dependencies": {
     "react": "^19.2.7",
