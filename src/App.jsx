@@ -164,6 +164,13 @@ async function sgdbGrids(id) {
 // Historique des jeux Xbox du compte lié à la clé -> [{ name, devices, image, lastPlayed }].
 // Filtré aux vrais jeux console Xbox (exclut PC-only / Win32 et apps/launchers).
 const XBL_CONSOLE_DEVICES = ["XboxSeries", "XboxOne", "Xbox360"];
+// xbl.io renvoie ses jaquettes en http://, et parfois depuis images-eds.xboxlive.com
+// qui ne repond pas en TLS. Servie en HTTPS, la page bloquerait ces images (contenu
+// mixte) ou echouerait a la negociation TLS : on bascule sur l'hote -ssl equivalent,
+// puis on force le schema. Sans quoi la jaquette d'un jeu importe reste cassee.
+const httpsImage = (u) => (u || "")
+  .replace("images-eds.xboxlive.com", "images-eds-ssl.xboxlive.com")
+  .replace(/^http:\/\//, "https://") || null;
 const XBL_APP_BLOCKLIST = /\b(app on pc|launcher|xbox app|windows edition|for windows)\b/i;
 async function xblTitleHistory() {
   if (!API_KEYS.xbl) return [];
@@ -179,9 +186,7 @@ async function xblTitleHistory() {
       .map(t => ({
         name: (t.name || "").trim(),
         devices: t.devices || [],
-        // xbl.io renvoie ses jaquettes en http:// : forcé en https, sinon le
-        // navigateur les bloque en contenu mixte sur un site servi en HTTPS.
-        image: t.displayImage ? t.displayImage.replace(/^http:\/\//, "https://") : null,
+        image: t.displayImage ? httpsImage(t.displayImage) : null,
         lastPlayed: t.titleHistory?.lastTimePlayed || null,
       }))
       .filter(t => t.name);
