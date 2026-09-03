@@ -2,10 +2,7 @@ import { memo, useState, useEffect, useRef } from "react";
 import Cover from "./Cover.jsx";
 import InfoboxView from "./InfoboxView.jsx";
 import { bg, card, bdr, txt, mut, demat } from "../lib/theme.js";
-import {
-  STATUTS, STATUS_COLORS, PLATFORM_COLORS, BACK_COMPAT_PARENT,
-  isDusty, lastSessionDate, daysSince,
-} from "../lib/model.js";
+import { PLATFORM_COLORS, BACK_COMPAT_PARENT, joursDePret, pretEnRetard } from "../lib/model.js";
 import {
   rawgSearch, rawgDetail, wikiFrenchTitles, wikiArticleData, wikidataInfobox,
   sgdbSearch, sgdbGrids,
@@ -43,10 +40,12 @@ function GameCard({ g, onEdit, onDelete, onEnrich, autoOpen }) {
   const [section, setSection] = useState(null);
   const toggle = s => setSection(c => c === s ? null : s);
 
-  const dusty = isDusty(g);
-  const last = lastSessionDate(g);
-  const idleDays = last && g.status === "en cours" ? daysSince(last) : null;
-  const baseBorder = dusty ? mut : bdr;
+  // Le traitement qui signalait les jeux délaissés — bordure en pointillés et
+  // opacité réduite — sert désormais au seul signal qui reste : un prêt qui
+  // s'éternise se repère dans la liste sans ouvrir l'onglet Prêts.
+  const enRetard = pretEnRetard(g);
+  const jours = joursDePret(g);
+  const baseBorder = enRetard ? "#f59e0b" : bdr;
 
   const rawgQuery = (q) => { setRawgQ(q); clearTimeout(rawgDebRef.current); rawgDebRef.current = setTimeout(async () => setRawgSugg(await rawgSearch(q)), 350); };
   const rawgPick = async (s) => {
@@ -126,27 +125,26 @@ function GameCard({ g, onEdit, onDelete, onEnrich, autoOpen }) {
   );
 
   return (
-    <div ref={rootRef} className="gl-card" style={{ background: card, border: `1px ${dusty ? "dashed" : "solid"} ${baseBorder}`, borderRadius: 12, overflow: "hidden", opacity: dusty ? 0.72 : 1, transition: "border-color 0.2s, opacity 0.2s" }}>
+    <div ref={rootRef} className="gl-card" style={{ background: card, border: `1px ${enRetard ? "dashed" : "solid"} ${baseBorder}`, borderRadius: 12, overflow: "hidden", transition: "border-color 0.2s" }}>
 
       <div style={{ display: "flex", gap: 8, padding: "8px 10px", cursor: "pointer" }} onClick={() => setOpen(!open)}>
         <Cover src={g.cover} title={g.title} size={46} />
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginBottom: 4 }}>
             <span style={{ background: PLATFORM_COLORS[g.platform] || "#5493FF", color: "#fff", fontSize: 9, fontWeight: 700, borderRadius: 3, padding: "1px 5px" }}>{g.platform}</span>
-            <span key={g.status} style={{ border: `1px solid ${STATUS_COLORS[g.status]}`, color: STATUS_COLORS[g.status], fontSize: 9, borderRadius: 3, padding: "1px 5px", display: "inline-block", animation: "statusPop 200ms ease" }}>{g.status}</span>
             {g.format === "démat" && <span style={{ background: demat, color: "#5493FF", fontSize: 9, borderRadius: 3, padding: "1px 5px" }}>démat</span>}
             {BACK_COMPAT_PARENT[g.platform] && g.backCompat && <span title={`Rétrocompatible ${BACK_COMPAT_PARENT[g.platform]}`} style={{ background: "#107C1022", color: "#22c55e", fontSize: 9, borderRadius: 3, padding: "1px 5px" }}>🔄 Compatible {BACK_COMPAT_PARENT[g.platform].replace("Xbox ", "")}</span>}
-            {g.lentA && <span style={{ background: "#7c320044", color: "#f59e0b", fontSize: 9, borderRadius: 3, padding: "1px 5px" }}>📤 {g.lentA}</span>}
+            {g.lentA && <span key={g.lentA} style={{ background: "#7c320044", color: "#f59e0b", fontSize: 9, borderRadius: 3, padding: "1px 5px", animation: "statusPop 200ms ease" }}>📤 {g.lentA}{jours !== null ? ` · ${jours}j` : ""}</span>}
           </div>
           <div style={{ fontWeight: 600, fontSize: 13, color: txt, marginBottom: 3, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 1, WebkitBoxOrient: "vertical" }}>{g.title}</div>
           <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
             {g.metacritic && <span style={{ color: g.metacritic >= 80 ? "#22c55e" : g.metacritic >= 60 ? "#f59e0b" : "#ef4444", fontSize: 11, fontWeight: 700 }}>MC {g.metacritic}</span>}
-            {idleDays !== null && <span title={`${idleDays} jours depuis la dernière session`} style={{ color: idleDays > 30 ? "#f59e0b" : mut, fontSize: 11 }}>💤 {idleDays}j</span>}
           </div>
         </div>
         <span style={{ color: mut, alignSelf: "center" }}>{open ? "▲" : "▼"}</span>
       </div>
-      <div style={{ height: 2, background: STATUS_COLORS[g.status] + "66" }} />
+      {/* La barre encodait le statut ; elle encode désormais le seul état suivi. */}
+      <div style={{ height: 2, background: g.lentA ? "#f59e0b" : "transparent" }} />
 
       {open && (
         <div style={{ padding: "12px 14px", borderTop: `1px solid ${bdr}` }} onClick={e => e.stopPropagation()}>
@@ -167,11 +165,6 @@ function GameCard({ g, onEdit, onDelete, onEnrich, autoOpen }) {
             </div>
           )}
 
-          {/* Statut */}
-          <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginBottom: 12 }}>
-            {STATUTS.map(s => <button key={s} onClick={() => onEdit(g.id, "status", s)} style={{ background: g.status === s ? STATUS_COLORS[s] + "33" : "transparent", border: `1px solid ${g.status === s ? STATUS_COLORS[s] : bdr}`, color: g.status === s ? STATUS_COLORS[s] : mut, borderRadius: 6, padding: "0 10px", minHeight: 36, fontSize: 11, cursor: "pointer" }}>{s}</button>)}
-          </div>
-
           {/* Format physique / démat */}
           <div style={{ display: "flex", gap: 5, alignItems: "center", marginBottom: 12 }}>
             <span style={{ color: mut, fontSize: 11 }}>Format :</span>
@@ -190,16 +183,43 @@ function GameCard({ g, onEdit, onDelete, onEnrich, autoOpen }) {
           )}
 
           {/* Prêt (accordéon) */}
-          {acc("loan", "📤 Prêt", (
-            <>
-              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                <span style={{ color: mut, fontSize: 11 }}>Prêté à :</span>
-                <input value={loanName} onChange={e => setLoanName(e.target.value)} placeholder="Nom…" style={{ flex: 1, background: "transparent", border: `1px solid ${bdr}`, borderRadius: 6, color: txt, padding: "4px 8px", fontSize: 12, outline: "none" }} />
-                <button onClick={() => { onEdit(g.id, "lentA", loanName || null); onEdit(g.id, "lentDate", loanName ? new Date().toISOString().slice(0,10) : null); if (loanName) onEdit(g.id, "status", "prêté"); }} style={{ background: "#f59e0b22", border: "1px solid #f59e0b", color: "#f59e0b", borderRadius: 6, padding: "4px 10px", fontSize: 11, cursor: "pointer" }}>OK</button>
+          {/* Prêt — l'une des deux raisons d'être de l'application, donc
+              déplié d'office plutôt qu'enfermé dans un accordéon. Marquer un
+              jeu rendu supposait auparavant de vider le champ du nom puis de
+              valider : personne ne devinait ce geste, d'où un bouton explicite. */}
+          <div style={{ background: bg, border: `1px solid ${g.lentA ? "#f59e0b" : bdr}`, borderRadius: 8, padding: "10px 12px", marginBottom: 12 }}>
+            {g.lentA ? (
+              <>
+                <div style={{ color: "#f59e0b", fontSize: 12, fontWeight: 600, marginBottom: 2 }}>📤 Prêté à {g.lentA}</div>
+                <div style={{ color: enRetard ? "#f59e0b" : mut, fontSize: 11, marginBottom: 8 }}>
+                  Depuis le {new Date(g.lentDate).toLocaleDateString("fr-FR")}
+                  {jours !== null ? ` · ${jours} jour${jours > 1 ? "s" : ""}` : ""}
+                  {enRetard ? " ⚠️" : ""}
+                </div>
+                <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                  <button onClick={() => { onEdit(g.id, "lentA", null); onEdit(g.id, "lentDate", null); setLoanName(""); }}
+                    style={{ minHeight: 38, padding: "0 14px", background: "#22c55e22", border: "1px solid #22c55e", color: "#22c55e", borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
+                    ✓ Rendu
+                  </button>
+                  <a href={`sms:?body=${encodeURIComponent(`Salut ! Tu penses à me rendre ${g.title} ? 😊`)}`}
+                    style={{ minHeight: 38, padding: "0 14px", display: "inline-flex", alignItems: "center", background: "transparent", border: `1px solid ${bdr}`, color: txt, borderRadius: 6, fontSize: 12, textDecoration: "none" }}>
+                    Relancer par SMS
+                  </a>
+                </div>
+              </>
+            ) : (
+              <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                <input value={loanName} onChange={e => setLoanName(e.target.value)} placeholder="Prêter à…"
+                  aria-label="Nom de la personne à qui prêter ce jeu"
+                  style={{ flex: 1, minWidth: 0, minHeight: 38, background: "transparent", border: `1px solid ${bdr}`, borderRadius: 6, color: txt, padding: "0 8px", fontSize: 12, outline: "none" }} />
+                <button onClick={() => { const n = loanName.trim(); if (!n) return; onEdit(g.id, "lentA", n); onEdit(g.id, "lentDate", new Date().toISOString().slice(0, 10)); }}
+                  disabled={!loanName.trim()}
+                  style={{ minHeight: 38, padding: "0 14px", background: loanName.trim() ? "#f59e0b22" : "transparent", border: `1px solid ${loanName.trim() ? "#f59e0b" : bdr}`, color: loanName.trim() ? "#f59e0b" : mut, borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: loanName.trim() ? "pointer" : "default" }}>
+                  Prêter
+                </button>
               </div>
-              {g.lentDate && <div style={{ color: mut, fontSize: 10, marginTop: 6 }}>Prêté le {new Date(g.lentDate).toLocaleDateString("fr-FR")}</div>}
-            </>
-          ))}
+            )}
+          </div>
 
           {/* Liens & contenu (accordéon) */}
           {acc("links", "🔗 Liens & contenu", (

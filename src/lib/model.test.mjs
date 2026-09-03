@@ -13,18 +13,17 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   migrateGames, validerJeuxImportes, compterFiltres,
-  isDusty, staleKey, isBackCompatPlatform,
-  BACK_COMPAT, XBOX_SERIES_CUTOFF,
+  joursDePret, pretEnRetard, isBackCompatPlatform,
+  BACK_COMPAT, XBOX_SERIES_CUTOFF, PRET_LONG_JOURS,
 } from "./model.js";
 
 const jeu = (p = {}) => ({
   id: 1, title: "Jeu", platform: "Xbox Series X", format: "physique",
-  addedDate: "2022-01-01", genre: [], style: "", status: "non commencé",
-  sessions: [], playedMinutes: 0, manualMinutes: 0, myLinks: ["", "", ""],
-  tips: "", tag: "", ...p,
+  addedDate: "2022-01-01", genre: [], style: "", lentA: null, lentDate: null,
+  myLinks: ["", "", ""], tips: "", tag: "", ...p,
 });
 
-const ilYA = (jours) => new Date(Date.now() - jours * 86400000).toISOString();
+const ilYA = (jours) => new Date(Date.now() - jours * 86400000).toISOString().slice(0, 10);
 
 // ── Migration ──────────────────────────────────────────────────────────────
 // Elle tourne à chaque chargement de l'application : une erreur ici réécrit
@@ -84,13 +83,9 @@ test("les entrées sans titre exploitable sont comptées, pas avalées", () => {
 
 test("les champs de mauvais type sont normalisés au lieu de casser le rendu", () => {
   const [g] = validerJeuxImportes([{
-    id: 2, title: "X", genre: "action", sessions: 5,
-    playedMinutes: -3, manualMinutes: "beaucoup", myLinks: null, tips: 42,
+    id: 2, title: "X", genre: "action", myLinks: null, tips: 42,
   }]).jeux;
   assert.deepEqual(g.genre, []);
-  assert.deepEqual(g.sessions, []);
-  assert.equal(g.playedMinutes, 0);
-  assert.equal(g.manualMinutes, 0);
   assert.deepEqual(g.myLinks, ["", "", ""]);
   assert.equal(g.tips, "");
 });
@@ -114,8 +109,8 @@ test("le titre est débarrassé de ses espaces", () => {
 // ── Règles d'affichage ─────────────────────────────────────────────────────
 
 test("compterFiltres ignore le tri et le mode d'affichage", () => {
-  assert.equal(compterFiltres({ plat: "tous", statFil: "tous", fmtFil: "tous" }), 0);
-  assert.equal(compterFiltres({ plat: "Switch 2", statFil: "tous", fmtFil: "démat" }), 2);
+  assert.equal(compterFiltres({ plat: "tous", pretFil: "tous", fmtFil: "tous" }), 0);
+  assert.equal(compterFiltres({ plat: "Switch 2", pretFil: "tous", fmtFil: "démat" }), 2);
 });
 
 test("une plateforme récente accueille la précédente, l'inverse est faux", () => {
@@ -125,15 +120,40 @@ test("une plateforme récente accueille la précédente, l'inverse est faux", ()
   assert.equal(isBackCompatPlatform("Xbox Series X"), false);
 });
 
-test("un jeu en cours devient poussiéreux après 30 jours sans session", () => {
-  assert.equal(isDusty(jeu({ status: "en cours", sessions: [{ date: ilYA(40), minutes: 60 }] })), true);
-  assert.equal(isDusty(jeu({ status: "en cours", sessions: [{ date: ilYA(5), minutes: 60 }] })), false);
-  assert.equal(isDusty(jeu({ status: "terminé", sessions: [{ date: ilYA(400), minutes: 60 }] })), false,
-    "un jeu terminé n'est jamais en retard");
+// ── Prêts ──────────────────────────────────────────────────────────────────
+// Le prêt est l'une des deux raisons d'être de l'application et n'avait aucun
+// test, alors que le statut, lui, en avait.
+
+test("un jeu chez soi n'a pas de durée de prêt", () => {
+  assert.equal(joursDePret(jeu()), null);
+  assert.equal(pretEnRetard(jeu()), false);
 });
 
-test("sans session, l'ancienneté se compte depuis la date d'ajout", () => {
-  const g = jeu({ status: "en cours", addedDate: "2020-01-01", sessions: [] });
-  assert.equal(isDusty(g), true);
-  assert.equal(staleKey(g), new Date("2020-01-01").getTime());
+test("un nom de prêt sans date ne compte pas comme un prêt", () => {
+  // Donnée incohérente venue d'un import : elle ne doit pas produire un
+  // « prêté depuis NaN jours ».
+  assert.equal(joursDePret(jeu({ lentA: "Paul", lentDate: null })), null);
+  assert.equal(pretEnRetard(jeu({ lentA: "Paul", lentDate: null })), false);
+});
+
+test("la durée de prêt se compte depuis la date de prêt", () => {
+  assert.equal(joursDePret(jeu({ lentA: "Paul", lentDate: ilYA(12) })), 12);
+});
+
+test("un prêt dépasse le seuil au-delà de 30 jours, pas à 30", () => {
+  assert.equal(pretEnRetard(jeu({ lentA: "Paul", lentDate: ilYA(PRET_LONG_JOURS) })), false);
+  assert.equal(pretEnRetard(jeu({ lentA: "Paul", lentDate: ilYA(PRET_LONG_JOURS + 1) })), true);
+});
+
+test("la migration retire les champs de progression et de temps de jeu", () => {
+  // Ils ne servent plus, et les laisser ferait croire à des fonctions
+  // inexistantes tout en voyageant à chaque synchronisation.
+  const [g] = migrateGames([jeu({
+    status: "terminé", playedMinutes: 300, manualMinutes: 60,
+    sessions: [{ date: "2024-01-01", minutes: 30 }], hltb: 40, note: 8, progression: "50%",
+  })]);
+  for (const mort of ["status", "playedMinutes", "manualMinutes", "sessions", "hltb", "note", "progression"]) {
+    assert.equal(mort in g, false, `${mort} aurait dû disparaître`);
+  }
+  assert.equal(g.title, "Jeu", "le reste du jeu est intact");
 });
