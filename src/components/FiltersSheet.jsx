@@ -73,7 +73,7 @@ export default function FiltersSheet({
       />
       <Groupe
         label="Affichage"
-        options={[["liste", "☰ Liste"], ["compact", "≡ Compact"], ["grille", "⊞ Grille"]]}
+        options={[["liste", "☰ Liste"], ["grille", "⊞ Grille"]]}
         value={view}
         onChange={setView}
       />

@@ -11,7 +11,7 @@ import {
   sgdbSearch, sgdbGrids,
 } from "../lib/api.js";
 
-function GameCard({ g, onEdit, onDelete, onEnrich, activeTimer, timerStart, onStartTimer, onStopTimer, autoOpen, compact = false }) {
+function GameCard({ g, onEdit, onDelete, onEnrich, activeTimer, timerStart, onStartTimer, onStopTimer, autoOpen }) {
   const [open, setOpen] = useState(!!autoOpen);
   const rootRef = useRef(null);
   useEffect(() => { if (autoOpen) rootRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }); }, []); // eslint-disable-line
@@ -145,8 +145,8 @@ function GameCard({ g, onEdit, onDelete, onEnrich, activeTimer, timerStart, onSt
   return (
     <div ref={rootRef} className="gl-card" style={{ background: card, border: `1px ${dusty ? "dashed" : "solid"} ${baseBorder}`, borderRadius: 12, overflow: "hidden", opacity: dusty ? 0.72 : 1, transition: "border-color 0.2s, opacity 0.2s" }}>
 
-      <div style={{ display: "flex", gap: compact ? 8 : 10, padding: compact ? "8px 10px" : 12, cursor: "pointer" }} onClick={() => setOpen(!open)}>
-        <Cover src={g.cover} title={g.title} size={compact ? 46 : 72} />
+      <div style={{ display: "flex", gap: 8, padding: "8px 10px", cursor: "pointer" }} onClick={() => setOpen(!open)}>
+        <Cover src={g.cover} title={g.title} size={46} />
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginBottom: 4 }}>
             <span style={{ background: PLATFORM_COLORS[g.platform] || "#5493FF", color: "#fff", fontSize: 9, fontWeight: 700, borderRadius: 3, padding: "1px 5px" }}>{g.platform}</span>
@@ -156,14 +156,14 @@ function GameCard({ g, onEdit, onDelete, onEnrich, activeTimer, timerStart, onSt
             {g.lentA && <span style={{ background: "#7c320044", color: "#f59e0b", fontSize: 9, borderRadius: 3, padding: "1px 5px" }}>📤 {g.lentA}</span>}
             {isActive && <span style={{ background: "#22c55e22", color: "#22c55e", fontSize: 9, borderRadius: 3, padding: "1px 5px" }}>▶ {String(Math.floor(elapsed/60)).padStart(2,"0")}:{String(elapsed%60).padStart(2,"0")}</span>}
           </div>
-          <div style={{ fontWeight: 600, fontSize: 13, color: txt, marginBottom: 3, ...(compact ? { overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 1, WebkitBoxOrient: "vertical" } : {}) }}>{g.title}</div>
+          <div style={{ fontWeight: 600, fontSize: 13, color: txt, marginBottom: 3, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 1, WebkitBoxOrient: "vertical" }}>{g.title}</div>
           <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
             {g.metacritic && <span style={{ color: g.metacritic >= 80 ? "#22c55e" : g.metacritic >= 60 ? "#f59e0b" : "#ef4444", fontSize: 11, fontWeight: 700 }}>MC {g.metacritic}</span>}
             {total > 0 && <span style={{ color: mut, fontSize: 11 }}>{fmtTime(total)}</span>}
             {hltbPct !== null && <span style={{ color: hltbPct >= 100 ? "#22c55e" : "#5493FF", fontSize: 11 }}>{hltbPct}% HLtB</span>}
-            {!compact && idleDays !== null && <span style={{ color: idleDays > 30 ? "#f59e0b" : mut, fontSize: 11 }}>💤 {idleDays}j depuis dernière session</span>}
+            {idleDays !== null && <span title={`${idleDays} jours depuis la dernière session`} style={{ color: idleDays > 30 ? "#f59e0b" : mut, fontSize: 11 }}>💤 {idleDays}j</span>}
           </div>
-          {!compact && hltbPct !== null && <div style={{ marginTop: 4, height: 3, background: bdr, borderRadius: 2 }}><div style={{ width: `${Math.min(100, hltbPct)}%`, height: "100%", background: hltbPct >= 100 ? "#22c55e" : "#5493FF", borderRadius: 2 }} /></div>}
+          {hltbPct !== null && <div style={{ marginTop: 4, height: 3, background: bdr, borderRadius: 2 }}><div style={{ width: `${Math.min(100, hltbPct)}%`, height: "100%", background: hltbPct >= 100 ? "#22c55e" : "#5493FF", borderRadius: 2 }} /></div>}
         </div>
         <span style={{ color: mut, alignSelf: "center" }}>{open ? "▲" : "▼"}</span>
       </div>
