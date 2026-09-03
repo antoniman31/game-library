@@ -6,9 +6,10 @@ fiches depuis plusieurs bases de données publiques.
 
 **➡️ [antoniman31.github.io/game-library](https://antoniman31.github.io/game-library/)** — installable en PWA sur mobile.
 
-Application **React + Vite**, sans backend : tout tient dans un composant
-(`src/App.jsx`, ~1550 lignes, styles inline) et les données vivent dans le
-`localStorage` du navigateur.
+Application **React + Vite**, sans backend applicatif : l'interface est
+découpée en composants et modules (`src/components/`, `src/lib/`), les données
+vivent dans le `localStorage` du navigateur, et un Worker Cloudflare sert à la
+fois de relais CORS et de sauvegarde entre appareils.
 
 ---
 
@@ -266,11 +267,22 @@ n'entrent jamais dans l'export.
 
 ## Architecture et choix techniques
 
-### Pourquoi un seul fichier ?
+### D'un seul fichier à un découpage
 
-Le projet est né d'un artefact autonome et a grandi par ajouts successifs. Tout
-est resté dans `src/App.jsx` avec des styles inline : pas de dépendance UI, pas
-de build CSS, un seul endroit à lire.
+Le projet est né d'un artefact autonome et a grandi par ajouts successifs : tout
+vivait dans `src/App.jsx`, 1 560 lignes et 136 Ko, styles inline compris. Ça a
+tenu longtemps, puis chaque ajout est devenu plus coûteux que le précédent et
+une erreur ne se cherchait plus qu'à l'aveugle.
+
+Le code est désormais réparti entre `src/lib/` (réseau, domaine, stockage,
+synchronisation) et `src/components/`, et `App.jsx` ne garde que l'ossature.
+
+Les couleurs, elles, ont quitté le JavaScript. Chaque composant recevait une
+prop `dark` et recalculait ses teintes dans des styles inline
+(`dark ? "#1a1a2e" : "#f0f4ff"`, une quarantaine de fois). Tant que rien ne
+passait par une feuille de style, aucune media query, aucun `:hover` et aucun
+mode d'affichage n'étaient possibles. Elles sont maintenant des jetons CSS dans
+`src/index.css`, basculés par un attribut `data-theme` sur `<html>`.
 
 ### Où sont passées les traductions automatiques ?
 
@@ -281,11 +293,26 @@ fournit directement un texte français rédigé, sans quota ni découpage.
 
 ### Décisions notables
 
-- **Pas de `npm ci` en CI.** Le lockfile ne réconcilie pas les binaires natifs
-  transitifs (`@emnapi`, tirés de Rollup) entre une génération sous Windows et
-  une exécution sous Linux ; `npm ci` échoue à la validation stricte même après
-  régénération du lockfile. Le workflow utilise `npm install`, qui produit le
-  même build.
+- **`npm ci` en CI.** Le lockfile échouait autrefois à la validation stricte
+  parce qu'il lui manquait les binaires natifs Linux de Rollup, absents quand il
+  était généré sous Windows. Il les porte désormais, et le workflow est repassé
+  à `npm ci` : `npm install` laissait npm résoudre librement, donc une version
+  mineure d'une dépendance transitive pouvait casser un déploiement sans qu'un
+  seul commit touche au projet. Si tu installes sous Windows, npm ajoutera les
+  binaires win32 : commite le lockfile mis à jour, il portera alors les deux
+  plateformes.
+- **Le mobile d'abord.** L'en-tête collant empilait le titre, cinq boutons à
+  libellé complet, les onglets, la recherche et quatre rangées de puces de
+  filtres : 317 px sur un écran de 915, soit un tiers de la surface avant le
+  premier jeu, et une rangée de boutons qui débordait de 13 px et faisait
+  défiler la page latéralement. Filtres et actions sont passés dans des
+  panneaux glissants, les cibles tactiles à 44 px, et la liste est paginée par
+  30 au lieu de monter les 94 fiches d'un coup.
+- **Rien n'échoue plus en silence.** Une exception de rendu vidait `#root` sans
+  un mot ; un `ErrorBoundary` affiche désormais l'erreur et propose d'exporter
+  la bibliothèque avant toute chose. Les écritures dans `localStorage` étaient
+  enveloppées dans un `catch {}` muet : un quota saturé faisait perdre la
+  persistance sans le moindre signe.
 - **Déploiement par artefact**, pas de dossier `docs/` commité : aucun fichier
   généré n'entre dans le dépôt.
 - **`addedDate` sert de proxy de date de sortie** pour classer Xbox One /
@@ -328,13 +355,25 @@ Worker pour travailler en local**.
 ├── .github/workflows/deploy.yml   Build + publication GitHub Pages
 ├── worker/                        Relais CORS Cloudflare (sans secret) + sa doc
 │   ├── index.js
+│   ├── test.mjs                   16 vérifications, sans dépendance ni déploiement
 │   ├── wrangler.toml
 │   └── README.md
 ├── public/                        Icônes PWA (192/512, any + maskable), favicon
 ├── src/
-│   ├── App.jsx                    Toute l'application
-│   ├── main.jsx
-│   └── index.css
+│   ├── App.jsx                    Ossature : état global, en-tête, onglets
+│   ├── main.jsx                   Montage + garde-fou d'erreurs global
+│   ├── index.css                  Jetons de thème, animations, survol
+│   ├── lib/
+│   │   ├── api.js                 RAWG, Wikipédia, Wikidata, SteamGridDB, xbl.io
+│   │   ├── model.js               Statuts, plateformes, migration, validation
+│   │   ├── seed.js                Bibliothèque de démarrage
+│   │   ├── storage.js             localStorage instrumenté (alerte de quota)
+│   │   ├── sync.js                Sauvegarde sur le Worker
+│   │   └── theme.js               Alias vers les jetons CSS
+│   └── components/
+│       ├── GameCard.jsx  AddModal.jsx  ImportModal.jsx
+│       ├── Sheet.jsx  FiltersSheet.jsx  ActionsSheet.jsx
+│       └── Cover.jsx  InfoboxView.jsx  ErrorBoundary.jsx
 ├── index.html
 ├── vite.config.js                 base, PWA, proxys de dev
 ├── PROGRESS.md                    État des fonctionnalités
@@ -346,8 +385,8 @@ Worker pour travailler en local**.
 ## Déploiement
 
 Automatique à chaque push sur `main`
-([`.github/workflows/deploy.yml`](.github/workflows/deploy.yml)) : `npm install`,
-`npm run build`, puis publication de `dist/` sur GitHub Pages via les actions
+([`.github/workflows/deploy.yml`](.github/workflows/deploy.yml)) : `npm ci`,
+`npm run lint`, `npm run build`, puis publication de `dist/` sur GitHub Pages via les actions
 officielles `configure-pages` / `upload-pages-artifact` / `deploy-pages`.
 
 **Aucun secret n'est nécessaire** dans le dépôt — c'est toute la raison d'être du
@@ -360,8 +399,12 @@ automatiquement au chargement suivant.
 
 ## Limites connues
 
-- **Données par appareil.** Tout est en `localStorage` : pas de synchronisation.
-  Le transfert se fait via Export / Import JSON, et les clés sont à ressaisir.
+- **La synchronisation est manuelle.** ⚙️ → Synchronisation dépose la
+  bibliothèque sur le Worker et la récupère, avec le même code sur chaque
+  appareil ; rien ne part ni n'arrive tout seul, et une récupération remplace la
+  bibliothèque locale après confirmation. Sans relais déployé, il reste l'Export
+  / Import JSON. Les clés d'API et le code de synchronisation sont à ressaisir
+  sur chaque appareil : ils ne figurent pas dans l'export.
 - **SteamGridDB et l'import Xbox exigent le relais** déployé et renseigné dans ⚙️.
 - **xbl.io** expose l'historique joué, pas les achats, et aucun temps de jeu.
 - **Wikidata est incomplet** sur certains jeux (souvent les titres Nintendo ou

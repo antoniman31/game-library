@@ -9,8 +9,11 @@ Dernière mise à jour : 2026-09-03.
 ## Stack & lancement
 
 - **Vite + React** (React 19, Vite 8), projet **100 % local** (aucun backend applicatif).
-- Point d'entrée : `src/App.jsx` (tout le code y est — composant unique, styles inline).
-- Persistance : **localStorage** (clé `gl_v2`).
+- Interface découpée : `src/App.jsx` (ossature), `src/components/` (fiches, modales,
+  panneaux glissants), `src/lib/` (réseau, domaine, stockage, synchronisation).
+  Les couleurs sont des jetons CSS dans `src/index.css`, basculés par `data-theme`.
+- Persistance : **localStorage** (clé `gl_v2`), plus une **sauvegarde sur le Worker**
+  (⚙️ → Synchronisation) pour partager la bibliothèque entre appareils.
 - Démarrer le dev :
   ```bash
   npm install   # première fois
@@ -71,7 +74,7 @@ partir dans l'Export JSON). Un bouton « Tester » valide chaque clé.
 - Champ booléen **`backCompat`**, `true` par défaut pour les plateformes « anciennes » (**Xbox One** et **Switch 1**) → badge discret **« 🔄 Compatible Series X »** / **« 🔄 Compatible Switch 2 »** selon la plateforme.
 - **Modifiable au cas par cas** : un toggle « Jouable sur … : oui / non » dans la fiche permet de marquer les rares exceptions (titres nécessitant un accessoire spécifique, etc.).
 - La valeur par défaut est posée par une **migration versionnée par jeu** (`bcV`) : le rattrapage ne s'applique qu'une fois, donc un choix manuel n'est **jamais réécrasé** au rechargement.
-- **Règle de rétrocompatibilité déclarative** (constante `BACK_COMPAT` dans `src/App.jsx`) : une plateforme récente affiche ses jeux natifs **+** ceux de la plateforme précédente marqués `backCompat`.
+- **Règle de rétrocompatibilité déclarative** (constante `BACK_COMPAT` dans `src/lib/model.js`) : une plateforme récente affiche ses jeux natifs **+** ceux de la plateforme précédente marqués `backCompat`.
   - **« Xbox Series X »** → natifs + **Xbox One** `backCompat`.
   - **« Switch 2 »** → natifs + **Switch 1** `backCompat` (tous par défaut : la Switch 2 lit quasiment toute la ludothèque Switch 1).
   - Les plateformes « anciennes » (**« Xbox One »**, **« Switch 1 »**) restent **strictes**.
@@ -108,6 +111,15 @@ partir dans l'Export JSON). Un bouton « Tester » valide chaque clé.
 
 ## Fait récemment
 
+- **Refonte mobile** : en-tête collant ramené de 317 à 177 px, débordement
+  horizontal de 13 px supprimé, filtres et actions en panneaux glissants,
+  cibles tactiles à 44 px, liste paginée par 30, recherche debouncée, mode
+  d'affichage compact.
+- **Robustesse** : `ErrorBoundary` avec export de secours, bandeau d'erreur pour
+  les fautes hors rendu, alerte de quota de stockage, validation de l'import
+  JSON, `npm ci` et lint en CI, `no-undef` activé dans oxlint.
+- **Synchronisation** entre appareils via le Worker (espace KV), et `worker/test.mjs`.
+
 - **PWA en ligne sur GitHub Pages** (manifest, service worker Workbox, icônes
   192/512 + maskable, installable sur écran d'accueil).
 - **Clés API sorties du code** et purgées de tout l'historique git avant le premier
@@ -116,12 +128,15 @@ partir dans l'Export JSON). Un bouton « Tester » valide chaque clé.
 
 ## Prochaines étapes
 
+- **Créer l'espace KV du Worker** puis redéployer, pour activer la
+  synchronisation : `npx wrangler kv namespace create SYNC`, recopier
+  l'identifiant dans `worker/wrangler.toml`, `npx wrangler deploy`.
+  Tant que ce n'est pas fait, le relais fonctionne et `/sync` répond 501.
 - **Relais déployé** : `https://game-library-proxy.antoniman31.workers.dev`
   — à coller dans ⚙️ sur chaque nouvel appareil (il n'est pas dans l'export JSON).
-- Transférer la bibliothèque sur mobile via **Export / Import JSON**.
-- Éventuellement : notifications push pour les prêts > 30 j (pattern VAPID déjà
-  éprouvé dans `gta6-backend`) ; synchro multi-appareils si le localStorage par
-  appareil devient gênant.
+- Éventuellement : rappel local à l'ouverture pour les prêts > 30 j. Les
+  notifications push de `gta6-backend` supposent un backend qui pousse ; ici, il
+  faudrait envoyer la liste des prêts à un serveur pour un gain quasi nul.
 
 ## Structure
 
@@ -130,11 +145,15 @@ GameLibrary/
 ├── index.html
 ├── package.json
 ├── .github/workflows/    ← deploy.yml : build + publication GitHub Pages
-├── worker/               ← relais CORS Cloudflare (sans secret) + sa doc
+├── worker/               ← relais CORS + sauvegarde KV (sans secret) + tests
 ├── vite.config.js        ← base '/game-library/', PWA, proxys de dev (sans clé)
 ├── PROGRESS.md           ← ce fichier
 └── src/
-    ├── App.jsx           ← toute l'application (aucune clé : cf. onglet ⚙️)
-    ├── main.jsx
-    └── index.css
+    ├── App.jsx           ← ossature : état global, en-tête, onglets
+    ├── main.jsx          ← montage + garde-fou d'erreurs global
+    ├── index.css         ← jetons de thème, animations, survol
+    ├── lib/              ← api, model, seed, storage, sync, theme
+    └── components/       ← GameCard, AddModal, ImportModal, Sheet,
+                             FiltersSheet, ActionsSheet, Cover,
+                             InfoboxView, ErrorBoundary
 ```

@@ -2,4 +2,14 @@ name = "game-library-proxy"
 main = "index.js"
 compatibility_date = "2026-01-01"
 
-# Aucun secret ni variable : les clés API sont fournies par le client à chaque requête.
+# Aucun secret ni variable : les clés API sont fournies par le client à chaque
+# requête, et le code de synchronisation ne quitte pas l'appareil de son
+# propriétaire (seule son empreinte SHA-256 sert de clé de stockage).
+
+# Sauvegarde de la bibliothèque. Créer l'espace une fois :
+#   npx wrangler kv namespace create SYNC
+# puis recopier l'identifiant renvoyé ci-dessous et décommenter les deux lignes.
+# Sans cela, le relais CORS fonctionne, et /sync répond 501 en le disant.
+# [[kv_namespaces]]
+# binding = "SYNC"
+# id = "à-remplacer-par-l-identifiant-renvoyé-par-wrangler"

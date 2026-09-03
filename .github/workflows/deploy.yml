@@ -29,10 +29,21 @@ jobs:
           cache: npm
 
       - name: Installer les dépendances
-        # npm install (et non npm ci) : le lockfile ne réconcilie pas les binaires
-        # natifs transitifs (@emnapi, tirés de Rollup) entre Windows et Linux, ce
-        # qui fait échouer la validation stricte de npm ci.
-        run: npm install --no-audit --no-fund
+        # npm ci : le build est reproductible et échoue si le lockfile ne
+        # correspond plus à package.json. `npm install` laissait au contraire
+        # npm résoudre librement, donc une version mineure d'une dépendance
+        # transitive pouvait casser un déploiement sans qu'aucun commit ne
+        # touche au projet.
+        #
+        # Le lockfile porte désormais les binaires natifs Linux de Rollup, qui
+        # manquaient quand il était généré sous Windows — c'était la cause de
+        # l'échec de npm ci. Si tu installes sous Windows, npm y ajoutera les
+        # binaires win32 : commite le lockfile mis à jour, il portera alors les
+        # deux plateformes.
+        run: npm ci --no-audit --no-fund
+
+      - name: Vérifier le code
+        run: npm run lint
 
       - name: Construire le site
         run: npm run build
