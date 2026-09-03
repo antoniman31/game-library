@@ -1,7 +1,15 @@
-name: Déploiement GitHub Pages
+name: Vérification et déploiement
 
+# Les vérifications tournent aussi sur les pull requests. Auparavant, le
+# workflow ne se déclenchait que sur un push vers `main` : lint et build ne
+# s'exécutaient donc qu'APRÈS la fusion, c'est-à-dire au moment où ils
+# déploient déjà. Une pull request qui ne compile pas n'était visible qu'une
+# fois le site cassé — c'est exactement ce qui s'est produit à la fusion de la
+# #1, où `npm run lint` a fait échouer le déploiement cinq fois de suite.
 on:
   push:
+    branches: [main]
+  pull_request:
     branches: [main]
   workflow_dispatch:
 
@@ -12,13 +20,15 @@ permissions:
   pages: write
   id-token: write
 
-# Un seul déploiement à la fois ; on ne coupe pas celui qui est en cours.
+# Un déploiement à la fois par référence : les pushes sur `main` restent
+# sérialisés, sans qu'une pull request attende celle d'à côté.
 concurrency:
-  group: pages
+  group: pages-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
-  build:
+  verifier:
+    name: Vérifier et construire
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -45,17 +55,26 @@ jobs:
       - name: Vérifier le code
         run: npm run lint
 
+      - name: Tester le Worker
+        run: npm run test:worker
+
       - name: Construire le site
         run: npm run build
 
       - uses: actions/configure-pages@v5
+        if: github.event_name != 'pull_request'
 
       - uses: actions/upload-pages-artifact@v3
+        if: github.event_name != 'pull_request'
         with:
           path: dist
 
   deploy:
-    needs: build
+    name: Publier sur GitHub Pages
+    # Une pull request se vérifie mais ne publie rien : elle n'a pas à écraser
+    # le site en ligne avant d'avoir été relue.
+    if: github.event_name != 'pull_request'
+    needs: verifier
     runs-on: ubuntu-latest
     environment:
       name: github-pages

@@ -293,6 +293,18 @@ fournit directement un texte français rédigé, sans quota ni découpage.
 
 ### Décisions notables
 
+- **Le lint distingue le navigateur du Worker.** `no-undef` est actif, et
+  l'environnement Node est déclaré dans un `overrides` limité à `worker/**`
+  plutôt que globalement. Déclaré partout, il rendrait `process` défini dans
+  `src/` aussi : un `process.env.X` glissé dans le code navigateur passerait le
+  lint pour échouer à l'exécution, Vite ne fournissant pas `process` au
+  navigateur. Attention au nom du fichier : oxlint ne lit que `.oxlintrc.json`,
+  avec le point ; un `oxlintrc.json` sans point est ignoré en silence.
+- **La CI tourne sur les pull requests**, le job `deploy` restant réservé à
+  `main`. Le workflow ne se déclenchait que sur un push vers `main` : lint et
+  build ne s'exécutaient donc qu'après la fusion, au moment où ils déploient
+  déjà. Une pull request qui ne compilait pas n'était visible qu'une fois le
+  site cassé.
 - **`npm ci` en CI.** Le lockfile échouait autrefois à la validation stricte
   parce qu'il lui manquait les binaires natifs Linux de Rollup, absents quand il
   était généré sous Windows. Il les porte désormais, et le workflow est repassé
@@ -386,7 +398,8 @@ Worker pour travailler en local**.
 
 Automatique à chaque push sur `main`
 ([`.github/workflows/deploy.yml`](.github/workflows/deploy.yml)) : `npm ci`,
-`npm run lint`, `npm run build`, puis publication de `dist/` sur GitHub Pages via les actions
+`npm run lint`, `npm run test:worker`, `npm run build`, puis publication de
+`dist/` sur GitHub Pages via les actions
 officielles `configure-pages` / `upload-pages-artifact` / `deploy-pages`.
 
 **Aucun secret n'est nécessaire** dans le dépôt — c'est toute la raison d'être du
