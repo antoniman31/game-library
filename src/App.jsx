@@ -10,7 +10,8 @@ import ScoresSheet from "./components/ScoresSheet.jsx";
 
 import { hdr, card, bdr, txt, mut } from "./lib/theme.js";
 import { GAMES_INIT } from "./lib/seed.js";
-import { BACK_COMPAT, migrateGames, compterFiltres, validerJeuxImportes, pretEnRetard, jeuxSansScore } from "./lib/model.js";
+import { BACK_COMPAT, migrateGames, compterFiltres, validerJeuxImportes, pretEnRetard, jeuxSansScore,
+  dureeEntreeHistorique, emprunteurs } from "./lib/model.js";
 import { lire, ecrire, surEchecStockage } from "./lib/storage.js";
 import { chargerSync, enregistrerSync, genererCode, envoyer, recuperer } from "./lib/sync.js";
 import {
@@ -428,10 +429,17 @@ export default function App() {
     const enRetard = games.filter(pretEnRetard).length;
     const byGenre = {}; games.forEach(g => g.genre.forEach(x => byGenre[x] = (byGenre[x]||0) + 1));
     const topGenres = Object.entries(byGenre).sort((a,b) => b[1]-a[1]).slice(0,6);
-    return { total, pretes, enRetard, topGenres };
+    // L'onglet ne disait rien du seul sujet que l'application suive vraiment.
+    const topEmprunteurs = emprunteurs(games).slice(0, 6);
+    return { total, pretes, enRetard, topGenres, topEmprunteurs };
   }, [games]);
 
   const lentGames = games.filter(g => g.lentA);
+  // Tous les prêts rendus, jeu par jeu, du plus récent au plus ancien.
+  const historique = useMemo(() => games
+    .flatMap(g => (g.pretsPasses || []).map(e => ({ ...e, titre: g.title })))
+    .sort((a, b) => (a.au < b.au ? 1 : a.au > b.au ? -1 : 0))
+    .slice(0, 50), [games]);
   const filtresActifs = compterFiltres({ plat, pretFil, fmtFil });
 
   // Ce qui est réellement monté. Le reste attend « Charger 30 de plus ».
@@ -592,21 +600,49 @@ export default function App() {
 
         {tab === "loans" && (
           <div>
-            {lentGames.length === 0 ? <div style={{ textAlign:"center", color:mut, padding:"60px 0" }}>Aucun jeu prêté actuellement</div>
+            {lentGames.length === 0 ? <div style={{ textAlign:"center", color:mut, padding:"40px 0" }}>Aucun jeu prêté actuellement</div>
             : lentGames.map(g => {
               const days = g.lentDate ? Math.floor((Date.now()-new Date(g.lentDate))/86400000) : null;
+              // Le seuil était réécrit ici en dur : la date de retour convenue
+              // n'aurait rien changé pour cet onglet.
+              const tard = pretEnRetard(g);
               return (
-                <div key={g.id} style={{ background:card, border:`1px solid ${days>30?"#ef4444":bdr}`, borderRadius:10, padding:"12px", marginBottom:8, display:"flex", gap:10, alignItems:"center" }}>
+                <div key={g.id} style={{ background:card, border:`1px solid ${tard?"#ef4444":bdr}`, borderRadius:10, padding:"12px", marginBottom:8, display:"flex", gap:10, alignItems:"center" }}>
                   <Cover src={g.cover} title={g.title} size={52} />
-                  <div style={{ flex:1 }}>
+                  <div style={{ flex:1, minWidth:0 }}>
                     <div style={{ color:txt, fontWeight:600, fontSize:13 }}>{g.title}</div>
                     <div style={{ color:"#f59e0b", fontSize:12 }}>📤 {g.lentA}</div>
-                    {days!==null && <div style={{ color:days>30?"#ef4444":mut, fontSize:11 }}>{days}j{days>30?" ⚠️ Prêt long !":""}</div>}
+                    {days!==null && (
+                      <div style={{ color:tard?"#ef4444":mut, fontSize:11 }}>
+                        {days}j
+                        {g.lentRetourPrevu
+                          ? ` · à rendre le ${new Date(g.lentRetourPrevu).toLocaleDateString("fr-FR")}`
+                          : ""}
+                        {tard ? " ⚠️" : ""}
+                      </div>
+                    )}
                   </div>
                   <a href={`sms:?body=${encodeURIComponent(`Salut ! Tu penses à me rendre ${g.title} ? 😊`)}`} style={{ background:"#f59e0b22", border:"1px solid #f59e0b", color:"#f59e0b", borderRadius:6, padding:"5px 10px", fontSize:11, textDecoration:"none" }}>SMS</a>
                 </div>
               );
             })}
+
+            {/* Les retours effaçaient toute trace du prêt. L'onglet ne montrait
+                donc jamais que la moitié vivante d'un sujet qui a une suite. */}
+            {historique.length > 0 && (
+              <>
+                <div style={{ color:txt, fontSize:12, fontWeight:600, margin:"18px 0 8px" }}>Déjà rendus</div>
+                {historique.map((e, i) => (
+                  <div key={i} style={{ display:"flex", gap:10, alignItems:"baseline", padding:"8px 2px", borderTop:`1px solid ${bdr}` }}>
+                    <div style={{ flex:1, minWidth:0 }}>
+                      <div style={{ color:txt, fontSize:12, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{e.titre}</div>
+                      <div style={{ color:mut, fontSize:11 }}>{e.a} · rendu le {new Date(e.au).toLocaleDateString("fr-FR")}</div>
+                    </div>
+                    <span style={{ color:mut, fontSize:11, flexShrink:0 }}>{dureeEntreeHistorique(e)} j</span>
+                  </div>
+                ))}
+              </>
+            )}
           </div>
         )}
 
@@ -771,6 +807,22 @@ export default function App() {
                 </div>
               ))}
             </div>
+
+            {/* Le prêt est le seul état que l'application suive ; l'onglet n'en
+                disait rien au-delà d'un compteur. */}
+            {stats.topEmprunteurs.length > 0 && (
+              <div style={{ background:card, border:`1px solid ${bdr}`, borderRadius:10, padding:14, marginBottom:16 }}>
+                <div style={{ color:txt, fontWeight:600, fontSize:13, marginBottom:10 }}>À qui je prête</div>
+                {stats.topEmprunteurs.map(e => (
+                  <div key={e.nom} style={{ display:"flex", justifyContent:"space-between", alignItems:"baseline", padding:"6px 0", borderTop:`1px solid ${bdr}` }}>
+                    <span style={{ color:txt, fontSize:12 }}>{e.nom}</span>
+                    <span style={{ color:mut, fontSize:11 }}>
+                      {e.prets} prêt{e.prets > 1 ? "s" : ""} · {Math.round(e.jours / e.prets)} j en moyenne
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>

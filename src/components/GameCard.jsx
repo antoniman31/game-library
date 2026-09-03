@@ -3,7 +3,8 @@ import Cover from "./Cover.jsx";
 import InfoboxView from "./InfoboxView.jsx";
 import Sheet from "./Sheet.jsx";
 import { bg, card, bdr, txt, mut, demat } from "../lib/theme.js";
-import { PLATFORM_COLORS, BACK_COMPAT_PARENT, PLATFORMES_JEU, estUrlImage, joursDePret, pretEnRetard, brouillonDepuisJeu, validerEdition } from "../lib/model.js";
+import { PLATFORM_COLORS, BACK_COMPAT_PARENT, PLATFORMES_JEU, estUrlImage, joursDePret, pretEnRetard, brouillonDepuisJeu, validerEdition,
+  rendreJeu, preterJeu, dureeEntreeHistorique } from "../lib/model.js";
 import {
   rawgSearch, rawgDetail, wikiFrenchTitles, wikiArticleData, wikidataInfobox,
   sgdbSearch, sgdbGrids,
@@ -16,6 +17,7 @@ function GameCard({ g, onEdit, onDelete, onEnrich, autoOpen }) {
   const rootRef = useRef(null);
   useEffect(() => { if (autoOpen) rootRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }); }, []); // eslint-disable-line
   const [loanName, setLoanName] = useState(g.lentA || "");
+  const [loanRetour, setLoanRetour] = useState("");
   const [rawgOpen, setRawgOpen] = useState(false);
   const [rawgQ, setRawgQ] = useState(g.title);
   const [rawgSugg, setRawgSugg] = useState([]);
@@ -270,22 +272,31 @@ function GameCard({ g, onEdit, onDelete, onEnrich, autoOpen }) {
                     Depuis le {new Date(g.lentDate).toLocaleDateString("fr-FR")}
                     {jours !== null ? ` · ${jours} jour${jours > 1 ? "s" : ""}` : ""}
                     {enRetard ? " ⚠️" : ""}
+                    {g.lentRetourPrevu && <><br />À rendre le {new Date(g.lentRetourPrevu).toLocaleDateString("fr-FR")}</>}
                   </div>
                   <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                    <button onClick={() => { onEdit(g.id, "lentA", null); onEdit(g.id, "lentDate", null); setLoanName(""); }}
+                    <button onClick={() => { onEnrich(g.id, rendreJeu(g)); setLoanName(""); setLoanRetour(""); }}
                       style={{ height: 36, padding: "0 14px", background: "#22c55e22", border: "1px solid #22c55e", color: "#22c55e", borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>✓ Rendu</button>
                     <a href={`sms:?body=${encodeURIComponent(`Salut ! Tu penses à me rendre ${g.title} ? 😊`)}`}
                       style={{ height: 36, padding: "0 14px", display: "inline-flex", alignItems: "center", background: "transparent", border: `1px solid ${bdr}`, color: txt, borderRadius: 8, fontSize: 12, textDecoration: "none" }}>Relancer par SMS</a>
                   </div>
                 </div>
               ) : pretOuvert ? (
-                <div style={{ flex: 1, minWidth: 0, display: "flex", gap: 6 }}>
-                  <input value={loanName} onChange={e => setLoanName(e.target.value)} placeholder="Nom…" autoFocus
-                    aria-label="Nom de la personne à qui prêter ce jeu"
-                    style={{ flex: 1, minWidth: 0, height: 36, background: "transparent", border: `1px solid ${bdr}`, borderRadius: 8, color: txt, padding: "0 10px", fontSize: 12, outline: "none" }} />
-                  <button onClick={() => { const n = loanName.trim(); if (!n) return; onEdit(g.id, "lentA", n); onEdit(g.id, "lentDate", new Date().toISOString().slice(0, 10)); setPretOuvert(false); }}
-                    disabled={!loanName.trim()}
-                    style={{ height: 36, padding: "0 14px", background: loanName.trim() ? "#f59e0b22" : "transparent", border: `1px solid ${loanName.trim() ? "#f59e0b" : bdr}`, color: loanName.trim() ? "#f59e0b" : mut, borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: loanName.trim() ? "pointer" : "default" }}>Prêter</button>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: "flex", gap: 6 }}>
+                    <input value={loanName} onChange={e => setLoanName(e.target.value)} placeholder="Nom…" autoFocus
+                      aria-label="Nom de la personne à qui prêter ce jeu"
+                      style={{ flex: 1, minWidth: 0, height: 36, background: "transparent", border: `1px solid ${bdr}`, borderRadius: 8, color: txt, padding: "0 10px", fontSize: 12, outline: "none", fontFamily: "inherit" }} />
+                    <button onClick={() => { const j = preterJeu(g, loanName, loanRetour); if (j === g) return; onEnrich(g.id, j); setPretOuvert(false); setLoanRetour(""); }}
+                      disabled={!loanName.trim()}
+                      style={{ height: 36, padding: "0 14px", background: loanName.trim() ? "#f59e0b22" : "transparent", border: `1px solid ${loanName.trim() ? "#f59e0b" : bdr}`, color: loanName.trim() ? "#f59e0b" : mut, borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: loanName.trim() ? "pointer" : "default" }}>Prêter</button>
+                  </div>
+                  {/* Facultatif : sans date, le seuil de 30 jours reste le repli. */}
+                  <label style={{ display: "flex", gap: 6, alignItems: "center", marginTop: 6 }}>
+                    <span style={{ color: mut, fontSize: 11, flexShrink: 0 }}>À rendre le</span>
+                    <input type="date" value={loanRetour} onChange={e => setLoanRetour(e.target.value)}
+                      style={{ flex: 1, minWidth: 0, height: 32, background: "transparent", border: `1px solid ${bdr}`, borderRadius: 8, color: txt, padding: "0 8px", fontSize: 12, outline: "none", fontFamily: "inherit" }} />
+                  </label>
                 </div>
               ) : (
                 <button onClick={() => setPretOuvert(true)}
@@ -293,6 +304,13 @@ function GameCard({ g, onEdit, onDelete, onEnrich, autoOpen }) {
               )}
             </div>
           </div>
+
+          {/* Ce jeu a-t-il déjà voyagé ? La question que « Rendu » effaçait. */}
+          {g.pretsPasses?.length > 0 && (
+            <div style={{ color: mut, fontSize: 11, lineHeight: 1.6, padding: "10px 2px 2px" }}>
+              Déjà prêté {g.pretsPasses.length} fois : {g.pretsPasses.map(e => `${e.a} (${dureeEntreeHistorique(e)} j)`).join(" · ")}
+            </div>
+          )}
 
           {/* Liens & contenu (accordéon) */}
           {acc("links", "🔗 Liens & contenu", (
