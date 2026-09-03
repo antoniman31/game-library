@@ -69,6 +69,25 @@ export function compterFiltres({ plat, pretFil, fmtFil }) {
   return [plat, pretFil, fmtFil].filter(v => v !== "tous").length;
 }
 
+// Normalisation d'un titre pour comparaison : minuscules, sans accents ni
+// ponctuation. Sert à la recherche, à la déduplication d'import, et à repérer
+// un rapprochement RAWG douteux.
+export const normTitle = (s) => (s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, " ").trim();
+
+// Le score récupéré vient du premier résultat RAWG pour le titre : sur une
+// centaine de jeux, un titre approximatif ramène tôt ou tard la note d'un
+// autre jeu. Deux titres qui ne se recouvrent pas méritent d'être signalés
+// plutôt qu'écrits en silence.
+export function rapprochementDouteux(titreLocal, titreSource) {
+  const a = normTitle(titreLocal), b = normTitle(titreSource);
+  if (!a || !b) return true;
+  return a !== b && !a.startsWith(b) && !b.startsWith(a);
+}
+
+// Jeux dont la note Metacritic manque — 0 compte comme absent, RAWG ne
+// distingue pas « pas de note » de « note nulle ».
+export const jeuxSansScore = (games) => (games || []).filter(g => !g.metacritic);
+
 // ── Édition manuelle d'une fiche ────────────────────────────────────────────
 // Tout ce que les sources automatiques écrivent (titre, plateforme, genres,
 // note, jaquette, description, infobox Wikidata) était en lecture seule : une

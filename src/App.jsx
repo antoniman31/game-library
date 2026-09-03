@@ -6,10 +6,11 @@ import AddModal from "./components/AddModal.jsx";
 import ImportModal from "./components/ImportModal.jsx";
 import FiltersSheet from "./components/FiltersSheet.jsx";
 import ActionsSheet from "./components/ActionsSheet.jsx";
+import ScoresSheet from "./components/ScoresSheet.jsx";
 
 import { hdr, card, bdr, txt, mut } from "./lib/theme.js";
 import { GAMES_INIT } from "./lib/seed.js";
-import { BACK_COMPAT, migrateGames, compterFiltres, validerJeuxImportes, pretEnRetard } from "./lib/model.js";
+import { BACK_COMPAT, migrateGames, compterFiltres, validerJeuxImportes, pretEnRetard, jeuxSansScore } from "./lib/model.js";
 import { lire, ecrire, surEchecStockage } from "./lib/storage.js";
 import { chargerSync, enregistrerSync, genererCode, envoyer, recuperer } from "./lib/sync.js";
 import {
@@ -76,6 +77,12 @@ export default function App() {
   const [refreshProg, setRefreshProg] = useState(0);
   const [refreshMsg, setRefreshMsg] = useState(null); // bilan de fin de refresh (S1)
   const refreshCancelRef = useRef(false); // annulation du refresh global (S6)
+  // Complétion des notes Metacritic manquantes.
+  const [scoresEnCours, setScoresEnCours] = useState(false);
+  const [scoresProg, setScoresProg] = useState(0);
+  const [scoresTotal, setScoresTotal] = useState(0);
+  const [scoresBilan, setScoresBilan] = useState(null); // { trouves, sansScore, stopped } ou { message }
+  const scoresCancelRef = useRef(false);
   const [deleted, setDeleted] = useState(null); // { game, index } pour l'undo
   const [alerteStockage, setAlerteStockage] = useState(null);
   const [sync, setSync] = useState(() => chargerSync());
@@ -155,6 +162,49 @@ export default function App() {
     });
   };
   const cancelRefresh = () => { refreshCancelRef.current = true; };
+
+  // Complète les notes Metacritic absentes depuis RAWG, sans toucher à celles
+  // déjà renseignées.
+  //
+  // Le rattrapage du démarrage ne vise que les jeux sans jaquette et ne prend
+  // la note qu'au passage : un jeu illustré mais sans note n'était jamais
+  // repêché. Et l'enrichissement de masse ne concerne que les jeux fraîchement
+  // importés, donc jamais la bibliothèque déjà en place.
+  const completerScores = async () => {
+    if (scoresEnCours) return;
+    if (!hasRawgKey()) { setScoresBilan({ message: "Aucune clé RAWG n'est configurée — voir Réglages." }); return; }
+    const cibles = jeuxSansScore(games);
+    if (!cibles.length) { setScoresBilan({ message: "Tous les jeux ont déjà une note." }); return; }
+
+    scoresCancelRef.current = false;
+    setScoresEnCours(true);
+    setScoresProg(0);
+    setScoresTotal(cibles.length);
+    setScoresBilan(null);
+    const trouves = [];
+    const sansScore = [];
+    for (let i = 0; i < cibles.length; i++) {
+      if (scoresCancelRef.current) break;
+      const g = cibles[i];
+      try {
+        const r = await rawgFirstResult(g.title);
+        if (r?.metacritic) {
+          setGames(gs => gs.map(x => x.id === g.id ? { ...x, metacritic: r.metacritic } : x));
+          trouves.push({ id: g.id, titre: g.title, titreRawg: r.name, score: r.metacritic });
+        } else sansScore.push(g.title);
+      } catch { sansScore.push(g.title); }
+      setScoresProg(i + 1);
+      await new Promise(res => setTimeout(res, 150)); // sous la limite de RAWG
+    }
+    setScoresEnCours(false);
+    setScoresBilan({ trouves, sansScore, stopped: scoresCancelRef.current });
+  };
+  const annulerScores = () => { scoresCancelRef.current = true; };
+  // Le bilan laisse retirer une note issue d'un mauvais rapprochement.
+  const retirerScore = useCallback((id) => {
+    setGames(gs => gs.map(g => g.id === id ? { ...g, metacritic: null } : g));
+    setScoresBilan(b => (b?.trouves ? { ...b, trouves: b.trouves.filter(t => t.id !== id) } : b));
+  }, []);
 
   // Fetch covers + metacritic manquants au démarrage
   useEffect(() => {
@@ -441,6 +491,20 @@ export default function App() {
           <div style={{ display: "flex", alignItems: "flex-start", gap: 8, background: "#ef444422", border: "1px solid #ef4444", borderRadius: 8, padding: "8px 10px", marginBottom: 10 }}>
             <div style={{ flex: 1, minWidth: 0, color: "#ef4444", fontSize: 11, fontWeight: 600, lineHeight: 1.4 }}>⚠️ {alerteStockage}</div>
             <button onClick={() => setAlerteStockage(null)} aria-label="Masquer" style={{ background: "transparent", border: "none", color: "#ef4444", fontSize: 14, cursor: "pointer", lineHeight: 1, padding: 0 }}>✕</button>
+          </div>
+        )}
+
+        {scoresEnCours && (
+          <div style={{ display: "flex", alignItems: "center", gap: 8, background: card, border: `1px solid ${bdr}`, borderRadius: 8, padding: "8px 10px", marginBottom: 10 }}>
+            <div style={{ flex: 1, minWidth: 0, color: txt, fontSize: 11, fontWeight: 600 }}>Recherche des notes… {scoresProg}/{scoresTotal}</div>
+            <button onClick={annulerScores} style={{ background: "#ef444422", border: "1px solid #ef4444", color: "#ef4444", borderRadius: 5, padding: "3px 8px", fontSize: 10, cursor: "pointer" }}>Arrêter</button>
+          </div>
+        )}
+
+        {scoresBilan?.message && (
+          <div style={{ display: "flex", alignItems: "flex-start", gap: 8, background: card, border: `1px solid ${bdr}`, borderRadius: 8, padding: "8px 10px", marginBottom: 10 }}>
+            <div style={{ flex: 1, minWidth: 0, color: txt, fontSize: 11, fontWeight: 600 }}>{scoresBilan.message}</div>
+            <button onClick={() => setScoresBilan(null)} aria-label="Masquer" style={{ background: "transparent", border: "none", color: mut, fontSize: 14, cursor: "pointer", lineHeight: 1, padding: 0 }}>✕</button>
           </div>
         )}
 
@@ -733,8 +797,18 @@ export default function App() {
           refreshTotal={games.length}
           onCancelRefresh={cancelRefresh}
           onImportXbox={() => setShowImport(true)}
+          onCompleterScores={completerScores}
+          scoresEnCours={scoresEnCours}
+          scoresProg={scoresProg}
+          scoresTotal={scoresTotal}
+          onAnnulerScores={annulerScores}
+          scoresManquants={jeuxSansScore(games).length}
         />
       )}
+
+      {scoresBilan && (scoresBilan.message
+        ? null
+        : <ScoresSheet bilan={scoresBilan} onAnnulerScore={retirerScore} onClose={() => setScoresBilan(null)} />)}
 
       {deleted && (
         <div style={{ position:"fixed", bottom:20, left:"50%", transform:"translateX(-50%)", zIndex:400, display:"flex", alignItems:"center", gap:14, background:card, border:`1px solid ${bdr}`, borderRadius:10, padding:"10px 14px", boxShadow:"0 8px 24px rgba(0,0,0,0.4)", animation:"toastIn 200ms ease" }}>

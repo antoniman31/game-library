@@ -1,4 +1,8 @@
 import { lire, ecrire } from "./storage.js";
+// normTitle vit dans model.js — pur, donc testable sans DOM ; réexporté ici
+// pour les appelants historiques.
+import { normTitle } from "./model.js";
+export { normTitle };
 
 // Appels aux sources externes : RAWG, Wikipédia FR, Wikidata, SteamGridDB, xbl.io.
 // Aucune clé n'est embarquée : elles sont saisies dans l'onglet Réglages et
@@ -61,7 +65,6 @@ export async function wikiFrenchTitles(q) {
 }
 
 // Normalise un titre pour comparaison (minuscules, sans accents ni ponctuation).
-export const normTitle = (s) => (s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, " ").trim();
 
 // Choisit le meilleur candidat Wikipédia pour un titre de jeu : correspondance exacte,
 // sinon préfixe, sinon le premier résultat (pertinence). Évite de tomber sur la page
