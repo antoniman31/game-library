@@ -160,28 +160,35 @@ function GameCard({ g, onEdit, onDelete, onEnrich, autoOpen }) {
 
       {open && (
         <div style={{ padding: "12px 14px", borderTop: `1px solid ${bdr}` }} onClick={e => e.stopPropagation()}>
-          {/* Identité. La jaquette flotte : le sous-titre puis la description
-              l'habillent. Un simple flex laissait un vide de plusieurs dizaines
-              de pixels sous le texte, à côté d'une jaquette bien plus haute. */}
-          <div style={{ overflow: "hidden", marginBottom: 14 }}>
-            <div style={{ float: "left", margin: "0 14px 8px 0" }}>
-              <Cover src={g.cover} title={g.title} size={96} />
+          {/* Identité. La jaquette et les informations courtes en deux colonnes,
+              la description en pleine largeur dessous.
+              Le texte habillait auparavant la jaquette : ses dernières lignes
+              repassaient sous l'image, ce qui cassait la colonne. Mettre la
+              description DANS la colonne de droite corrigeait ça mais laissait,
+              sur un texte long, une bande vide sous la jaquette. Pleine largeur
+              règle les deux, et donne des lignes de ~55 caractères au lieu
+              de ~38. */}
+          <div style={{ display: "flex", gap: 14, marginBottom: g.style ? 12 : 16 }}>
+            <Cover src={g.cover} title={g.title} size={96} />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 17, fontWeight: 700, lineHeight: 1.25, color: txt, marginBottom: 6 }}>{g.title}</div>
+              <div style={{ color: mut, fontSize: 11, lineHeight: 1.7 }}>
+                <b style={{ color: txt, fontWeight: 600 }}>{g.platform}</b> · {g.format}
+                {g.genre.length > 0 && <><br />{g.genre.join(" · ")}</>}
+                {g.metacritic ? <><br />Metacritic <b style={{ color: noteCouleur, fontWeight: 700 }}>{g.metacritic}</b></> : null}
+                <br />Ajouté le {new Date(g.addedDate).toLocaleDateString("fr-FR")}
+              </div>
             </div>
-            <div style={{ fontSize: 17, fontWeight: 700, lineHeight: 1.25, color: txt, marginBottom: 6 }}>{g.title}</div>
-            <div style={{ color: mut, fontSize: 11, lineHeight: 1.7, marginBottom: g.style ? 10 : 0 }}>
-              <b style={{ color: txt, fontWeight: 600 }}>{g.platform}</b> · {g.format}
-              {g.genre.length > 0 && <><br />{g.genre.join(" · ")}</>}
-              <br />Ajouté le {new Date(g.addedDate).toLocaleDateString("fr-FR")}
-            </div>
-            {g.style && (
-              <>
-                {/* En italique gris coupé à deux lignes, le seul texte qu'on ait
-                    envie de lire était le plus pénible de la fiche. */}
-                <div style={{ color: txt, fontSize: 13, lineHeight: 1.5, ...(descOpen ? {} : { overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 4, WebkitBoxOrient: "vertical" }) }}>{g.style}</div>
-                {g.style.length > 160 && <button onClick={() => setDescOpen(o => !o)} style={{ background: "transparent", border: "none", color: "#5493FF", fontSize: 11, cursor: "pointer", padding: "6px 0 0" }}>{descOpen ? "▴ Réduire" : "▾ Lire la suite"}</button>}
-              </>
-            )}
           </div>
+
+          {g.style && (
+            <div style={{ marginBottom: 16 }}>
+              {/* En italique gris coupé à deux lignes, le seul texte qu'on ait
+                  envie de lire était le plus pénible de la fiche. */}
+              <div style={{ color: txt, fontSize: 13, lineHeight: 1.5, ...(descOpen ? {} : { overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 4, WebkitBoxOrient: "vertical" }) }}>{g.style}</div>
+              {g.style.length > 160 && <button onClick={() => setDescOpen(o => !o)} style={{ background: "transparent", border: "none", color: "#5493FF", fontSize: 11, cursor: "pointer", padding: "6px 0 0" }}>{descOpen ? "▴ Réduire" : "▾ Lire la suite"}</button>}
+            </div>
+          )}
 
           {/* Infos Wikidata : des filets, plus un cadre (voir InfoboxView). */}
           {g.infobox && <div style={{ marginBottom: 16 }}><InfoboxView info={g.infobox} /></div>}
