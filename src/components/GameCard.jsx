@@ -1,6 +1,7 @@
 import { memo, useState, useEffect, useRef } from "react";
 import Cover from "./Cover.jsx";
 import InfoboxView from "./InfoboxView.jsx";
+import Sheet from "./Sheet.jsx";
 import { bg, card, bdr, txt, mut, demat } from "../lib/theme.js";
 import { PLATFORM_COLORS, BACK_COMPAT_PARENT, PLATFORMES_JEU, estUrlImage, joursDePret, pretEnRetard, brouillonDepuisJeu, validerEdition } from "../lib/model.js";
 import {
@@ -127,6 +128,10 @@ function GameCard({ g, onEdit, onDelete, onEnrich, autoOpen }) {
   // description n'écrit pas dans le stockage à chaque lettre.
   const ouvrirEdition = () => { setBrouillon(brouillonDepuisJeu(g)); setErreurs({}); setEditionOuverte(true); };
   const fermerEdition = () => { setEditionOuverte(false); setBrouillon(null); setErreurs({}); };
+  // Le fond de la feuille se ferme au clic : sans garde-fou, un doigt à côté
+  // jetterait une correction en cours sans rien dire.
+  const brouillonModifie = () => !!brouillon && JSON.stringify(brouillon) !== JSON.stringify(brouillonDepuisJeu(g));
+  const demanderFermeture = () => { if (brouillonModifie() && !window.confirm("Abandonner les modifications ?")) return; fermerEdition(); };
   const champ = (k, v) => setBrouillon(b => ({ ...b, [k]: v }));
   const enregistrer = () => {
     const { erreurs: err, valeurs } = validerEdition(brouillon);
@@ -137,7 +142,9 @@ function GameCard({ g, onEdit, onDelete, onEnrich, autoOpen }) {
   };
 
   const champStyle = (k) => ({
-    width: "100%", boxSizing: "border-box", background: card,
+    // Fond plus sombre que la feuille, comme les champs de la fenêtre d'ajout :
+    // sur fond `card`, un champ `card` ne se distinguait que par son liseré.
+    width: "100%", boxSizing: "border-box", background: bg,
     border: `1px solid ${erreurs[k] ? "#ef4444" : bdr}`, borderRadius: 6,
     color: txt, padding: "7px 9px", fontSize: 12, outline: "none",
     fontFamily: "inherit", // sans quoi textarea et champ date passent en monospace
@@ -323,8 +330,7 @@ function GameCard({ g, onEdit, onDelete, onEnrich, autoOpen }) {
           ))}
           {/* Re-association RAWG */}
           {rawgOpen && (
-            <div style={{ position: "relative", background: bg, border: `1px solid ${bdr}`, borderRadius: 8, padding: "10px 12px", marginBottom: 10 }}>
-              <div style={{ color: txt, fontSize: 11, fontWeight: 600, marginBottom: 6 }}>Ré-associer depuis RAWG</div>
+            <Sheet title="Ré-associer depuis RAWG" onClose={() => setRawgOpen(false)}>
               <input value={rawgQ} onChange={e => rawgQuery(e.target.value)} placeholder="Titre du jeu…" autoFocus style={{ width: "100%", boxSizing: "border-box", background: "transparent", border: `1px solid ${bdr}`, borderRadius: 6, color: txt, padding: "6px 8px", fontSize: 12, outline: "none" }} />
               {rawgBusy && <div style={{ color: "#5493FF", fontSize: 11, marginTop: 4 }}>Récupération & traduction…</div>}
               {rawgSugg.length > 0 && !rawgBusy && (
@@ -337,12 +343,11 @@ function GameCard({ g, onEdit, onDelete, onEnrich, autoOpen }) {
                   ))}
                 </div>
               )}
-            </div>
+            </Sheet>
           )}
           {/* Titre français via Wikipédia FR */}
           {wikiOpen && (
-            <div style={{ background: bg, border: `1px solid ${bdr}`, borderRadius: 8, padding: "10px 12px", marginBottom: 10 }}>
-              <div style={{ color: txt, fontSize: 11, fontWeight: 600, marginBottom: 6 }}>Titre français (Wikipédia)</div>
+            <Sheet title="Titre français (Wikipédia)" onClose={() => setWikiOpen(false)}>
               <input value={wikiQ} onChange={e => wikiQuery(e.target.value)} placeholder="Titre du jeu…" autoFocus style={{ width: "100%", boxSizing: "border-box", background: "transparent", border: `1px solid ${bdr}`, borderRadius: 6, color: txt, padding: "6px 8px", fontSize: 12, outline: "none" }} />
               {wikiBusy && <div style={{ color: "#5493FF", fontSize: 11, marginTop: 4 }}>Recherche…</div>}
               {!wikiBusy && wikiSugg.length > 0 && (
@@ -394,12 +399,11 @@ function GameCard({ g, onEdit, onDelete, onEnrich, autoOpen }) {
                   </div>
                 </div>
               )}
-            </div>
+            </Sheet>
           )}
           {/* Jaquettes SteamGridDB */}
           {sgdbOpen && (
-            <div style={{ background: bg, border: `1px solid ${bdr}`, borderRadius: 8, padding: "10px 12px", marginBottom: 10 }}>
-              <div style={{ color: txt, fontSize: 11, fontWeight: 600, marginBottom: 6 }}>Jaquette SteamGridDB</div>
+            <Sheet title="Choisir une jaquette" onClose={() => setSgdbOpen(false)}>
               <input value={sgdbQ} onChange={e => sgdbQuery(e.target.value)} placeholder="Titre du jeu…" autoFocus style={{ width: "100%", boxSizing: "border-box", background: "transparent", border: `1px solid ${bdr}`, borderRadius: 6, color: txt, padding: "6px 8px", fontSize: 12, outline: "none" }} />
               {sgdbBusy && <div style={{ color: "#5493FF", fontSize: 11, marginTop: 6 }}>Recherche des jaquettes…</div>}
               {!sgdbBusy && sgdbGridsList.length > 0 && (
@@ -414,7 +418,7 @@ function GameCard({ g, onEdit, onDelete, onEnrich, autoOpen }) {
                 </>
               )}
               {!sgdbBusy && sgdbDone && sgdbGridsList.length === 0 && <div style={{ color: mut, fontSize: 11, marginTop: 6 }}>Aucune jaquette trouvée sur SteamGridDB</div>}
-            </div>
+            </Sheet>
           )}
           {/* Outils. « Ajouté le » était orphelin en bas à gauche, calé contre
               quatre boutons qui débordaient sur deux lignes — et Supprimer,
@@ -435,11 +439,11 @@ function GameCard({ g, onEdit, onDelete, onEnrich, autoOpen }) {
 
           {sourcesOuvertes && (
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 10 }}>
-              <button onClick={() => { if (editionOuverte) fermerEdition(); else ouvrirEdition(); }}
-                style={{ ...boutonSource, background: editionOuverte ? "#5493FF33" : "#5493FF22", fontWeight: 600 }}>✏️ À la main</button>
-              <button onClick={() => { setRawgOpen(o => !o); if (!rawgOpen) { setRawgQ(g.title); rawgQuery(g.title); } }} style={boutonSource}>🔄 RAWG</button>
-              <button onClick={() => { setWikiOpen(o => !o); if (!wikiOpen) { setWikiQ(g.title); setWikiDone(false); wikiQuery(g.title); } }} style={boutonSource}>🇫🇷 Titre français</button>
-              <button onClick={() => { setSgdbOpen(o => !o); if (!sgdbOpen) { setSgdbQ(g.title); setSgdbDone(false); sgdbQuery(g.title); } }} style={boutonSource}>📦 Jaquette</button>
+              <button onClick={() => { setSourcesOuvertes(false); ouvrirEdition(); }}
+                style={{ ...boutonSource, background: "#5493FF22", fontWeight: 600 }}>✏️ À la main</button>
+              <button onClick={() => { setSourcesOuvertes(false); setRawgOpen(true); setRawgQ(g.title); rawgQuery(g.title); }} style={boutonSource}>🔄 RAWG</button>
+              <button onClick={() => { setSourcesOuvertes(false); setWikiOpen(true); setWikiQ(g.title); setWikiDone(false); wikiQuery(g.title); }} style={boutonSource}>🇫🇷 Titre français</button>
+              <button onClick={() => { setSourcesOuvertes(false); setSgdbOpen(true); setSgdbQ(g.title); setSgdbDone(false); sgdbQuery(g.title); }} style={boutonSource}>📦 Jaquette</button>
             </div>
           )}
 
@@ -448,8 +452,7 @@ function GameCard({ g, onEdit, onDelete, onEnrich, autoOpen }) {
               l'infobox ; rien ne permettait de les corriger quand elles se
               trompaient, sinon supprimer le jeu et le recréer. */}
           {editionOuverte && brouillon && (
-            <div style={{ background: bg, border: `1px solid ${bdr}`, borderRadius: 8, padding: "12px 12px 14px", marginBottom: 10 }}>
-              <div style={{ color: txt, fontSize: 12, fontWeight: 700, marginBottom: 10 }}>Corriger les informations</div>
+            <Sheet title="Corriger les informations" onClose={demanderFermeture}>
 
               {ligneEdition("Titre", "title", <input value={brouillon.title} onChange={e => champ("title", e.target.value)} style={champStyle("title")} />)}
 
@@ -493,7 +496,7 @@ function GameCard({ g, onEdit, onDelete, onEnrich, autoOpen }) {
               {Object.keys(erreurs).length > 0 && (
                 <div role="alert" style={{ color: "#ef4444", fontSize: 11, marginTop: 8 }}>Rien n'a été enregistré : corrige les champs en rouge.</div>
               )}
-            </div>
+            </Sheet>
           )}
         </div>
       )}

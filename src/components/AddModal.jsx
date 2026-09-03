@@ -1,4 +1,5 @@
 import { useState, useRef } from "react";
+import Sheet from "./Sheet.jsx";
 import { bg, card, bdr, txt, mut } from "../lib/theme.js";
 import { PLATFORMS, isBackCompatPlatform } from "../lib/model.js";
 import {
@@ -32,7 +33,7 @@ function AddModal({ onAdd, onClose }) {
   const [cover, setCover] = useState(null);
   const sgDebRef = useRef(null);
 
-  const inp = { background: bg, border: `1px solid ${bdr}`, borderRadius: 8, color: txt, padding: "8px 12px", fontSize: 13, outline: "none", width: "100%", boxSizing: "border-box" };
+  const inp = { background: bg, border: `1px solid ${bdr}`, borderRadius: 8, color: txt, padding: "8px 12px", fontSize: 13, outline: "none", width: "100%", boxSizing: "border-box", fontFamily: "inherit" };
   const srcBtn = { background: "transparent", border: "1px solid #5493FF", color: "#5493FF", borderRadius: 6, padding: "5px 8px", fontSize: 11, cursor: "pointer" };
 
   const search = async (q) => setSugg(await rawgSearch(q));
@@ -103,10 +104,11 @@ function AddModal({ onAdd, onClose }) {
     });
   };
 
+  // Cette fenêtre réimplémentait mot pour mot le panneau glissant de Sheet :
+  // même position, même fond, même repli — mais sans poignée ni bouton de
+  // fermeture, et à corriger deux fois.
   return (
-    <div style={{ position: "fixed", inset: 0, background: "#000b", zIndex: 300, display: "flex", alignItems: "flex-end" }} onClick={onClose}>
-      <div style={{ background: card, border: `1px solid ${bdr}`, borderRadius: "16px 16px 0 0", padding: "20px 20px calc(20px + var(--safe-bottom))", width: "100%", maxWidth: 500, margin: "0 auto", maxHeight: "85vh", overflowY: "auto" }} onClick={e => e.stopPropagation()}>
-        <div style={{ fontWeight: 700, fontSize: 15, color: txt, marginBottom: 14 }}>Ajouter un jeu</div>
+    <Sheet title="Ajouter un jeu" onClose={onClose}>
 
         <div style={{ position: "relative", marginBottom: 10 }}>
           <input value={title} onChange={e => { setTitle(e.target.value); clearTimeout(debRef.current); debRef.current = setTimeout(() => search(e.target.value), 350); }} placeholder="Titre du jeu *" style={inp} />
@@ -190,8 +192,7 @@ function AddModal({ onAdd, onClose }) {
           <button onClick={onClose} style={{ flex: 1, background: "transparent", border: `1px solid ${bdr}`, color: "#94a3b8", borderRadius: 8, padding: 10, cursor: "pointer", fontSize: 13 }}>Annuler</button>
           <button onClick={handleAdd} style={{ flex: 2, background: "#5493FF", border: "none", color: "#fff", borderRadius: 8, padding: 10, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>Ajouter</button>
         </div>
-      </div>
-    </div>
+    </Sheet>
   );
 }
 
