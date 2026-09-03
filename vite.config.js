@@ -17,6 +17,18 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg'],
       manifest: {
+        // Identité de l'application, explicite plutôt que déduite.
+        //
+        // Sans ce champ, le navigateur dérive l'identité de `start_url` : le
+        // jour où celui-ci change, l'application installée devient un fantôme
+        // que plus rien ne met à jour, et la « nouvelle » s'installe à côté.
+        // Deux PWA cohabitant sur antoniman31.github.io (celle-ci et
+        // GTA6_WATCH), l'ambiguïté ne coûte rien à lever.
+        //
+        // La valeur reprend volontairement `start_url` : l'identité calculée
+        // reste donc exactement celle d'aujourd'hui, et les installations
+        // existantes ne sont pas orphelines.
+        id: '/game-library/',
         name: 'Game Library',
         short_name: 'Game Library',
         description: 'Bibliothèque de jeux vidéo : suivi, temps de jeu, prêts et statistiques.',
