@@ -56,9 +56,9 @@ function ImportModal({ games, onImportGames, onClose }) {
       const platform = addedDate >= XBOX_SERIES_CUTOFF ? "Xbox Series X" : "Xbox One";
       created.push({
         id: Date.now() + i, title: t.name, platform, format: "démat", addedDate,
-        genre: [], style: "", status: "non commencé", note: null, lentA: null, lentDate: null,
-        cover: t.image || null, metacritic: null, hltb: null, playedMinutes: 0, manualMinutes: 0,
-        sessions: [], myLinks: ["", "", ""], tips: "", tag: "", progression: "",
+        genre: [], style: "", lentA: null, lentDate: null,
+        cover: t.image || null, metacritic: null,
+        myLinks: ["", "", ""], tips: "", tag: "",
         backCompat: isBackCompatPlatform(platform), infobox: null,
       });
       setProgress(i + 1);

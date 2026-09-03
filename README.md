@@ -1,7 +1,7 @@
 # Game Library
 
 Bibliothèque de jeux vidéo personnelle (Xbox / Switch) : suivi de progression,
-chronomètre de session, prêts, statistiques, et enrichissement automatique des
+suivi des prêts, et enrichissement automatique des
 fiches depuis plusieurs bases de données publiques.
 
 **➡️ [antoniman31.github.io/game-library](https://antoniman31.github.io/game-library/)** — installable en PWA sur mobile.
@@ -119,11 +119,11 @@ erreur CORS.
 - **Recherche** sur titre + genre + tag, **insensible à la casse et aux accents**
   (« creatif » trouve le genre « Créatif »). La description est volontairement
   exclue : un mot du résumé faisait remonter des jeux sans rapport.
-- **Filtres combinables** : plateforme, statut, format (physique / démat).
-- **Tri** : A-Z, date, Metacritic, temps de jeu.
+- **Filtres combinables** : plateforme, prêt (chez moi / prêtés), format (physique / démat).
+- **Tri** : A-Z, date, Metacritic.
 - **Filtre « 🎯 à finir »** : « en cours » + « non commencé », triés par ancienneté
   de dernière session — pour attaquer la pile par le plus vieux.
-- **Statuts** : non commencé, en cours, terminé, platine, abandonné, prêté.
+- **Prêts** : nom de l'emprunteur et date, durée affichée, alerte au-delà de 30 jours.
 - **Thème clair / sombre**.
 - **Suppression avec toast « Annuler »** (5 s) au lieu d'une popup bloquante.
 
@@ -133,14 +133,14 @@ erreur CORS.
   l'historique des 3 dernières sessions.
 - **Saisie manuelle** du temps déjà joué (heures / minutes, boutons **+** et **−**,
   borné à 0).
-- **Barre HowLongToBeat** : pourcentage d'avancement si le champ `hltb` est rempli.
+- **Barre de prêt** : la bande sous la jaquette passe à l'orange quand le jeu est dehors.
 - **Jeux « poussiéreux »** : un jeu « en cours » sans activité depuis plus de 30
   jours est affiché estompé, bordure en pointillés.
 - **Compteur « jours depuis la dernière session »** sur les jeux en cours.
 
 ### Prêts
 
-- Marquer un jeu comme prêté (nom de l'emprunteur + date) bascule son statut.
+- Prêter un jeu (nom de l'emprunteur + date) ; « ✓ Rendu » le fait revenir.
 - Onglet **Prêts** : **alerte au-delà de 30 jours** et bouton **SMS** de relance
   (lien `sms:` pré-rempli).
 
@@ -148,7 +148,7 @@ erreur CORS.
 
 Chaque fiche se déplie et regroupe, en accordéons repliés par défaut :
 **📤 Prêt**, **🔗 Liens & contenu** (recherches YouTube / JVC / IGN + 3 liens
-personnels), **📝 Notes**. Restent toujours visibles : genres, statut, format,
+personnels), **📝 Notes**. Restent toujours visibles : genres, prêt, format,
 rétrocompatibilité et bloc « Temps de jeu ». La description est repliée à deux
 lignes avec un « Lire la suite ».
 
@@ -313,6 +313,13 @@ fournit directement un texte français rédigé, sans quota ni découpage.
   seul commit touche au projet. Si tu installes sous Windows, npm ajoutera les
   binaires win32 : commite le lockfile mis à jour, il portera alors les deux
   plateformes.
+- **Ce que l'application ne fait pas.** Elle a longtemps suivi la progression
+  (non commencé, en cours, terminé, platine, abandonné) et le temps de jeu, avec
+  chronomètre et historique de sessions. Les deux ont été retirés : la console
+  tient déjà ces données, mieux et sans saisie manuelle. Les redoubler ici
+  demandait du travail pour une information qu'on possède ailleurs. Il reste ce
+  que la console ne sait pas faire — voir toute la bibliothèque d'un coup, et
+  savoir chez qui sont les jeux.
 - **Le mobile d'abord.** L'en-tête collant empilait le titre, cinq boutons à
   libellé complet, les onglets, la recherche et quatre rangées de puces de
   filtres : 317 px sur un écran de 915, soit un tiers de la surface avant le
@@ -377,7 +384,7 @@ Worker pour travailler en local**.
 │   ├── index.css                  Jetons de thème, animations, survol
 │   ├── lib/
 │   │   ├── api.js                 RAWG, Wikipédia, Wikidata, SteamGridDB, xbl.io
-│   │   ├── model.js               Statuts, plateformes, migration, validation
+│   │   ├── model.js               Plateformes, prêts, migration, validation
 │   │   ├── seed.js                Bibliothèque de démarrage
 │   │   ├── storage.js             localStorage instrumenté (alerte de quota)
 │   │   ├── sync.js                Sauvegarde sur le Worker

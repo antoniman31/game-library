@@ -1,7 +1,9 @@
-// Vocabulaire du domaine : statuts, plateformes, rétrocompatibilité, migration
-// des jeux stockés et petits calculs de date / durée.
-export const STATUS_COLORS = { "non commencé": "#64748b", "en cours": "#5493FF", "terminé": "#22c55e", "platine": "#a855f7", "abandonné": "#ef4444", "prêté": "#f59e0b" };
-export const STATUTS = ["non commencé", "en cours", "terminé", "platine", "abandonné", "prêté"];
+// Vocabulaire du domaine : plateformes, rétrocompatibilité, prêts, migration
+// des jeux stockés.
+// L'application suit un seul état : le jeu est-il chez moi, ou prêté ?
+// La progression (terminé, en cours, platine…) était tenue en double avec la
+// console, qui la connaît mieux ; elle a été retirée.
+export const PRET_LONG_JOURS = 30;
 export const PLATFORMS = ["tous", "Xbox Series X", "Xbox One", "Switch 2", "Switch 1"];
 // S4 : Series X vert vif (marque Xbox), One vert plus foncé, Switch rouge.
 export const PLATFORM_COLORS = { "Xbox Series X": "#107C10", "Xbox One": "#0a5c0a", "Switch 2": "#e4000f", "Switch 1": "#e4000f" };
@@ -24,6 +26,10 @@ export const BACK_COMPAT_PARENT = Object.fromEntries(Object.entries(BACK_COMPAT)
 //   v2             : Switch 1 rétrocompatibles Switch 2 -> rattrapage une seule fois
 // Une fois bcV=2 posé, le champ n'est plus jamais forcé : le toggle manuel de la fiche
 // (exception au cas par cas) survit donc aux rechargements.
+// Champs devenus sans objet : la progression et le temps de jeu, que la console
+// tient déjà, plus `note` et `progression` qui n'ont jamais été ni écrits ni lus.
+const CHAMPS_RETIRES = ["status", "playedMinutes", "manualMinutes", "sessions", "hltb", "note", "progression"];
+
 export const XBOX_SERIES_CUTOFF = "2020-11-10";
 export const BACK_COMPAT_VERSION = 2;
 export function migrateGames(list) {
@@ -34,38 +40,33 @@ export function migrateGames(list) {
     else if ((ng.bcV || 1) < 2 && ng.platform === "Switch 1" && ng.backCompat === false) ng.backCompat = true;
     ng.bcV = BACK_COMPAT_VERSION;
     if (ng.infobox === undefined) ng.infobox = null;
+    // Sept champs devenus sans objet : la progression et le temps de jeu, que
+    // la console tient déjà, plus `note` et `progression` qui n'ont jamais été
+    // ni écrits ni lus. Les garder ferait croire à des fonctions inexistantes,
+    // et ils voyagent à chaque écriture et à chaque synchronisation.
+    for (const mort of CHAMPS_RETIRES) delete ng[mort];
     return ng;
   });
 }
 
-export function fmtTime(mins) {
-  if (!mins) return "0h";
-  const h = Math.floor(mins / 60), m = mins % 60;
-  return h > 0 ? `${h}h${m > 0 ? m + "m" : ""}` : `${m}m`;
+export function daysSince(date) { return Math.floor((Date.now() - date) / 86400000); }
+// Nombre de jours depuis le prêt, ou null si le jeu est chez soi.
+export function joursDePret(g) {
+  if (!g.lentA || !g.lentDate) return null;
+  return daysSince(new Date(g.lentDate));
 }
 
-// Date de la dernière session jouée, ou null si aucune.
-export function lastSessionDate(g) {
-  const s = g.sessions;
-  return s && s.length ? new Date(s[s.length - 1].date) : null;
-}
-export function daysSince(date) { return Math.floor((Date.now() - date) / 86400000); }
-// Jeu "en cours" laissé de côté depuis >30j (dernière session, ou date d'ajout en fallback).
-export function isDusty(g) {
-  if (g.status !== "en cours") return false;
-  const last = lastSessionDate(g);
-  return daysSince(last || new Date(g.addedDate)) > 30;
-}
-// Ancienneté pour le tri "à finir" : dernière session, sinon date d'ajout.
-export function staleKey(g) {
-  const last = lastSessionDate(g);
-  return (last || new Date(g.addedDate)).getTime();
+// Prêt qui s'éternise : le seul signal d'alerte que l'application ait encore
+// à donner. Le traitement visuel qui marquait les jeux délaissés lui revient.
+export function pretEnRetard(g) {
+  const j = joursDePret(g);
+  return j !== null && j > PRET_LONG_JOURS;
 }
 
 // Compte les filtres réellement appliqués. Le tri et le mode d'affichage n'en
 // sont pas : ils changent l'ordre ou la densité, jamais ce qui est montré.
-export function compterFiltres({ plat, statFil, fmtFil }) {
-  return [plat, statFil, fmtFil].filter(v => v !== "tous").length;
+export function compterFiltres({ plat, pretFil, fmtFil }) {
+  return [plat, pretFil, fmtFil].filter(v => v !== "tous").length;
 }
 
 // ── Import d'un fichier JSON ────────────────────────────────────────────────
@@ -79,13 +80,11 @@ export function compterFiltres({ plat, statFil, fmtFil }) {
 // qu'à laisser croire à un import complet.
 const JEU_VIDE = {
   platform: "Xbox Series X", format: "physique", genre: [], style: "",
-  status: "non commencé", note: null, lentA: null, lentDate: null, cover: null,
-  metacritic: null, hltb: null, playedMinutes: 0, manualMinutes: 0, sessions: [],
-  myLinks: ["", "", ""], tips: "", tag: "", progression: "", infobox: null,
+  lentA: null, lentDate: null, cover: null, metacritic: null,
+  myLinks: ["", "", ""], tips: "", tag: "", infobox: null,
 };
 
 const estTexte = (v) => typeof v === "string";
-const nombreOuZero = (v) => (Number.isFinite(v) && v >= 0 ? v : 0);
 
 export function validerJeuxImportes(data) {
   if (!Array.isArray(data)) return { jeux: null, rejetes: 0 };
@@ -112,10 +111,7 @@ export function validerJeuxImportes(data) {
       title: brut.title.trim(),
       addedDate: estTexte(brut.addedDate) && brut.addedDate ? brut.addedDate : new Date().toISOString().slice(0, 10),
       genre: Array.isArray(brut.genre) ? brut.genre.filter(estTexte) : [],
-      sessions: Array.isArray(brut.sessions) ? brut.sessions.filter(s => s && estTexte(s.date)) : [],
       myLinks: Array.isArray(brut.myLinks) ? [0, 1, 2].map(i => (estTexte(brut.myLinks[i]) ? brut.myLinks[i] : "")) : ["", "", ""],
-      playedMinutes: nombreOuZero(brut.playedMinutes),
-      manualMinutes: nombreOuZero(brut.manualMinutes),
       style: estTexte(brut.style) ? brut.style : "",
       tips: estTexte(brut.tips) ? brut.tips : "",
       tag: estTexte(brut.tag) ? brut.tag : "",

@@ -9,13 +9,9 @@ import ActionsSheet from "./components/ActionsSheet.jsx";
 
 import { hdr, card, bdr, txt, mut } from "./lib/theme.js";
 import { GAMES_INIT } from "./lib/seed.js";
-import {
-  STATUS_COLORS, BACK_COMPAT,
-  migrateGames, fmtTime, staleKey, compterFiltres, validerJeuxImportes,
-} from "./lib/model.js";
+import { BACK_COMPAT, migrateGames, compterFiltres, validerJeuxImportes, pretEnRetard } from "./lib/model.js";
 import { lire, ecrire, surEchecStockage } from "./lib/storage.js";
 import { chargerSync, enregistrerSync, genererCode, envoyer, recuperer } from "./lib/sync.js";
-import { chargerChrono, enregistrerChrono } from "./lib/chrono.js";
 import {
   loadKeys, setApiKeys, normTitle, hasRawgKey, rawgFirstResult,
   rawgSearch, rawgDetail, wikiFrenchTitles, wikiArticleData, pickBestWikiTitle,
@@ -47,7 +43,7 @@ export default function App() {
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
   const [plat, setPlat] = useState("tous");
-  const [statFil, setStatFil] = useState("tous");
+  const [pretFil, setPretFil] = useState("tous");
   const [fmtFil, setFmtFil] = useState("tous");
   const [sort, setSort] = useState("titre");
   const [view, setView] = useState("liste");
@@ -71,11 +67,6 @@ export default function App() {
   // l'effaçait deux secondes plus tard : si on commençait à taper pendant ce
   // délai, le texte disparaissait sous les doigts.
   const [focusId, setFocusId] = useState(null);
-  // Le chrono ne vivait que dans la mémoire de React : Android tue
-  // régulièrement une PWA laissée en arrière-plan, et la session en cours
-  // disparaissait avec elle. Il est donc relu au démarrage.
-  const [activeTimer, setActiveTimer] = useState(() => chargerChrono().id);
-  const [timerStart, setTimerStart] = useState(() => chargerChrono().debut);
   // Le thème est persisté : il repartait en sombre à chaque rechargement.
   // index.html le pose sur <html> avant le premier rendu pour éviter le clignotement.
   const [theme, setTheme] = useState(() => {
@@ -125,7 +116,7 @@ export default function App() {
 
   // Toute pagination repart du début quand le contenu de la liste change :
   // sinon « Charger 30 de plus » resterait déplié sur un résultat de 3 jeux.
-  useEffect(() => { setVisibleCount(PAGE_SIZE); }, [search, plat, statFil, fmtFil, sort, tab, view]);
+  useEffect(() => { setVisibleCount(PAGE_SIZE); }, [search, plat, pretFil, fmtFil, sort, tab, view]);
 
   // Recherche posée par le code (clic sur une vignette, retour d'un ajout) :
   // les deux états doivent bouger ensemble, sans attendre le délai de frappe.
@@ -195,19 +186,6 @@ export default function App() {
   // fonctions et le memo() des fiches ne servirait à rien.
   const edit = useCallback((id, field, val) => setGames(gs => gs.map(g => g.id === id ? { ...g, [field]: val } : g)), []);
   const enrichGame = useCallback((id, data) => setGames(gs => gs.map(g => g.id === id ? { ...g, ...data } : g)), []);
-  const startTimer = useCallback((id) => {
-    const debut = Date.now();
-    setActiveTimer(id); setTimerStart(debut);
-    enregistrerChrono({ id, debut });
-  }, []);
-  const stopTimer = useCallback((id) => {
-    // Garde : sans début connu, `Date.now() - null` vaut Date.now() et
-    // ajouterait une cinquantaine d'années de temps de jeu.
-    const mins = timerStart ? Math.round((Date.now() - timerStart) / 60000) : 0;
-    if (mins > 0) setGames(gs => gs.map(g => g.id === id ? { ...g, playedMinutes: g.playedMinutes + mins, sessions: [...(g.sessions || []), { date: new Date().toISOString(), minutes: mins }] } : g));
-    setActiveTimer(null); setTimerStart(null);
-    enregistrerChrono(null);
-  }, [timerStart]);
   // Ajoute le jeu puis l'ouvre directement en fiche complète (parité fiche/ajout).
   const addGame = (g) => {
     setGames(gs => [g, ...gs]);
@@ -216,7 +194,7 @@ export default function App() {
     setTab("library");
     setView("liste");
     setPlat("tous");
-    setStatFil("tous");
+    setPretFil("tous");
     applySearch("");
   };
 
@@ -229,7 +207,7 @@ export default function App() {
     setTab("library");
     setView("liste");
     setPlat("tous");
-    setStatFil("tous");
+    setPretFil("tous");
     applySearch("");
   };
 
@@ -379,34 +357,32 @@ export default function App() {
       // "anciennes" ("Xbox One", "Switch 1") restent strictes.
       const platMatch = plat === "tous" || g.platform === plat
         || (BACK_COMPAT[plat] === g.platform && !!g.backCompat);
-      const statusMatch = statFil === "tous" ? true
-        : statFil === "à finir" ? (g.status === "en cours" || g.status === "non commencé")
-        : g.status === statFil;
+      const pretMatch = pretFil === "tous" ? true
+        : pretFil === "prêtés" ? !!g.lentA
+        : !g.lentA;
       return searchMatch
         && platMatch
         && (fmtFil === "tous" || g.format === fmtFil)
-        && statusMatch;
+        && pretMatch;
     });
     return list.sort((a, b) => {
-      if (statFil === "à finir") return staleKey(a) - staleKey(b); // plus anciennes d'abord
       if (sort === "date") return new Date(b.addedDate) - new Date(a.addedDate);
       if (sort === "metacritic") return (b.metacritic||0) - (a.metacritic||0);
-      if (sort === "temps") return (b.playedMinutes+b.manualMinutes) - (a.playedMinutes+a.manualMinutes);
       return a.title.localeCompare(b.title);
     });
-  }, [games, search, plat, statFil, fmtFil, sort]);
+  }, [games, search, plat, pretFil, fmtFil, sort]);
 
   const stats = useMemo(() => {
-    const total = games.length, termines = games.filter(g => g.status === "terminé").length;
-    const enCours = games.filter(g => g.status === "en cours").length, pretes = games.filter(g => g.lentA).length;
-    const totalTime = games.reduce((a, g) => a + g.playedMinutes + g.manualMinutes, 0);
+    const total = games.length;
+    const pretes = games.filter(g => g.lentA).length;
+    const enRetard = games.filter(pretEnRetard).length;
     const byGenre = {}; games.forEach(g => g.genre.forEach(x => byGenre[x] = (byGenre[x]||0) + 1));
     const topGenres = Object.entries(byGenre).sort((a,b) => b[1]-a[1]).slice(0,6);
-    return { total, termines, enCours, pretes, totalTime, topGenres };
+    return { total, pretes, enRetard, topGenres };
   }, [games]);
 
   const lentGames = games.filter(g => g.lentA);
-  const filtresActifs = compterFiltres({ plat, statFil, fmtFil });
+  const filtresActifs = compterFiltres({ plat, pretFil, fmtFil });
 
   // Ce qui est réellement monté. Le reste attend « Charger 30 de plus ».
   const visible = filtered.slice(0, visibleCount);
@@ -439,7 +415,12 @@ export default function App() {
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, marginBottom: 10 }}>
           <div style={{ minWidth: 0 }}>
             <div style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 11, color: ACCENT, lineHeight: 1.4 }}>GAME LIBRARY</div>
-            <div style={{ fontSize: 10, color: mut, marginTop: 3 }}>{stats.total} jeux · {stats.termines} terminés · {stats.enCours} en cours</div>
+            {/* La ligne répond aux deux questions que l'application sert à poser :
+                combien de jeux, et combien sont dehors. */}
+            <div style={{ fontSize: 10, color: mut, marginTop: 3 }}>
+              {stats.total} jeux{stats.pretes > 0 ? ` · ${stats.pretes} prêté${stats.pretes > 1 ? "s" : ""}` : ""}
+              {stats.enRetard > 0 ? <span style={{ color: "#f59e0b" }}> · {stats.enRetard} en retard</span> : null}
+            </div>
           </div>
           {/* Deux boutons seulement. Les quatre actions à libellé complet qui
               tenaient ici débordaient de l'écran de 13 px : elles sont passées
@@ -526,7 +507,7 @@ export default function App() {
               <div key={g.id} className="gl-tile" style={{ background:card, border:`1px solid ${bdr}`, borderRadius:10, overflow:"hidden", cursor:"pointer" }}
                 onClick={() => { setView("liste"); setFocusId(g.id); }}>
                 <Cover src={g.cover} title={g.title} size="100%" />
-                <div style={{ height:3, background:STATUS_COLORS[g.status]+"88" }} />
+                <div style={{ height:3, background:g.lentA ? "#f59e0b" : "transparent" }} />
                 <div style={{ padding:"6px 7px" }}>
                   <div style={{ color:txt, fontSize:10, fontWeight:600, lineHeight:1.3, overflow:"hidden", display:"-webkit-box", WebkitLineClamp:2, WebkitBoxOrient:"vertical" }}>{g.title}</div>
                   {g.metacritic && <div style={{ color:g.metacritic>=80?"#22c55e":"#f59e0b", fontSize:9, marginTop:2 }}>MC {g.metacritic}</div>}
@@ -539,7 +520,7 @@ export default function App() {
         ) : (
           <>
           <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
-            {visible.map(g => <GameCard key={g.id} g={g} onEdit={edit} onDelete={deleteGame} onEnrich={enrichGame} activeTimer={activeTimer} timerStart={timerStart} onStartTimer={startTimer} onStopTimer={stopTimer} autoOpen={g.id === lastAddedId || g.id === focusId} />)}
+            {visible.map(g => <GameCard key={g.id} g={g} onEdit={edit} onDelete={deleteGame} onEnrich={enrichGame} autoOpen={g.id === lastAddedId || g.id === focusId} />)}
           </div>
           {chargerPlus}
           </>
@@ -668,8 +649,39 @@ export default function App() {
                 )}
               </div>
 
+              {/* La copie hors ligne, juste sous la synchronisation : les deux
+                  répondent au même besoin — sortir la bibliothèque de cet
+                  appareil et l'y ramener. Le bloc vivait dans l'onglet Stats,
+                  au point que l'avertissement ci-dessous devait donner des
+                  indications routières vers un autre onglet. */}
+              <div style={{ background: card, border:`1px solid ${bdr}`, borderRadius:10, padding:14, marginBottom:12 }}>
+                <div style={{ color:txt, fontWeight:600, fontSize:13, marginBottom:4 }}>Copie hors ligne</div>
+                <div style={{ color:mut, fontSize:11, marginBottom:10, lineHeight:1.5 }}>
+                  Un fichier JSON sur cet appareil, utile avant une manipulation risquée
+                  ou quand le relais n'est pas configuré.
+                </div>
+                <div style={{ display:"flex", gap:8 }}>
+                  <button onClick={exportJSON} style={{ flex:1, minHeight:"var(--tap)", background:"#5493FF22", border:"1px solid #5493FF", color:"#5493FF", borderRadius:8, fontSize:12, fontWeight:600, cursor:"pointer" }}>⬇ Exporter</button>
+                  <button onClick={() => importRef.current?.click()} style={{ flex:1, minHeight:"var(--tap)", background:"transparent", border:`1px solid ${bdr}`, color:txt, borderRadius:8, fontSize:12, fontWeight:600, cursor:"pointer" }}>⬆ Importer</button>
+                  <input ref={importRef} type="file" accept="application/json,.json" onChange={importJSON} style={{ display:"none" }} />
+                </div>
+              </div>
+
+              {/* Le thème est une préférence, pas une action : il quitte le
+                  panneau « ⋯ », qui ne garde que les opérations ponctuelles. */}
+              <div style={{ background: card, border:`1px solid ${bdr}`, borderRadius:10, padding:14, marginBottom:12, display:"flex", alignItems:"center", gap:12 }}>
+                <div style={{ flex:1, minWidth:0 }}>
+                  <div style={{ color:txt, fontWeight:600, fontSize:13 }}>Thème</div>
+                  <div style={{ color:mut, fontSize:11, marginTop:2 }}>{theme === "dark" ? "Sombre" : "Clair"}</div>
+                </div>
+                <button onClick={() => setTheme(t => (t === "dark" ? "light" : "dark"))}
+                  style={{ minHeight:"var(--tap)", padding:"0 14px", background:"transparent", border:`1px solid ${bdr}`, color:txt, borderRadius:8, fontSize:12, cursor:"pointer", whiteSpace:"nowrap" }}>
+                  {theme === "dark" ? "☀️ Passer en clair" : "🌙 Passer en sombre"}
+                </button>
+              </div>
+
               <div style={{ background: card, border:`1px solid ${bdr}`, borderRadius:10, padding:14, color:mut, fontSize:11, lineHeight:1.5 }}>
-                ⚠️ L'<strong>Export JSON</strong> (onglet Stats) contient tes jeux mais <strong>ni tes clés ni ton code de synchronisation</strong> — c'est volontaire, pour pouvoir partager ou sauvegarder un export sans fuite.
+                ⚠️ L'<strong>export JSON</strong> contient tes jeux mais <strong>ni tes clés ni ton code de synchronisation</strong> — c'est volontaire, pour pouvoir partager ou sauvegarder un export sans fuite.
                 Sur un nouvel appareil, il faut donc récupérer la bibliothèque <em>et</em> resaisir ces valeurs ici.
               </div>
             </div>
@@ -679,7 +691,7 @@ export default function App() {
         {tab === "stats" && (
           <div>
             <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:16 }}>
-              {[["Total",stats.total,"#5493FF"],["Terminés",stats.total ? `${stats.termines} (${Math.round(stats.termines/stats.total*100)}%)` : "0","#22c55e"],["En cours",stats.enCours,"#5493FF"],["Prêtés",stats.pretes,"#f59e0b"],["Temps total",fmtTime(stats.totalTime),"#a855f7"]].map(([l,v,c]) => (
+              {[["Total",stats.total,"#5493FF"],["Prêtés",stats.pretes,"#f59e0b"]].map(([l,v,c]) => (
                 <div key={l} style={{ background:card, border:`1px solid ${bdr}`, borderRadius:10, padding:"12px 14px" }}>
                   <div style={{ color:mut, fontSize:10 }}>{l}</div>
                   <div style={{ color:c, fontSize:20, fontWeight:700, marginTop:2 }}>{v}</div>
@@ -695,15 +707,6 @@ export default function App() {
                 </div>
               ))}
             </div>
-            <div style={{ background:card, border:`1px solid ${bdr}`, borderRadius:10, padding:14 }}>
-              <div style={{ color:txt, fontWeight:600, fontSize:13, marginBottom:4 }}>Sauvegarde</div>
-              <div style={{ color:mut, fontSize:11, marginBottom:10 }}>Exporte ou restaure toute la bibliothèque au format JSON.</div>
-              <div style={{ display:"flex", gap:8 }}>
-                <button onClick={exportJSON} style={{ flex:1, background:"#5493FF22", border:"1px solid #5493FF", color:"#5493FF", borderRadius:8, padding:"8px 12px", fontSize:12, fontWeight:600, cursor:"pointer" }}>⬇ Exporter</button>
-                <button onClick={() => importRef.current?.click()} style={{ flex:1, background:"transparent", border:`1px solid ${bdr}`, color:txt, borderRadius:8, padding:"8px 12px", fontSize:12, fontWeight:600, cursor:"pointer" }}>⬆ Importer</button>
-                <input ref={importRef} type="file" accept="application/json,.json" onChange={importJSON} style={{ display:"none" }} />
-              </div>
-            </div>
           </div>
         )}
       </div>
@@ -713,7 +716,7 @@ export default function App() {
       {showFilters && (
         <FiltersSheet
           plat={plat} setPlat={setPlat}
-          statFil={statFil} setStatFil={setStatFil}
+          pretFil={pretFil} setPretFil={setPretFil}
           fmtFil={fmtFil} setFmtFil={setFmtFil}
           sort={sort} setSort={setSort}
           view={view} setView={setView}
@@ -724,8 +727,6 @@ export default function App() {
       {showActions && (
         <ActionsSheet
           onClose={() => setShowActions(false)}
-          theme={theme}
-          onToggleTheme={() => setTheme(t => (t === "dark" ? "light" : "dark"))}
           onRefreshDescriptions={refreshAllDescriptions}
           refreshing={refreshing}
           refreshProg={refreshProg}

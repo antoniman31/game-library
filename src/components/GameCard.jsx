@@ -2,16 +2,13 @@ import { memo, useState, useEffect, useRef } from "react";
 import Cover from "./Cover.jsx";
 import InfoboxView from "./InfoboxView.jsx";
 import { bg, card, bdr, txt, mut, demat } from "../lib/theme.js";
-import {
-  STATUTS, STATUS_COLORS, PLATFORM_COLORS, BACK_COMPAT_PARENT,
-  fmtTime, isDusty, lastSessionDate, daysSince,
-} from "../lib/model.js";
+import { PLATFORM_COLORS, BACK_COMPAT_PARENT, joursDePret, pretEnRetard } from "../lib/model.js";
 import {
   rawgSearch, rawgDetail, wikiFrenchTitles, wikiArticleData, wikidataInfobox,
   sgdbSearch, sgdbGrids,
 } from "../lib/api.js";
 
-function GameCard({ g, onEdit, onDelete, onEnrich, activeTimer, timerStart, onStartTimer, onStopTimer, autoOpen }) {
+function GameCard({ g, onEdit, onDelete, onEnrich, autoOpen }) {
   const [open, setOpen] = useState(!!autoOpen);
   const rootRef = useRef(null);
   useEffect(() => { if (autoOpen) rootRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }); }, []); // eslint-disable-line
@@ -40,30 +37,15 @@ function GameCard({ g, onEdit, onDelete, onEnrich, activeTimer, timerStart, onSt
   const [sgdbDone, setSgdbDone] = useState(false);
   const sgdbDebRef = useRef(null);
   const [descOpen, setDescOpen] = useState(false);
-  const [manH, setManH] = useState(0);
-  const [manM, setManM] = useState(0);
-  const [, setTick] = useState(0); // force le re-rendu du chrono chaque seconde
-  const isActive = activeTimer === g.id;
   const [section, setSection] = useState(null);
   const toggle = s => setSection(c => c === s ? null : s);
 
-  // Le début de la session vient de l'état global, pas d'une référence posée à
-  // l'activation : après un rechargement, le chrono restauré repartait
-  // visuellement de 00:00 alors que le temps réellement comptabilisé, lui,
-  // partait du vrai début. Deux vérités pour la même session.
-  useEffect(() => {
-    if (!isActive) return;
-    const t = setInterval(() => setTick(x => x + 1), 1000);
-    return () => clearInterval(t);
-  }, [isActive]);
-
-  const elapsed = isActive && timerStart ? Math.floor((Date.now() - timerStart) / 1000) : 0;
-  const total = g.playedMinutes + g.manualMinutes;
-  const hltbPct = g.hltb && total ? Math.min(100, Math.round(total / (g.hltb * 60) * 100)) : null;
-  const dusty = isDusty(g);
-  const last = lastSessionDate(g);
-  const idleDays = last && g.status === "en cours" ? daysSince(last) : null;
-  const baseBorder = dusty ? mut : bdr;
+  // Le traitement qui signalait les jeux délaissés — bordure en pointillés et
+  // opacité réduite — sert désormais au seul signal qui reste : un prêt qui
+  // s'éternise se repère dans la liste sans ouvrir l'onglet Prêts.
+  const enRetard = pretEnRetard(g);
+  const jours = joursDePret(g);
+  const baseBorder = enRetard ? "#f59e0b" : bdr;
 
   const rawgQuery = (q) => { setRawgQ(q); clearTimeout(rawgDebRef.current); rawgDebRef.current = setTimeout(async () => setRawgSugg(await rawgSearch(q)), 350); };
   const rawgPick = async (s) => {
@@ -143,31 +125,26 @@ function GameCard({ g, onEdit, onDelete, onEnrich, activeTimer, timerStart, onSt
   );
 
   return (
-    <div ref={rootRef} className="gl-card" style={{ background: card, border: `1px ${dusty ? "dashed" : "solid"} ${baseBorder}`, borderRadius: 12, overflow: "hidden", opacity: dusty ? 0.72 : 1, transition: "border-color 0.2s, opacity 0.2s" }}>
+    <div ref={rootRef} className="gl-card" style={{ background: card, border: `1px ${enRetard ? "dashed" : "solid"} ${baseBorder}`, borderRadius: 12, overflow: "hidden", transition: "border-color 0.2s" }}>
 
       <div style={{ display: "flex", gap: 8, padding: "8px 10px", cursor: "pointer" }} onClick={() => setOpen(!open)}>
         <Cover src={g.cover} title={g.title} size={46} />
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginBottom: 4 }}>
             <span style={{ background: PLATFORM_COLORS[g.platform] || "#5493FF", color: "#fff", fontSize: 9, fontWeight: 700, borderRadius: 3, padding: "1px 5px" }}>{g.platform}</span>
-            <span key={g.status} style={{ border: `1px solid ${STATUS_COLORS[g.status]}`, color: STATUS_COLORS[g.status], fontSize: 9, borderRadius: 3, padding: "1px 5px", display: "inline-block", animation: "statusPop 200ms ease" }}>{g.status}</span>
             {g.format === "démat" && <span style={{ background: demat, color: "#5493FF", fontSize: 9, borderRadius: 3, padding: "1px 5px" }}>démat</span>}
             {BACK_COMPAT_PARENT[g.platform] && g.backCompat && <span title={`Rétrocompatible ${BACK_COMPAT_PARENT[g.platform]}`} style={{ background: "#107C1022", color: "#22c55e", fontSize: 9, borderRadius: 3, padding: "1px 5px" }}>🔄 Compatible {BACK_COMPAT_PARENT[g.platform].replace("Xbox ", "")}</span>}
-            {g.lentA && <span style={{ background: "#7c320044", color: "#f59e0b", fontSize: 9, borderRadius: 3, padding: "1px 5px" }}>📤 {g.lentA}</span>}
-            {isActive && <span style={{ background: "#22c55e22", color: "#22c55e", fontSize: 9, borderRadius: 3, padding: "1px 5px" }}>▶ {String(Math.floor(elapsed/60)).padStart(2,"0")}:{String(elapsed%60).padStart(2,"0")}</span>}
+            {g.lentA && <span key={g.lentA} style={{ background: "#7c320044", color: "#f59e0b", fontSize: 9, borderRadius: 3, padding: "1px 5px", animation: "statusPop 200ms ease" }}>📤 {g.lentA}{jours !== null ? ` · ${jours}j` : ""}</span>}
           </div>
           <div style={{ fontWeight: 600, fontSize: 13, color: txt, marginBottom: 3, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 1, WebkitBoxOrient: "vertical" }}>{g.title}</div>
           <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
             {g.metacritic && <span style={{ color: g.metacritic >= 80 ? "#22c55e" : g.metacritic >= 60 ? "#f59e0b" : "#ef4444", fontSize: 11, fontWeight: 700 }}>MC {g.metacritic}</span>}
-            {total > 0 && <span style={{ color: mut, fontSize: 11 }}>{fmtTime(total)}</span>}
-            {hltbPct !== null && <span style={{ color: hltbPct >= 100 ? "#22c55e" : "#5493FF", fontSize: 11 }}>{hltbPct}% HLtB</span>}
-            {idleDays !== null && <span title={`${idleDays} jours depuis la dernière session`} style={{ color: idleDays > 30 ? "#f59e0b" : mut, fontSize: 11 }}>💤 {idleDays}j</span>}
           </div>
-          {hltbPct !== null && <div style={{ marginTop: 4, height: 3, background: bdr, borderRadius: 2 }}><div style={{ width: `${Math.min(100, hltbPct)}%`, height: "100%", background: hltbPct >= 100 ? "#22c55e" : "#5493FF", borderRadius: 2 }} /></div>}
         </div>
         <span style={{ color: mut, alignSelf: "center" }}>{open ? "▲" : "▼"}</span>
       </div>
-      <div style={{ height: 2, background: STATUS_COLORS[g.status] + "66" }} />
+      {/* La barre encodait le statut ; elle encode désormais le seul état suivi. */}
+      <div style={{ height: 2, background: g.lentA ? "#f59e0b" : "transparent" }} />
 
       {open && (
         <div style={{ padding: "12px 14px", borderTop: `1px solid ${bdr}` }} onClick={e => e.stopPropagation()}>
@@ -188,11 +165,6 @@ function GameCard({ g, onEdit, onDelete, onEnrich, activeTimer, timerStart, onSt
             </div>
           )}
 
-          {/* Statut */}
-          <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginBottom: 12 }}>
-            {STATUTS.map(s => <button key={s} onClick={() => onEdit(g.id, "status", s)} style={{ background: g.status === s ? STATUS_COLORS[s] + "33" : "transparent", border: `1px solid ${g.status === s ? STATUS_COLORS[s] : bdr}`, color: g.status === s ? STATUS_COLORS[s] : mut, borderRadius: 6, padding: "0 10px", minHeight: 36, fontSize: 11, cursor: "pointer" }}>{s}</button>)}
-          </div>
-
           {/* Format physique / démat */}
           <div style={{ display: "flex", gap: 5, alignItems: "center", marginBottom: 12 }}>
             <span style={{ color: mut, fontSize: 11 }}>Format :</span>
@@ -210,51 +182,44 @@ function GameCard({ g, onEdit, onDelete, onEnrich, activeTimer, timerStart, onSt
             </div>
           )}
 
-          {/* Chrono */}
-          <div style={{ background: bg, borderRadius: 8, padding: "10px 12px", marginBottom: 12 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
-              <span style={{ color: txt, fontSize: 12, fontWeight: 600 }}>Temps de jeu</span>
-              <span style={{ color: "#5493FF", fontSize: 12, fontWeight: 700 }}>{fmtTime(total)}{g.hltb ? ` / ${g.hltb}h` : ""}</span>
-            </div>
-            <button onClick={() => isActive ? onStopTimer(g.id) : onStartTimer(g.id)} style={{ background: isActive ? "#ef444422" : "#22c55e22", border: `1px solid ${isActive ? "#ef4444" : "#22c55e"}`, color: isActive ? "#ef4444" : "#22c55e", borderRadius: 6, padding: "5px 14px", fontSize: 12, cursor: "pointer", fontWeight: 600, marginBottom: 8 }}>
-              {isActive ? `⏹ Stop (${String(Math.floor(elapsed/60)).padStart(2,"0")}:${String(elapsed%60).padStart(2,"0")})` : "▶ Jouer"}
-            </button>
-            <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-              <span style={{ color: mut, fontSize: 11 }}>Déjà joué :</span>
-              <input type="number" min="0" value={manH || ""} placeholder="0" onChange={e => setManH(Math.max(0, parseInt(e.target.value, 10) || 0))} style={{ width: 42, background: "transparent", border: `1px solid ${bdr}`, borderRadius: 4, color: txt, padding: "2px 4px", fontSize: 11 }} />
-              <span style={{ color: mut, fontSize: 11 }}>h</span>
-              <input type="number" min="0" max="59" value={manM || ""} placeholder="0" onChange={e => setManM(Math.min(59, Math.max(0, parseInt(e.target.value, 10) || 0)))} style={{ width: 38, background: "transparent", border: `1px solid ${bdr}`, borderRadius: 4, color: txt, padding: "2px 4px", fontSize: 11 }} />
-              <span style={{ color: mut, fontSize: 11 }}>m</span>
-              <button onClick={() => { const add = manH * 60 + manM; if (add <= 0) return; onEdit(g.id, "manualMinutes", (g.manualMinutes || 0) + add); setManH(0); setManM(0); }} style={{ background: "#5493FF22", border: "1px solid #5493FF", color: "#5493FF", borderRadius: 4, padding: "2px 8px", fontSize: 11, cursor: "pointer" }}>+</button>
-              <button onClick={() => { const sub = manH * 60 + manM; if (sub <= 0) return; onEdit(g.id, "manualMinutes", Math.max(0, (g.manualMinutes || 0) - sub)); setManH(0); setManM(0); }} style={{ background: "#ef444422", border: "1px solid #ef4444", color: "#ef4444", borderRadius: 4, padding: "2px 8px", fontSize: 11, cursor: "pointer" }}>−</button>
-            </div>
-            {/* Durée de référence. Le champ `hltb` existait dans le modèle et
-                pilotait la jauge de progression et le badge « % HLtB », mais
-                aucune interface ne permettait de le renseigner : les deux
-                étaient donc du code mort, incapable de s'afficher un jour. */}
-            <div style={{ display: "flex", gap: 6, alignItems: "center", marginTop: 8 }}>
-              <span style={{ color: mut, fontSize: 11 }}>Durée annoncée :</span>
-              <input type="number" min="0" step="1" value={g.hltb ?? ""} placeholder="—"
-                onChange={e => { const v = parseInt(e.target.value, 10); onEdit(g.id, "hltb", Number.isFinite(v) && v > 0 ? v : null); }}
-                aria-label="Durée annoncée du jeu, en heures"
-                style={{ width: 56, minHeight: 32, background: "transparent", border: `1px solid ${bdr}`, borderRadius: 4, color: txt, padding: "2px 6px", fontSize: 11 }} />
-              <span style={{ color: mut, fontSize: 11 }}>h</span>
-              {hltbPct !== null && <span style={{ color: mut, fontSize: 10 }}>→ {hltbPct} % parcourus</span>}
-            </div>
-            {g.sessions.slice(-3).reverse().map((s, i) => <div key={i} style={{ color: mut, fontSize: 10, marginTop: 4 }}>{new Date(s.date).toLocaleDateString("fr-FR")} — {fmtTime(s.minutes)}</div>)}
-          </div>
-
           {/* Prêt (accordéon) */}
-          {acc("loan", "📤 Prêt", (
-            <>
-              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                <span style={{ color: mut, fontSize: 11 }}>Prêté à :</span>
-                <input value={loanName} onChange={e => setLoanName(e.target.value)} placeholder="Nom…" style={{ flex: 1, background: "transparent", border: `1px solid ${bdr}`, borderRadius: 6, color: txt, padding: "4px 8px", fontSize: 12, outline: "none" }} />
-                <button onClick={() => { onEdit(g.id, "lentA", loanName || null); onEdit(g.id, "lentDate", loanName ? new Date().toISOString().slice(0,10) : null); if (loanName) onEdit(g.id, "status", "prêté"); }} style={{ background: "#f59e0b22", border: "1px solid #f59e0b", color: "#f59e0b", borderRadius: 6, padding: "4px 10px", fontSize: 11, cursor: "pointer" }}>OK</button>
+          {/* Prêt — l'une des deux raisons d'être de l'application, donc
+              déplié d'office plutôt qu'enfermé dans un accordéon. Marquer un
+              jeu rendu supposait auparavant de vider le champ du nom puis de
+              valider : personne ne devinait ce geste, d'où un bouton explicite. */}
+          <div style={{ background: bg, border: `1px solid ${g.lentA ? "#f59e0b" : bdr}`, borderRadius: 8, padding: "10px 12px", marginBottom: 12 }}>
+            {g.lentA ? (
+              <>
+                <div style={{ color: "#f59e0b", fontSize: 12, fontWeight: 600, marginBottom: 2 }}>📤 Prêté à {g.lentA}</div>
+                <div style={{ color: enRetard ? "#f59e0b" : mut, fontSize: 11, marginBottom: 8 }}>
+                  Depuis le {new Date(g.lentDate).toLocaleDateString("fr-FR")}
+                  {jours !== null ? ` · ${jours} jour${jours > 1 ? "s" : ""}` : ""}
+                  {enRetard ? " ⚠️" : ""}
+                </div>
+                <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                  <button onClick={() => { onEdit(g.id, "lentA", null); onEdit(g.id, "lentDate", null); setLoanName(""); }}
+                    style={{ minHeight: 38, padding: "0 14px", background: "#22c55e22", border: "1px solid #22c55e", color: "#22c55e", borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
+                    ✓ Rendu
+                  </button>
+                  <a href={`sms:?body=${encodeURIComponent(`Salut ! Tu penses à me rendre ${g.title} ? 😊`)}`}
+                    style={{ minHeight: 38, padding: "0 14px", display: "inline-flex", alignItems: "center", background: "transparent", border: `1px solid ${bdr}`, color: txt, borderRadius: 6, fontSize: 12, textDecoration: "none" }}>
+                    Relancer par SMS
+                  </a>
+                </div>
+              </>
+            ) : (
+              <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                <input value={loanName} onChange={e => setLoanName(e.target.value)} placeholder="Prêter à…"
+                  aria-label="Nom de la personne à qui prêter ce jeu"
+                  style={{ flex: 1, minWidth: 0, minHeight: 38, background: "transparent", border: `1px solid ${bdr}`, borderRadius: 6, color: txt, padding: "0 8px", fontSize: 12, outline: "none" }} />
+                <button onClick={() => { const n = loanName.trim(); if (!n) return; onEdit(g.id, "lentA", n); onEdit(g.id, "lentDate", new Date().toISOString().slice(0, 10)); }}
+                  disabled={!loanName.trim()}
+                  style={{ minHeight: 38, padding: "0 14px", background: loanName.trim() ? "#f59e0b22" : "transparent", border: `1px solid ${loanName.trim() ? "#f59e0b" : bdr}`, color: loanName.trim() ? "#f59e0b" : mut, borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: loanName.trim() ? "pointer" : "default" }}>
+                  Prêter
+                </button>
               </div>
-              {g.lentDate && <div style={{ color: mut, fontSize: 10, marginTop: 6 }}>Prêté le {new Date(g.lentDate).toLocaleDateString("fr-FR")}</div>}
-            </>
-          ))}
+            )}
+          </div>
 
           {/* Liens & contenu (accordéon) */}
           {acc("links", "🔗 Liens & contenu", (

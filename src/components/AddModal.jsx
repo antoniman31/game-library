@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
 import { bg, card, bdr, txt, mut } from "../lib/theme.js";
-import { PLATFORMS, STATUTS, isBackCompatPlatform } from "../lib/model.js";
+import { PLATFORMS, isBackCompatPlatform } from "../lib/model.js";
 import {
   rawgSearch, rawgDetail, wikiFrenchTitles, wikiArticleData, wikidataInfobox,
   sgdbSearch, sgdbGrids,
@@ -11,7 +11,6 @@ function AddModal({ onAdd, onClose }) {
   const [platform, setPlatform] = useState("Xbox Series X");
   const [fmt, setFmt] = useState("physique");
   const [date, setDate] = useState("");
-  const [status, setStatus] = useState("non commencé");
   const [loading, setLoading] = useState(false);
   const [sugg, setSugg] = useState([]);
   const [rawg, setRawg] = useState(null);
@@ -96,11 +95,10 @@ function AddModal({ onAdd, onClose }) {
       addedDate: date || new Date().toISOString().slice(0, 10),
       genre: rawg?.genres?.map(g => g.name) || [],
       style: wikiExtract || "",
-      status, note: null, lentA: null, lentDate: null,
+      lentA: null, lentDate: null,
       cover: cover || rawg?.background_image || null,
       metacritic: rawg?.metacritic || null,
-      hltb: null, playedMinutes: 0, manualMinutes: 0, sessions: [],
-      myLinks: ["","",""], tips: "", tag: "", progression: "",
+      myLinks: ["","",""], tips: "", tag: "",
       backCompat: isBackCompatPlatform(platform), infobox: wikiInfo || null,
     });
   };
@@ -186,8 +184,7 @@ function AddModal({ onAdd, onClose }) {
           <select value={platform} onChange={e => setPlatform(e.target.value)} style={{ ...inp, flex: 1 }}>{PLATFORMS.filter(p => p !== "tous").map(p => <option key={p}>{p}</option>)}</select>
           <select value={fmt} onChange={e => setFmt(e.target.value)} style={{ ...inp, flex: 1 }}><option>physique</option><option>démat</option></select>
         </div>
-        <input type="date" value={date} onChange={e => setDate(e.target.value)} style={{ ...inp, marginBottom: 10 }} />
-        <select value={status} onChange={e => setStatus(e.target.value)} style={{ ...inp, marginBottom: 14 }}>{STATUTS.map(s => <option key={s}>{s}</option>)}</select>
+        <input type="date" value={date} onChange={e => setDate(e.target.value)} style={{ ...inp, marginBottom: 14 }} />
 
         <div style={{ display: "flex", gap: 8 }}>
           <button onClick={onClose} style={{ flex: 1, background: "transparent", border: `1px solid ${bdr}`, color: "#94a3b8", borderRadius: 8, padding: 10, cursor: "pointer", fontSize: 13 }}>Annuler</button>

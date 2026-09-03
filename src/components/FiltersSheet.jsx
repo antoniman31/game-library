@@ -1,6 +1,6 @@
 import Sheet from "./Sheet.jsx";
 import { bdr, txt, mut } from "../lib/theme.js";
-import { STATUTS, STATUS_COLORS, PLATFORMS, compterFiltres } from "../lib/model.js";
+import { PLATFORMS, compterFiltres } from "../lib/model.js";
 
 const ACCENT = "#5493FF";
 
@@ -40,10 +40,10 @@ function Groupe({ label, options, value, onChange, colorOf }) {
 }
 
 export default function FiltersSheet({
-  plat, setPlat, statFil, setStatFil, fmtFil, setFmtFil,
+  plat, setPlat, pretFil, setPretFil, fmtFil, setFmtFil,
   sort, setSort, view, setView, onClose, resultats,
 }) {
-  const actifs = compterFiltres({ plat, statFil, fmtFil });
+  const actifs = compterFiltres({ plat, pretFil, fmtFil });
   return (
     <Sheet title="Filtres & affichage" onClose={onClose}>
       <Groupe
@@ -52,12 +52,14 @@ export default function FiltersSheet({
         value={plat}
         onChange={setPlat}
       />
+      {/* Le groupe Statut a laissé la place au seul état que l'application
+          suit encore : le jeu est-il ici, ou chez quelqu'un ? */}
       <Groupe
-        label="Statut"
-        options={[["tous", "Tous"], ...STATUTS.map(s => [s, s]), ["à finir", "🎯 À finir"]]}
-        value={statFil}
-        onChange={setStatFil}
-        colorOf={k => STATUS_COLORS[k]}
+        label="Prêt"
+        options={[["tous", "Tous"], ["chez moi", "🏠 Chez moi"], ["prêtés", "📤 Prêtés"]]}
+        value={pretFil}
+        onChange={setPretFil}
+        colorOf={k => (k === "prêtés" ? "#f59e0b" : ACCENT)}
       />
       <Groupe
         label="Format"
@@ -67,7 +69,7 @@ export default function FiltersSheet({
       />
       <Groupe
         label="Tri"
-        options={[["titre", "A → Z"], ["date", "Date"], ["metacritic", "Metacritic"], ["temps", "Temps de jeu"]]}
+        options={[["titre", "A → Z"], ["date", "Date"], ["metacritic", "Metacritic"]]}
         value={sort}
         onChange={setSort}
       />
@@ -80,7 +82,7 @@ export default function FiltersSheet({
 
       <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 4 }}>
         <button
-          onClick={() => { setPlat("tous"); setStatFil("tous"); setFmtFil("tous"); }}
+          onClick={() => { setPlat("tous"); setPretFil("tous"); setFmtFil("tous"); }}
           disabled={actifs === 0}
           style={{
             flex: 1, minHeight: "var(--tap)", background: "transparent",

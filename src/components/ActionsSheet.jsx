@@ -28,8 +28,11 @@ function Action({ icone, titre, detail, onClick, disabled, danger }) {
   );
 }
 
+// Le panneau ne garde que les opérations ponctuelles — celles qui se lancent,
+// durent un moment et se terminent. Le thème, qui est une préférence, est passé
+// dans Réglages avec le reste de ce qui se règle une fois.
 export default function ActionsSheet({
-  onClose, theme, onToggleTheme,
+  onClose,
   onRefreshDescriptions, refreshing, refreshProg, refreshTotal, onCancelRefresh,
   onImportXbox,
 }) {
@@ -56,11 +59,6 @@ export default function ActionsSheet({
         titre="Importer ma bibliothèque Xbox"
         detail="Via xbl.io — nécessite la clé et le relais"
         onClick={() => { onClose(); onImportXbox(); }}
-      />
-      <Action
-        icone={theme === "dark" ? "☀️" : "🌙"}
-        titre={theme === "dark" ? "Passer en thème clair" : "Passer en thème sombre"}
-        onClick={onToggleTheme}
       />
     </Sheet>
   );
