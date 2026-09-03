@@ -179,7 +179,9 @@ async function xblTitleHistory() {
       .map(t => ({
         name: (t.name || "").trim(),
         devices: t.devices || [],
-        image: t.displayImage || null,
+        // xbl.io renvoie ses jaquettes en http:// : forcé en https, sinon le
+        // navigateur les bloque en contenu mixte sur un site servi en HTTPS.
+        image: t.displayImage ? t.displayImage.replace(/^http:\/\//, "https://") : null,
         lastPlayed: t.titleHistory?.lastTimePlayed || null,
       }))
       .filter(t => t.name);
