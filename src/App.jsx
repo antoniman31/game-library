@@ -241,9 +241,26 @@ export default function App() {
   // ── Sauvegarde sur le Worker ───────────────────────────────────────────
   const majSync = (v) => { setSync(v); enregistrerSync(v); };
 
-  const envoyerAuCloud = async () => {
+  const envoyerAuCloud = async (base = sync.majLe) => {
     setSyncEtat({ type: "…", texte: "Envoi en cours…" });
-    const r = await envoyer(keys.proxy, sync.code, games);
+    const r = await envoyer(keys.proxy, sync.code, games, base);
+
+    // Un autre appareil a envoyé depuis notre dernière synchronisation. Écraser
+    // détruirait son travail : on pose le choix, chiffres en main, au lieu de
+    // décider à la place de l'utilisateur.
+    if (!r.ok && r.conflit) {
+      const quand = r.data?.updatedAt ? new Date(r.data.updatedAt).toLocaleString("fr-FR") : "date inconnue";
+      const ecraser = window.confirm(
+        `Un autre appareil a envoyé sa bibliothèque depuis ta dernière synchronisation.\n\n` +
+        `Sur le relais : ${r.data?.count ?? "?"} jeu(x), enregistrés le ${quand}.\n` +
+        `Sur cet appareil : ${games.length} jeu(x).\n\n` +
+        `OK = écraser le relais avec cet appareil\n` +
+        `Annuler = ne rien envoyer (récupère d'abord pour comparer)`
+      );
+      if (!ecraser) { setSyncEtat({ type: "ko", texte: "Envoi annulé — récupère d'abord pour ne rien perdre." }); return; }
+      return envoyerAuCloud("force");
+    }
+
     if (!r.ok) { setSyncEtat({ type: "ko", texte: r.erreur }); return; }
     majSync({ ...sync, majLe: r.data?.updatedAt || new Date().toISOString() });
     setSyncEtat({ type: "ok", texte: `${games.length} jeux sauvegardés.` });
@@ -593,7 +610,7 @@ export default function App() {
                 </div>
 
                 <div style={{ display:"flex", gap:8, marginBottom:8 }}>
-                  <button onClick={envoyerAuCloud} disabled={syncEtat?.type === "…"}
+                  <button onClick={() => envoyerAuCloud()} disabled={syncEtat?.type === "…"}
                     style={{ flex:1, minHeight:"var(--tap)", background:"#5493FF22", border:"1px solid #5493FF", color:"#5493FF", borderRadius:8, fontSize:12, fontWeight:600, cursor:"pointer" }}>⬆ Envoyer</button>
                   <button onClick={recupererDuCloud} disabled={syncEtat?.type === "…"}
                     style={{ flex:1, minHeight:"var(--tap)", background:"transparent", border:`1px solid ${bdr}`, color:txt, borderRadius:8, fontSize:12, fontWeight:600, cursor:"pointer" }}>⬇ Récupérer</button>
