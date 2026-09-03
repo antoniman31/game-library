@@ -1,19 +1,39 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 
-const RAWG_KEY = "CLE_RAWG_RETIREE_DE_L_HISTORIQUE";
+// ── Clés API ────────────────────────────────────────────────────────────────
+// Aucune clé n'est embarquée dans le code : chacun saisit les siennes dans l'onglet
+// Réglages, elles sont stockées sur l'appareil (localStorage "gl_keys", volontairement
+// séparé de "gl_v2" pour qu'elles ne partent JAMAIS dans l'Export JSON).
+// `proxy` = base d'URL du relais CORS (Cloudflare Worker) pour SteamGridDB et xbl.io,
+// qui n'exposent pas de CORS. Vide -> chemins relatifs (proxy du serveur de dev Vite).
+const KEYS_STORAGE = "gl_keys";
+const EMPTY_KEYS = { rawg: "", sgdb: "", xbl: "", proxy: "" };
+function loadKeys() {
+  try { return { ...EMPTY_KEYS, ...(JSON.parse(localStorage.getItem(KEYS_STORAGE)) || {}) }; }
+  catch { return { ...EMPTY_KEYS }; }
+}
+// Copie au niveau module pour que les helpers d'API y accèdent sans passer de paramètre.
+let API_KEYS = loadKeys();
+function setApiKeys(k) {
+  API_KEYS = { ...EMPTY_KEYS, ...k };
+  try { localStorage.setItem(KEYS_STORAGE, JSON.stringify(API_KEYS)); } catch {}
+}
+// Base des appels relayés : le Worker en prod, le proxy Vite (relatif) en dev.
+const proxyBase = () => (API_KEYS.proxy || "").replace(/\/+$/, "");
 
 async function rawgSearch(q) {
-  if (!q || q.trim().length < 2) return [];
+  if (!q || q.trim().length < 2 || !API_KEYS.rawg) return [];
   try {
-    const r = await fetch(`https://api.rawg.io/api/games?key=${RAWG_KEY}&search=${encodeURIComponent(q)}&page_size=10`);
+    const r = await fetch(`https://api.rawg.io/api/games?key=${API_KEYS.rawg}&search=${encodeURIComponent(q)}&page_size=10`);
     const d = await r.json();
     return d.results || [];
   } catch { return []; }
 }
 
 async function rawgDetail(id) {
+  if (!API_KEYS.rawg) return null;
   try {
-    const r = await fetch(`https://api.rawg.io/api/games/${id}?key=${RAWG_KEY}`);
+    const r = await fetch(`https://api.rawg.io/api/games/${id}?key=${API_KEYS.rawg}`);
     return await r.json();
   } catch { return null; }
 }
@@ -117,10 +137,11 @@ async function wikidataInfobox(wikiTitle) {
 // SteamGridDB n'expose pas de CORS : on passe par le proxy du serveur de dev
 // (voir vite.config.js) qui relaie /sgdb/* vers l'API avec le token Authorization.
 // Recherche un jeu sur SteamGridDB (autocomplete) -> [{ id, name }].
+const sgdbHeaders = () => ({ Authorization: `Bearer ${API_KEYS.sgdb}` });
 async function sgdbSearch(term) {
-  if (!term || term.trim().length < 2) return [];
+  if (!term || term.trim().length < 2 || !API_KEYS.sgdb) return [];
   try {
-    const r = await fetch(`/sgdb/search/autocomplete/${encodeURIComponent(term)}`);
+    const r = await fetch(`${proxyBase()}/sgdb/search/autocomplete/${encodeURIComponent(term)}`, { headers: sgdbHeaders() });
     if (!r.ok) return [];
     const d = await r.json();
     return d?.data || [];
@@ -130,8 +151,9 @@ async function sgdbSearch(term) {
 // Grids verticales (600x900, format boîte) d'un jeu SteamGridDB.
 // -> [{ thumb, url }] : thumb pour l'aperçu (léger), url pour la cover finale.
 async function sgdbGrids(id) {
+  if (!API_KEYS.sgdb) return [];
   try {
-    const r = await fetch(`/sgdb/grids/game/${id}?dimensions=600x900`);
+    const r = await fetch(`${proxyBase()}/sgdb/grids/game/${id}?dimensions=600x900`, { headers: sgdbHeaders() });
     if (!r.ok) return [];
     const d = await r.json();
     return (d?.data || []).map(x => ({ thumb: x.thumb || x.url, url: x.url })).filter(g => g.url);
@@ -144,8 +166,9 @@ async function sgdbGrids(id) {
 const XBL_CONSOLE_DEVICES = ["XboxSeries", "XboxOne", "Xbox360"];
 const XBL_APP_BLOCKLIST = /\b(app on pc|launcher|xbox app|windows edition|for windows)\b/i;
 async function xblTitleHistory() {
+  if (!API_KEYS.xbl) return [];
   try {
-    const r = await fetch(`/xbl/player/titleHistory`);
+    const r = await fetch(`${proxyBase()}/xbl/player/titleHistory`, { headers: { "X-Authorization": API_KEYS.xbl } });
     if (!r.ok) return [];
     const d = await r.json();
     const titles = d?.content?.titles || [];
@@ -1060,6 +1083,10 @@ export default function App() {
   const [tab, setTab] = useState("library");
   const [showAdd, setShowAdd] = useState(false);
   const [showImport, setShowImport] = useState(false);
+  const [keys, setKeys] = useState(() => loadKeys());   // clés API saisies par l'utilisateur
+  const [showKeys, setShowKeys] = useState(false);      // afficher/masquer les valeurs
+  const [keyTest, setKeyTest] = useState({});           // résultat du bouton « Tester »
+  const [savedMsg, setSavedMsg] = useState(false);      // confirmation d'enregistrement
   const [importedIds, setImportedIds] = useState([]); // pour l'enrichissement post-import (E)
   const [enriching, setEnriching] = useState(false);
   const [enrichProg, setEnrichProg] = useState(0);
@@ -1115,10 +1142,11 @@ export default function App() {
   // Fetch covers + metacritic manquants au démarrage
   useEffect(() => {
     const fetchCovers = async () => {
+      if (!API_KEYS.rawg) return;   // pas de clé RAWG configurée -> on ne tente rien
       const missing = games.filter(g => !g.cover);
       for (const g of missing) {
         try {
-          const r = await fetch(`https://api.rawg.io/api/games?key=${RAWG_KEY}&search=${encodeURIComponent(g.title)}&page_size=1`);
+          const r = await fetch(`https://api.rawg.io/api/games?key=${API_KEYS.rawg}&search=${encodeURIComponent(g.title)}&page_size=1`);
           const d = await r.json();
           const result = d.results?.[0];
           if (result) {
@@ -1343,7 +1371,7 @@ export default function App() {
 
         {/* Tabs */}
         <div style={{ display: "flex", gap: 4, marginBottom: 10 }}>
-          {[["library","Bibliothèque"],["loans",`Prêts${lentGames.length ? ` (${lentGames.length})` : ""}`],["stats","Stats"]].map(([k,l]) => (
+          {[["library","Bibliothèque"],["loans",`Prêts${lentGames.length ? ` (${lentGames.length})` : ""}`],["stats","Stats"],["settings","⚙️"]].map(([k,l]) => (
             <button key={k} onClick={() => setTab(k)} style={{ background: tab===k?"#5493FF":"transparent", border:`1px solid ${tab===k?"#5493FF":bdr}`, color: tab===k?"#fff":mut, borderRadius:6, padding:"4px 10px", fontSize:11, cursor:"pointer" }}>{l}</button>
           ))}
         </div>
@@ -1412,6 +1440,73 @@ export default function App() {
             })}
           </div>
         )}
+
+        {tab === "settings" && (() => {
+          const champs = [
+            ["rawg", "Clé RAWG", "Jaquettes, Metacritic, genres, dates de sortie", "https://rawg.io/apidocs"],
+            ["sgdb", "Clé SteamGridDB", "Jaquettes verticales format boîte", "https://www.steamgriddb.com/profile/preferences/api"],
+            ["xbl", "Clé xbl.io", "Import de la bibliothèque Xbox", "https://xbl.io/console"],
+          ];
+          const testKey = async (id) => {
+            setKeyTest(t => ({ ...t, [id]: "…" }));
+            let ok = false;
+            try {
+              if (id === "rawg") ok = (await rawgSearch("halo")).length > 0;
+              if (id === "sgdb") ok = (await sgdbSearch("halo")).length > 0;
+              if (id === "xbl") ok = (await xblTitleHistory()).length > 0;
+            } catch {}
+            setKeyTest(t => ({ ...t, [id]: ok ? "ok" : "ko" }));
+          };
+          const champStyle = { width: "100%", boxSizing: "border-box", background: inpBg, border: `1px solid ${bdr}`, borderRadius: 6, color: txt, padding: "7px 9px", fontSize: 12, outline: "none", fontFamily: "monospace" };
+          return (
+            <div>
+              <div style={{ background: dark?"#1a1a2e":"#f0f4ff", border:`1px solid ${bdr}`, borderRadius:10, padding:14, marginBottom:12 }}>
+                <div style={{ color:txt, fontWeight:600, fontSize:13, marginBottom:4 }}>Clés API</div>
+                <div style={{ color:mut, fontSize:11, marginBottom:12 }}>
+                  Elles restent <strong>sur cet appareil</strong> (stockage local du navigateur) et ne sont jamais envoyées ailleurs qu'aux services concernés.
+                  Elles ne figurent ni dans le code, ni dans l'export.
+                </div>
+                {champs.map(([id, label, desc, lien]) => (
+                  <div key={id} style={{ marginBottom: 12 }}>
+                    <div style={{ display:"flex", alignItems:"baseline", gap:6, marginBottom:3, flexWrap:"wrap" }}>
+                      <span style={{ color:txt, fontSize:12, fontWeight:600 }}>{label}</span>
+                      <a href={lien} target="_blank" rel="noreferrer" style={{ color:"#5493FF", fontSize:10, textDecoration:"none" }}>↗ obtenir</a>
+                      <span style={{ color:mut, fontSize:10 }}>— {desc}</span>
+                    </div>
+                    <div style={{ display:"flex", gap:6, alignItems:"center" }}>
+                      <input type={showKeys ? "text" : "password"} value={keys[id]} placeholder="non configurée"
+                        onChange={e => setKeys(k => ({ ...k, [id]: e.target.value.trim() }))} style={champStyle} />
+                      <button onClick={() => testKey(id)} disabled={!keys[id]}
+                        style={{ background:"transparent", border:`1px solid ${bdr}`, color:mut, borderRadius:5, padding:"5px 9px", fontSize:10, cursor: keys[id] ? "pointer":"default", opacity: keys[id]?1:0.5, whiteSpace:"nowrap" }}>Tester</button>
+                      <span style={{ fontSize:14, width:16, textAlign:"center" }}>
+                        {keyTest[id] === "ok" ? "✅" : keyTest[id] === "ko" ? "❌" : keyTest[id] === "…" ? "⏳" : ""}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+                <div style={{ marginBottom: 12 }}>
+                  <div style={{ color:txt, fontSize:12, fontWeight:600, marginBottom:3 }}>Relais CORS (Cloudflare Worker)</div>
+                  <div style={{ color:mut, fontSize:10, marginBottom:3 }}>
+                    Requis en ligne pour SteamGridDB et xbl.io, qui refusent les appels directs du navigateur. Laisser vide en développement local.
+                  </div>
+                  <input type="text" value={keys.proxy} placeholder="https://mon-worker.workers.dev"
+                    onChange={e => setKeys(k => ({ ...k, proxy: e.target.value.trim() }))} style={champStyle} />
+                </div>
+                <div style={{ display:"flex", gap:8, alignItems:"center", flexWrap:"wrap" }}>
+                  <button onClick={() => { setApiKeys(keys); setKeyTest({}); setSavedMsg(true); setTimeout(() => setSavedMsg(false), 2000); }}
+                    style={{ background:"#5493FF", border:"none", color:"#fff", borderRadius:8, padding:"8px 14px", fontSize:12, fontWeight:600, cursor:"pointer" }}>Enregistrer</button>
+                  <button onClick={() => setShowKeys(v => !v)}
+                    style={{ background:"transparent", border:`1px solid ${bdr}`, color:mut, borderRadius:8, padding:"8px 12px", fontSize:12, cursor:"pointer" }}>{showKeys ? "Masquer" : "Afficher"}</button>
+                  {savedMsg && <span style={{ color:"#22c55e", fontSize:11 }}>Enregistré ✓</span>}
+                </div>
+              </div>
+              <div style={{ background: dark?"#1a1a2e":"#f0f4ff", border:`1px solid ${bdr}`, borderRadius:10, padding:14, color:mut, fontSize:11, lineHeight:1.5 }}>
+                ⚠️ L'<strong>Export JSON</strong> (onglet Stats) contient tes jeux mais <strong>pas tes clés</strong> — c'est volontaire, pour pouvoir partager ou sauvegarder un export sans fuite.
+                Sur un nouvel appareil, il faut donc importer l'export <em>et</em> resaisir les clés ici.
+              </div>
+            </div>
+          );
+        })()}
 
         {tab === "stats" && (
           <div>
