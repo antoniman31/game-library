@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { card, bdr, txt, mut } from "../lib/theme.js";
 import { PLATFORM_COLORS } from "../lib/model.js";
 import { statsCirculation, statsCollection } from "../lib/stats.js";
+import SousOnglets from "./SousOnglets.jsx";
 
 // L'onglet Stats montrait trois chiffres et les genres, alors que
 // l'application stocke bien davantage. Deux sous-onglets, parce que les deux
@@ -199,18 +200,8 @@ export default function StatsView({ games }) {
   const [vue, setVue] = useState("circulation");
   return (
     <div>
-      <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
-        {[["circulation", "Circulation"], ["collection", "Collection"]].map(([k, l]) => (
-          <button key={k} onClick={() => setVue(k)} aria-pressed={vue === k}
-            style={{
-              flex: 1, minHeight: "var(--tap)", borderRadius: 8, fontSize: 13, cursor: "pointer",
-              fontWeight: vue === k ? 600 : 400,
-              background: vue === k ? "#5493FF22" : "transparent",
-              border: `1px solid ${vue === k ? "#5493FF" : bdr}`,
-              color: vue === k ? "#5493FF" : mut,
-            }}>{l}</button>
-        ))}
-      </div>
+      <SousOnglets valeur={vue} onChange={setVue}
+        options={[["circulation", "Circulation"], ["collection", "Collection"]]} />
       {vue === "circulation" ? <Circulation games={games} /> : <Collection games={games} />}
     </div>
   );
