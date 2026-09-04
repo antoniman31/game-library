@@ -1,34 +1,38 @@
 # Game Library — État du projet
 
 > Pour l'historique des décisions, les bugs rencontrés et les approches abandonnées,
-> voir [`JOURNAL.md`](JOURNAL.md).
+> voir [`JOURNAL.md`](JOURNAL.md). Pour l'installation et la configuration,
+> voir [`README.md`](README.md).
 
 Application de gestion de bibliothèque de jeux vidéo (Xbox / Switch), usage perso.
-Dernière mise à jour : 2026-09-03.
+Dernière mise à jour : 2026-09-04.
 
 ## Stack & lancement
 
 - **Vite + React** (React 19, Vite 8), projet **100 % local** (aucun backend applicatif).
 - Interface découpée : `src/App.jsx` (ossature), `src/components/` (fiches, modales,
-  panneaux glissants), `src/lib/` (réseau, domaine, stockage, synchronisation).
-  Les couleurs sont des jetons CSS dans `src/index.css`, basculés par `data-theme`.
+  panneaux glissants), `src/lib/` (réseau, domaine, statistiques, stockage,
+  synchronisation). Les couleurs sont des jetons CSS dans `src/index.css`, basculés
+  par `data-theme` sur `<html>`.
 - Persistance : **localStorage** (clé `gl_v2`), plus une **sauvegarde sur le Worker**
-  (⚙️ → Synchronisation) pour partager la bibliothèque entre appareils.
+  (⚙️ → Sauvegarde) pour partager la bibliothèque entre appareils.
 - Démarrer le dev :
   ```bash
   npm install   # première fois
-  npm run dev   # http://localhost:5173
+  npm run dev   # http://localhost:5173/game-library/
   ```
-- Build de prod : `npm run build`.
+- Build de prod : `npm run build`. Vérifications : `npm run lint`, `npm test`
+  (83 tests + 29 vérifications du Worker).
 - **En ligne (PWA installable)** : https://antoniman31.github.io/game-library/
   — déploiement automatique par GitHub Actions à chaque push sur `main`.
 
 ## Sources de données & clés
 
 ⚠️ **Aucune clé n'est présente dans le code ni dans le dépôt.** Chacun saisit les
-siennes dans l'onglet **⚙️ Réglages** ; elles sont stockées sur l'appareil
-(`localStorage` clé `gl_keys`, volontairement séparée de `gl_v2` pour ne jamais
-partir dans l'Export JSON). Un bouton « Tester » valide chaque clé.
+siennes dans **⚙️ → Services** ; elles sont stockées sur l'appareil (`localStorage`
+clé `gl_keys`, volontairement séparée de `gl_v2` pour ne jamais partir dans l'export
+JSON). Un bouton « Tester » valide chaque clé. Une fois renseignée, chaque clé passe
+en lecture seule, avec « Modifier » et « Supprimer » séparés et confirmés.
 
 - **RAWG** (jaquettes, Metacritic, genres, dates de sortie) — appels directs, CORS ouvert.
 - **Wikipédia FR** (titre officiel + description) et **Wikidata** (infobox) — sans clé, CORS ouvert.
@@ -36,124 +40,198 @@ partir dans l'Export JSON). Un bouton « Tester » valide chaque clé.
   refusent les appels navigateur (pas de CORS). Elles passent par un **relais Cloudflare
   Worker** (`worker/`) qui **ne détient aucun secret** : il ne fait que transmettre la clé
   envoyée par le client, avec liste blanche d'origines *et* de cibles. Son URL se règle
-  dans ⚙️. En développement, le proxy Vite joue le même rôle (sans clé lui non plus).
+  dans ⚙️ → Services. En développement, le proxy Vite joue le même rôle (sans clé lui non plus).
 
 ## Fonctionnalités livrées
 
-### Sources d'enrichissement par jeu (fiche dépliée)
-- **🔄 Rechercher sur RAWG** : ré-associe un jeu mal matché → remplace cover, Metacritic, genres. Liste scrollable (jusqu'à 10 résultats).
-- **🇫🇷 Titre français (Wikipédia)** : recherche full-text Wikipédia FR → remplace le titre par le titre commercial officiel FR ; propose ensuite le **résumé** (description), la **jaquette** d'infobox, et les **infos Wikidata** (voir plus bas), chacun applicable indépendamment.
-- **📦 Jaquette SteamGridDB** : vignettes verticales 600×900 (aperçu via `thumb`, image finale via `url`), 3 par ligne, clic pour choisir la cover.
+### La fiche de jeu
 
-### Descriptions — Wikipédia FR uniquement
-- Les descriptions proviennent **exclusivement de Wikipédia FR** (extract d'intro). **MyMemory a été entièrement supprimé** (plus aucune traduction automatique EN→FR).
-- **Bouton « 🌐 Actualiser descriptions »** (header) : régénère la description de tous les jeux depuis Wikipédia.
-  - **Annulable en cours de route** (bouton « Annuler »).
-  - **Meilleure correspondance de titre** (exact → préfixe → 1er résultat) pour éviter de récupérer la page « série » au lieu du jeu.
-  - **Bilan de fin** : nombre de descriptions actualisées + **liste des jeux sans page Wikipédia trouvée**.
-  - Délai anti-rate-limit conservé (~150 ms entre jeux).
+- **Tout est modifiable.** « Modifier la fiche » ouvre un panneau qui laisse corriger
+  ce que les sources automatiques ont écrit : titre, plateforme, format,
+  rétrocompatibilité, genres, note, date d'ajout, description, jaquette, et jusqu'aux
+  champs Wikidata. La saisie passe par un brouillon local — « Annuler » retrouve
+  vraiment l'état d'avant — et refuse ce qui casserait le modèle (note hors bornes,
+  date invalide, plateforme inconnue).
+- **Accordéons repliés** : « 🔗 Liens & contenu » (recherches YouTube / JVC / IGN +
+  3 liens personnels) et « 📝 Notes ». Toujours visibles : l'identité du jeu,
+  l'infobox Wikidata, et le bloc **Prêt** — la seule action qu'on répète.
+- Description repliée avec « Lire la suite ».
+- Les quatre sources (correction manuelle, RAWG, titre français, jaquette) s'ouvrent
+  en **panneau au premier plan**, pas à l'intérieur de la fiche.
 
-### Infobox Wikidata
-- Après avoir choisi le titre via Wikipédia, récupération structurée depuis **Wikidata** : **développeur, éditeur, dates de sortie par plateforme, mode de jeu (solo/multi/coop), série/franchise (jeu précédent / suivant)**. Le **moteur de jeu est volontairement exclu**. Métacritic non repris de Wikidata (celui de RAWG suffit).
-- Appliquée via « Utiliser ces infos » puis **affichée dans la fiche** si présente ; libellés résolus en `fr` → `en` → `mul`.
+### Sources d'enrichissement par jeu
 
-### Ajout d'un jeu (AddModal) — parité totale avec les fiches
-- **3 sources avant validation** : RAWG (autocomplete), Wikipédia (titre + description + infobox), SteamGridDB (jaquette), en plus de plateforme / format / statut / date.
-- **Après ajout, le jeu s'ouvre automatiquement en fiche complète** (scroll + dépliage) : toutes les actions (prêt, liens, notes, sources, format…) sont immédiatement disponibles, exactement comme pour un jeu existant.
+- **🔄 RAWG** : ré-associe un jeu mal matché → remplace jaquette, Metacritic, genres.
+- **🇫🇷 Titre français (Wikipédia)** : recherche full-text FR → titre commercial
+  officiel, puis au choix le **résumé**, la **jaquette** d'infobox et les **infos
+  Wikidata**, chacun applicable indépendamment.
+- **📦 Jaquette SteamGridDB** : vignettes verticales 600×900, 3 par ligne.
+
+### Actions de masse (panneau ⋯)
+
+- **Actualiser les descriptions** : régénère toutes les descriptions depuis
+  Wikipédia FR. Annulable, délai anti-rate-limit (~150 ms), bilan de fin avec la
+  liste des jeux sans page trouvée, meilleure correspondance de titre
+  (exact → préfixe → premier résultat). Comme il **remplace** tout, y compris ce qui
+  a été corrigé à la main, il demande confirmation en disant combien.
+- **Compléter les notes** : cherche sur RAWG les Metacritic manquants, puis affiche
+  un **rapport vérifiable** — pour chaque note, le titre RAWG qui a répondu. Un
+  rapprochement douteux est marqué ⚠️ et se retire d'un bouton.
+- **Importer Xbox** (voir plus bas).
 
 ### Import de la bibliothèque Xbox Live (xbl.io)
-- Bouton header **« 🎮 Importer Xbox »** → récupère l'historique de jeux du compte lié à la clé (`player/titleHistory`).
-- **Filtrage** : sur ~164 titres renvoyés, seuls les **vrais jeux console Xbox** sont gardés (~150) — les entrées PC-only / Win32 et les apps/launchers (Xbox App, Minecraft Launcher, Solitaire…) sont exclues.
-- **Écran de prévisualisation** avant tout import (modal scrollable) : jaquette xbl.io + plateformes du titre, marquage **« Nouveau » / « Déjà présent »** (comparaison de titre normalisée), **compteurs**, **tout cocher / décocher**, cases décochables individuellement pour écarter les doublons FR/EN.
-- **Création des jeux** : `format: "démat"`, jaquette xbl.io immédiate (remplaçable ensuite par SteamGridDB), **date d'ajout = date de sortie officielle croisée via RAWG** (fallback : dernière session jouée, puis date du jour), plateforme **Xbox One / Series X** déduite par la règle de date, `backCompat` cohérent. Délai anti-rate-limit RAWG + **arrêt possible** en cours d'import.
-- **Enrichissement post-import** (bannière « Enrichir », best-effort et **annulable**) : complète cover/Metacritic/genres via RAWG et la description via Wikipédia sur les jeux fraîchement importés.
-- ⚠️ L'API expose l'**historique joué**, pas la liste des achats : un jeu acheté mais jamais lancé n'apparaît pas ; un jeu Game Pass/démo lancé apparaît. Aucun temps de jeu n'est importé (absent de l'endpoint) — le chrono manuel reste la source.
 
-### Plateformes & rétrocompatibilité
-- L'ancienne plateforme « Xbox » est **séparée automatiquement** en **Xbox One** / **Xbox Series X** selon la date (`addedDate`, seuil **10/11/2020**). Migration **idempotente** (au chargement, seed + localStorage ; ne re-migre pas un jeu déjà séparé). `addedDate` sert de proxy de date de sortie — approximatif pour quelques titres anciens (ex. Halo 4 classé Xbox One).
-- Champ booléen **`backCompat`**, `true` par défaut pour les plateformes « anciennes » (**Xbox One** et **Switch 1**) → badge discret **« 🔄 Compatible Series X »** / **« 🔄 Compatible Switch 2 »** selon la plateforme.
-- **Modifiable au cas par cas** : un toggle « Jouable sur … : oui / non » dans la fiche permet de marquer les rares exceptions (titres nécessitant un accessoire spécifique, etc.).
-- La valeur par défaut est posée par une **migration versionnée par jeu** (`bcV`) : le rattrapage ne s'applique qu'une fois, donc un choix manuel n'est **jamais réécrasé** au rechargement.
-- **Règle de rétrocompatibilité déclarative** (constante `BACK_COMPAT` dans `src/lib/model.js`) : une plateforme récente affiche ses jeux natifs **+** ceux de la plateforme précédente marqués `backCompat`.
-  - **« Xbox Series X »** → natifs + **Xbox One** `backCompat`.
-  - **« Switch 2 »** → natifs + **Switch 1** `backCompat` (tous par défaut : la Switch 2 lit quasiment toute la ludothèque Switch 1).
-  - Les plateformes « anciennes » (**« Xbox One »**, **« Switch 1 »**) restent **strictes**.
-- Couleurs de badge distinctes (Series X vert vif, One vert foncé, Switch rouge). Filtres de plateforme et select d'AddModal alignés.
-
-### Suivi de jeu
-- **Chrono de session** (Jouer/Stop) + **temps manuel** (h/min, boutons **+** / **−** borné à 0) + **historique des 3 dernières sessions**.
-- **Bande de prêt** : orange sous la jaquette quand le jeu est prêté, bordure en pointillés au-delà de 30 jours.
-- **Format physique / démat éditable directement dans la fiche** (toggle), plus seulement à l'ajout.
-- **Jeux « poussiéreux »** : un « en cours » sans activité depuis > 30 j est estompé (bordure grisée).
-- **Compteur « jours depuis dernière session »** sur les jeux en cours.
+- Récupère l'historique de jeux du compte lié à la clé (`player/titleHistory`).
+- **Filtrage** : sur ~164 titres renvoyés, seuls les vrais jeux console sont gardés
+  (~150) — entrées PC-only / Win32 et apps/launchers exclues.
+- **Écran de prévisualisation** obligatoire : jaquette, plateformes, marquage
+  « Nouveau » / « Déjà présent » (titre normalisé), compteurs, tout cocher/décocher,
+  cases individuelles pour écarter les doublons FR/EN.
+- **Création** : `format: "démat"`, jaquette xbl.io immédiate, **date d'ajout = date
+  de sortie officielle croisée via RAWG** (repli : dernière session, puis date du
+  jour), plateforme Xbox One / Series X déduite, `backCompat` cohérent, arrêt possible.
+- **Enrichissement post-import** proposé en bannière, best-effort et annulable.
+- ⚠️ L'API expose l'**historique joué**, pas les achats. Aucun temps de jeu.
 
 ### Prêts
-- Prêter un jeu (nom + date), le marquer rendu, relancer par SMS depuis la fiche.
-- Onglet **Prêts** : **alerte si prêt > 30 jours** (« ⚠️ Prêt long ! »), bouton **SMS** de relance (lien `sms:` pré-rempli).
 
-### Organisation & UI
-- **Stats** : total, prêtés, top genres. L'**Export / Import JSON** est passé dans ⚙️ Réglages, avec la synchronisation.
-- **Tri** : A-Z / Date / Metacritic / Temps. **Filtre « 🎯 à finir »** (en cours + non commencé, triés par ancienneté).
-- **Filtres** (combinables entre eux et avec la recherche) : **plateforme**, **prêt** (Tous / Chez moi / Prêtés), et **format** (Tous / Physique / Démat).
-- **Recherche texte** sur **titre + genre + tag**, **insensible à la casse et aux accents** (« creatif » trouve le genre « Créatif »). La **description est volontairement exclue** de la recherche : elle générait trop de faux positifs (un mot du résumé remontait des jeux sans rapport).
-- **Vues** liste et grille (jaquettes **format boîte vertical 2:3**), **thème clair / sombre**.
-- **Suppression** via **toast « Annuler »** (5 s) au lieu d'une confirmation bloquante.
-- **Fiches en accordéons** repliés : « 📤 Prêt », « 🔗 Liens & contenu », « 📝 Notes ». Description repliée à 2 lignes avec « Lire la suite ».
-- Note /10, tag et progression retirés de l'UI (champs conservés dans le modèle pour compat).
+- Prêter un jeu : nom de l'emprunteur, et **date de retour facultative**.
+- **Alerte** : la date convenue quand elle existe, sinon un seuil de 30 jours. Un
+  seuil unique traitait de la même façon le jeu passé à un frère pour le week-end et
+  celui confié à un collègue pour l'été.
+- « ✓ Rendu » **archive** le prêt au lieu de l'effacer : la fiche rappelle à qui le
+  jeu a déjà été confié et combien de temps, l'onglet Prêts liste les retours sous
+  « Déjà rendus ». L'historique est borné à 20 entrées par jeu, garde la date de
+  retour convenue, et voyage dans l'export.
+- Un prêt **saisi par erreur** s'efface sans être archivé, et chaque ligne
+  d'historique porte sa croix : sans ça, un essai fausse les moyennes pour toujours.
+- Bouton **SMS** de relance (lien `sms:` pré-rempli).
+
+### Statistiques
+
+Deux sous-onglets. Chaque bloc disparaît quand il n'a rien à dire.
+
+- **Circulation** : nombre de prêts, durée moyenne, jamais prêtés, taux de rotation,
+  personnes distinctes, qui emprunte le plus et qui garde le plus longtemps, rythme
+  mensuel sur un an, ce qui est dehors trié par ancienneté, et la **ponctualité**
+  (a-t-il rendu à la date dite — seuls les prêts rendus avec date convenue comptent).
+- **Collection** : plateformes, formats, genres, note moyenne **et médiane**, moyenne
+  par plateforme et par genre (3 jeux notés minimum), âge des jeux d'après leur date
+  de sortie Wikidata, délai médian entre sortie et achat, rythme d'ajout, studios et
+  séries, complétude — plus les **doublons possibles** et les **épisodes manquants**
+  déduits des champs « précédent / suivant » de Wikidata.
+- Un bouton **Recalculer** relit l'heure : les chiffres suivent la bibliothèque en
+  direct, seuls les jours écoulés se figent quand l'app reste ouverte plusieurs jours.
+
+### Plateformes & rétrocompatibilité
+
+- L'ancienne plateforme « Xbox » est **séparée automatiquement** en Xbox One /
+  Xbox Series X selon `addedDate` (seuil 10/11/2020). Migration **idempotente**.
+- **Règle déclarative** (`BACK_COMPAT` dans `src/lib/model.js`) : une plateforme
+  récente affiche ses jeux natifs **+** ceux de la précédente marqués `backCompat`.
+  Xbox Series X → + Xbox One ; Switch 2 → + Switch 1 ; les anciennes restent strictes.
+- Badge « 🔄 Compatible Series X » / « Compatible Switch 2 ».
+- **Choix manuel** dans le panneau d'édition pour les rares exceptions. Il disparaît,
+  et la valeur avec lui, si l'on choisit une plateforme sans console parente.
+- Protégé par une **migration versionnée par jeu** (`bcV`) : le rattrapage ne
+  s'applique qu'une fois, un choix manuel n'est jamais réécrasé.
+
+### Sauvegarde
+
+- **Synchronisation par code** (⚙️ → Sauvegarde) : dépose la bibliothèque sur le
+  Worker et la reprend ailleurs, avec le même code de 26 caractères. Elle emporte
+  aussi l'**apparence**, et les **clés des services** si l'on coche la case prévue,
+  décochée par défaut. Le code reste sur l'appareil et ne part jamais dans l'export.
+- **Copie hors ligne** : Export / Import JSON, en mode remplacer ou fusionner.
+- Un envoi qui écraserait le travail d'un autre appareil est **refusé** (409) : l'app
+  pose le choix, chiffres en main.
+- L'import ne fait pas confiance au fichier : date illisible, plateforme inconnue,
+  format inventé ou note en toutes lettres sont ramenés à une valeur sûre, et le
+  nombre d'entrées corrigées est annoncé.
+
+### Organisation & interface
+
+- **Recherche** sur titre + genre + tag, insensible à la casse et aux accents. La
+  description est volontairement exclue (trop de faux positifs).
+- **Filtres** combinables : plateforme, prêt, format. **Tri** : A-Z, date, Metacritic.
+- **Vues** liste et grille (jaquettes 2:3), liste paginée par 30.
+- **Trois modes de thème** : automatique (suit le téléphone, y compris quand il
+  bascule le soir), clair, noir profond. Bouton dans l'en-tête, choix dans ⚙️.
+- **Panneaux glissants** pour les filtres, les actions et les sources : Échap ferme,
+  et la page cesse de défiler derrière.
+- **Suppression** : confirmation qui dit ce qui part avec le jeu, puis toast
+  « Annuler » de 5 s.
+- **Bannière de mise à jour** quand une nouvelle version a pris la main
+  (`controllerchange`) : l'onglet ouvert exécute encore l'ancien code.
 
 ## Limites connues
 
-- **SteamGridDB et xbl.io nécessitent le relais** : sans Worker déployé (et son URL renseignée dans ⚙️), ces deux sources restent indisponibles en ligne. Tout le reste fonctionne.
-- **xbl.io** : historique joué ≠ bibliothèque achetée (voir section Import Xbox) ; pas de temps de jeu exposé.
-- **Jaquettes xbl.io réécrites en HTTPS** (`httpsImage`) : l'API les sert en `http://` et une partie via `images-eds.xboxlive.com`, hôte sans TLS. Sans cette réécriture, toute jaquette importée depuis Xbox restait cassée sur le site HTTPS — invisible en dev (`http://localhost`).
-- **Pas d'import Nintendo possible** : Nintendo n'expose aucune API de bibliothèque/achats. Le seul accès (non officiel, `nxapi`) passe par les relevés du contrôle parental — jeux *joués* et temps de jeu, via un login Nintendo interactif. Voir README.
-- **Wikidata** : certains champs d'infobox sont parfois absents (jeux Nintendo/récents) → affichage best-effort, sans casser l'UI.
+- **SteamGridDB et xbl.io nécessitent le relais** : sans Worker déployé (et son URL
+  renseignée dans ⚙️), ces deux sources restent indisponibles en ligne.
+- **Le Worker ne se déploie pas avec le site.** GitHub Pages ne publie que `dist/` ;
+  toute modification de `worker/index.js` demande un `npx wrangler deploy` séparé.
+- **xbl.io** : historique joué ≠ bibliothèque achetée ; pas de temps de jeu exposé.
+- **Jaquettes xbl.io réécrites en HTTPS** (`httpsImage`) : l'API les sert en `http://`
+  et une partie via `images-eds.xboxlive.com`, hôte sans TLS. Invisible en dev.
+- **Pas d'import Nintendo possible** : aucune API de bibliothèque ou d'achats. La
+  bibliothèque Switch a été reconstituée à la main depuis les reçus d'achat par mail.
+- **Wikidata** est parfois incomplet (jeux Nintendo ou très récents) : affichage
+  best-effort, sans casser la fiche.
+- **Le classement Xbox One / Series X repose sur `addedDate`**, faute de date de
+  sortie stockée séparément.
+- **Contraste du thème clair** : le vert et le rouge tournent entre 2,83 et 4,39:1 là
+  où WCAG AA demande 4,5:1, et le blanc sur l'accent du thème sombre est à 3,00:1.
+  Mesuré, non corrigé — ça touche l'identité visuelle.
 
 ## Fait récemment
 
-- **Refonte mobile** : en-tête collant ramené de 317 à 177 px, débordement
-  horizontal de 13 px supprimé, filtres et actions en panneaux glissants,
-  cibles tactiles à 44 px, liste paginée par 30, recherche debouncée, mode
-  d'affichage compact.
-- **Robustesse** : `ErrorBoundary` avec export de secours, bandeau d'erreur pour
-  les fautes hors rendu, alerte de quota de stockage, validation de l'import
-  JSON, `npm ci` et lint en CI, `no-undef` activé dans oxlint.
-- **Synchronisation** entre appareils via le Worker (espace KV), et `worker/test.mjs`.
-
-- **PWA en ligne sur GitHub Pages** (manifest, service worker Workbox, icônes
-  192/512 + maskable, installable sur écran d'accueil).
-- **Clés API sorties du code** et purgées de tout l'historique git avant le premier
-  push (aucune clé n'a jamais été publiée → inutile de les régénérer).
-- **Relais CORS sans secret** pour SteamGridDB et xbl.io.
+- **Audit complet** : validation des valeurs à l'import (une date illisible produisait
+  des `NaN` jusque dans les moyennes de l'onglet Stats), fiche qui se rouvrait toute
+  seule, Échap sans effet sur les panneaux, page qui défilait derrière eux, accent du
+  thème clair sous la limite de lisibilité, manifeste PWA resté au thème précédent.
+- **Statistiques** refaites : deux sous-onglets, ponctualité, rotation, âge de la
+  collection, doublons et épisodes manquants.
+- **Noir profond** en remplacement du sombre bleu nuit.
+- **Préférences dans la sauvegarde en ligne** (apparence toujours, clés sur demande).
+- **Worker** : horodatage strictement croissant — deux envois dans la même
+  milliseconde portaient le même, et l'appareil resté en arrière écrasait l'autre en
+  silence.
+- **Confirmations** sur tous les gestes irréversibles, et champs sensibles
+  verrouillés.
+- **Panneau d'édition** : plus rien n'est en lecture seule dans une fiche.
 
 ## Prochaines étapes
 
-- **Ajouter le secret `CLOUDFLARE_API_TOKEN`** au dépôt GitHub (Settings →
-  Secrets and variables → Actions) : sans lui, le déploiement automatique du
-  Worker échoue et `/sync` reste inactif. L'espace KV `SYNC` est créé et
-  déclaré dans `worker/wrangler.toml`.
+- **Déployer le Worker** (`cd worker && npx wrangler deploy`) : trois changements
+  l'attendent, dont le correctif d'écrasement silencieux. Rien ne le fait
+  automatiquement — un déploiement par GitHub Actions demanderait un secret
+  `CLOUDFLARE_API_TOKEN` dans le dépôt, ce qui n'a jamais été mis en place.
 - **Relais déployé** : `https://game-library-proxy.antoniman31.workers.dev`
-  — à coller dans ⚙️ sur chaque nouvel appareil (il n'est pas dans l'export JSON).
-- Éventuellement : rappel local à l'ouverture pour les prêts > 30 j. Les
-  notifications push de `gta6-backend` supposent un backend qui pousse ; ici, il
-  faudrait envoyer la liste des prêts à un serveur pour un gain quasi nul.
+  — à coller dans ⚙️ sur chaque nouvel appareil.
+- Passer `npm run audit -- export.json` sur la vraie bibliothèque : le script n'a
+  jamais vu autre chose que des données de test.
+- Trancher le contraste du thème clair (voir Limites connues).
 
 ## Structure
 
 ```
-GameLibrary/
-├── index.html
+game-library/
+├── index.html            ← script anti-clignotement du thème
 ├── package.json
-├── .github/workflows/    ← deploy.yml : build + publication GitHub Pages
+├── .github/workflows/    ← deploy.yml : lint, tests, build, publication Pages
 ├── worker/               ← relais CORS + sauvegarde KV (sans secret) + tests
+├── scripts/audit.mjs     ← audit des données d'un export (pas un test)
 ├── vite.config.js        ← base '/game-library/', PWA, proxys de dev (sans clé)
 ├── PROGRESS.md           ← ce fichier
 └── src/
     ├── App.jsx           ← ossature : état global, en-tête, onglets
     ├── main.jsx          ← montage + garde-fou d'erreurs global
     ├── index.css         ← jetons de thème, animations, survol
-    ├── lib/              ← api, model, seed, storage, sync, theme
-    └── components/       ← GameCard, AddModal, ImportModal, Sheet,
-                             FiltersSheet, ActionsSheet, Cover,
-                             InfoboxView, ErrorBoundary
+    ├── lib/              ← api, model, stats, apparence, preferences,
+    │                       garde-fous, maj, seed, storage, sync, theme
+    │                       (+ *.test.mjs)
+    └── components/       ← GameCard, AddModal, ImportModal, StatsView,
+                             SettingsView, ScoresSheet, Sheet, FiltersSheet,
+                             ActionsSheet, SousOnglets, Cover, InfoboxView,
+                             ChampProtege, ErrorBoundary
 ```

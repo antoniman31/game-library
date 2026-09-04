@@ -16,17 +16,23 @@ Il complète les deux autres documents :
 
 ## 1. Ce qu'est le projet
 
-Une bibliothèque de jeux vidéo personnelle (Xbox / Switch) : suivi de progression,
-chronomètre de session, prêts, statistiques, et enrichissement automatique des fiches
-depuis plusieurs bases publiques.
+Une bibliothèque de jeux vidéo personnelle (Xbox / Switch) : catalogue, prêts,
+statistiques, et enrichissement automatique des fiches depuis plusieurs bases
+publiques.
+
+> Le projet a longtemps suivi la **progression** et le **temps de jeu**, chronomètre
+> de session compris. Les deux ont été retirés — voir la phase 9. Ce document garde la
+> trace de cette période, puisque c'est son rôle.
 
 **Contraintes fixées dès le départ, jamais remises en cause :**
 
-- **Aucun backend.** L'application est entièrement statique, les données vivent dans le
-  `localStorage` du navigateur.
-- **Un seul fichier.** Tout tient dans `src/App.jsx` (~1550 lignes), styles inline, aucune
-  dépendance UI.
+- **Aucun backend applicatif.** L'application est entièrement statique et les données
+  vivent dans le `localStorage` du navigateur. Le Worker Cloudflare ajouté plus tard
+  ne fait que relayer et stocker : il ne connaît rien du domaine.
 - **Français partout** : interface, descriptions, titres de jeux.
+
+> La contrainte « un seul fichier » a tenu jusqu'à la phase 9, où `App.jsx` avait
+> atteint 1 560 lignes et 136 Ko. Elle a été abandonnée, pas oubliée.
 
 **Résultat** : https://antoniman31.github.io/game-library/ — PWA installable, déployée
 automatiquement à chaque push.
@@ -221,30 +227,119 @@ Navigateur (clés dans localStorage)
 Sept phases d'exécution ont suivi : réglages, Worker, branchement, PWA, purge de
 l'historique, déploiement, vérifications.
 
+### Phase 9 — Ce que la console sait déjà
+
+L'application suivait la progression (non commencé, en cours, terminé, platine,
+abandonné) et le temps de jeu, avec chronomètre de session et historique. Les deux
+ont été **retirés**, pas masqués : la console tient déjà ces données, mieux et sans
+saisie manuelle, et les redoubler ici demandait du travail pour une information qu'on
+possède ailleurs. Sept champs ont quitté le modèle (`status`, `playedMinutes`,
+`manualMinutes`, `sessions`, `hltb`, `note`, `progression`), supprimés par la
+migration : les garder ferait croire à des fonctions inexistantes, et ils voyageaient
+à chaque écriture et à chaque synchronisation.
+
+Reste ce que la console ne sait pas faire : voir toute la bibliothèque d'un coup, et
+savoir chez qui sont les jeux.
+
+Dans le même mouvement, `App.jsx` — 1 560 lignes, 136 Ko, styles inline compris — a
+été découpé en `src/lib/` et `src/components/`. La contrainte du fichier unique avait
+tenu longtemps ; elle rendait désormais chaque ajout plus coûteux que le précédent, et
+une erreur ne se cherchait plus qu'à l'aveugle. Les couleurs sont sorties du
+JavaScript vers des jetons CSS : tant que rien ne passait par une feuille de style,
+aucune media query n'était possible — donc aucun thème qui suive le téléphone.
+
+### Phase 10 — Le prêt comme sujet à part entière
+
+« Rendu » remettait `lentA` et `lentDate` à `null` : le prêt disparaissait sans laisser
+de trace. On ne savait plus à qui on avait déjà confié un jeu, ni que la même personne
+met trois mois à chaque fois — alors que c'est précisément ce que cette application est
+censée savoir. Un **historique borné à 20 entrées par jeu** est apparu, porté par le
+jeu lui-même, donc voyageant dans l'export et la synchronisation.
+
+Le seuil d'alerte unique de 30 jours traitait de la même façon le jeu passé à un frère
+pour le week-end et celui confié à un collègue pour l'été : une **date de retour
+convenue**, facultative, fait désormais foi quand elle existe.
+
+Trois défauts trouvés en chemin, tous silencieux :
+
+- `rendreJeu` **jetait la date convenue** en archivant. La fonctionnalité ne laissait
+  donc aucune trace une fois le jeu rendu, et la seule question qui compte — a-t-il
+  rendu quand il l'avait dit ? — devenait impossible à poser.
+- Un prêt **encore dehors** comptait comme « rendu en retard » : son `au` vaut
+  aujourd'hui. Repéré sur une capture d'écran de vérification, pas par un test.
+- `Math.round` arrondit −0,5 vers le haut quand il arrondit +0,5 vers le bas : sur un
+  écart de retard, le biais jouait systématiquement contre l'emprunteur. Un test l'a
+  attrapé.
+
+### Phase 11 — Le noir profond, et un bouton de moins
+
+Le thème ne connaissait que deux états et ignorait le réglage du téléphone : un
+appareil qui bascule en sombre le soir laissait une application restée en clair. Trois
+modes sont apparus, dont un **automatique** qui suit le système en cours de route.
+
+Le noir profond a d'abord été ajouté comme **préférence applicable par-dessus** le
+sombre — un raisonnement défendable : l'OLED est une variante du sombre, pas un pair
+de « clair » et « automatique ». Une capture d'écran a tranché autrement : quatre
+commandes dans un panneau qui en comptait déjà trois pour la même question, et pour un
+choix qui n'en est pas un. Entre un bleu nuit et un vrai noir, on tranche une fois. Le
+sombre **est** devenu le noir profond, la valeur stockée restant `"dark"` pour n'avoir
+rien à migrer.
+
+### Phase 12 — Ce qui casse en silence
+
+Une série de défauts qui avaient en commun de ne jamais se voir :
+
+- **Le Worker** produisait `updatedAt` avec `toISOString()`, précis à la milliseconde.
+  Deux envois dans la même milliseconde portaient le même horodatage — or c'est lui qui
+  identifie la version. Un appareil resté en arrière présentait alors une base par
+  accident identique à la version courante : le conflit passait inaperçu et son envoi
+  **écrasait l'autre**. Trouvé par l'intégration continue, dont le runner est plus
+  rapide que la machine de développement ; le test fige désormais l'horloge.
+- **L'import ne validait que les types.** « pas une date » est une chaîne, donc ça
+  passait, et le `NaN` qui en sortait remontait jusque dans les moyennes de l'onglet
+  Stats, affiché comme une statistique. Une plateforme inconnue entrait sans apparaître
+  dans aucun filtre ; un format inventé n'était compté ni en physique ni en démat, si
+  bien que les trois tuiles de Collection cessaient de s'additionner.
+- **Le thème clair** affichait son accent à 2,58:1 là où WCAG AA demande 4,5. Le jeton
+  `--accent` existait mais ne servait à rien : le bleu était écrit en dur une
+  cinquantaine de fois, donc le thème clair ne pouvait pas le corriger.
+- **Échap ne fermait aucun panneau**, et la page défilait derrière eux. Le verrou de
+  défilement posé sur `<body>` ne bloquait rien : c'est `<html>` qui défile ici.
+- **Le manifeste PWA** habillait encore l'écran de démarrage en bleu nuit et la barre
+  système en bleu, autour d'une application devenue noire.
+
 ---
 
 ## 3. Architecture finale
 
 ```
 ├── .github/workflows/deploy.yml   Build Vite + publication GitHub Pages (aucun secret)
-├── worker/                        Relais CORS Cloudflare (aucun secret) + sa doc
+├── worker/                        Relais CORS + sauvegarde KV (aucun secret) + sa doc
+├── scripts/audit.mjs              Audit des données d'un export (pas un test)
 ├── public/                        Icônes PWA 192/512 (any + maskable), favicon
-├── src/App.jsx                    Toute l'application (~1550 lignes)
+├── src/App.jsx                    Ossature : état global, en-tête, onglets
+├── src/lib/                       Modules purs, testables sans navigateur
+├── src/components/                Fiches, modales, panneaux glissants
 ├── vite.config.js                 base '/game-library/', PWA, proxys de dev
 ├── README.md · PROGRESS.md · JOURNAL.md
 └── LICENSE                        MIT
 ```
 
-**Stockage navigateur** — deux entrées volontairement séparées :
+**Stockage navigateur** — des entrées volontairement séparées :
 
-| Clé | Contenu | Dans l'export JSON ? |
-|---|---|---|
-| `gl_v2` | Les jeux | ✅ oui |
-| `gl_keys` | Les clés API + URL du relais | ❌ **jamais** |
+| Clé | Contenu | Dans l'export JSON ? | Dans la sauvegarde en ligne ? |
+|---|---|---|---|
+| `gl_v2` | Les jeux | ✅ oui | ✅ oui |
+| `gl_keys` | Les clés API + URL du relais | ❌ **jamais** | Sur demande explicite, sauf l'URL du relais |
+| `gl_sync` | Le code de synchronisation | ❌ **jamais** | ❌ **jamais** — il est la clé de cette sauvegarde |
+| `gl_theme` | Le mode d'apparence | ❌ non | ✅ oui |
 
 Cette séparation est délibérée : un export doit pouvoir être partagé ou sauvegardé sans
-fuiter de clé. Conséquence assumée : sur un nouvel appareil, il faut importer l'export
-**et** ressaisir les clés.
+fuiter de clé. La sauvegarde en ligne peut, elle, emporter les clés — mais seulement si
+l'on coche une case décochée par défaut, parce que cocher change la nature du code de
+synchronisation : il protège une liste de jeux, il protégerait des identifiants.
+L'URL du relais ne voyage jamais : elle est nécessaire pour joindre la sauvegarde, donc
+la restaurer depuis la sauvegarde serait circulaire.
 
 **Sources et accès :**
 
@@ -383,9 +478,10 @@ mesure avec le simple en-tête `X-Authorization` de xbl.io.
 | **En ligne** | https://antoniman31.github.io/game-library/ |
 | **Dépôt** | https://github.com/antoniman31/game-library (public, MIT) |
 | **Relais** | `https://game-library-proxy.antoniman31.workers.dev` |
-| **Bibliothèque** | 94 jeux de départ · 6 statuts · 4 plateformes |
-| **Code** | ~1550 lignes dans un fichier · lint sans avertissement |
-| **PWA** | Manifest, service worker Workbox, icônes 192/512 (any + maskable) |
+| **Bibliothèque** | 94 jeux de départ · 4 plateformes · un seul état suivi : chez moi ou dehors |
+| **Code** | ~5 900 lignes réparties entre `lib/` et `components/` · lint sans avertissement |
+| **Tests** | 83 sur les modules purs + 29 vérifications du Worker, sans dépendance ni déploiement |
+| **PWA** | Manifest, service worker Workbox, icônes 192/512 (any + maskable), bannière de mise à jour |
 | **Secrets** | **Aucune clé dans les fichiers ni dans l'historique git** (revérifié sur les trois) |
 | **Coût** | 0 € — GitHub Pages, Actions, Cloudflare Workers et toutes les API utilisées sont sur des offres gratuites |
 
@@ -395,27 +491,42 @@ mesure avec le simple en-tête `X-Authorization` de xbl.io.
 
 ## 8. Ce qui reste
 
-**À faire sur chaque appareil** (rien n'est synchronisé) :
+**À faire sur chaque appareil :**
 
-1. Coller les trois clés **et** l'URL du relais dans l'onglet ⚙️, puis « Tester ».
-2. Transférer la bibliothèque : **Stats → Exporter** depuis l'ancien appareil,
-   **Stats → Importer** sur le nouveau.
-3. Sur mobile : « Installer l'application » depuis le menu du navigateur.
+1. Coller l'**URL du relais** dans ⚙️ → Services : elle ne voyage jamais, et sans elle
+   la synchronisation ne peut pas être jointe.
+2. Saisir le **code de synchronisation**, puis « ⬇ Récupérer ». Il ne figure ni dans
+   l'export ni dans la sauvegarde qu'il protège. Les clés des services suivent, si la
+   case a été cochée sur l'appareil d'origine ; sinon, les ressaisir.
+3. Sans relais : **⚙️ → Sauvegarde → Exporter** depuis l'ancien appareil, **Importer**
+   sur le nouveau.
+4. Sur mobile : « Installer l'application » depuis le menu du navigateur.
 
 **Pistes ouvertes, volontairement non traitées :**
 
-- **Notifications push pour les prêts dépassant 30 jours** — l'application calcule déjà
-  l'alerte, et le pattern VAPID est déjà éprouvé dans un autre projet de l'auteur.
-- **Synchronisation multi-appareils** — aujourd'hui l'export/import JSON est le seul pont.
+- **Notifications push pour les prêts dépassés** — l'application calcule déjà l'alerte,
+  et le pattern VAPID est éprouvé dans un autre projet de l'auteur. Écarté : cela
+  suppose un backend qui pousse, donc envoyer la liste des prêts à un serveur pour un
+  gain quasi nul.
+- **Contraste du thème clair** — le vert et le rouge tournent entre 2,83 et 4,39:1, et
+  le blanc sur l'accent du thème sombre est à 3,00:1. Mesuré, non corrigé : cela touche
+  l'identité visuelle, ce n'est pas une décision technique.
 - **Parcours SteamGridDB de bout en bout en ligne** — validé par le bouton « Tester »,
   mais le choix d'une jaquette depuis une fiche n'a pas été rejoué en production.
-- **Import Nintendo** — voir section 6.
+- **Import Nintendo** — voir section 6. La bibliothèque Switch a finalement été
+  reconstituée à la main depuis les reçus d'achat reçus par mail : 22 jeux retrouvés,
+  plus quatre déduits d'achats de DLC dont le reçu du jeu manquait.
 
 **Points de vigilance :**
 
+- **Le Worker ne se déploie pas avec le site.** GitHub Pages ne publie que `dist/` ;
+  toute modification de `worker/index.js` demande un `npx wrangler deploy` séparé. Un
+  déploiement automatique demanderait un secret `CLOUDFLARE_API_TOKEN` dans le dépôt,
+  ce qui n'a jamais été mis en place.
 - Après un déploiement, le service worker sert l'ancienne version : **la nouvelle
-  s'applique au chargement suivant**. Fermer et rouvrir l'application si un changement
-  n'apparaît pas.
+  s'applique au chargement suivant**. Une bannière « ✨ Nouvelle version » le signale
+  désormais, déclenchée par `controllerchange` — auparavant il fallait fermer et
+  rouvrir l'application sans jamais savoir s'il y avait quelque chose à voir.
 - Le classement Xbox One / Series X repose sur `addedDate` : approximatif pour les titres
   antérieurs à la Xbox One (Halo 4, sorti en 2012 sur Xbox 360, est classé Xbox One).
 - `localStorage` n'est pas un coffre-fort : les clés y sont lisibles par tout script
