@@ -16,6 +16,7 @@ import { BACK_COMPAT, migrateGames, compterFiltres, validerJeuxImportes, pretEnR
   dureeEntreeHistorique, supprimerEntreeHistorique } from "./lib/model.js";
 import { lire, ecrire, surEchecStockage } from "./lib/storage.js";
 import { chargerSync, enregistrerSync, genererCode, envoyer, recuperer } from "./lib/sync.js";
+import { preferencesASauvegarder, preferencesRecues, resumePreferences } from "./lib/preferences.js";
 import { surMiseAJour } from "./lib/maj.js";
 import { resoudreTheme, modeSuivant, modeValide, ICONES, LIBELLES, COULEUR_BARRE } from "./lib/apparence.js";
 import {
@@ -359,7 +360,11 @@ export default function App() {
 
   const envoyerAuCloud = async (base = sync.majLe) => {
     setSyncEtat({ type: "…", texte: "Envoi en cours…" });
-    const r = await envoyer(keys.proxy, sync.code, games, base);
+    // La sauvegarde ne portait que les jeux : un appareil neuf les retrouvait,
+    // puis il fallait tout re-régler. Les clés n'y vont que si la case est
+    // cochée sur cet appareil-ci.
+    const prefs = preferencesASauvegarder({ modeTheme, noirProfond, keys, avecCles: sync.avecCles });
+    const r = await envoyer(keys.proxy, sync.code, games, base, prefs);
 
     // Un autre appareil a envoyé depuis notre dernière synchronisation. Écraser
     // détruirait son travail : on pose le choix, chiffres en main, au lieu de
@@ -379,7 +384,11 @@ export default function App() {
 
     if (!r.ok) { setSyncEtat({ type: "ko", texte: r.erreur }); return; }
     majSync({ ...sync, majLe: r.data?.updatedAt || new Date().toISOString() });
-    setSyncEtat({ type: "ok", texte: `${games.length} jeux sauvegardés.` });
+    setSyncEtat({
+      type: "ok",
+      texte: `${games.length} jeu${games.length > 1 ? "x" : ""} sauvegardé${games.length > 1 ? "s" : ""}`
+        + `${prefs.keys ? ", clés comprises" : ""}.`,
+    });
   };
 
   // Vérifie qu'une clé répond, sans quitter les réglages.
@@ -416,8 +425,24 @@ export default function App() {
     );
     if (!ok) { setSyncEtat({ type: "ko", texte: "Récupération annulée." }); return; }
     setGames(jeux);
+
+    // Les préférences se reprennent à part, et sur une seconde question : on
+    // vient chercher une bibliothèque, pas forcément à se faire changer son
+    // thème ni écraser ses clés par celles d'un autre appareil.
+    const prefs = preferencesRecues(r.data.prefs);
+    const resume = resumePreferences(prefs);
+    if (resume && window.confirm(`La sauvegarde contient aussi ${resume}.\n\nLes appliquer à cet appareil ?`)) {
+      if (prefs.modeTheme) setModeTheme(prefs.modeTheme);
+      if (prefs.noirProfond !== undefined) setNoirProfond(prefs.noirProfond);
+      if (prefs.keys) {
+        const fusion = { ...keys, ...prefs.keys };
+        setKeys(fusion);
+        setApiKeys(fusion);
+      }
+    }
+
     majSync({ ...sync, majLe: r.data.updatedAt || null });
-    setSyncEtat({ type: "ok", texte: `${jeux.length} jeux récupérés.` });
+    setSyncEtat({ type: "ok", texte: `${jeux.length} jeu${jeux.length > 1 ? "x" : ""} récupéré${jeux.length > 1 ? "s" : ""}.` });
   };
 
   const exportJSON = () => {

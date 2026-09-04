@@ -194,7 +194,26 @@ export default function SettingsView({
                 {syncEtat.type === "ok" ? "✓ " : syncEtat.type === "ko" ? "✕ " : "⏳ "}{syncEtat.texte}
               </div>
             )}
-            {sync.majLe && syncEtat?.type !== "…" && (
+            {/* Les clés ne partent que si on le demande, et la conséquence est
+            écrite à côté : cocher change ce que le code de synchronisation
+            protège — une liste de jeux devient une liste d'identifiants. */}
+        <label style={{ display: "flex", gap: 8, alignItems: "flex-start", marginTop: 12, paddingTop: 12, borderTop: `1px solid ${bdr}`, cursor: "pointer" }}>
+          <input type="checkbox" checked={!!sync.avecCles}
+            onChange={e => majSync({ ...sync, avecCles: e.target.checked })}
+            style={{ marginTop: 2, width: 16, height: 16, accentColor: ACCENT, flexShrink: 0 }} />
+          <span>
+            <span style={{ color: txt, fontSize: 12, fontWeight: 600 }}>Inclure les clés des services</span>
+            <span style={{ display: "block", color: mut, fontSize: 11, lineHeight: 1.5, marginTop: 2 }}>
+              Un appareil neuf devient utilisable dès la saisie du code, sans aller rechercher les clés
+              sur trois sites. En échange, elles sont stockées en clair sur ton relais et le code de
+              synchronisation devient le seul verrou qui les protège — ne le partage plus en croyant
+              ne partager qu'une liste de jeux. L'adresse du relais, elle, ne part jamais : elle est
+              nécessaire pour joindre la sauvegarde.
+            </span>
+          </span>
+        </label>
+
+        {sync.majLe && syncEtat?.type !== "…" && (
               <div style={{ color: mut, fontSize: 10, marginTop: 6 }}>
                 Dernière synchronisation : {new Date(sync.majLe).toLocaleString("fr-FR")}
               </div>

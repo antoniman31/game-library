@@ -13,12 +13,19 @@ import { lire, ecrire } from "./storage.js";
 
 const CLE_SYNC = "gl_sync";
 
+// `avecCles` est une préférence de CET appareil et ne se synchronise pas :
+// chacun décide de ce qu'il expose, et une case cochée sur le PC ne doit pas
+// se propager au téléphone du salon.
 export function chargerSync() {
   try {
     const v = JSON.parse(lire(CLE_SYNC) || "{}");
-    return { code: typeof v.code === "string" ? v.code : "", majLe: v.majLe || null };
+    return {
+      code: typeof v.code === "string" ? v.code : "",
+      majLe: v.majLe || null,
+      avecCles: v.avecCles === true,
+    };
   } catch {
-    return { code: "", majLe: null };
+    return { code: "", majLe: null, avecCles: false };
   }
 }
 
@@ -70,8 +77,13 @@ async function appeler(proxy, code, methode, corps, base) {
 // Worker refuse l'envoi s'il ne correspond plus, plutôt que d'écraser le
 // travail d'un autre appareil en silence. `"force"` passe outre — l'app ne
 // l'envoie qu'après une confirmation explicite.
-export const envoyer = (proxy, code, games, base) =>
-  appeler(proxy, code, "PUT", JSON.stringify({ games }), base);
+//
+// `prefs` accompagne la bibliothèque : l'apparence, et les clés de service si
+// cet appareil a coché la case. Omis, il laisse en place ce que le relais
+// avait déjà — un appareil resté sur une version antérieure n'efface donc pas
+// les préférences des autres.
+export const envoyer = (proxy, code, games, base, prefs) =>
+  appeler(proxy, code, "PUT", JSON.stringify(prefs ? { games, prefs } : { games }), base);
 
 export const recuperer = (proxy, code) =>
   appeler(proxy, code, "GET", null);
