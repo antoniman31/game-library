@@ -167,3 +167,123 @@ test("une bibliothèque vide ne produit ni NaN ni plantage", () => {
   assert.deepEqual(s.parPlateforme, []);
   assert.equal(statsCollection(null).total, 0);
 });
+
+// ── Ce que les nouveaux agrégats doivent éviter de dire ────────────────────
+
+test("la ponctualité ne juge que les prêts qui avaient une date", () => {
+  const s = statsCirculation([
+    // Rendu deux jours après la date convenue.
+    jeu({ id: 1, pretsPasses: [{ a: "Paul", du: "2024-01-01", au: "2024-01-12", prevu: "2024-01-10" }] }),
+    // Rendu trois jours avant.
+    jeu({ id: 2, pretsPasses: [{ a: "Léa", du: "2024-02-01", au: "2024-02-07", prevu: "2024-02-10" }] }),
+    // Sans date convenue : une entrée d'avant, qui ne doit pas passer pour
+    // ponctuelle sous prétexte qu'elle n'a rien promis.
+    jeu({ id: 3, pretsPasses: [{ a: "Max", du: "2024-03-01", au: "2024-03-30" }] }),
+  ]);
+  assert.equal(s.ponctualite.combien, 2);
+  assert.equal(s.ponctualite.aLHeure, 1);
+  assert.equal(s.ponctualite.enRetard, 1);
+  // +2 et −3 : l'écart moyen penche du côté de l'avance. Math.round aurait
+  // rendu −0 ici, parce qu'il arrondit −0,5 vers le haut : le biais aurait
+  // toujours joué contre l'emprunteur.
+  assert.equal(s.ponctualite.ecartMoyen, -1);
+  assert.equal(s.ponctualite.pire.titre, "Jeu");
+  assert.equal(s.ponctualite.pire.jours, 2);
+  // Un prêt encore dehors, dont la date est dépassée, n'est pas « rendu en
+  // retard » : il n'est pas rendu. Il est signalé ailleurs, pas ici.
+  const enCours = statsCirculation([
+    jeu({ id: 1, lentA: "Max", lentDate: ilYA(70), lentRetourPrevu: ilYA(10) }),
+  ]);
+  assert.equal(enCours.ponctualite, null);
+  assert.equal(enCours.enRetard, 1, "il reste compté comme prêt en retard, ailleurs");
+  assert.equal(enCours.dehors[0].titre, "Jeu");
+
+  // Aucune date convenue nulle part : le bloc n'a rien à dire et disparaît.
+  assert.equal(statsCirculation([jeu({ pretsPasses: [{ a: "Max", du: "2024-03-01", au: "2024-03-30" }] })]).ponctualite, null);
+});
+
+test("la rotation compte les jeux sortis, pas les prêts", () => {
+  const s = statsCirculation([
+    // Trois prêts, mais un seul jeu : la rotation vaut un tiers, pas 100 %.
+    jeu({ id: 1, pretsPasses: [
+      { a: "Paul", du: "2024-01-01", au: "2024-01-05" },
+      { a: "Léa", du: "2024-02-01", au: "2024-02-05" },
+      { a: "Max", du: "2024-03-01", au: "2024-03-05" },
+    ] }),
+    jeu({ id: 2 }), jeu({ id: 3 }),
+  ]);
+  assert.equal(s.total, 3);
+  assert.equal(s.rotation.sortis, 1);
+  assert.equal(s.rotation.pourcent, 33);
+  assert.equal(s.personnesDistinctes, 3);
+});
+
+test("les douze derniers mois gardent les mois vides et ignorent le reste", () => {
+  const s = statsCollection([
+    jeu({ id: 1, addedDate: "2026-09-04" }),
+    jeu({ id: 2, addedDate: "2015-01-01" }), // hors fenêtre : ne doit pas y entrer
+  ]);
+  assert.equal(s.parMoisAjout.length, 12);
+  assert.equal(s.parMoisAjout.reduce((a, [, n]) => a + n, 0), 1, "seul le mois dans la fenêtre compte");
+  assert.ok(s.parMoisAjout.every(([cle]) => /^\d{4}-\d{2}$/.test(cle)));
+});
+
+test("la médiane des notes ne suit pas la moyenne", () => {
+  // 20, 88, 90 : moyenne 66, médiane 88. Une seule bouse ne doit pas faire
+  // passer une bonne collection pour médiocre.
+  const s = statsCollection([
+    jeu({ id: 1, metacritic: 20 }), jeu({ id: 2, metacritic: 88 }), jeu({ id: 3, metacritic: 90 }),
+  ]);
+  assert.equal(s.note.moyenne, 66);
+  assert.equal(s.note.mediane, 88);
+});
+
+test("une moyenne par groupe demande au moins trois jeux notés", () => {
+  const s = statsCollection([
+    ...[90, 80, 70].map((n, i) => jeu({ id: i + 1, platform: "Switch 1", metacritic: n })),
+    jeu({ id: 4, platform: "Xbox One", metacritic: 100 }),
+  ]);
+  assert.deepEqual(s.noteParPlateforme, [["Switch 1", 80, 3]], "Xbox One n'a qu'un jeu noté");
+});
+
+test("les doublons distinguent l'achat multiplateforme de la saisie en double", () => {
+  const d = statsCollection([
+    jeu({ id: 1, title: "Halo", platform: "Xbox One" }),
+    jeu({ id: 2, title: "halo", platform: "Xbox Series X" }),
+    jeu({ id: 3, title: "Zelda", platform: "Switch 1" }),
+    jeu({ id: 4, title: "Zelda", platform: "Switch 1" }),
+  ]).doublons;
+  // La saisie en double passe devant : c'est la seule erreur certaine.
+  assert.equal(d[0].titre, "Zelda");
+  assert.equal(d[0].memePlateforme, true);
+  assert.equal(d[1].memePlateforme, false, "le même jeu sur deux consoles n'est pas une erreur");
+});
+
+test("un épisode manquant n'est signalé que s'il manque vraiment", () => {
+  const s = statsCollection([
+    jeu({ id: 1, title: "Halo 5", infobox: { follows: "Halo 4", followedBy: "Halo Infinite" } }),
+    jeu({ id: 2, title: "Halo Infinite", infobox: { follows: "Halo 5" } }),
+  ]);
+  assert.deepEqual(s.seriesIncompletes.map(m => m.titre), ["Halo 4"]);
+  assert.deepEqual(s.seriesIncompletes[0].depuis, ["Halo 5"]);
+});
+
+test("le délai d'achat ignore les dates impossibles", () => {
+  const s = statsCollection([
+    jeu({ id: 1, addedDate: "2024-01-01", infobox: { releases: [{ date: "2023-01-01" }] } }),
+    // Ajouté avant sa propre sortie : une date fausse, pas un achat anticipé.
+    jeu({ id: 2, addedDate: "2020-01-01", infobox: { releases: [{ date: "2023-01-01" }] } }),
+    jeu({ id: 3, addedDate: "2024-01-01" }),
+  ]);
+  assert.equal(s.delaiAchat.combien, 1);
+  assert.equal(s.delaiAchat.median, 365);
+  assert.equal(s.delaiAchat.apresUnAn, 0, "365 jours ne fait pas encore plus d'un an");
+  assert.equal(statsCollection([jeu({ id: 1 })]).delaiAchat, null);
+});
+
+test("l'âge des jeux se lit sur la sortie la plus ancienne, pas la première listée", () => {
+  const s = statsCollection([
+    jeu({ id: 1, infobox: { releases: [{ date: "2021-11-15", platform: "Xbox Series X" }, { date: "2009-03-01", platform: "Xbox 360" }] } }),
+  ]);
+  assert.deepEqual(s.parDecennie, [["2000", 1]]);
+});
