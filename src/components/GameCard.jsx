@@ -10,6 +10,24 @@ import {
   sgdbSearch, sgdbGrids,
 } from "../lib/api.js";
 
+// Deux valeurs exclusives, côte à côte : plus lisible qu'une case à cocher
+// quand le « non » compte autant que le « oui ».
+const Segment = ({ options, valeur, onChange }) => (
+  <div style={{ display: "flex", border: `1px solid ${bdr}`, borderRadius: 8, overflow: "hidden", width: "fit-content" }}>
+    {options.map(([libelle, val, teinte = "#5493FF"]) => {
+      const actif = valeur === val;
+      return (
+        <button key={libelle} type="button" onClick={() => onChange(val)} aria-pressed={actif}
+          style={{
+            background: actif ? `${teinte}22` : "transparent", border: "none",
+            color: actif ? teinte : mut, fontWeight: actif ? 600 : 400,
+            fontSize: 12, padding: "0 16px", height: 34, cursor: "pointer", fontFamily: "inherit",
+          }}>{libelle}</button>
+      );
+    })}
+  </div>
+);
+
 const boutonSource = { height: 36, padding: "0 12px", background: "transparent", border: "1px solid #5493FF", color: "#5493FF", borderRadius: 8, fontSize: 11, cursor: "pointer" };
 
 function GameCard({ g, onEdit, onDelete, onEnrich, autoOpen }) {
@@ -134,7 +152,13 @@ function GameCard({ g, onEdit, onDelete, onEnrich, autoOpen }) {
   // jetterait une correction en cours sans rien dire.
   const brouillonModifie = () => !!brouillon && JSON.stringify(brouillon) !== JSON.stringify(brouillonDepuisJeu(g));
   const demanderFermeture = () => { if (brouillonModifie() && !window.confirm("Abandonner les modifications ?")) return; fermerEdition(); };
-  const champ = (k, v) => setBrouillon(b => ({ ...b, [k]: v }));
+  const champ = (k, v) => setBrouillon(b => {
+    const suivant = { ...b, [k]: v };
+    // Une plateforme sans console parente ne peut pas être rétrocompatible :
+    // la ligne disparaît de l'écran, la valeur doit disparaître avec elle.
+    if (k === "platform" && !BACK_COMPAT_PARENT[v]) suivant.backCompat = false;
+    return suivant;
+  });
   const enregistrer = () => {
     const { erreurs: err, valeurs } = validerEdition(brouillon);
     setErreurs(err);
@@ -151,14 +175,16 @@ function GameCard({ g, onEdit, onDelete, onEnrich, autoOpen }) {
     color: txt, padding: "7px 9px", fontSize: 12, outline: "none",
     fontFamily: "inherit", // sans quoi textarea et champ date passent en monospace
   });
-  const ligneEdition = (label, cle, controle, aide) => (
-    <label style={{ display: "block", marginBottom: 10 }}>
+  // Balise : un <label> autour de boutons transmet le clic sur le texte au
+  // premier bouton — soit, pour « Format », un basculement à « physique ».
+  const ligneEdition = (label, cle, controle, aide, Balise = "label") => (
+    <Balise style={{ display: "block", marginBottom: 10 }}>
       <span style={{ display: "block", color: mut, fontSize: 11, marginBottom: 4 }}>
         {label}{aide ? <span style={{ opacity: 0.75 }}> · {aide}</span> : null}
       </span>
       {controle}
       {erreurs[cle] && <span style={{ display: "block", color: "#ef4444", fontSize: 11, marginTop: 3 }}>{erreurs[cle]}</span>}
-    </label>
+    </Balise>
   );
 
   const acc = (id, title, content) => (
@@ -235,35 +261,17 @@ function GameCard({ g, onEdit, onDelete, onEnrich, autoOpen }) {
           {/* Infos Wikidata : des filets, plus un cadre (voir InfoboxView). */}
           {g.infobox && <div style={{ marginBottom: 16 }}><InfoboxView info={g.infobox} /></div>}
 
-          {/* Possession : format, rétrocompatibilité et prêt réunis, puisque
-              c'est le même sujet — mon exemplaire. Un fond, pas une bordure :
-              six blocs encadrés de poids égal ne hiérarchisaient rien. */}
+          {/* Le prêt, et lui seul. Le format et la rétrocompatibilité tenaient
+              ici la même place, alors qu'on les règle une fois dans la vie d'un
+              jeu : ils sont passés dans « Modifier la fiche », avec le reste de
+              ce qui se corrige. Les pastilles en haut de la carte continuent de
+              les annoncer d'un coup d'œil.
+
+              Le prêt reste : c'est une action, répétée, et il était auparavant
+              enfermé dans un accordéon où « rendu » se devinait en vidant le
+              champ du nom. */}
           <div style={{ background: bg, borderRadius: 10, padding: 12, marginBottom: 4 }}>
             <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
-              <span style={{ color: mut, fontSize: 11, flex: "0 0 52px", paddingTop: 10 }}>Format</span>
-              <div style={{ display: "flex", border: `1px solid ${bdr}`, borderRadius: 8, overflow: "hidden" }}>
-                {["physique", "démat"].map(f => (
-                  <button key={f} onClick={() => onEdit(g.id, "format", f)} aria-pressed={g.format === f}
-                    style={{ background: g.format === f ? "#5493FF22" : "transparent", border: "none", color: g.format === f ? "#5493FF" : mut, fontWeight: g.format === f ? 600 : 400, fontSize: 12, padding: "0 14px", height: 36, cursor: "pointer" }}>{f}</button>
-                ))}
-              </div>
-            </div>
-
-            {BACK_COMPAT_PARENT[g.platform] && (
-              <div style={{ display: "flex", gap: 10, alignItems: "flex-start", marginTop: 12 }}>
-                <span style={{ color: mut, fontSize: 11, flex: "0 0 52px", paddingTop: 10 }}>Sur {BACK_COMPAT_PARENT[g.platform].replace("Xbox ", "")}</span>
-                <div style={{ display: "flex", border: `1px solid ${bdr}`, borderRadius: 8, overflow: "hidden" }}>
-                  {[["oui", true], ["non", false]].map(([label, val]) => (
-                    <button key={label} onClick={() => onEdit(g.id, "backCompat", val)} aria-pressed={!!g.backCompat === val}
-                      style={{ background: !!g.backCompat === val ? (val ? "#22c55e22" : "#ef444422") : "transparent", border: "none", color: !!g.backCompat === val ? (val ? "#22c55e" : "#ef4444") : mut, fontWeight: !!g.backCompat === val ? 600 : 400, fontSize: 12, padding: "0 16px", height: 36, cursor: "pointer" }}>{label}</button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Le prêt était enfermé dans un accordéon, et « rendu » se devinait
-                en vidant le champ du nom. */}
-            <div style={{ display: "flex", gap: 10, alignItems: "flex-start", marginTop: 12 }}>
               <span style={{ color: mut, fontSize: 11, flex: "0 0 52px", paddingTop: 10 }}>Prêt</span>
               {g.lentA ? (
                 <div style={{ flex: 1, minWidth: 0 }}>
@@ -486,6 +494,17 @@ function GameCard({ g, onEdit, onDelete, onEnrich, autoOpen }) {
                   {PLATFORMES_JEU.map(p => <option key={p} value={p}>{p}</option>)}
                 </select>
               ))}
+
+              {ligneEdition("Format", "format", (
+                <Segment valeur={brouillon.format} onChange={v => champ("format", v)}
+                  options={[["physique", "physique"], ["démat", "démat"]]} />
+              ), null, "div")}
+
+              {BACK_COMPAT_PARENT[brouillon.platform] && ligneEdition(
+                `Jouable sur ${BACK_COMPAT_PARENT[brouillon.platform].replace("Xbox ", "")}`, "backCompat", (
+                  <Segment valeur={brouillon.backCompat} onChange={v => champ("backCompat", v)}
+                    options={[["oui", true, "#22c55e"], ["non", false, "#ef4444"]]} />
+                ), "rétrocompatibilité", "div")}
 
               {ligneEdition("Genres", "genre", <input value={brouillon.genre} onChange={e => champ("genre", e.target.value)} placeholder="Action, Aventure…" style={champStyle("genre")} />, "séparés par des virgules")}
 

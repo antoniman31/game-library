@@ -183,6 +183,7 @@ export function brouillonDepuisJeu(g) {
   const i = g.infobox || {};
   return {
     title: g.title || "", platform: g.platform || PLATFORMES_JEU[0],
+    format: g.format === "démat" ? "démat" : "physique", backCompat: !!g.backCompat,
     genre: listeVersTexte(g.genre), metacritic: g.metacritic == null ? "" : String(g.metacritic),
     addedDate: g.addedDate || "", style: g.style || "", cover: g.cover || "",
     developers: listeVersTexte(i.developers), publishers: listeVersTexte(i.publishers),
@@ -201,6 +202,13 @@ export function validerEdition(b) {
   const titre = String(b.title || "").trim();
   if (!titre) erreurs.title = "Titre obligatoire";
   if (!PLATFORMES_JEU.includes(b.platform)) erreurs.platform = "Plateforme inconnue";
+
+  // Une plateforme sans console parente ne peut pas être rétrocompatible.
+  // Sans cette remise à zéro, faire passer un jeu de Xbox One à Xbox Series X
+  // laisse un backCompat à true que plus rien n'affiche — et que les
+  // statistiques continuent de compter parmi les jeux rétrocompatibles.
+  const format = b.format === "démat" ? "démat" : "physique";
+  const backCompat = !!b.backCompat && !!BACK_COMPAT_PARENT[b.platform];
 
   let mc = null;
   const mcBrut = String(b.metacritic || "").trim();
@@ -230,7 +238,8 @@ export function validerEdition(b) {
   return {
     erreurs,
     valeurs: {
-      title: titre, platform: b.platform, genre: listeDepuisTexte(b.genre),
+      title: titre, platform: b.platform, format, backCompat,
+      genre: listeDepuisTexte(b.genre),
       metacritic: mc, addedDate: date, style: String(b.style || "").trim(),
       cover: cover || null, infobox: infoVide ? null : info,
     },
