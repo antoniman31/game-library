@@ -16,7 +16,7 @@ import {
   joursDePret, pretEnRetard, isBackCompatPlatform,
   brouillonDepuisJeu, validerEdition, sortiesDepuisTexte, sortiesVersTexte, listeDepuisTexte,
   normTitle, rapprochementDouteux, jeuxSansScore,
-  rendreJeu, preterJeu, dureeEntreeHistorique, MAX_HISTORIQUE_PRET, aujourdhuiISO,
+  rendreJeu, preterJeu, annulerPret, supprimerEntreeHistorique, dureeEntreeHistorique, MAX_HISTORIQUE_PRET, aujourdhuiISO,
   BACK_COMPAT, XBOX_SERIES_CUTOFF, PRET_LONG_JOURS,
 } from "./model.js";
 import { ecouterMiseAJour } from "./maj.js";
@@ -374,4 +374,39 @@ test("un changement de contrôleur signale une mise à jour, sauf à la premièr
 
   // Sans service worker (navigateur qui n'en veut pas), rien ne casse.
   assert.doesNotThrow(() => ecouterMiseAJour(null, true, () => {})());
+});
+
+
+// ── Corriger une erreur de saisie ──────────────────────────────────────────
+// « Rendu » archive : c'est ce qu'on veut d'un vrai prêt qui se termine, et
+// c'est exactement ce qu'on ne veut pas d'un essai. Sans un geste qui efface
+// sans archiver, tester la fonction fausse les statistiques pour toujours.
+
+test("annuler un prêt ne laisse aucune trace, contrairement à le rendre", () => {
+  const g = jeu({ lentA: "Paul", lentDate: ilYA(3), lentRetourPrevu: "2030-01-01" });
+  const annule = annulerPret(g);
+  assert.equal(annule.lentA, null);
+  assert.equal(annule.lentDate, null);
+  assert.equal(annule.lentRetourPrevu, null);
+  assert.equal(annule.pretsPasses, undefined, "rien n'entre dans l'historique");
+  // Le même jeu « rendu » y entre, lui : c'est toute la différence.
+  assert.equal(rendreJeu(g).pretsPasses.length, 1);
+  const vide = jeu();
+  assert.equal(annulerPret(vide), vide, "sans prêt, rien ne bouge");
+});
+
+test("une entrée d'historique se supprime par sa position, pas par son nom", () => {
+  // La même personne peut emprunter plusieurs fois : le nom ne désigne rien.
+  const g = jeu({ pretsPasses: [
+    { a: "Paul", du: "2024-01-01", au: "2024-01-05" },
+    { a: "Paul", du: "2024-03-01", au: "2024-03-09" },
+    { a: "Léa", du: "2024-05-01", au: "2024-05-03" },
+  ] });
+  const apres = supprimerEntreeHistorique(g, 1);
+  assert.deepEqual(apres.pretsPasses.map(e => e.du), ["2024-01-01", "2024-05-01"]);
+  assert.equal(g.pretsPasses.length, 3, "l'original n'est pas modifié");
+  // Un index hors bornes ne doit rien casser ni rien supprimer au hasard.
+  assert.equal(supprimerEntreeHistorique(g, -1), g);
+  assert.equal(supprimerEntreeHistorique(g, 3), g);
+  assert.equal(supprimerEntreeHistorique(jeu(), 0).pretsPasses, undefined);
 });

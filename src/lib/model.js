@@ -98,6 +98,25 @@ export function rendreJeu(g) {
   };
 }
 
+// Efface un prêt SANS l'archiver : il n'a pas eu lieu.
+//
+// « ✓ Rendu » suppose un prêt réel qui se termine, et l'inscrit dans
+// l'historique — donc dans les statistiques. Un prêt créé par erreur, ou un
+// essai de la fonction, n'a rien à y faire : le corriger avec « Rendu »
+// fabrique une ligne fausse que plus rien n'efface.
+export function annulerPret(g) {
+  if (!g.lentA && !g.lentDate) return g;
+  return { ...g, lentA: null, lentDate: null, lentRetourPrevu: null };
+}
+
+// Retire une ligne de l'historique. Même raison : une erreur doit pouvoir
+// disparaître, sinon elle fausse les moyennes pour toujours.
+export function supprimerEntreeHistorique(g, index) {
+  const hist = g.pretsPasses || [];
+  if (index < 0 || index >= hist.length) return g;
+  return { ...g, pretsPasses: hist.filter((_, i) => i !== index) };
+}
+
 // Prête le jeu. `retourPrevu` vide ou absent -> pas de date convenue.
 export function preterJeu(g, nom, retourPrevu) {
   const n = String(nom || "").trim();

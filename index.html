@@ -26,11 +26,18 @@
     />
 
     <!-- Le thème est appliqué avant le premier rendu : posé par React dans un
-         effet, l'app s'affichait un instant en sombre avant de basculer en clair. -->
+         effet, l'app s'affichait un instant en sombre avant de basculer en clair.
+         Ce script duplique volontairement resoudreTheme() de src/lib/apparence.js :
+         il doit s'exécuter avant tout module, donc avant que le bundle existe.
+         Trois valeurs possibles dans gl_theme — "auto" (ou rien), "light",
+         "dark" — et l'automatique suit le réglage du téléphone. -->
     <script>
       try {
         var t = localStorage.getItem("gl_theme");
-        if (t === "light") document.documentElement.dataset.theme = "light";
+        if (t !== "light" && t !== "dark") {
+          t = matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+        }
+        document.documentElement.dataset.theme = t;
       } catch (e) { /* stockage indisponible : on reste sur le thème sombre */ }
     </script>
   </head>
