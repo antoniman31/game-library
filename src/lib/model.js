@@ -88,9 +88,14 @@ export const dureeEntreeHistorique = (e) =>
   Math.max(0, Math.round((new Date(e.au) - new Date(e.du)) / 86400000));
 
 // Rend le jeu et archive le prêt. Pure : retourne un nouvel objet.
+// `prevu` conserve la date de retour convenue au moment du prêt. Sans elle,
+// l'entrée archivée ne dit plus que la durée, et la question qui compte —
+// a-t-il rendu quand il l'avait dit ? — devient impossible à poser une fois le
+// jeu revenu. Les entrées d'avant n'en ont pas : elles sont simplement
+// exclues du calcul de ponctualité, pas fausses.
 export function rendreJeu(g) {
   if (!g.lentA || !g.lentDate) return g;
-  const entree = { a: g.lentA, du: g.lentDate, au: aujourdhuiISO() };
+  const entree = { a: g.lentA, du: g.lentDate, au: aujourdhuiISO(), prevu: g.lentRetourPrevu || null };
   return {
     ...g,
     lentA: null, lentDate: null, lentRetourPrevu: null,
