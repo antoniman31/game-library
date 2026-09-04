@@ -112,9 +112,12 @@ async function sauvegarde(request, env, origine) {
   const existant = await env.SYNC.get(cle);
   const base = request.headers.get("X-Sync-Base") || "";
 
-  if (existant !== null && base !== "force") {
-    let actuel = null;
+  let actuel = null;
+  if (existant !== null) {
     try { actuel = JSON.parse(existant); } catch { /* enregistrement illisible : on laisse écraser */ }
+  }
+
+  if (existant !== null && base !== "force") {
     if (actuel && actuel.updatedAt !== base) {
       return new Response(JSON.stringify({
         erreur: "La sauvegarde a changé depuis ta dernière synchronisation.",
@@ -127,10 +130,27 @@ async function sauvegarde(request, env, origine) {
 
   // L'horodatage est posé par le serveur : l'horloge d'un appareil peut être
   // fausse, et c'est lui qui arbitre « qui est le plus récent ».
+  //
+  // Il doit être STRICTEMENT croissant, parce qu'il ne sert pas qu'à afficher
+  // une date : c'est lui qui identifie la version, et donc qui décide si une
+  // base est périmée. `toISOString()` s'arrête à la milliseconde ; deux envois
+  // dans la même milliseconde produisaient le même horodatage, si bien qu'un
+  // appareil resté sur la version d'avant présentait une base par accident
+  // identique à la version courante. Le conflit passait inaperçu et son envoi
+  // écrasait silencieusement celui de l'autre appareil — exactement ce que ce
+  // mécanisme existe pour empêcher.
+  //
+  // Une milliseconde ajoutée suffit : l'horodatage reste une date lisible, et
+  // deux versions successives ne peuvent plus se confondre.
+  let quand = new Date().toISOString();
+  if (actuel && quand <= actuel.updatedAt) {
+    quand = new Date(new Date(actuel.updatedAt).getTime() + 1).toISOString();
+  }
+
   const enregistre = JSON.stringify({
     games: charge.games,
     count: charge.games.length,
-    updatedAt: new Date().toISOString(),
+    updatedAt: quand,
   });
   await env.SYNC.put(cle, enregistre);
   return new Response(enregistre, { status: 200, headers: { ...entetes, "Content-Type": "application/json" } });

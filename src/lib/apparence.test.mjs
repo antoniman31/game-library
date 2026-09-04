@@ -6,7 +6,7 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { resoudreTheme, modeSuivant, modeValide, MODES } from "./apparence.js";
+import { resoudreTheme, modeSuivant, modeValide, MODES, COULEUR_BARRE } from "./apparence.js";
 import { pertesDeReglages, messageDePerte, messageCodeSync } from "./garde-fous.js";
 
 test("seul le mode automatique dépend du téléphone", () => {
@@ -15,6 +15,30 @@ test("seul le mode automatique dépend du téléphone", () => {
   // Un choix explicite tient, quoi que fasse le système.
   assert.equal(resoudreTheme("light", true), "light");
   assert.equal(resoudreTheme("dark", false), "dark");
+});
+
+test("le noir profond décide quel sombre, jamais s'il fait sombre", () => {
+  // La variante ne doit pas transformer le clair en noir : c'est une variante
+  // du sombre, pas un quatrième mode.
+  assert.equal(resoudreTheme("light", true, true), "light");
+  assert.equal(resoudreTheme("auto", false, true), "light");
+  // Partout où le thème est sombre, elle s'applique — y compris quand c'est
+  // l'automatique qui a décidé du sombre, ce qui est le cas courant le soir.
+  assert.equal(resoudreTheme("dark", false, true), "oled");
+  assert.equal(resoudreTheme("auto", true, true), "oled");
+  // Sans la préférence, rien ne change pour qui ne la connaît pas.
+  assert.equal(resoudreTheme("dark", false), "dark");
+  assert.equal(resoudreTheme("auto", true), "dark");
+  // Le cycle du bouton d'en-tête reste à trois pressions.
+  assert.equal(MODES.length, 3);
+});
+
+test("la barre d'état a une couleur pour chaque thème rendu", () => {
+  // Un thème sans couleur laisserait le bleu du manifeste coiffer l'app.
+  for (const t of ["light", "dark", "oled"]) {
+    assert.match(COULEUR_BARRE[t], /^#[0-9a-f]{6}$/, `${t} n'a pas de couleur de barre`);
+  }
+  assert.equal(COULEUR_BARRE.oled, "#000000");
 });
 
 test("le bouton d'en-tête boucle sur les trois modes", () => {

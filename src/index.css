@@ -47,6 +47,37 @@
   --tap: 44px;
 }
 
+/* Noir profond, pour les dalles OLED.
+   Un pixel noir y est un pixel éteint : d'où le vrai noir, l'absence de halo
+   dans le noir complet, et un peu de batterie gagnée. Le sombre ordinaire est
+   un bleu nuit dont chaque pixel reste allumé.
+
+   Ce n'est pas un quatrième thème mais une variante du sombre : le mode
+   Automatique doit pouvoir y basculer le soir comme il basculait au bleu nuit.
+
+   Les cartes ne sont pas noires elles aussi — sans un écart, plus rien ne se
+   distingue. Elles gardent juste de quoi exister, et ce sont les bordures,
+   remontées, qui portent la structure. Le texte reste cassé plutôt que blanc
+   pur : sur du noir absolu, le blanc pur bave sur certaines dalles. */
+html[data-theme="oled"] {
+  color-scheme: dark;
+
+  --bg: #000000;
+  --hdr: #000000;
+  --card: #0b0b12;
+  --bdr: #23233d;
+  --txt: #e2e8f0;
+  --mut: #93a3bb;
+  --demat: #10243d;
+
+  --accent: #5493ff;
+  --ok: #22c55e;
+  --warn: #f59e0b;
+  --danger: #ef4444;
+  --platine: #a855f7;
+  --slate: #64748b;
+}
+
 html[data-theme="light"] {
   color-scheme: light;
 
