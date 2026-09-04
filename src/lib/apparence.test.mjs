@@ -17,28 +17,23 @@ test("seul le mode automatique dépend du téléphone", () => {
   assert.equal(resoudreTheme("dark", false), "dark");
 });
 
-test("le noir profond décide quel sombre, jamais s'il fait sombre", () => {
-  // La variante ne doit pas transformer le clair en noir : c'est une variante
-  // du sombre, pas un quatrième mode.
-  assert.equal(resoudreTheme("light", true, true), "light");
-  assert.equal(resoudreTheme("auto", false, true), "light");
-  // Partout où le thème est sombre, elle s'applique — y compris quand c'est
-  // l'automatique qui a décidé du sombre, ce qui est le cas courant le soir.
-  assert.equal(resoudreTheme("dark", false, true), "oled");
-  assert.equal(resoudreTheme("auto", true, true), "oled");
-  // Sans la préférence, rien ne change pour qui ne la connaît pas.
-  assert.equal(resoudreTheme("dark", false), "dark");
-  assert.equal(resoudreTheme("auto", true), "dark");
-  // Le cycle du bouton d'en-tête reste à trois pressions.
+test("le sombre est le noir profond, il n'y a plus de second sombre", () => {
+  // Le noir profond a d'abord été une préférence applicable par-dessus le
+  // sombre : un quatrième bouton pour un choix qui n'en est pas un. Entre un
+  // bleu nuit et un vrai noir, on tranche une fois.
   assert.equal(MODES.length, 3);
+  assert.equal(resoudreTheme("dark", false), "dark");
+  assert.equal(resoudreTheme("auto", true), "dark", "l'automatique y bascule le soir comme avant");
+  assert.equal(COULEUR_BARRE.dark, "#000000", "la barre d'état suit le fond");
+  // La valeur stockée n'a pas changé : un réglage déjà enregistré reste valide.
+  assert.equal(modeValide("dark"), "dark");
 });
 
 test("la barre d'état a une couleur pour chaque thème rendu", () => {
   // Un thème sans couleur laisserait le bleu du manifeste coiffer l'app.
-  for (const t of ["light", "dark", "oled"]) {
+  for (const t of ["light", "dark"]) {
     assert.match(COULEUR_BARRE[t], /^#[0-9a-f]{6}$/, `${t} n'a pas de couleur de barre`);
   }
-  assert.equal(COULEUR_BARRE.oled, "#000000");
 });
 
 test("le bouton d'en-tête boucle sur les trois modes", () => {

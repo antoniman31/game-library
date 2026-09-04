@@ -69,7 +69,7 @@ const EnTeteChamp = ({ nom, lien, quoi }) => (
 );
 
 export default function SettingsView({
-  modeTheme, setModeTheme, noirProfond, setNoirProfond,
+  modeTheme, setModeTheme,
   keys, setKeys, appliquerCles, testerCle, etatCles,
   sync, majSync, genererCode, syncEtat, setSyncEtat, onEnvoyer, onRecuperer,
   onExporter, onImporter,
@@ -111,7 +111,7 @@ export default function SettingsView({
     <div>
       {/* Trois boutons ne remplissent pas un onglet, et c'est le seul réglage
           qu'on change par envie : il reste au-dessus, visible d'emblée. */}
-      <Section titre="Apparence" aide="« Automatique » suit le réglage clair/sombre du téléphone, y compris quand il bascule tout seul le soir.">
+      <Section titre="Apparence" aide="« Automatique » suit le réglage clair/sombre du téléphone, y compris quand il bascule tout seul le soir. Le sombre est un vrai noir : sur une dalle OLED, un pixel noir est un pixel éteint.">
         <div style={{ display: "flex", gap: 6 }}>
           {MODES.map(m => (
             <Bouton key={m} pleinePlace aria-pressed={modeTheme === m}
@@ -120,21 +120,6 @@ export default function SettingsView({
               {ICONES[m]} {LIBELLES[m]}
             </Bouton>
           ))}
-        </div>
-
-        {/* Une variante du sombre, pas un quatrième mode : elle s'applique
-            aussi quand c'est l'automatique qui a choisi le sombre. */}
-        <div style={{ marginTop: 10, paddingTop: 10, borderTop: `1px solid ${bdr}` }}>
-          <Bouton pleinePlace aria-pressed={!!noirProfond}
-            intention={noirProfond ? "principal" : "neutre"}
-            onClick={() => setNoirProfond(v => !v)}>
-            ⬛ Noir profond {noirProfond ? "· activé" : ""}
-          </Bouton>
-          <p style={{ color: mut, fontSize: 11, lineHeight: 1.5, margin: "6px 0 0" }}>
-            Fond vraiment noir plutôt que bleu nuit. Sur un écran OLED, un pixel noir est un pixel éteint :
-            pas de halo dans le noir, et un peu de batterie gagnée. En échange, les cartes se distinguent
-            par leur liseré plutôt que par leur fond.
-          </p>
         </div>
       </Section>
 
@@ -194,7 +179,26 @@ export default function SettingsView({
                 {syncEtat.type === "ok" ? "✓ " : syncEtat.type === "ko" ? "✕ " : "⏳ "}{syncEtat.texte}
               </div>
             )}
-            {sync.majLe && syncEtat?.type !== "…" && (
+            {/* Les clés ne partent que si on le demande, et la conséquence est
+            écrite à côté : cocher change ce que le code de synchronisation
+            protège — une liste de jeux devient une liste d'identifiants. */}
+        <label style={{ display: "flex", gap: 8, alignItems: "flex-start", marginTop: 12, paddingTop: 12, borderTop: `1px solid ${bdr}`, cursor: "pointer" }}>
+          <input type="checkbox" checked={!!sync.avecCles}
+            onChange={e => majSync({ ...sync, avecCles: e.target.checked })}
+            style={{ marginTop: 2, width: 16, height: 16, accentColor: ACCENT, flexShrink: 0 }} />
+          <span>
+            <span style={{ color: txt, fontSize: 12, fontWeight: 600 }}>Inclure les clés des services</span>
+            <span style={{ display: "block", color: mut, fontSize: 11, lineHeight: 1.5, marginTop: 2 }}>
+              Un appareil neuf devient utilisable dès la saisie du code, sans aller rechercher les clés
+              sur trois sites. En échange, elles sont stockées en clair sur ton relais et le code de
+              synchronisation devient le seul verrou qui les protège — ne le partage plus en croyant
+              ne partager qu'une liste de jeux. L'adresse du relais, elle, ne part jamais : elle est
+              nécessaire pour joindre la sauvegarde.
+            </span>
+          </span>
+        </label>
+
+        {sync.majLe && syncEtat?.type !== "…" && (
               <div style={{ color: mut, fontSize: 10, marginTop: 6 }}>
                 Dernière synchronisation : {new Date(sync.majLe).toLocaleString("fr-FR")}
               </div>

@@ -102,6 +102,24 @@ test("envoi sans base sur une sauvegarde existante refusé", r.status === 409);
 r = await appel("PUT", "/sync", { code: CODE2, base: "force", corps: JSON.stringify({ games: [{ id: 5, title: "Choix assumé" }] }) });
 test("écrasement explicite accepté avec base=force", r.status === 200 && (await r.json()).count === 1);
 
+// ── Préférences ────────────────────────────────────────────────────────────
+// La sauvegarde transporte aussi l'apparence et, sur demande, les clés. Le
+// Worker ne juge pas leur contenu — c'est l'app qui valide ce qu'elle
+// reprend — mais il ne doit pas les perdre en route.
+const CODE4 = "PQRSTUVWXYZ23456789ABCDEFG";
+r = await appel("PUT", "/sync", { code: CODE4, corps: JSON.stringify({ games: [{ id: 1 }], prefs: { theme: "dark", oled: true } }) });
+const avecPrefs = await r.json();
+test("les préférences sont conservées", avecPrefs.prefs?.oled === true && avecPrefs.prefs?.theme === "dark");
+
+r = await appel("PUT", "/sync", { code: CODE4, corps: JSON.stringify({ games: [], prefs: "pas un objet" }) });
+test("des préférences qui ne sont pas un objet sont refusées", r.status === 400);
+
+// Un appareil resté sur l'ancienne version envoie sans `prefs` : celles qui
+// étaient là ne doivent pas disparaître pour autant.
+r = await appel("PUT", "/sync", { code: CODE4, base: avecPrefs.updatedAt, corps: JSON.stringify({ games: [{ id: 1 }, { id: 2 }] }) });
+const sansPrefs = await r.json();
+test("un envoi sans préférences ne les efface pas", sansPrefs.prefs?.oled === true, JSON.stringify(sansPrefs.prefs));
+
 // Méthode
 r = await appel("DELETE", "/sync", { code: CODE });
 test("DELETE refusé", r.status === 405);

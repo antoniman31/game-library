@@ -95,6 +95,15 @@ async function sauvegarde(request, env, origine) {
     return new Response(JSON.stringify({ erreur: "Le champ `games` doit être une liste." }),
       { status: 400, headers: { ...entetes, "Content-Type": "application/json" } });
   }
+  // `prefs` transporte l'apparence et, si l'appareil le demande, ses clés de
+  // service. Le Worker ne cherche pas à savoir ce qu'il y a dedans : c'est
+  // l'application qui valide ce qu'elle accepte de reprendre. Il vérifie juste
+  // que ce soit un objet, pour ne pas stocker n'importe quoi sous ce nom.
+  if (charge.prefs !== undefined
+      && (typeof charge.prefs !== "object" || charge.prefs === null || Array.isArray(charge.prefs))) {
+    return new Response(JSON.stringify({ erreur: "Le champ `prefs` doit être un objet." }),
+      { status: 400, headers: { ...entetes, "Content-Type": "application/json" } });
+  }
 
   // ── Concurrence ────────────────────────────────────────────────────────
   // Le PUT écrasait la sauvegarde sans condition. Deux appareils qui envoient
@@ -147,9 +156,14 @@ async function sauvegarde(request, env, origine) {
     quand = new Date(new Date(actuel.updatedAt).getTime() + 1).toISOString();
   }
 
+  // Une sauvegarde envoyée sans `prefs` — un appareil resté sur une version
+  // antérieure — ne doit pas effacer celles qui étaient déjà là.
+  const prefs = charge.prefs !== undefined ? charge.prefs : actuel?.prefs;
+
   const enregistre = JSON.stringify({
     games: charge.games,
     count: charge.games.length,
+    ...(prefs !== undefined ? { prefs } : {}),
     updatedAt: quand,
   });
   await env.SYNC.put(cle, enregistre);

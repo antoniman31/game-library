@@ -15,16 +15,25 @@
 :root {
   color-scheme: dark;
 
-  --bg: #0f0f1a;        /* fond de l'app et des accordéons */
-  --hdr: #12122a;       /* en-tête collant */
-  --card: #1a1a2e;      /* cartes, modales, champs de saisie */
-  --bdr: #2a2a4a;       /* toutes les bordures */
+  /* Noir profond, et non plus bleu nuit. Sur une dalle OLED un pixel noir est
+     un pixel éteint : d'où le vrai noir, l'absence de halo dans l'obscurité et
+     un peu de batterie gagnée. Le bleu nuit n'était qu'un second sombre, et un
+     second sombre ne se choisit pas — il occupait un bouton pour rien.
+
+     Les cartes ne sont pas noires elles aussi : sans écart, plus rien ne se
+     distingue. Elles gardent juste de quoi exister, et les bordures, remontées,
+     portent la structure. Le texte reste cassé plutôt que blanc pur, qui bave
+     sur certaines dalles. */
+  --bg: #000000;        /* fond de l'app et des accordéons */
+  --hdr: #000000;       /* en-tête collant */
+  --card: #0b0b12;      /* cartes, modales, champs de saisie */
+  --bdr: #23233d;       /* toutes les bordures */
   --txt: #e2e8f0;
   /* Éclairci depuis #64748b : le contraste tombait à 4,00:1 sur le fond et
      3,58:1 sur les cartes, pour du texte de 9 à 11 px. WCAG AA demande 4,5:1.
      Cette teinte donne 6,17:1 et 5,52:1. */
   --mut: #93a3bb;
-  --demat: #1e3a5f;     /* fond du badge « démat » */
+  --demat: #10243d;     /* fond du badge « démat » */
 
   --accent: #5493ff;
   --ok: #22c55e;
@@ -45,37 +54,6 @@
      de haut ; Material recommande 48 dp, on s'en approche sans faire exploser
      la densité de l'écran. */
   --tap: 44px;
-}
-
-/* Noir profond, pour les dalles OLED.
-   Un pixel noir y est un pixel éteint : d'où le vrai noir, l'absence de halo
-   dans le noir complet, et un peu de batterie gagnée. Le sombre ordinaire est
-   un bleu nuit dont chaque pixel reste allumé.
-
-   Ce n'est pas un quatrième thème mais une variante du sombre : le mode
-   Automatique doit pouvoir y basculer le soir comme il basculait au bleu nuit.
-
-   Les cartes ne sont pas noires elles aussi — sans un écart, plus rien ne se
-   distingue. Elles gardent juste de quoi exister, et ce sont les bordures,
-   remontées, qui portent la structure. Le texte reste cassé plutôt que blanc
-   pur : sur du noir absolu, le blanc pur bave sur certaines dalles. */
-html[data-theme="oled"] {
-  color-scheme: dark;
-
-  --bg: #000000;
-  --hdr: #000000;
-  --card: #0b0b12;
-  --bdr: #23233d;
-  --txt: #e2e8f0;
-  --mut: #93a3bb;
-  --demat: #10243d;
-
-  --accent: #5493ff;
-  --ok: #22c55e;
-  --warn: #f59e0b;
-  --danger: #ef4444;
-  --platine: #a855f7;
-  --slate: #64748b;
 }
 
 html[data-theme="light"] {
