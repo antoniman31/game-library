@@ -175,14 +175,35 @@ const brouillonValide = (p = {}) => ({
 test("un aller-retour brouillon → valeurs ne perd rien", () => {
   const g = jeu({
     title: "Halo Infinite", genre: ["FPS", "Action"], metacritic: 87, cover: "https://x/y.jpg",
+    platform: "Xbox One", format: "démat", backCompat: true,
     style: "Un jeu de tir.", infobox: { developers: ["343"], publishers: ["Xbox"], releases: [{ date: "2021-12-08", platform: "Xbox Series X" }], modes: ["Solo", "Multijoueur"], series: "Halo", follows: "Halo 5", followedBy: "" },
   });
   const { erreurs, valeurs } = validerEdition(brouillonDepuisJeu(g));
   assert.deepEqual(erreurs, {});
-  for (const k of ["title", "platform", "genre", "metacritic", "addedDate", "style", "cover"]) {
+  for (const k of ["title", "platform", "format", "backCompat", "genre", "metacritic", "addedDate", "style", "cover"]) {
     assert.deepEqual(valeurs[k], g[k], `${k} a changé en passant par le brouillon`);
   }
   assert.deepEqual(valeurs.infobox, g.infobox);
+});
+
+test("le format et la rétrocompatibilité passent par le brouillon", () => {
+  const g = jeu({ title: "Alan Wake", platform: "Xbox One", format: "démat", backCompat: true });
+  const { valeurs } = validerEdition(brouillonDepuisJeu(g));
+  assert.equal(valeurs.format, "démat");
+  assert.equal(valeurs.backCompat, true);
+  // Une valeur de format inconnue — un import bricolé, une vieille sauvegarde —
+  // retombe sur « physique » plutôt que d'entrer telle quelle dans le stock.
+  assert.equal(validerEdition(brouillonValide({ format: "cartouche" })).valeurs.format, "physique");
+});
+
+test("changer pour une plateforme sans console parente efface la rétrocompatibilité", () => {
+  // Le cas qui fausse les statistiques en silence : la ligne disparaît de
+  // l'écran, mais la valeur restait dans les données et continuait d'être
+  // comptée parmi les jeux rétrocompatibles.
+  // « Xbox Series X » n'a pas de console parente ; « Xbox One » a la sienne.
+  const b = brouillonValide({ platform: "Xbox Series X", backCompat: true });
+  assert.equal(validerEdition(b).valeurs.backCompat, false);
+  assert.equal(validerEdition({ ...b, platform: "Xbox One" }).valeurs.backCompat, true);
 });
 
 test("un titre vide est refusé", () => {
