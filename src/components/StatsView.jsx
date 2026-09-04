@@ -66,10 +66,15 @@ const Histogramme = ({ donnees, couleur = "#5493FF", etiquette = (c) => c }) => 
 // au survol, et l'écrire douze fois mangerait la place des chiffres.
 const moisCourt = (cle) => cle.slice(5);
 
+// Les deux côtés reviennent à la ligne. Ils tenaient chacun sur une seule,
+// ce qui allait tant que la droite était un nombre et la gauche un titre
+// court : « cité par The Legend of Zelda: Breath of the Wild » a poussé la
+// page entière hors de l'écran. Un titre de jeu n'a pas de longueur maximale,
+// et le tronquer perdrait précisément l'information qu'on vient lire ici.
 const Ligne = ({ gauche, droite, couleur = mut }) => (
   <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "baseline", padding: "6px 0", borderTop: `1px solid ${bdr}` }}>
-    <span style={{ color: txt, fontSize: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{gauche}</span>
-    <span style={{ color: couleur, fontSize: 11, flexShrink: 0 }}>{droite}</span>
+    <span style={{ color: txt, fontSize: 12, minWidth: 0, overflowWrap: "anywhere" }}>{gauche}</span>
+    <span style={{ color: couleur, fontSize: 11, textAlign: "right", minWidth: 0, overflowWrap: "anywhere" }}>{droite}</span>
   </div>
 );
 
@@ -334,7 +339,8 @@ function Collection({ games, jour }) {
       {s.seriesIncompletes.length > 0 && (
         <Bloc titre="Épisodes manquants">
           {s.seriesIncompletes.map(m => (
-            <Ligne key={m.titre} gauche={m.titre} droite={`cité par ${m.depuis.slice(0, 2).join(", ")}`} />
+            <Ligne key={m.titre} gauche={m.titre}
+              droite={`cité par ${m.depuis[0]}${m.depuis.length > 1 ? ` et ${m.depuis.length - 1} autre${m.depuis.length > 2 ? "s" : ""}` : ""}`} />
           ))}
           <div style={{ color: mut, fontSize: 10, marginTop: 8, lineHeight: 1.4 }}>
             Des jeux que tes fiches Wikidata désignent comme épisode précédent ou suivant, et que tu n'as pas.
