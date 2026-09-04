@@ -117,6 +117,41 @@ test("preflight autorise PUT et X-Sync-Code",
 r = await appel("GET", "/sync", { code: CODE, env: {} });
 test("sans espace KV -> 501 explicite", r.status === 501, (await r.json()).erreur);
 
+// Deux envois dans la même milliseconde.
+//
+// C'est le cas que le runner d'intégration continue a trouvé et que ma machine
+// ne produisait jamais : `toISOString()` s'arrête à la milliseconde, deux
+// versions successives portaient donc le même horodatage, et la base périmée
+// d'un autre appareil passait pour à jour. Son envoi écrasait l'autre en
+// silence. L'horloge est figée ici pour que le défaut ne dépende plus de la
+// vitesse de la machine qui exécute les tests.
+{
+  const VraieDate = Date;
+  const instant = VraieDate.now();
+  // Une fonction plutôt qu'une sous-classe : `new Date(...)` rend l'objet
+  // retourné par le constructeur, et on évite un `super()` qu'on ne peut pas
+  // appeler ici sans perdre l'instant figé.
+  function DateFigee(...a) { return a.length ? new VraieDate(...a) : new VraieDate(instant); }
+  DateFigee.now = () => instant;
+  DateFigee.parse = VraieDate.parse;
+  DateFigee.UTC = VraieDate.UTC;
+  DateFigee.prototype = VraieDate.prototype;
+  globalThis.Date = DateFigee;
+
+  const CODE3 = "23456789ABCDEFGHJKLMNPQRST";
+  const v1 = await (await appel("PUT", "/sync", { code: CODE3, corps: JSON.stringify({ games: [{ id: 1, title: "PC" }] }) })).json();
+  const v2 = await (await appel("PUT", "/sync", { code: CODE3, base: v1.updatedAt, corps: JSON.stringify({ games: [{ id: 1 }, { id: 2 }] }) })).json();
+  test("deux versions dans la même milliseconde restent distinctes", v1.updatedAt !== v2.updatedAt, `${v1.updatedAt} vs ${v2.updatedAt}`);
+
+  r = await appel("PUT", "/sync", { code: CODE3, base: v1.updatedAt, corps: JSON.stringify({ games: [{ id: 9, title: "Écrasement" }] }) });
+  test("horloge figée : la base périmée est quand même refusée", r.status === 409);
+
+  const apres = await (await appel("GET", "/sync", { code: CODE3 })).json();
+  test("horloge figée : la sauvegarde de l'autre appareil est intacte", apres.count === 2, `count=${apres.count}`);
+
+  globalThis.Date = VraieDate;
+}
+
 // Le relais d'origine n'a pas bougé
 r = await appel("GET", "/inconnu/x");
 test("chemin non relayable -> 404", r.status === 404);
