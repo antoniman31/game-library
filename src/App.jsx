@@ -81,11 +81,7 @@ export default function App() {
   const [systemeSombre, setSystemeSombre] = useState(
     () => typeof matchMedia === "function" && matchMedia("(prefers-color-scheme: dark)").matches
   );
-  // Le noir profond est une préférence à part, pas un mode : elle s'applique
-  // chaque fois que le thème est sombre, y compris quand c'est l'automatique
-  // qui l'a décidé.
-  const [noirProfond, setNoirProfond] = useState(() => lire("gl_oled") === "1");
-  const theme = resoudreTheme(modeTheme, systemeSombre, noirProfond);
+  const theme = resoudreTheme(modeTheme, systemeSombre);
   const [refreshing, setRefreshing] = useState(false);
   const [refreshProg, setRefreshProg] = useState(0);
   const [refreshMsg, setRefreshMsg] = useState(null); // bilan de fin de refresh (S1)
@@ -131,7 +127,6 @@ export default function App() {
     document.querySelector('meta[name="theme-color"]')?.setAttribute("content", COULEUR_BARRE[theme]);
   }, [theme]);
   useEffect(() => { ecrire("gl_theme", modeTheme); }, [modeTheme]);
-  useEffect(() => { ecrire("gl_oled", noirProfond ? "1" : ""); }, [noirProfond]);
 
   // Le téléphone peut basculer pendant que l'application est ouverte — la nuit
   // tombe, ou l'économiseur de batterie s'enclenche. En mode automatique, elle
@@ -363,7 +358,7 @@ export default function App() {
     // La sauvegarde ne portait que les jeux : un appareil neuf les retrouvait,
     // puis il fallait tout re-régler. Les clés n'y vont que si la case est
     // cochée sur cet appareil-ci.
-    const prefs = preferencesASauvegarder({ modeTheme, noirProfond, keys, avecCles: sync.avecCles });
+    const prefs = preferencesASauvegarder({ modeTheme, keys, avecCles: sync.avecCles });
     const r = await envoyer(keys.proxy, sync.code, games, base, prefs);
 
     // Un autre appareil a envoyé depuis notre dernière synchronisation. Écraser
@@ -433,7 +428,6 @@ export default function App() {
     const resume = resumePreferences(prefs);
     if (resume && window.confirm(`La sauvegarde contient aussi ${resume}.\n\nLes appliquer à cet appareil ?`)) {
       if (prefs.modeTheme) setModeTheme(prefs.modeTheme);
-      if (prefs.noirProfond !== undefined) setNoirProfond(prefs.noirProfond);
       if (prefs.keys) {
         const fusion = { ...keys, ...prefs.keys };
         setKeys(fusion);
@@ -738,7 +732,6 @@ export default function App() {
         {tab === "settings" && (
           <SettingsView
             modeTheme={modeTheme} setModeTheme={setModeTheme}
-            noirProfond={noirProfond} setNoirProfond={setNoirProfond}
             keys={keys} setKeys={setKeys}
             appliquerCles={{ actuelles: loadKeys(), appliquer: setApiKeys }}
             testerCle={testerCle} etatCles={keyTest}

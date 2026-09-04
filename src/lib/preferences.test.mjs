@@ -11,24 +11,24 @@ import { preferencesASauvegarder, preferencesRecues, resumePreferences } from ".
 const CLES = { rawg: "R", sgdb: "S", xbl: "X", proxy: "https://relais.workers.dev" };
 
 test("les clés ne partent que si l'appareil le demande", () => {
-  const sans = preferencesASauvegarder({ modeTheme: "dark", noirProfond: true, keys: CLES, avecCles: false });
-  assert.deepEqual(sans, { theme: "dark", oled: true });
+  const sans = preferencesASauvegarder({ modeTheme: "dark", keys: CLES, avecCles: false });
+  assert.deepEqual(sans, { theme: "dark" });
   assert.equal(sans.keys, undefined, "la case décochée n'envoie rien");
 
-  const avec = preferencesASauvegarder({ modeTheme: "auto", noirProfond: false, keys: CLES, avecCles: true });
+  const avec = preferencesASauvegarder({ modeTheme: "auto", keys: CLES, avecCles: true });
   assert.deepEqual(avec.keys, { rawg: "R", sgdb: "S", xbl: "X" });
 });
 
 test("l'adresse du relais ne part jamais", () => {
   // La restaurer depuis la sauvegarde serait circulaire : il faut déjà le
   // relais pour aller chercher la sauvegarde.
-  const p = preferencesASauvegarder({ modeTheme: "dark", noirProfond: false, keys: CLES, avecCles: true });
+  const p = preferencesASauvegarder({ modeTheme: "dark", keys: CLES, avecCles: true });
   assert.equal(p.keys.proxy, undefined);
   assert.equal(preferencesRecues({ keys: { proxy: "https://pirate.example" } }).keys, undefined);
 });
 
 test("une clé vide n'est pas envoyée et n'efface rien", () => {
-  const p = preferencesASauvegarder({ modeTheme: "dark", noirProfond: false, keys: { rawg: "R", sgdb: "   " }, avecCles: true });
+  const p = preferencesASauvegarder({ modeTheme: "dark", keys: { rawg: "R", sgdb: "   " }, avecCles: true });
   assert.deepEqual(p.keys, { rawg: "R" }, "une clé blanche ne voyage pas");
   // Reçue vide, elle ne doit pas retirer celle de cet appareil.
   assert.equal(preferencesRecues({ keys: { rawg: "" } }).keys, undefined);
@@ -40,10 +40,13 @@ test("une sauvegarde aberrante ne change aucun réglage", () => {
   assert.deepEqual(preferencesRecues(null), {});
   assert.deepEqual(preferencesRecues("texte"), {});
   assert.deepEqual(preferencesRecues([]), {});
-  assert.deepEqual(preferencesRecues({ theme: "arc-en-ciel", oled: "oui" }), {});
+  assert.deepEqual(preferencesRecues({ theme: "arc-en-ciel" }), {});
+  // `oled` venait d'une version où le noir profond se réglait à part : il
+  // n'est plus lu, comme n'importe quel champ inconnu.
+  assert.deepEqual(preferencesRecues({ oled: true }), {});
   assert.deepEqual(preferencesRecues({ keys: "volées" }), {});
   // Ce qu'on reconnaît passe.
-  assert.deepEqual(preferencesRecues({ theme: "light", oled: false }), { modeTheme: "light", noirProfond: false });
+  assert.deepEqual(preferencesRecues({ theme: "light" }), { modeTheme: "light" });
 });
 
 test("le résumé dit ce qui va être appliqué avant qu'on l'applique", () => {
