@@ -4,6 +4,12 @@
 //     node scripts/audit.mjs ma-sauvegarde.json
 //     node scripts/audit.mjs ma-sauvegarde.json --jaquettes   # vérifie les URLs (réseau)
 //     node scripts/audit.mjs ma-sauvegarde.json --strict      # code de retour ≠ 0
+//     node scripts/audit.mjs ma-sauvegarde.json --json        # pour comparer deux passages
+//
+// Par npm, `--json` demande `--silent` : sans lui la bannière de npm précède la
+// sortie sur le même flux, et le fichier obtenu n'est plus du JSON.
+//
+//     npm run --silent audit -- ma-sauvegarde.json --json > avant.json
 //
 // Pourquoi un fichier permanent plutôt qu'un script jeté après usage : chaque
 // vérification ci-dessous a été écrite un jour où quelque chose clochait —
@@ -25,9 +31,10 @@ const args = process.argv.slice(2);
 const fichier = args.find(a => !a.startsWith("--"));
 const strict = args.includes("--strict");
 const verifierJaquettes = args.includes("--jaquettes");
+const enJson = args.includes("--json");
 
 if (!fichier) {
-  console.error("Usage : node scripts/audit.mjs <export.json> [--jaquettes] [--strict]");
+  console.error("Usage : node scripts/audit.mjs <export.json> [--jaquettes] [--strict] [--json]");
   process.exit(2);
 }
 
@@ -46,8 +53,17 @@ if (!Array.isArray(brut)) {
 }
 const jeux = migrateGames(brut);
 
+// Trois niveaux, parce qu'un rapport à plat se lit mal : « 60 jeux sans
+// jaquette » y voisinait avec « identifiant en double », qui casse l'édition.
+// Le premier est une liste de courses, le second un défaut. Les mettre au même
+// rang, c'est obliger à tout relire pour trouver ce qui compte.
+//
+//   grave   quelque chose est cassé ou le sera
+//   moyen   une valeur qui n'aurait pas dû entrer, ou une incohérence
+//   info    un manque : légitime, à combler quand on veut
+const GRAVITES = ["grave", "moyen", "info"];
 const constats = [];
-const signaler = (categorie, detail) => constats.push({ categorie, detail });
+const signaler = (categorie, detail, gravite = "moyen") => constats.push({ gravite, categorie, detail });
 
 // ── Doublons ───────────────────────────────────────────────────────────────
 // Deux entrées du même titre SUR LA MÊME PLATEFORME : là c'est franchement
@@ -65,7 +81,7 @@ for (const [, groupe] of parCle) {
 // dessus, deux jeux au même id se modifient l'un l'autre.
 const vus = new Set();
 for (const g of jeux) {
-  if (vus.has(g.id)) signaler("id en double", `« ${g.title} » porte l'identifiant ${g.id}, déjà pris`);
+  if (vus.has(g.id)) signaler("id en double", `« ${g.title} » porte l'identifiant ${g.id}, déjà pris`, "grave");
   vus.add(g.id);
 }
 
@@ -81,14 +97,14 @@ for (const [libelle, predicat] of [
   ["sans note", g => !g.metacritic],
 ]) {
   const titres = sans(predicat);
-  if (titres.length) signaler(libelle, `${titres.length} : ${resume(titres)}`);
+  if (titres.length) signaler(libelle, `${titres.length} : ${resume(titres)}`, "info");
 }
 
 // ── Dates ──────────────────────────────────────────────────────────────────
 const aujourdhui = new Date().toISOString().slice(0, 10);
 for (const g of jeux) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(g.addedDate || "")) {
-    signaler("date d'ajout illisible", `« ${g.title} » : ${JSON.stringify(g.addedDate)}`);
+    signaler("date d'ajout illisible", `« ${g.title} » : ${JSON.stringify(g.addedDate)}`, "grave");
   } else if (g.addedDate > aujourdhui) {
     signaler("date d'ajout à venir", `« ${g.title} » : ${g.addedDate}`);
   }
@@ -113,11 +129,11 @@ for (const g of jeux) {
     signaler("note impossible", `« ${g.title} » : ${JSON.stringify(g.metacritic)}`);
   }
   if (g.lentDate && !estDateISO(g.lentDate)) {
-    signaler("date de prêt illisible", `« ${g.title} » : ${JSON.stringify(g.lentDate)}`);
+    signaler("date de prêt illisible", `« ${g.title} » : ${JSON.stringify(g.lentDate)}`, "grave");
   }
   for (const e of g.pretsPasses || []) {
     if (!estDateISO(e.du) || !estDateISO(e.au)) {
-      signaler("date d'historique illisible", `« ${g.title} » : ${e.a}, du ${JSON.stringify(e.du)} au ${JSON.stringify(e.au)}`);
+      signaler("date d'historique illisible", `« ${g.title} » : ${e.a}, du ${JSON.stringify(e.du)} au ${JSON.stringify(e.au)}`, "grave");
     }
   }
 }
@@ -126,12 +142,12 @@ for (const g of jeux) {
 for (const g of jeux) {
   // Un nom sans date, ou l'inverse : le prêt ne compte pas et n'alerte jamais.
   if (!!g.lentA !== !!g.lentDate) {
-    signaler("prêt incomplet", `« ${g.title} » : lentA=${JSON.stringify(g.lentA)}, lentDate=${JSON.stringify(g.lentDate)}`);
+    signaler("prêt incomplet", `« ${g.title} » : lentA=${JSON.stringify(g.lentA)}, lentDate=${JSON.stringify(g.lentDate)}`, "grave");
   }
   if (g.lentA && g.lentDate) {
     const jours = Math.floor((Date.now() - new Date(g.lentDate)) / 86400000);
     if (jours > PRET_LONG_JOURS * 3) {
-      signaler("prêt très ancien", `« ${g.title} » chez ${g.lentA} depuis ${jours} jours`);
+      signaler("prêt très ancien", `« ${g.title} » chez ${g.lentA} depuis ${jours} jours`, "info");
     }
     if (g.lentRetourPrevu && g.lentRetourPrevu < g.lentDate) {
       signaler("retour avant le prêt", `« ${g.title} » : prêté le ${g.lentDate}, à rendre le ${g.lentRetourPrevu}`);
@@ -142,7 +158,7 @@ for (const g of jeux) {
     // ajouterait un second constat pour le même défaut.
     if (!estDateISO(e.du) || !estDateISO(e.au)) continue;
     if (e.au < e.du) signaler("historique incohérent", `« ${g.title} » : ${e.a}, rendu (${e.au}) avant le prêt (${e.du})`);
-    if (dureeEntreeHistorique(e) > 365) signaler("prêt historique très long", `« ${g.title} » : ${e.a}, ${dureeEntreeHistorique(e)} jours`);
+    if (dureeEntreeHistorique(e) > 365) signaler("prêt historique très long", `« ${g.title} » : ${e.a}, ${dureeEntreeHistorique(e)} jours`, "info");
   }
 }
 
@@ -152,7 +168,7 @@ for (const g of jeux) {
 for (const g of jeux) {
   const serie = g.infobox?.series;
   if (serie && rapprochementDouteux(g.title, serie) && !normTitle(g.title).includes(normTitle(serie))) {
-    signaler("série éloignée du titre", `« ${g.title} » → série « ${serie} »`);
+    signaler("série éloignée du titre", `« ${g.title} » → série « ${serie} »`, "info");
   }
 }
 
@@ -172,18 +188,48 @@ if (verifierJaquettes) {
 }
 
 // ── Rapport ────────────────────────────────────────────────────────────────
+
+// --json : de quoi comparer deux passages. Après un gros import, la question
+// n'est pas « combien de constats » mais « lesquels sont apparus » — et ça, un
+// rapport en prose ne permet pas de le calculer.
+if (enJson) {
+  console.log(JSON.stringify({
+    fichier,
+    jeux: jeux.length,
+    constats,
+    parGravite: Object.fromEntries(GRAVITES.map(g => [g, constats.filter(c => c.gravite === g).length])),
+  }, null, 2));
+  process.exit(strict && constats.length ? 1 : 0);
+}
+
 console.log(`${jeux.length} jeu${jeux.length > 1 ? "x" : ""} analysé${jeux.length > 1 ? "s" : ""}.\n`);
 if (!constats.length) {
   console.log("Rien à signaler.");
   process.exit(0);
 }
 
-const parCategorie = new Map();
-for (const c of constats) (parCategorie.get(c.categorie) || parCategorie.set(c.categorie, []).get(c.categorie)).push(c.detail);
-for (const [categorie, details] of parCategorie) {
-  console.log(`${categorie} (${details.length})`);
-  for (const d of details) console.log(`  ${d}`);
+// Du plus grave au moins grave, et rien d'autre ne change l'ordre : ce qu'on
+// vient chercher doit être en haut, pas noyé au milieu des champs à compléter.
+const ETIQUETTES = { grave: "🔴 GRAVE", moyen: "🟠 À VÉRIFIER", info: "⚪ POUR INFORMATION" };
+for (const gravite of GRAVITES) {
+  const duNiveau = constats.filter(c => c.gravite === gravite);
+  if (!duNiveau.length) continue;
+
+  console.log(`${ETIQUETTES[gravite]} — ${duNiveau.length} constat(s)`);
+  const parCategorie = new Map();
+  for (const c of duNiveau) {
+    if (!parCategorie.has(c.categorie)) parCategorie.set(c.categorie, []);
+    parCategorie.get(c.categorie).push(c.detail);
+  }
+  for (const [categorie, details] of parCategorie) {
+    console.log(`  ${categorie} (${details.length})`);
+    for (const d of details) console.log(`    ${d}`);
+  }
   console.log("");
 }
-console.log(`${constats.length} constat(s). Un constat n'est pas forcément un défaut.`);
-process.exit(strict ? 1 : 0);
+
+const graves = constats.filter(c => c.gravite === "grave").length;
+console.log(`${constats.length} constat(s)${graves ? `, dont ${graves} grave(s)` : ""}. Un constat n'est pas forcément un défaut.`);
+// --strict échoue sur n'importe quel constat ; sans lui, seul le grave compte,
+// puisqu'un champ vide n'est pas une raison de faire échouer quoi que ce soit.
+process.exit(strict && constats.length ? 1 : 0);
