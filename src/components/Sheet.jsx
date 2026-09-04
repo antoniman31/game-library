@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useId, useRef } from "react";
 import { card, bdr, txt } from "../lib/theme.js";
 
 // Panneau glissant depuis le bas.
@@ -21,8 +21,32 @@ export default function Sheet({ title, onClose, children }) {
   // évite ce va-et-vient tout en appelant toujours la version courante.
   const fermerRef = useRef(onClose);
   fermerRef.current = onClose;
+  const panneauRef = useRef(null);
+  const titreId = useId();
   useEffect(() => {
-    const surTouche = (e) => { if (e.key === "Escape") fermerRef.current(); };
+    // Le focus entre dans le panneau et n'en sort plus tant qu'il est ouvert.
+    // Sans ça, Tab continuait de parcourir la page cachée derrière : on tabulait
+    // dans une liste qu'on ne voyait pas, et le lecteur d'écran annonçait des
+    // boutons hors du panneau qu'on venait d'ouvrir.
+    const rendreLeFocus = document.activeElement;
+    const focalisables = () => [...panneauRef.current.querySelectorAll(
+      'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+    )].filter(el => el.offsetParent !== null);
+    // Le panneau lui-même reçoit le focus de départ plutôt que son premier
+    // bouton : ouvrir « Filtres » ne doit pas donner l'air d'avoir déjà choisi.
+    panneauRef.current?.focus();
+
+    const surTouche = (e) => {
+      if (e.key === "Escape") { fermerRef.current(); return; }
+      if (e.key !== "Tab") return;
+      const cibles = focalisables();
+      if (!cibles.length) { e.preventDefault(); return; }
+      const premier = cibles[0], dernier = cibles[cibles.length - 1];
+      const courant = document.activeElement;
+      if (!panneauRef.current.contains(courant)) { e.preventDefault(); premier.focus(); return; }
+      if (e.shiftKey && courant === premier) { e.preventDefault(); dernier.focus(); }
+      else if (!e.shiftKey && courant === dernier) { e.preventDefault(); premier.focus(); }
+    };
     document.addEventListener("keydown", surTouche);
     // Sur <html>, pas sur <body> : `min-height: 100vh` est posé sur les deux,
     // et c'est l'élément racine qui défile ici — `document.scrollingElement` le
@@ -33,6 +57,9 @@ export default function Sheet({ title, onClose, children }) {
     return () => {
       document.removeEventListener("keydown", surTouche);
       racine.style.overflow = avant;
+      // Refermer doit ramener là d'où l'on vient, sinon le focus repart au
+      // début du document et il faut retraverser toute la page.
+      if (rendreLeFocus instanceof HTMLElement) rendreLeFocus.focus();
     };
   }, []);
 
@@ -42,22 +69,31 @@ export default function Sheet({ title, onClose, children }) {
       onClick={onClose}
     >
       <div
+        ref={panneauRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titreId}
+        tabIndex={-1}
         style={{
-          background: card, border: `1px solid ${bdr}`, borderRadius: "16px 16px 0 0",
+          background: card, border: `1px solid ${bdr}`,
+          borderRadius: "var(--r-lg) var(--r-lg) 0 0",
           padding: "8px 20px calc(20px + var(--safe-bottom))", width: "100%", maxWidth: 500,
-          margin: "0 auto", maxHeight: "85vh", overflowY: "auto",
+          // `dvh` et non `vh` : sur mobile, `vh` se calcule sur la fenêtre
+          // barre d'adresse rétractée, si bien que le bas du panneau — donc ses
+          // boutons — passait sous cette barre tant qu'elle était dépliée.
+          margin: "0 auto", maxHeight: "85dvh", overflowY: "auto", outline: "none",
         }}
         onClick={e => e.stopPropagation()}
       >
         {/* La poignée dit d'où vient le panneau et par où il repart. */}
-        <div style={{ width: 36, height: 4, borderRadius: 2, background: bdr, margin: "0 auto 12px" }} />
+        <div style={{ width: 36, height: 4, borderRadius: "var(--r-xs)", background: bdr, margin: "0 auto 12px" }} />
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-          <div style={{ fontWeight: 700, fontSize: 15, color: txt }}>{title}</div>
+          <div id={titreId} style={{ fontWeight: 700, fontSize: 15, color: txt }}>{title}</div>
           <button
             onClick={onClose}
             aria-label="Fermer"
             style={{
-              background: "transparent", border: `1px solid ${bdr}`, color: txt, borderRadius: 8,
+              background: "transparent", border: `1px solid ${bdr}`, color: txt, borderRadius: "var(--r-sm)",
               width: "var(--tap)", height: "var(--tap)", fontSize: 15, cursor: "pointer", flexShrink: 0,
             }}
           >

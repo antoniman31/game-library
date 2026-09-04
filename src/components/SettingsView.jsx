@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { card, bdr, txt, mut, accent, accentDoux, ok, danger } from "../lib/theme.js";
+import { card, bdr, txt, mut, accent, accentDoux, accentFond, ok, danger } from "../lib/theme.js";
 import { MODES, LIBELLES, ICONES } from "../lib/apparence.js";
 import { pertesDeReglages, messageDePerte, messageCodeSync, CONSEQUENCES } from "../lib/garde-fous.js";
 import ChampProtege from "./ChampProtege.jsx";
@@ -31,15 +31,24 @@ import SousOnglets from "./SousOnglets.jsx";
 const ACCENT = accent;
 
 const Section = ({ titre, aide, children }) => (
-  <section style={{ background: card, border: `1px solid ${bdr}`, borderRadius: 10, padding: 14, marginBottom: 12 }}>
+  <section style={{ background: card, border: `1px solid ${bdr}`, borderRadius: "var(--r-md)", padding: 14, marginBottom: 12 }}>
     <h2 style={{ color: txt, fontWeight: 600, fontSize: 13, margin: 0 }}>{titre}</h2>
     {aide && <p style={{ color: mut, fontSize: 11, lineHeight: 1.5, margin: "4px 0 0" }}>{aide}</p>}
     <div style={{ marginTop: 12 }}>{children}</div>
   </section>
 );
 
+// L'application avait trois grammaires pour dire « c'est ce bouton-là » :
+// l'aplat bleu dans l'en-tête et les fenêtres d'ajout, le contour teinté ici,
+// et un troisième dans les filtres. Von Restorff ne fonctionne que si la forme
+// remarquable est la même partout : l'aplat est l'action principale, partout.
+//
+// Le contour teinté n'a pas disparu, il a changé de métier : il ne dit plus
+// « fais ceci », il dit « c'est ce qui est choisi » — le mode de thème actif,
+// exactement comme un sous-onglet sélectionné.
 const STYLES_BOUTON = {
-  principal: { background: accentDoux, border: `1px solid ${ACCENT}`, color: ACCENT, fontWeight: 600 },
+  principal: { background: accentFond, border: "1px solid transparent", color: "#fff", fontWeight: 600 },
+  selection: { background: accentDoux, border: `1px solid ${ACCENT}`, color: ACCENT, fontWeight: 600 },
   neutre: { background: "transparent", border: `1px solid ${bdr}`, color: txt, fontWeight: 400 },
   danger: { background: "transparent", border: `1px solid ${danger}`, color: danger, fontWeight: 600 },
 };
@@ -49,7 +58,7 @@ const Bouton = ({ intention = "neutre", pleinePlace, disabled, children, ...rest
     disabled={disabled}
     style={{
       ...STYLES_BOUTON[intention],
-      minHeight: "var(--tap)", padding: "0 14px", borderRadius: 8, fontSize: 12,
+      minHeight: "var(--tap)", padding: "0 14px", borderRadius: "var(--r-sm)", fontSize: 12,
       cursor: disabled ? "default" : "pointer", opacity: disabled ? 0.45 : 1,
       whiteSpace: "nowrap", flex: pleinePlace ? 1 : "0 0 auto", fontFamily: "inherit",
     }}
@@ -60,11 +69,25 @@ const Bouton = ({ intention = "neutre", pleinePlace, disabled, children, ...rest
 // Le nom d'un champ, éventuellement suivi du lien pour obtenir la valeur et
 // de ce qu'elle sert. Les clés portaient cet en-tête, le code de
 // synchronisation et le relais en avaient chacun un différent.
+// « obtenir ↗ » était un lien de 13 px de haut posé au fil du texte : la cible
+// la plus petite de l'application, pour l'action qui sort de l'application.
+// Il passe à droite, à la hauteur des autres commandes, et l'explication prend
+// la ligne du dessous plutôt que de se disputer la première.
 const EnTeteChamp = ({ nom, lien, quoi }) => (
-  <div style={{ display: "flex", alignItems: "baseline", gap: 6, flexWrap: "wrap", marginBottom: 4 }}>
-    <span style={{ color: txt, fontSize: 12, fontWeight: 600 }}>{nom}</span>
-    {lien && <a href={lien} target="_blank" rel="noreferrer" style={{ color: ACCENT, fontSize: 11, textDecoration: "none" }}>obtenir ↗</a>}
-    {quoi && <span style={{ color: mut, fontSize: 11, lineHeight: 1.4 }}>{quoi}</span>}
+  <div style={{ marginBottom: 4 }}>
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "var(--ecart-tap)", minHeight: "var(--tap-min)" }}>
+      <span style={{ color: txt, fontSize: 12, fontWeight: 600, minWidth: 0 }}>{nom}</span>
+      {lien && (
+        <a href={lien} target="_blank" rel="noreferrer"
+          style={{
+            display: "inline-flex", alignItems: "center", flexShrink: 0,
+            minHeight: "var(--tap-min)", padding: "0 10px",
+            border: `1px solid ${bdr}`, borderRadius: "var(--r-sm)",
+            color: ACCENT, fontSize: 11, textDecoration: "none",
+          }}>obtenir ↗</a>
+      )}
+    </div>
+    {quoi && <span style={{ display: "block", color: mut, fontSize: 11, lineHeight: 1.4 }}>{quoi}</span>}
   </div>
 );
 
@@ -112,10 +135,10 @@ export default function SettingsView({
       {/* Trois boutons ne remplissent pas un onglet, et c'est le seul réglage
           qu'on change par envie : il reste au-dessus, visible d'emblée. */}
       <Section titre="Apparence" aide="« Automatique » suit le réglage clair/sombre du téléphone, y compris quand il bascule tout seul le soir. Le sombre est un vrai noir : sur une dalle OLED, un pixel noir est un pixel éteint.">
-        <div style={{ display: "flex", gap: 6 }}>
+        <div style={{ display: "flex", gap: "var(--ecart-tap)" }}>
           {MODES.map(m => (
             <Bouton key={m} pleinePlace aria-pressed={modeTheme === m}
-              intention={modeTheme === m ? "principal" : "neutre"}
+              intention={modeTheme === m ? "selection" : "neutre"}
               onClick={() => setModeTheme(m)}>
               {ICONES[m]} {LIBELLES[m]}
             </Bouton>
@@ -158,7 +181,7 @@ export default function SettingsView({
               {/* La saisie s'applique à la validation : sinon effacer pour
                   retaper détruit la valeur au premier caractère supprimé. */}
               {codeSaisi !== null && codeSaisi.trim() !== sync.code && (
-                <div style={{ display: "flex", gap: 6, marginTop: 6, alignItems: "center" }}>
+                <div style={{ display: "flex", gap: "var(--ecart-tap)", marginTop: 6, alignItems: "center" }}>
                   <Bouton intention="principal" onClick={validerCode}>Appliquer</Bouton>
                   <Bouton onClick={() => setCodeSaisi(null)}>Annuler</Bouton>
                 </div>
@@ -199,7 +222,7 @@ export default function SettingsView({
         </label>
 
         {sync.majLe && syncEtat?.type !== "…" && (
-              <div style={{ color: mut, fontSize: 10, marginTop: 6 }}>
+              <div style={{ color: mut, fontSize: 11, marginTop: 6 }}>
                 Dernière synchronisation : {new Date(sync.majLe).toLocaleString("fr-FR")}
               </div>
             )}
@@ -229,7 +252,7 @@ export default function SettingsView({
                 actions={
                   <>
                     <Bouton disabled={!keys[id]} onClick={() => testerCle(id)}>Tester</Bouton>
-                    <span aria-live="polite" style={{ fontSize: 14, width: 18, textAlign: "center", flexShrink: 0 }}>
+                    <span aria-live="polite" style={{ fontSize: 15, width: 18, textAlign: "center", flexShrink: 0 }}>
                       {etatCles[id] === "ok" ? "✅" : etatCles[id] === "ko" ? "❌" : etatCles[id] === "…" ? "⏳" : ""}
                     </span>
                   </>

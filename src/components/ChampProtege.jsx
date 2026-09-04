@@ -18,8 +18,8 @@ import { messageDeverrouillage, messageSuppression } from "../lib/garde-fous.js"
 const ACCENT = accent;
 
 const bouton = (couleur) => ({
-  minHeight: 34, padding: "0 12px", background: "transparent",
-  border: `1px solid ${couleur}`, color: couleur, borderRadius: 8,
+  minHeight: "var(--tap-min)", padding: "0 12px", background: "transparent",
+  border: `1px solid ${couleur}`, color: couleur, borderRadius: "var(--r-sm)",
   fontSize: 11, cursor: "pointer", whiteSpace: "nowrap", fontFamily: "inherit",
 });
 
@@ -40,9 +40,9 @@ export default function ChampProtege({
       readOnly={verrou}
       onChange={e => onChange(e.target.value)}
       style={{
-        width: "100%", boxSizing: "border-box", background: bg,
-        border: `1px solid ${bdr}`, borderRadius: 8, color: verrou ? mut : txt,
-        padding: "9px 10px", fontSize: 12, outline: "none",
+        width: "100%", boxSizing: "border-box", background: bg, minHeight: "var(--tap-min)",
+        border: `1px solid ${bdr}`, borderRadius: "var(--r-sm)", color: verrou ? mut : txt,
+        padding: "9px 10px", fontSize: 12,
         fontFamily: "ui-monospace, monospace", cursor: verrou ? "default" : "text",
       }}
     />
@@ -50,7 +50,7 @@ export default function ChampProtege({
 
   return (
     <div>
-      <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+      <div style={{ display: "flex", gap: "var(--ecart-tap)", alignItems: "center" }}>
         <div style={{ flex: 1, minWidth: 0, position: "relative" }}>
           {champ}
           {/* Dire que c'est verrouillé, sinon le champ passe pour cassé. */}
@@ -62,7 +62,7 @@ export default function ChampProtege({
       </div>
 
       {renseigne && (
-        <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
+        <div style={{ display: "flex", gap: "var(--ecart-tap)", marginTop: 6 }}>
           {verrou ? (
             <>
               <button style={bouton(ACCENT)} onClick={() => {

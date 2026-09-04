@@ -7,6 +7,7 @@ import ImportModal from "./components/ImportModal.jsx";
 import FiltersSheet from "./components/FiltersSheet.jsx";
 import ActionsSheet from "./components/ActionsSheet.jsx";
 import ScoresSheet from "./components/ScoresSheet.jsx";
+import Sheet from "./components/Sheet.jsx";
 import StatsView from "./components/StatsView.jsx";
 import SettingsView from "./components/SettingsView.jsx";
 
@@ -35,11 +36,24 @@ const RATTRAPAGE_MAX = 12;
 
 const ACCENT = accent;
 
+// Croix de fermeture des bannières. Elles étaient dessinées sans cadre, sans
+// remplissage et sans marge intérieure : la cible réelle valait la taille du
+// glyphe, une dizaine de pixels de large, là où WCAG 2.5.8 demande 24 px et
+// Material 48 dp. Les monter à 48 doublerait la hauteur d'une bannière ;
+// `--tap-min` est le plancher retenu. Le glyphe ne bouge pas — c'est la zone
+// sensible autour de lui qui grandit.
+const btnFermer = {
+  minWidth: "var(--tap-min)", minHeight: "var(--tap-min)", flexShrink: 0,
+  display: "inline-flex", alignItems: "center", justifyContent: "center",
+  background: "transparent", border: "none", borderRadius: "var(--r-sm)",
+  fontSize: 15, cursor: "pointer", lineHeight: 1, padding: 0,
+};
+
 // Bouton d'en-tête : même gabarit pour tous, à la hauteur de cible tactile.
 const btnHdr = {
   minHeight: "var(--tap)", minWidth: "var(--tap)", background: "transparent",
-  border: `1px solid ${bdr}`, color: txt, borderRadius: 10, padding: "0 12px",
-  fontSize: 14, cursor: "pointer", display: "inline-flex", alignItems: "center",
+  border: `1px solid ${bdr}`, color: txt, borderRadius: "var(--r-md)", padding: "0 12px",
+  fontSize: 15, cursor: "pointer", display: "inline-flex", alignItems: "center",
   justifyContent: "center", gap: 6, flexShrink: 0,
 };
 
@@ -99,6 +113,8 @@ export default function App() {
   const scoresCancelRef = useRef(false);
   const [deleted, setDeleted] = useState(null); // { game, index } pour l'undo
   const [alerteStockage, setAlerteStockage] = useState(null);
+  // Fichier lu et validé, en attente de la décision « remplacer ou fusionner ».
+  const [importChoix, setImportChoix] = useState(null);
   const [majDispo, setMajDispo] = useState(false);
   const [sync, setSync] = useState(() => chargerSync());
   const [syncEtat, setSyncEtat] = useState(null);   // { type: "ok" | "ko" | "…", texte }
@@ -469,21 +485,23 @@ export default function App() {
       if (!jeux) { alert("Ce fichier ne contient pas une liste de jeux."); return; }
       if (!jeux.length) { alert(`Aucun jeu exploitable dans ce fichier${rejetes ? ` (${rejetes} entrée(s) ignorée(s))` : ""}.`); return; }
 
-      // Une valeur ramenée à une valeur sûre — date illisible, plateforme
-      // inconnue, note en toutes lettres — se dit : sans ça, un fichier abîmé
-      // s'importe comme un fichier sain et la correction ne se remarque que
-      // plus tard, sur une fiche qui a changé toute seule.
-      const avertissement = (rejetes ? `\n\n⚠️ ${rejetes} entrée(s) sans titre ont été ignorées.` : "")
-        + (corriges ? `\n\n⚠️ ${corriges} entrée(s) contenaient des valeurs illisibles, ramenées à des valeurs sûres.` : "");
-      const replace = window.confirm(
-        `Fichier : ${jeux.length} jeu(x) valides.${avertissement}\n\nOK = REMPLACER toute la bibliothèque\nAnnuler = FUSIONNER (ajoute uniquement les jeux absents)`
-      );
-      if (replace) setGames(jeux);
-      else setGames(gs => { const ids = new Set(gs.map(x => x.id)); return [...gs, ...jeux.filter(x => !ids.has(x.id))]; });
+      // La question se posait dans un confirm() : « OK = REMPLACER, Annuler =
+      // FUSIONNER ». Or Annuler veut dire « ne rien faire » partout ailleurs,
+      // et Échap ferme sur Annuler — on croyait sortir de la boîte, on
+      // déclenchait une fusion. Deux actions distinctes ne tiennent pas dans un
+      // bouton binaire : elles ont chacune la leur, et annuler n'importe rien.
+      setImportChoix({ jeux, rejetes, corriges });
     };
     reader.onerror = () => alert("Lecture du fichier impossible.");
     reader.readAsText(file);
     e.target.value = "";
+  };
+
+  const remplacerParImport = () => { setGames(importChoix.jeux); setImportChoix(null); };
+  const fusionnerImport = () => {
+    const ids = new Set(games.map(x => x.id));
+    setGames(gs => [...gs, ...importChoix.jeux.filter(x => !ids.has(x.id))]);
+    setImportChoix(null);
   };
 
   const filtered = useMemo(() => {
@@ -540,7 +558,7 @@ export default function App() {
       onClick={() => setVisibleCount(c => c + PAGE_SIZE)}
       style={{
         width: "100%", minHeight: "var(--tap)", marginTop: 12, background: "transparent",
-        border: `1px solid ${bdr}`, color: txt, borderRadius: 10, fontSize: 13, cursor: "pointer",
+        border: `1px solid ${bdr}`, color: txt, borderRadius: "var(--r-md)", fontSize: 13, cursor: "pointer",
       }}
     >
       Charger {Math.min(PAGE_SIZE, restants)} de plus ({restants} restant{restants > 1 ? "s" : ""})
@@ -562,10 +580,10 @@ export default function App() {
       <div style={{ background: hdr, borderBottom: `1px solid ${bdr}`, padding: "calc(12px + var(--safe-top)) calc(14px + var(--safe-right)) 12px calc(14px + var(--safe-left))", position: "sticky", top: 0, zIndex: 100 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, marginBottom: 10 }}>
           <div style={{ minWidth: 0 }}>
-            <div style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 11, color: ACCENT, lineHeight: 1.4 }}>GAME LIBRARY</div>
+            <h1 style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 11, color: ACCENT, lineHeight: 1.4, margin: 0, fontWeight: 400 }}>GAME LIBRARY</h1>
             {/* La ligne répond aux deux questions que l'application sert à poser :
                 combien de jeux, et combien sont dehors. */}
-            <div style={{ fontSize: 10, color: mut, marginTop: 3 }}>
+            <div style={{ fontSize: 11, color: mut, marginTop: 3 }}>
               {stats.total} jeu{stats.total > 1 ? "x" : ""}{stats.pretes > 0 ? ` · ${stats.pretes} prêté${stats.pretes > 1 ? "s" : ""}` : ""}
               {stats.enRetard > 0 ? <span style={{ color: warn }}> · {stats.enRetard} en retard</span> : null}
             </div>
@@ -591,53 +609,57 @@ export default function App() {
         </div>
 
         {alerteStockage && (
-          <div style={{ display: "flex", alignItems: "flex-start", gap: 8, background: dangerDoux, border: `1px solid ${danger}`, borderRadius: 8, padding: "8px 10px", marginBottom: 10 }}>
+          <div style={{ display: "flex", alignItems: "flex-start", gap: 8, background: dangerDoux, border: `1px solid ${danger}`, borderRadius: "var(--r-sm)", padding: "8px 10px", marginBottom: 10 }}>
             <div style={{ flex: 1, minWidth: 0, color: danger, fontSize: 11, fontWeight: 600, lineHeight: 1.4 }}>⚠️ {alerteStockage}</div>
-            <button onClick={() => setAlerteStockage(null)} aria-label="Masquer" style={{ background: "transparent", border: "none", color: danger, fontSize: 14, cursor: "pointer", lineHeight: 1, padding: 0 }}>✕</button>
+            <button onClick={() => setAlerteStockage(null)} aria-label="Masquer" style={{ ...btnFermer, color: danger }}>✕</button>
           </div>
         )}
 
         {scoresEnCours && (
-          <div style={{ display: "flex", alignItems: "center", gap: 8, background: card, border: `1px solid ${bdr}`, borderRadius: 8, padding: "8px 10px", marginBottom: 10 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, background: card, border: `1px solid ${bdr}`, borderRadius: "var(--r-sm)", padding: "8px 10px", marginBottom: 10 }}>
             <div style={{ flex: 1, minWidth: 0, color: txt, fontSize: 11, fontWeight: 600 }}>Recherche des notes… {scoresProg}/{scoresTotal}</div>
-            <button onClick={annulerScores} style={{ background: dangerDoux, border: `1px solid ${danger}`, color: danger, borderRadius: 5, padding: "3px 8px", fontSize: 10, cursor: "pointer" }}>Arrêter</button>
+            <button onClick={annulerScores} style={{ background: dangerDoux, border: `1px solid ${danger}`, color: danger, borderRadius: "var(--r-xs)", padding: "3px 8px", fontSize: 11, cursor: "pointer" }}>Arrêter</button>
           </div>
         )}
 
         {scoresBilan?.message && (
-          <div style={{ display: "flex", alignItems: "flex-start", gap: 8, background: card, border: `1px solid ${bdr}`, borderRadius: 8, padding: "8px 10px", marginBottom: 10 }}>
+          <div style={{ display: "flex", alignItems: "flex-start", gap: 8, background: card, border: `1px solid ${bdr}`, borderRadius: "var(--r-sm)", padding: "8px 10px", marginBottom: 10 }}>
             <div style={{ flex: 1, minWidth: 0, color: txt, fontSize: 11, fontWeight: 600 }}>{scoresBilan.message}</div>
-            <button onClick={() => setScoresBilan(null)} aria-label="Masquer" style={{ background: "transparent", border: "none", color: mut, fontSize: 14, cursor: "pointer", lineHeight: 1, padding: 0 }}>✕</button>
+            <button onClick={() => setScoresBilan(null)} aria-label="Masquer" style={{ ...btnFermer, color: mut }}>✕</button>
           </div>
         )}
 
         {refreshMsg && (
-          <div style={{ display: "flex", alignItems: "flex-start", gap: 8, background: card, border: `1px solid ${bdr}`, borderRadius: 8, padding: "8px 10px", marginBottom: 10 }}>
+          <div style={{ display: "flex", alignItems: "flex-start", gap: 8, background: card, border: `1px solid ${bdr}`, borderRadius: "var(--r-sm)", padding: "8px 10px", marginBottom: 10 }}>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ color: txt, fontSize: 11, fontWeight: 600 }}>{refreshMsg.text}</div>
-              {refreshMsg.notFound.length > 0 && <div style={{ color: mut, fontSize: 10, marginTop: 3, maxHeight: 54, overflowY: "auto" }}>Sans page : {refreshMsg.notFound.join(", ")}</div>}
+              {refreshMsg.notFound.length > 0 && <div style={{ color: mut, fontSize: 11, marginTop: 3, maxHeight: 54, overflowY: "auto" }}>Sans page : {refreshMsg.notFound.join(", ")}</div>}
             </div>
-            <button onClick={() => setRefreshMsg(null)} style={{ background: "transparent", border: "none", color: mut, fontSize: 14, cursor: "pointer", lineHeight: 1, padding: 0 }}>✕</button>
+            <button onClick={() => setRefreshMsg(null)} aria-label="Masquer" style={{ ...btnFermer, color: mut }}>✕</button>
           </div>
         )}
 
         {(importedIds.length > 0 || enriching) && (
-          <div style={{ display: "flex", alignItems: "center", gap: 8, background: card, border: `1px solid ${bdr}`, borderRadius: 8, padding: "8px 10px", marginBottom: 10 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, background: card, border: `1px solid ${bdr}`, borderRadius: "var(--r-sm)", padding: "8px 10px", marginBottom: 10 }}>
             <div style={{ flex: 1, minWidth: 0, color: txt, fontSize: 11, fontWeight: 600 }}>
               {enriching ? `Enrichissement… ${enrichProg}/${importedIds.length}` : `${importedIds.length} jeu(x) importé(s) — enrichir via RAWG + Wikipédia ?`}
             </div>
             {enriching
-              ? <button onClick={cancelEnrich} style={{ background: dangerDoux, border: `1px solid ${danger}`, color: danger, borderRadius: 5, padding: "3px 8px", fontSize: 10, cursor: "pointer" }}>Arrêter</button>
+              ? <button onClick={cancelEnrich} style={{ background: dangerDoux, border: `1px solid ${danger}`, color: danger, borderRadius: "var(--r-xs)", padding: "3px 8px", fontSize: 11, cursor: "pointer" }}>Arrêter</button>
               : <>
-                  <button onClick={enrichImported} style={{ background: accentDoux, border: `1px solid ${accent}`, color: accent, borderRadius: 5, padding: "3px 8px", fontSize: 10, cursor: "pointer" }}>Enrichir</button>
-                  <button onClick={() => setImportedIds([])} style={{ background: "transparent", border: "none", color: mut, fontSize: 14, cursor: "pointer", lineHeight: 1, padding: 0 }}>✕</button>
+                  <button onClick={enrichImported} style={{ background: accentDoux, border: `1px solid ${accent}`, color: accent, borderRadius: "var(--r-xs)", padding: "3px 8px", fontSize: 11, cursor: "pointer" }}>Enrichir</button>
+                  <button onClick={() => setImportedIds([])} aria-label="Masquer" style={{ ...btnFermer, color: mut }}>✕</button>
                 </>}
           </div>
         )}
 
         {/* Onglets : pleine largeur, à la hauteur de cible tactile. */}
-        <div style={{ display: "flex", gap: 6, marginBottom: tab === "library" ? 10 : 0 }}>
-          {[["library","Bibliothèque"],["loans",`Prêts${lentGames.length ? ` (${lentGames.length})` : ""}`],["stats","Stats"],["settings","⚙️"]].map(([k,l]) => (
+        <div style={{ display: "flex", gap: "var(--ecart-tap)", marginBottom: tab === "library" ? 10 : 0 }}>
+          {/* « Bibliothèque » se coupait en « Bibliothè… » dès qu'il devenait l'onglet
+              actif : le gras l'élargit, et quatre onglets ne tiennent pas dans
+              360 px. Un libellé tronqué sur l'onglet principal donne l'air d'un
+              écran cassé — « Jeux » dit la même chose et tient partout. */}
+          {[["library","Jeux"],["loans",`Prêts${lentGames.length ? ` (${lentGames.length})` : ""}`],["stats","Stats"],["settings","⚙️"]].map(([k,l]) => (
             // Le dernier onglet n'a qu'un émoji pour libellé : un lecteur
             // d'écran annonçait « engrenage », ce qui ne dit pas où l'on va.
             <button key={k} onClick={() => setTab(k)} aria-pressed={tab === k}
@@ -646,7 +668,7 @@ export default function App() {
                 flex: k === "settings" ? "0 0 auto" : 1, minWidth: k === "settings" ? "var(--tap)" : 0,
                 minHeight: "var(--tap)", background: tab===k ? accentFond : "transparent",
                 border: `1px solid ${tab===k ? accentFond : bdr}`, color: tab===k ? "#fff" : mut,
-                borderRadius: 10, padding: "0 8px", fontSize: 12, fontWeight: tab===k ? 600 : 400,
+                borderRadius: "var(--r-md)", padding: "0 8px", fontSize: 12, fontWeight: tab===k ? 600 : 400,
                 cursor: "pointer", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
               }}>{l}</button>
           ))}
@@ -659,10 +681,10 @@ export default function App() {
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
             <input value={searchInput} onChange={e => setSearchInput(e.target.value)} type="search"
               placeholder="Rechercher titre, genre, tag…"
-              style={{ flex: 1, minWidth: 0, minHeight: "var(--tap)", background: card, border: `1px solid ${bdr}`, borderRadius: 10, color: txt, padding: "0 12px", fontSize: 14, outline: "none" }} />
+              style={{ flex: 1, minWidth: 0, minHeight: "var(--tap)", background: card, border: `1px solid ${bdr}`, borderRadius: "var(--r-md)", color: txt, padding: "0 12px", fontSize: 15 }} />
             <button onClick={() => setShowFilters(true)}
               style={{ ...btnHdr, borderColor: filtresActifs ? ACCENT : bdr, color: filtresActifs ? ACCENT : txt, fontSize: 13 }}>
-              Filtres{filtresActifs > 0 && <span style={{ background: accentFond, color: "#fff", borderRadius: 9, padding: "1px 6px", fontSize: 11, fontWeight: 700 }}>{filtresActifs}</span>}
+              Filtres{filtresActifs > 0 && <span style={{ background: accentFond, color: "#fff", borderRadius: "var(--r-sm)", padding: "1px 6px", fontSize: 11, fontWeight: 700 }}>{filtresActifs}</span>}
             </button>
           </div>
         )}
@@ -674,13 +696,13 @@ export default function App() {
           <>
           <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(120px,1fr))", gap:10 }}>
             {visible.map(g => (
-              <div key={g.id} className="gl-tile" style={{ background:card, border:`1px solid ${bdr}`, borderRadius:10, overflow:"hidden", cursor:"pointer" }}
+              <div key={g.id} className="gl-tile" style={{ background:card, border:`1px solid ${bdr}`, borderRadius: "var(--r-md)", overflow:"hidden", cursor:"pointer" }}
                 onClick={() => { setView("liste"); setFocusId(g.id); }}>
                 <Cover src={g.cover} title={g.title} size="100%" />
                 <div style={{ height:3, background:g.lentA ? warnFond : "transparent" }} />
                 <div style={{ padding:"6px 7px" }}>
-                  <div style={{ color:txt, fontSize:10, fontWeight:600, lineHeight:1.3, overflow:"hidden", display:"-webkit-box", WebkitLineClamp:2, WebkitBoxOrient:"vertical" }}>{g.title}</div>
-                  {g.metacritic && <div style={{ color:g.metacritic>=80?ok:warn, fontSize:9, marginTop:2 }}>MC {g.metacritic}</div>}
+                  <div style={{ color:txt, fontSize: 11, fontWeight:600, lineHeight:1.3, overflow:"hidden", display:"-webkit-box", WebkitLineClamp:2, WebkitBoxOrient:"vertical" }}>{g.title}</div>
+                  {g.metacritic && <div style={{ color:g.metacritic>=80?ok:warn, fontSize: 11, marginTop:2 }}>MC {g.metacritic}</div>}
                 </div>
               </div>
             ))}
@@ -708,7 +730,7 @@ export default function App() {
               // n'aurait rien changé pour cet onglet.
               const tard = pretEnRetard(g);
               return (
-                <div key={g.id} style={{ background:card, border:`1px solid ${tard?danger:bdr}`, borderRadius:10, padding:"12px", marginBottom:8, display:"flex", gap:10, alignItems:"center" }}>
+                <div key={g.id} style={{ background:card, border:`1px solid ${tard?danger:bdr}`, borderRadius: "var(--r-md)", padding:"12px", marginBottom:8, display:"flex", gap:10, alignItems:"center" }}>
                   <Cover src={g.cover} title={g.title} size={52} />
                   <div style={{ flex:1, minWidth:0 }}>
                     <div style={{ color:txt, fontWeight:600, fontSize:13 }}>{g.title}</div>
@@ -723,7 +745,7 @@ export default function App() {
                       </div>
                     )}
                   </div>
-                  <a href={`sms:?body=${encodeURIComponent(`Salut ! Tu penses à me rendre ${g.title} ? 😊`)}`} style={{ background:warnDoux, border:`1px solid ${warn}`, color:warn, borderRadius:6, padding:"5px 10px", fontSize:11, textDecoration:"none" }}>SMS</a>
+                  <a href={`sms:?body=${encodeURIComponent(`Salut ! Tu penses à me rendre ${g.title} ? 😊`)}`} style={{ display:"inline-flex", alignItems:"center", minHeight:"var(--tap-min)", background:warnDoux, border:`1px solid ${warn}`, color:warn, borderRadius: "var(--r-sm)", padding:"0 12px", fontSize:11, textDecoration:"none", flexShrink:0 }}>SMS</a>
                 </div>
               );
             })}
@@ -742,7 +764,7 @@ export default function App() {
                     <span style={{ color:mut, fontSize:11, flexShrink:0 }}>{dureeEntreeHistorique(e)} j</span>
                     <button onClick={() => supprimerPretPasse(e.jeuId, e.index, e)}
                       aria-label={`Supprimer le prêt de ${e.titre} à ${e.a}`} title="Supprimer de l'historique"
-                      style={{ flexShrink:0, minWidth:32, minHeight:32, background:"transparent", border:"none", color:mut, fontSize:14, cursor:"pointer", lineHeight:1 }}>✕</button>
+                      style={{ ...btnFermer, color:mut }}>✕</button>
                   </div>
                 ))}
               </>
@@ -765,6 +787,39 @@ export default function App() {
 
         {tab === "stats" && <StatsView games={games} />}
       </div>
+
+      {importChoix && (
+        <Sheet title="Importer ce fichier" onClose={() => setImportChoix(null)}>
+          <div style={{ color: txt, fontSize: 13, lineHeight: 1.6, marginBottom: 4 }}>
+            {importChoix.jeux.length} jeu{importChoix.jeux.length > 1 ? "x" : ""} valide{importChoix.jeux.length > 1 ? "s" : ""} dans le fichier.
+            Cet appareil en compte {games.length}.
+          </div>
+          {/* Une valeur ramenée à une valeur sûre — date illisible, plateforme
+              inconnue, note en toutes lettres — se dit : sans ça, un fichier
+              abîmé s'importe comme un fichier sain, et la correction ne se
+              remarque que plus tard, sur une fiche qui a changé toute seule. */}
+          {(importChoix.rejetes > 0 || importChoix.corriges > 0) && (
+            <div style={{ color: warn, fontSize: 12, lineHeight: 1.5, marginBottom: 4 }}>
+              {importChoix.rejetes > 0 && <div>⚠️ {importChoix.rejetes} entrée(s) sans titre ont été ignorées.</div>}
+              {importChoix.corriges > 0 && <div>⚠️ {importChoix.corriges} entrée(s) contenaient des valeurs illisibles, ramenées à des valeurs sûres.</div>}
+            </div>
+          )}
+          <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 12 }}>
+            <button onClick={fusionnerImport}
+              style={{ minHeight: "var(--tap)", background: accentFond, border: "1px solid transparent", color: "#fff", borderRadius: "var(--r-sm)", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", textAlign: "left", padding: "0 14px" }}>
+              Fusionner — ajoute seulement les jeux absents
+            </button>
+            <button onClick={remplacerParImport}
+              style={{ minHeight: "var(--tap)", background: "transparent", border: `1px solid ${danger}`, color: danger, borderRadius: "var(--r-sm)", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", textAlign: "left", padding: "0 14px" }}>
+              Remplacer — jette les {games.length} jeu{games.length > 1 ? "x" : ""} de cet appareil
+            </button>
+            <button onClick={() => setImportChoix(null)}
+              style={{ minHeight: "var(--tap)", background: "transparent", border: `1px solid ${bdr}`, color: mut, borderRadius: "var(--r-sm)", fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>
+              Annuler
+            </button>
+          </div>
+        </Sheet>
+      )}
 
       {showAdd && <AddModal onAdd={addGame} onClose={() => setShowAdd(false)} />}
       {showImport && <ImportModal games={games} onImportGames={importGames} onClose={() => setShowImport(false)} />}
@@ -802,19 +857,19 @@ export default function App() {
         : <ScoresSheet bilan={scoresBilan} onAnnulerScore={retirerScore} onClose={() => setScoresBilan(null)} />)}
 
       {majDispo && (
-        <div role="status" style={{ position:"fixed", bottom:20, left:"50%", transform:"translateX(-50%)", zIndex:401, display:"flex", alignItems:"center", gap:10, maxWidth:"calc(100vw - 24px)", background:card, border:`1px solid ${accent}`, borderRadius:10, padding:"10px 14px", boxShadow:"0 8px 24px rgba(0,0,0,0.4)", animation:"toastIn 200ms ease" }}>
+        <div role="status" style={{ position:"fixed", bottom:20, left:"50%", transform:"translateX(-50%)", zIndex:401, display:"flex", alignItems:"center", gap:10, maxWidth:"calc(100vw - 24px)", background:card, border:`1px solid ${accent}`, borderRadius: "var(--r-md)", padding:"10px 14px", boxShadow:"0 8px 24px rgba(0,0,0,0.4)", animation:"toastIn 200ms ease" }}>
           {/* Sur 412 px, les trois éléments ne tiennent que si le libellé ne
               se casse pas : « installée » partait à la ligne, seul. */}
           <span style={{ color:txt, fontSize:13, whiteSpace:"nowrap" }}>✨ Nouvelle version</span>
-          <button onClick={() => location.reload()} style={{ background:accentDoux, border:`1px solid ${accent}`, color:accent, borderRadius:6, padding:"4px 12px", fontSize:12, fontWeight:600, cursor:"pointer" }}>Recharger</button>
-          <button onClick={() => setMajDispo(false)} aria-label="Plus tard" style={{ background:"transparent", border:"none", color:mut, fontSize:14, cursor:"pointer", lineHeight:1, padding:0 }}>✕</button>
+          <button onClick={() => location.reload()} style={{ background:accentDoux, border:`1px solid ${accent}`, color:accent, borderRadius: "var(--r-sm)", padding:"4px 12px", fontSize:12, fontWeight:600, cursor:"pointer" }}>Recharger</button>
+          <button onClick={() => setMajDispo(false)} aria-label="Plus tard" style={{ ...btnFermer, color:mut }}>✕</button>
         </div>
       )}
 
       {deleted && (
-        <div style={{ position:"fixed", bottom:20, left:"50%", transform:"translateX(-50%)", zIndex:400, display:"flex", alignItems:"center", gap:14, background:card, border:`1px solid ${bdr}`, borderRadius:10, padding:"10px 14px", boxShadow:"0 8px 24px rgba(0,0,0,0.4)", animation:"toastIn 200ms ease" }}>
+        <div role="status" style={{ position:"fixed", bottom:20, left:"50%", transform:"translateX(-50%)", zIndex:400, display:"flex", alignItems:"center", gap:14, background:card, border:`1px solid ${bdr}`, borderRadius: "var(--r-md)", padding:"10px 14px", boxShadow:"0 8px 24px rgba(0,0,0,0.4)", animation:"toastIn 200ms ease" }}>
           <span style={{ color:txt, fontSize:13 }}>🗑 « {deleted.game.title} » supprimé</span>
-          <button onClick={undoDelete} style={{ background:"transparent", border:`1px solid ${accent}`, color:accent, borderRadius:6, padding:"4px 12px", fontSize:12, fontWeight:600, cursor:"pointer" }}>Annuler</button>
+          <button onClick={undoDelete} style={{ background:"transparent", border:`1px solid ${accent}`, color:accent, borderRadius: "var(--r-sm)", padding:"4px 12px", fontSize:12, fontWeight:600, cursor:"pointer" }}>Annuler</button>
         </div>
       )}
     </div>

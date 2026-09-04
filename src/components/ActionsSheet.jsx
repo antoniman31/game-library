@@ -16,12 +16,12 @@ function Action({ icone, titre, detail, onClick, disabled, destructif }) {
       style={{
         display: "flex", alignItems: "center", gap: 12, width: "100%", textAlign: "left",
         minHeight: "var(--tap)", background: "transparent",
-        border: `1px solid ${destructif ? danger : bdr}`, borderRadius: 10,
+        border: `1px solid ${destructif ? danger : bdr}`, borderRadius: "var(--r-md)",
         padding: "10px 12px", marginBottom: 8, cursor: disabled ? "default" : "pointer",
         opacity: disabled ? 0.5 : 1,
       }}
     >
-      <span style={{ fontSize: 18, flexShrink: 0 }}>{icone}</span>
+      <span style={{ fontSize: 19, flexShrink: 0 }}>{icone}</span>
       <span style={{ minWidth: 0 }}>
         <span style={{ display: "block", color: c, fontSize: 13, fontWeight: 600 }}>{titre}</span>
         {detail && <span style={{ display: "block", color: mut, fontSize: 11, marginTop: 1 }}>{detail}</span>}

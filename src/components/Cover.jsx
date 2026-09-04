@@ -10,9 +10,9 @@ function Cover({ src, title, size = 72 }) {
     ? { width: "100%", aspectRatio: "2 / 3", minWidth: 0 }
     : { width: size, height: size * 1.5, minWidth: size };
   if (!src || err) return (
-    <div style={{ ...box, background: bg, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", fontSize: isFull ? 40 : size * 0.4 }}>🎮</div>
+    <div style={{ ...box, background: bg, borderRadius: "var(--r-sm)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: isFull ? 40 : size * 0.4 }}>🎮</div>
   );
-  return <img src={src} alt={title} onError={() => setErr(true)} style={{ ...box, objectFit: "cover", borderRadius: 8, display: "block" }} />;
+  return <img src={src} alt={title} onError={() => setErr(true)} style={{ ...box, objectFit: "cover", borderRadius: "var(--r-sm)", display: "block" }} />;
 }
 
 
