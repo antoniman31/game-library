@@ -1,12 +1,14 @@
 import Sheet from "./Sheet.jsx";
-import { bdr, txt, mut } from "../lib/theme.js";
+import { bdr, txt, mut, danger } from "../lib/theme.js";
 
 // Une action = une ligne pleine largeur : intitulé, explication, et la hauteur
 // de cible qu'il faut. Dans l'en-tête, ces mêmes boutons tenaient sur une seule
 // rangée qui débordait de l'écran de 13 px et faisait défiler la page
 // latéralement.
-function Action({ icone, titre, detail, onClick, disabled, danger }) {
-  const c = danger ? "#ef4444" : txt;
+// `destructif` et non `danger` : le jeton de couleur porte déjà ce nom, et
+// une prop qui l'ombre transformerait la couleur en booléen.
+function Action({ icone, titre, detail, onClick, disabled, destructif }) {
+  const c = destructif ? danger : txt;
   return (
     <button
       onClick={onClick}
@@ -14,7 +16,7 @@ function Action({ icone, titre, detail, onClick, disabled, danger }) {
       style={{
         display: "flex", alignItems: "center", gap: 12, width: "100%", textAlign: "left",
         minHeight: "var(--tap)", background: "transparent",
-        border: `1px solid ${danger ? "#ef4444" : bdr}`, borderRadius: 10,
+        border: `1px solid ${destructif ? danger : bdr}`, borderRadius: 10,
         padding: "10px 12px", marginBottom: 8, cursor: disabled ? "default" : "pointer",
         opacity: disabled ? 0.5 : 1,
       }}
@@ -45,7 +47,7 @@ export default function ActionsSheet({
           titre={`Actualisation… ${refreshProg}/${refreshTotal}`}
           detail="Toucher pour arrêter"
           onClick={onCancelRefresh}
-          danger
+          destructif
         />
       ) : (
         <Action
@@ -61,7 +63,7 @@ export default function ActionsSheet({
           titre={`Recherche des notes… ${scoresProg}/${scoresTotal}`}
           detail="Toucher pour arrêter"
           onClick={onAnnulerScores}
-          danger
+          destructif
         />
       ) : (
         <Action

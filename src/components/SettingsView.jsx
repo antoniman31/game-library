@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { card, bdr, txt, mut, accent, accentDoux } from "../lib/theme.js";
+import { card, bdr, txt, mut, accent, accentDoux, ok, danger } from "../lib/theme.js";
 import { MODES, LIBELLES, ICONES } from "../lib/apparence.js";
 import { pertesDeReglages, messageDePerte, messageCodeSync, CONSEQUENCES } from "../lib/garde-fous.js";
 import ChampProtege from "./ChampProtege.jsx";
@@ -41,7 +41,7 @@ const Section = ({ titre, aide, children }) => (
 const STYLES_BOUTON = {
   principal: { background: accentDoux, border: `1px solid ${ACCENT}`, color: ACCENT, fontWeight: 600 },
   neutre: { background: "transparent", border: `1px solid ${bdr}`, color: txt, fontWeight: 400 },
-  danger: { background: "transparent", border: "1px solid #ef4444", color: "#ef4444", fontWeight: 600 },
+  danger: { background: "transparent", border: `1px solid ${danger}`, color: danger, fontWeight: 600 },
 };
 
 const Bouton = ({ intention = "neutre", pleinePlace, disabled, children, ...reste }) => (
@@ -175,7 +175,7 @@ export default function SettingsView({
             </div>
 
             {syncEtat && (
-              <div role="status" style={{ marginTop: 10, fontSize: 11, lineHeight: 1.4, color: syncEtat.type === "ko" ? "#ef4444" : syncEtat.type === "ok" ? "#22c55e" : mut }}>
+              <div role="status" style={{ marginTop: 10, fontSize: 11, lineHeight: 1.4, color: syncEtat.type === "ko" ? danger : syncEtat.type === "ok" ? ok : mut }}>
                 {syncEtat.type === "ok" ? "✓ " : syncEtat.type === "ko" ? "✕ " : "⏳ "}{syncEtat.texte}
               </div>
             )}
@@ -253,7 +253,7 @@ export default function SettingsView({
           <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
             <Bouton intention="principal" onClick={enregistrerCles}>Enregistrer</Bouton>
             <Bouton onClick={() => setVisible(v => !v)}>{visible ? "Masquer" : "Afficher"}</Bouton>
-            {enregistre && <span role="status" style={{ color: "#22c55e", fontSize: 11 }}>Enregistré ✓</span>}
+            {enregistre && <span role="status" style={{ color: ok, fontSize: 11 }}>Enregistré ✓</span>}
           </div>
         </Section>
       )}

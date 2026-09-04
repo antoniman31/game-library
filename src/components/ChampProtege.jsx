@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { bg, bdr, txt, mut, accent } from "../lib/theme.js";
+import { bg, bdr, txt, mut, accent, danger } from "../lib/theme.js";
 import { messageDeverrouillage, messageSuppression } from "../lib/garde-fous.js";
 
 // Un champ dont la valeur ne s'écrase pas par inadvertance.
@@ -69,7 +69,7 @@ export default function ChampProtege({
                 if (!window.confirm(messageDeverrouillage(quoi))) return;
                 setDeverrouille(true);
               }}>Modifier</button>
-              <button style={bouton("#ef4444")} onClick={() => {
+              <button style={bouton(danger)} onClick={() => {
                 if (!window.confirm(messageSuppression(quoi, consequence))) return;
                 onSupprimer();
               }}>Supprimer</button>

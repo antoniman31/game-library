@@ -56,14 +56,14 @@ export default class ErrorBoundary extends Component {
         <pre
           style={{
             background: "var(--card)", border: "1px solid var(--bdr)", borderRadius: 10,
-            padding: "10px 12px", color: "#ef4444", fontSize: 11, lineHeight: 1.45,
+            padding: "10px 12px", color: "var(--danger)", fontSize: 11, lineHeight: 1.45,
             whiteSpace: "pre-wrap", wordBreak: "break-word", margin: "0 0 16px",
           }}
         >
           {String(this.state.erreur?.message || this.state.erreur)}
         </pre>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          <button onClick={this.exporter} style={{ ...btn, background: "var(--accent)", border: "none", color: "#fff" }}>
+          <button onClick={this.exporter} style={{ ...btn, background: "var(--accent-fond)", border: "none", color: "#fff" }}>
             ⬇ Exporter ma bibliothèque
           </button>
           <button

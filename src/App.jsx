@@ -10,7 +10,7 @@ import ScoresSheet from "./components/ScoresSheet.jsx";
 import StatsView from "./components/StatsView.jsx";
 import SettingsView from "./components/SettingsView.jsx";
 
-import { hdr, card, bdr, txt, mut, accent, accentDoux } from "./lib/theme.js";
+import { hdr, card, bdr, txt, mut, accent, accentDoux, accentFond, warnDoux, dangerDoux, ok, warn, warnFond, danger } from "./lib/theme.js";
 import { GAMES_INIT } from "./lib/seed.js";
 import { BACK_COMPAT, migrateGames, compterFiltres, validerJeuxImportes, pretEnRetard, jeuxSansScore,
   dureeEntreeHistorique, supprimerEntreeHistorique, joursDePret } from "./lib/model.js";
@@ -567,7 +567,7 @@ export default function App() {
                 combien de jeux, et combien sont dehors. */}
             <div style={{ fontSize: 10, color: mut, marginTop: 3 }}>
               {stats.total} jeu{stats.total > 1 ? "x" : ""}{stats.pretes > 0 ? ` · ${stats.pretes} prêté${stats.pretes > 1 ? "s" : ""}` : ""}
-              {stats.enRetard > 0 ? <span style={{ color: "#f59e0b" }}> · {stats.enRetard} en retard</span> : null}
+              {stats.enRetard > 0 ? <span style={{ color: warn }}> · {stats.enRetard} en retard</span> : null}
             </div>
           </div>
           {/* Deux boutons seulement. Les quatre actions à libellé complet qui
@@ -584,23 +584,23 @@ export default function App() {
               {refreshing || enriching ? "⏳" : "⋯"}
             </button>
             <button onClick={() => setShowAdd(true)}
-              style={{ ...btnHdr, background: ACCENT, border: "none", color: "#fff", fontSize: 13, fontWeight: 600 }}>
+              style={{ ...btnHdr, background: accentFond, border: "none", color: "#fff", fontSize: 13, fontWeight: 600 }}>
               + Ajouter
             </button>
           </div>
         </div>
 
         {alerteStockage && (
-          <div style={{ display: "flex", alignItems: "flex-start", gap: 8, background: "#ef444422", border: "1px solid #ef4444", borderRadius: 8, padding: "8px 10px", marginBottom: 10 }}>
-            <div style={{ flex: 1, minWidth: 0, color: "#ef4444", fontSize: 11, fontWeight: 600, lineHeight: 1.4 }}>⚠️ {alerteStockage}</div>
-            <button onClick={() => setAlerteStockage(null)} aria-label="Masquer" style={{ background: "transparent", border: "none", color: "#ef4444", fontSize: 14, cursor: "pointer", lineHeight: 1, padding: 0 }}>✕</button>
+          <div style={{ display: "flex", alignItems: "flex-start", gap: 8, background: dangerDoux, border: `1px solid ${danger}`, borderRadius: 8, padding: "8px 10px", marginBottom: 10 }}>
+            <div style={{ flex: 1, minWidth: 0, color: danger, fontSize: 11, fontWeight: 600, lineHeight: 1.4 }}>⚠️ {alerteStockage}</div>
+            <button onClick={() => setAlerteStockage(null)} aria-label="Masquer" style={{ background: "transparent", border: "none", color: danger, fontSize: 14, cursor: "pointer", lineHeight: 1, padding: 0 }}>✕</button>
           </div>
         )}
 
         {scoresEnCours && (
           <div style={{ display: "flex", alignItems: "center", gap: 8, background: card, border: `1px solid ${bdr}`, borderRadius: 8, padding: "8px 10px", marginBottom: 10 }}>
             <div style={{ flex: 1, minWidth: 0, color: txt, fontSize: 11, fontWeight: 600 }}>Recherche des notes… {scoresProg}/{scoresTotal}</div>
-            <button onClick={annulerScores} style={{ background: "#ef444422", border: "1px solid #ef4444", color: "#ef4444", borderRadius: 5, padding: "3px 8px", fontSize: 10, cursor: "pointer" }}>Arrêter</button>
+            <button onClick={annulerScores} style={{ background: dangerDoux, border: `1px solid ${danger}`, color: danger, borderRadius: 5, padding: "3px 8px", fontSize: 10, cursor: "pointer" }}>Arrêter</button>
           </div>
         )}
 
@@ -627,7 +627,7 @@ export default function App() {
               {enriching ? `Enrichissement… ${enrichProg}/${importedIds.length}` : `${importedIds.length} jeu(x) importé(s) — enrichir via RAWG + Wikipédia ?`}
             </div>
             {enriching
-              ? <button onClick={cancelEnrich} style={{ background: "#ef444422", border: "1px solid #ef4444", color: "#ef4444", borderRadius: 5, padding: "3px 8px", fontSize: 10, cursor: "pointer" }}>Arrêter</button>
+              ? <button onClick={cancelEnrich} style={{ background: dangerDoux, border: `1px solid ${danger}`, color: danger, borderRadius: 5, padding: "3px 8px", fontSize: 10, cursor: "pointer" }}>Arrêter</button>
               : <>
                   <button onClick={enrichImported} style={{ background: accentDoux, border: `1px solid ${accent}`, color: accent, borderRadius: 5, padding: "3px 8px", fontSize: 10, cursor: "pointer" }}>Enrichir</button>
                   <button onClick={() => setImportedIds([])} style={{ background: "transparent", border: "none", color: mut, fontSize: 14, cursor: "pointer", lineHeight: 1, padding: 0 }}>✕</button>
@@ -644,8 +644,8 @@ export default function App() {
               aria-label={k === "settings" ? "Réglages" : undefined}
               style={{
                 flex: k === "settings" ? "0 0 auto" : 1, minWidth: k === "settings" ? "var(--tap)" : 0,
-                minHeight: "var(--tap)", background: tab===k ? ACCENT : "transparent",
-                border: `1px solid ${tab===k ? ACCENT : bdr}`, color: tab===k ? "#fff" : mut,
+                minHeight: "var(--tap)", background: tab===k ? accentFond : "transparent",
+                border: `1px solid ${tab===k ? accentFond : bdr}`, color: tab===k ? "#fff" : mut,
                 borderRadius: 10, padding: "0 8px", fontSize: 12, fontWeight: tab===k ? 600 : 400,
                 cursor: "pointer", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
               }}>{l}</button>
@@ -662,7 +662,7 @@ export default function App() {
               style={{ flex: 1, minWidth: 0, minHeight: "var(--tap)", background: card, border: `1px solid ${bdr}`, borderRadius: 10, color: txt, padding: "0 12px", fontSize: 14, outline: "none" }} />
             <button onClick={() => setShowFilters(true)}
               style={{ ...btnHdr, borderColor: filtresActifs ? ACCENT : bdr, color: filtresActifs ? ACCENT : txt, fontSize: 13 }}>
-              Filtres{filtresActifs > 0 && <span style={{ background: ACCENT, color: "#fff", borderRadius: 9, padding: "1px 6px", fontSize: 11, fontWeight: 700 }}>{filtresActifs}</span>}
+              Filtres{filtresActifs > 0 && <span style={{ background: accentFond, color: "#fff", borderRadius: 9, padding: "1px 6px", fontSize: 11, fontWeight: 700 }}>{filtresActifs}</span>}
             </button>
           </div>
         )}
@@ -677,10 +677,10 @@ export default function App() {
               <div key={g.id} className="gl-tile" style={{ background:card, border:`1px solid ${bdr}`, borderRadius:10, overflow:"hidden", cursor:"pointer" }}
                 onClick={() => { setView("liste"); setFocusId(g.id); }}>
                 <Cover src={g.cover} title={g.title} size="100%" />
-                <div style={{ height:3, background:g.lentA ? "#f59e0b" : "transparent" }} />
+                <div style={{ height:3, background:g.lentA ? warnFond : "transparent" }} />
                 <div style={{ padding:"6px 7px" }}>
                   <div style={{ color:txt, fontSize:10, fontWeight:600, lineHeight:1.3, overflow:"hidden", display:"-webkit-box", WebkitLineClamp:2, WebkitBoxOrient:"vertical" }}>{g.title}</div>
-                  {g.metacritic && <div style={{ color:g.metacritic>=80?"#22c55e":"#f59e0b", fontSize:9, marginTop:2 }}>MC {g.metacritic}</div>}
+                  {g.metacritic && <div style={{ color:g.metacritic>=80?ok:warn, fontSize:9, marginTop:2 }}>MC {g.metacritic}</div>}
                 </div>
               </div>
             ))}
@@ -708,13 +708,13 @@ export default function App() {
               // n'aurait rien changé pour cet onglet.
               const tard = pretEnRetard(g);
               return (
-                <div key={g.id} style={{ background:card, border:`1px solid ${tard?"#ef4444":bdr}`, borderRadius:10, padding:"12px", marginBottom:8, display:"flex", gap:10, alignItems:"center" }}>
+                <div key={g.id} style={{ background:card, border:`1px solid ${tard?danger:bdr}`, borderRadius:10, padding:"12px", marginBottom:8, display:"flex", gap:10, alignItems:"center" }}>
                   <Cover src={g.cover} title={g.title} size={52} />
                   <div style={{ flex:1, minWidth:0 }}>
                     <div style={{ color:txt, fontWeight:600, fontSize:13 }}>{g.title}</div>
-                    <div style={{ color:"#f59e0b", fontSize:12 }}>📤 {g.lentA}</div>
+                    <div style={{ color:warn, fontSize:12 }}>📤 {g.lentA}</div>
                     {days!==null && (
-                      <div style={{ color:tard?"#ef4444":mut, fontSize:11 }}>
+                      <div style={{ color:tard?danger:mut, fontSize:11 }}>
                         {days}j
                         {g.lentRetourPrevu
                           ? ` · à rendre le ${new Date(g.lentRetourPrevu).toLocaleDateString("fr-FR")}`
@@ -723,7 +723,7 @@ export default function App() {
                       </div>
                     )}
                   </div>
-                  <a href={`sms:?body=${encodeURIComponent(`Salut ! Tu penses à me rendre ${g.title} ? 😊`)}`} style={{ background:"#f59e0b22", border:"1px solid #f59e0b", color:"#f59e0b", borderRadius:6, padding:"5px 10px", fontSize:11, textDecoration:"none" }}>SMS</a>
+                  <a href={`sms:?body=${encodeURIComponent(`Salut ! Tu penses à me rendre ${g.title} ? 😊`)}`} style={{ background:warnDoux, border:`1px solid ${warn}`, color:warn, borderRadius:6, padding:"5px 10px", fontSize:11, textDecoration:"none" }}>SMS</a>
                 </div>
               );
             })}

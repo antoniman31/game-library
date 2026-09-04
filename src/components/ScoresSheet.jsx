@@ -1,5 +1,5 @@
 import Sheet from "./Sheet.jsx";
-import { bdr, txt, mut } from "../lib/theme.js";
+import { bdr, txt, mut, ok, warn, danger } from "../lib/theme.js";
 import { rapprochementDouteux } from "../lib/model.js";
 
 // Bilan de « Compléter les scores manquants ».
@@ -32,11 +32,11 @@ export default function ScoresSheet({ bilan, onAnnulerScore, onClose }) {
           <div key={t.id} style={{ display: "flex", gap: 10, alignItems: "center", padding: "9px 0", borderTop: `1px solid ${bdr}` }}>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ color: txt, fontSize: 12, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.titre}</div>
-              <div style={{ color: suspect ? "#f59e0b" : mut, fontSize: 11, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              <div style={{ color: suspect ? warn : mut, fontSize: 11, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                 {suspect ? "⚠️ " : ""}RAWG : {t.titreRawg}
               </div>
             </div>
-            <span style={{ color: t.score >= 80 ? "#22c55e" : t.score >= 60 ? "#f59e0b" : "#ef4444", fontSize: 13, fontWeight: 700, flexShrink: 0 }}>{t.score}</span>
+            <span style={{ color: t.score >= 80 ? ok : t.score >= 60 ? warn : danger, fontSize: 13, fontWeight: 700, flexShrink: 0 }}>{t.score}</span>
             <button onClick={() => onAnnulerScore(t.id)} title="Retirer ce score"
               style={{ flexShrink: 0, minHeight: 34, padding: "0 10px", background: "transparent", border: `1px solid ${bdr}`, color: mut, borderRadius: 6, fontSize: 11, cursor: "pointer" }}>
               Retirer
