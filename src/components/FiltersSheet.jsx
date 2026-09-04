@@ -1,8 +1,8 @@
 import Sheet from "./Sheet.jsx";
-import { bdr, txt, mut } from "../lib/theme.js";
+import { bdr, txt, mut, accent, accentDoux } from "../lib/theme.js";
 import { PLATFORMS, compterFiltres } from "../lib/model.js";
 
-const ACCENT = "#5493FF";
+const ACCENT = accent;
 
 // Une rangée d'options. `flex: 1` avec `minWidth` laisse deux ou trois boutons
 // par ligne selon leur libellé, sans grille figée qui laisserait des trous.
@@ -23,7 +23,7 @@ function Groupe({ label, options, value, onChange, colorOf }) {
               aria-pressed={actif}
               style={{
                 flex: 1, minWidth: 92, minHeight: "var(--tap)",
-                background: actif ? c + "22" : "transparent",
+                background: actif ? (c === accent ? accentDoux : c + "22") : "transparent",
                 border: `1px solid ${actif ? c : bdr}`,
                 color: actif ? c : txt,
                 borderRadius: 8, padding: "6px 10px", fontSize: 12,

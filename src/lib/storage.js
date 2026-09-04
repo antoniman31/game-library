@@ -51,7 +51,7 @@ export function ecrire(cle, valeur) {
     const plein = e && (e.name === "QuotaExceededError" || e.name === "NS_ERROR_DOM_QUOTA_REACHED");
     signaler(
       plein
-        ? "Stockage local saturé : tes modifications ne sont plus enregistrées sur cet appareil. Exporte ta bibliothèque (onglet Stats) avant de fermer."
+        ? "Stockage local saturé : tes modifications ne sont plus enregistrées sur cet appareil. Exporte ta bibliothèque (Réglages → Sauvegarde → Copie hors ligne) avant de fermer."
         : "Le stockage local est inaccessible : tes modifications ne sont pas enregistrées. Navigation privée ou données de site bloquées ?"
     );
     return false;

@@ -10,10 +10,10 @@ import ScoresSheet from "./components/ScoresSheet.jsx";
 import StatsView from "./components/StatsView.jsx";
 import SettingsView from "./components/SettingsView.jsx";
 
-import { hdr, card, bdr, txt, mut } from "./lib/theme.js";
+import { hdr, card, bdr, txt, mut, accent, accentDoux } from "./lib/theme.js";
 import { GAMES_INIT } from "./lib/seed.js";
 import { BACK_COMPAT, migrateGames, compterFiltres, validerJeuxImportes, pretEnRetard, jeuxSansScore,
-  dureeEntreeHistorique, supprimerEntreeHistorique } from "./lib/model.js";
+  dureeEntreeHistorique, supprimerEntreeHistorique, joursDePret } from "./lib/model.js";
 import { lire, ecrire, surEchecStockage } from "./lib/storage.js";
 import { chargerSync, enregistrerSync, genererCode, envoyer, recuperer } from "./lib/sync.js";
 import { preferencesASauvegarder, preferencesRecues, resumePreferences } from "./lib/preferences.js";
@@ -33,7 +33,7 @@ const PAGE_SIZE = 30;
 // Jaquettes rattrapées au démarrage, par ouverture de l'application.
 const RATTRAPAGE_MAX = 12;
 
-const ACCENT = "#5493FF";
+const ACCENT = accent;
 
 // Bouton d'en-tête : même gabarit pour tous, à la hauteur de cible tactile.
 const btnHdr = {
@@ -72,6 +72,11 @@ export default function App() {
   // l'effaçait deux secondes plus tard : si on commençait à taper pendant ce
   // délai, le texte disparaissait sous les doigts.
   const [focusId, setFocusId] = useState(null);
+  // Ces deux marqueurs n'ouvrent la fiche qu'UNE fois. Ils restaient posés
+  // indéfiniment : quitter l'onglet puis y revenir démonte les fiches et les
+  // remonte, si bien qu'une fiche refermée à la main se rouvrait toute seule,
+  // sans qu'on comprenne pourquoi celle-là et pas une autre.
+  const consommerOuverture = useCallback(() => { setFocusId(null); setLastAddedId(null); }, []);
   // Le thème est persisté : il repartait en sombre à chaque rechargement.
   // index.html le pose sur <html> avant le premier rendu pour éviter le clignotement.
   // Trois modes, pas deux : « automatique » suit le réglage du téléphone, qui
@@ -337,12 +342,16 @@ export default function App() {
     // Le toast d'annulation ne dure que cinq secondes : passé ce délai, le jeu
     // et son historique de prêts sont perdus sans recours.
     if (!window.confirm(`Supprimer « ${g.title} » ?${(g.pretsPasses || []).length ? `\n\nSon historique de ${g.pretsPasses.length} prêt(s) disparaît avec lui.` : ""}`)) return;
-    const index = games.findIndex(x => x.id === g.id);
+    // L'index se lit dans `gamesRef`, tenue à jour à chaque rendu : le lire
+    // depuis `games` obligeait à en dépendre, donc à refabriquer cette fonction
+    // à chaque changement de la bibliothèque — et le memo() des fiches ne
+    // servait plus à rien, puisqu'une de leurs props changeait à chaque frappe.
+    const index = gamesRef.current.findIndex(x => x.id === g.id);
     setGames(gs => gs.filter(x => x.id !== g.id));
     setDeleted({ game: g, index });
     clearTimeout(undoRef.current);
     undoRef.current = setTimeout(() => setDeleted(null), 5000);
-  }, [games]);
+  }, []);
   const undoDelete = () => {
     if (!deleted) return;
     clearTimeout(undoRef.current);
@@ -408,7 +417,7 @@ export default function App() {
 
     // On valide la sauvegarde distante comme un import de fichier : elle a été
     // écrite par une autre version de l'app, peut-être plus ancienne.
-    const { jeux, rejetes } = validerJeuxImportes(distants);
+    const { jeux, rejetes, corriges } = validerJeuxImportes(distants);
     const quand = r.data.updatedAt ? new Date(r.data.updatedAt).toLocaleString("fr-FR") : "date inconnue";
 
     // Un remplacement écrase du travail local : il se confirme, chiffres en main.
@@ -416,6 +425,7 @@ export default function App() {
       `Sauvegarde du ${quand} : ${jeux.length} jeu(x).\n` +
       `Cet appareil en compte ${games.length}.` +
       (rejetes ? `\n\n⚠️ ${rejetes} entrée(s) ignorée(s).` : "") +
+      (corriges ? `\n⚠️ ${corriges} entrée(s) corrigée(s).` : "") +
       `\n\nRemplacer la bibliothèque de cet appareil ?`
     );
     if (!ok) { setSyncEtat({ type: "ko", texte: "Récupération annulée." }); return; }
@@ -455,11 +465,16 @@ export default function App() {
       try { data = JSON.parse(reader.result); }
       catch { alert("Ce fichier n'est pas du JSON valide."); return; }
 
-      const { jeux, rejetes } = validerJeuxImportes(data);
+      const { jeux, rejetes, corriges } = validerJeuxImportes(data);
       if (!jeux) { alert("Ce fichier ne contient pas une liste de jeux."); return; }
       if (!jeux.length) { alert(`Aucun jeu exploitable dans ce fichier${rejetes ? ` (${rejetes} entrée(s) ignorée(s))` : ""}.`); return; }
 
-      const avertissement = rejetes ? `\n\n⚠️ ${rejetes} entrée(s) sans titre ont été ignorées.` : "";
+      // Une valeur ramenée à une valeur sûre — date illisible, plateforme
+      // inconnue, note en toutes lettres — se dit : sans ça, un fichier abîmé
+      // s'importe comme un fichier sain et la correction ne se remarque que
+      // plus tard, sur une fiche qui a changé toute seule.
+      const avertissement = (rejetes ? `\n\n⚠️ ${rejetes} entrée(s) sans titre ont été ignorées.` : "")
+        + (corriges ? `\n\n⚠️ ${corriges} entrée(s) contenaient des valeurs illisibles, ramenées à des valeurs sûres.` : "");
       const replace = window.confirm(
         `Fichier : ${jeux.length} jeu(x) valides.${avertissement}\n\nOK = REMPLACER toute la bibliothèque\nAnnuler = FUSIONNER (ajoute uniquement les jeux absents)`
       );
@@ -614,7 +629,7 @@ export default function App() {
             {enriching
               ? <button onClick={cancelEnrich} style={{ background: "#ef444422", border: "1px solid #ef4444", color: "#ef4444", borderRadius: 5, padding: "3px 8px", fontSize: 10, cursor: "pointer" }}>Arrêter</button>
               : <>
-                  <button onClick={enrichImported} style={{ background: "#5493FF22", border: "1px solid #5493FF", color: "#5493FF", borderRadius: 5, padding: "3px 8px", fontSize: 10, cursor: "pointer" }}>Enrichir</button>
+                  <button onClick={enrichImported} style={{ background: accentDoux, border: `1px solid ${accent}`, color: accent, borderRadius: 5, padding: "3px 8px", fontSize: 10, cursor: "pointer" }}>Enrichir</button>
                   <button onClick={() => setImportedIds([])} style={{ background: "transparent", border: "none", color: mut, fontSize: 14, cursor: "pointer", lineHeight: 1, padding: 0 }}>✕</button>
                 </>}
           </div>
@@ -623,7 +638,10 @@ export default function App() {
         {/* Onglets : pleine largeur, à la hauteur de cible tactile. */}
         <div style={{ display: "flex", gap: 6, marginBottom: tab === "library" ? 10 : 0 }}>
           {[["library","Bibliothèque"],["loans",`Prêts${lentGames.length ? ` (${lentGames.length})` : ""}`],["stats","Stats"],["settings","⚙️"]].map(([k,l]) => (
+            // Le dernier onglet n'a qu'un émoji pour libellé : un lecteur
+            // d'écran annonçait « engrenage », ce qui ne dit pas où l'on va.
             <button key={k} onClick={() => setTab(k)} aria-pressed={tab === k}
+              aria-label={k === "settings" ? "Réglages" : undefined}
               style={{
                 flex: k === "settings" ? "0 0 auto" : 1, minWidth: k === "settings" ? "var(--tap)" : 0,
                 minHeight: "var(--tap)", background: tab===k ? ACCENT : "transparent",
@@ -672,7 +690,8 @@ export default function App() {
         ) : (
           <>
           <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
-            {visible.map(g => <GameCard key={g.id} g={g} onEdit={edit} onDelete={deleteGame} onEnrich={enrichGame} autoOpen={g.id === lastAddedId || g.id === focusId} />)}
+            {visible.map(g => <GameCard key={g.id} g={g} onEdit={edit} onDelete={deleteGame} onEnrich={enrichGame}
+              autoOpen={g.id === lastAddedId || g.id === focusId} onOuverte={consommerOuverture} />)}
           </div>
           {chargerPlus}
           </>
@@ -682,7 +701,9 @@ export default function App() {
           <div>
             {lentGames.length === 0 ? <div style={{ textAlign:"center", color:mut, padding:"40px 0" }}>Aucun jeu prêté actuellement</div>
             : lentGames.map(g => {
-              const days = g.lentDate ? Math.floor((Date.now()-new Date(g.lentDate))/86400000) : null;
+              // joursDePret fait déjà ce calcul, et refuse au passage une date
+              // illisible plutôt que d'afficher « NaNj ».
+              const days = joursDePret(g);
               // Le seuil était réécrit ici en dur : la date de retour convenue
               // n'aurait rien changé pour cet onglet.
               const tard = pretEnRetard(g);
@@ -781,11 +802,11 @@ export default function App() {
         : <ScoresSheet bilan={scoresBilan} onAnnulerScore={retirerScore} onClose={() => setScoresBilan(null)} />)}
 
       {majDispo && (
-        <div role="status" style={{ position:"fixed", bottom:20, left:"50%", transform:"translateX(-50%)", zIndex:401, display:"flex", alignItems:"center", gap:10, maxWidth:"calc(100vw - 24px)", background:card, border:"1px solid #5493FF", borderRadius:10, padding:"10px 14px", boxShadow:"0 8px 24px rgba(0,0,0,0.4)", animation:"toastIn 200ms ease" }}>
+        <div role="status" style={{ position:"fixed", bottom:20, left:"50%", transform:"translateX(-50%)", zIndex:401, display:"flex", alignItems:"center", gap:10, maxWidth:"calc(100vw - 24px)", background:card, border:`1px solid ${accent}`, borderRadius:10, padding:"10px 14px", boxShadow:"0 8px 24px rgba(0,0,0,0.4)", animation:"toastIn 200ms ease" }}>
           {/* Sur 412 px, les trois éléments ne tiennent que si le libellé ne
               se casse pas : « installée » partait à la ligne, seul. */}
           <span style={{ color:txt, fontSize:13, whiteSpace:"nowrap" }}>✨ Nouvelle version</span>
-          <button onClick={() => location.reload()} style={{ background:"#5493FF22", border:"1px solid #5493FF", color:"#5493FF", borderRadius:6, padding:"4px 12px", fontSize:12, fontWeight:600, cursor:"pointer" }}>Recharger</button>
+          <button onClick={() => location.reload()} style={{ background:accentDoux, border:`1px solid ${accent}`, color:accent, borderRadius:6, padding:"4px 12px", fontSize:12, fontWeight:600, cursor:"pointer" }}>Recharger</button>
           <button onClick={() => setMajDispo(false)} aria-label="Plus tard" style={{ background:"transparent", border:"none", color:mut, fontSize:14, cursor:"pointer", lineHeight:1, padding:0 }}>✕</button>
         </div>
       )}
@@ -793,7 +814,7 @@ export default function App() {
       {deleted && (
         <div style={{ position:"fixed", bottom:20, left:"50%", transform:"translateX(-50%)", zIndex:400, display:"flex", alignItems:"center", gap:14, background:card, border:`1px solid ${bdr}`, borderRadius:10, padding:"10px 14px", boxShadow:"0 8px 24px rgba(0,0,0,0.4)", animation:"toastIn 200ms ease" }}>
           <span style={{ color:txt, fontSize:13 }}>🗑 « {deleted.game.title} » supprimé</span>
-          <button onClick={undoDelete} style={{ background:"transparent", border:"1px solid #5493FF", color:"#5493FF", borderRadius:6, padding:"4px 12px", fontSize:12, fontWeight:600, cursor:"pointer" }}>Annuler</button>
+          <button onClick={undoDelete} style={{ background:"transparent", border:`1px solid ${accent}`, color:accent, borderRadius:6, padding:"4px 12px", fontSize:12, fontWeight:600, cursor:"pointer" }}>Annuler</button>
         </div>
       )}
     </div>

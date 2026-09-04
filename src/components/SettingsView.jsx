@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { card, bdr, txt, mut } from "../lib/theme.js";
+import { card, bdr, txt, mut, accent, accentDoux } from "../lib/theme.js";
 import { MODES, LIBELLES, ICONES } from "../lib/apparence.js";
 import { pertesDeReglages, messageDePerte, messageCodeSync, CONSEQUENCES } from "../lib/garde-fous.js";
 import ChampProtege from "./ChampProtege.jsx";
@@ -28,7 +28,7 @@ import SousOnglets from "./SousOnglets.jsx";
 // change par envie plutôt que par nécessité — l'enterrer d'un clic serait le
 // punir de sa légèreté.
 
-const ACCENT = "#5493FF";
+const ACCENT = accent;
 
 const Section = ({ titre, aide, children }) => (
   <section style={{ background: card, border: `1px solid ${bdr}`, borderRadius: 10, padding: 14, marginBottom: 12 }}>
@@ -39,7 +39,7 @@ const Section = ({ titre, aide, children }) => (
 );
 
 const STYLES_BOUTON = {
-  principal: { background: `${ACCENT}22`, border: `1px solid ${ACCENT}`, color: ACCENT, fontWeight: 600 },
+  principal: { background: accentDoux, border: `1px solid ${ACCENT}`, color: ACCENT, fontWeight: 600 },
   neutre: { background: "transparent", border: `1px solid ${bdr}`, color: txt, fontWeight: 400 },
   danger: { background: "transparent", border: "1px solid #ef4444", color: "#ef4444", fontWeight: 600 },
 };

@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { card, bdr, txt, mut } from "../lib/theme.js";
+import { card, bdr, txt, mut, accent } from "../lib/theme.js";
 import { PLATFORM_COLORS } from "../lib/model.js";
 import { statsCirculation, statsCollection } from "../lib/stats.js";
 import SousOnglets from "./SousOnglets.jsx";
@@ -22,7 +22,7 @@ const Bloc = ({ titre, children }) => (
 // Une ligne de comptage avec sa barre. Le dénominateur est passé
 // explicitement : rapporter des genres à un total de jeux et des prêts à un
 // total de prêts ne se compare pas.
-const Barre = ({ label, valeur, total, couleur = "#5493FF", suffixe }) => (
+const Barre = ({ label, valeur, total, couleur = accent, suffixe }) => (
   <div style={{ marginBottom: 8 }}>
     <div style={{ display: "flex", justifyContent: "space-between", gap: 10, marginBottom: 3 }}>
       <span style={{ color: txt, fontSize: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{label}</span>
@@ -47,7 +47,7 @@ const Tuiles = ({ items }) => (
 
 // Trois séries temporelles partagent désormais cette forme. Une barre à zéro
 // garde deux pixels de gris : sans elle, un mois vide disparaît et l'axe ment.
-const Histogramme = ({ donnees, couleur = "#5493FF", etiquette = (c) => c }) => {
+const Histogramme = ({ donnees, couleur = accent, etiquette = (c) => c }) => {
   const max = Math.max(...donnees.map(([, n]) => n), 1);
   return (
     <div style={{ display: "flex", gap: 3, alignItems: "flex-end", height: 70 }}>
@@ -177,7 +177,7 @@ function Circulation({ games, jour }) {
       {s.parPlateforme.length > 0 && (
         <Bloc titre="Ce qui part">
           {s.parPlateforme.map(([p, n]) => (
-            <Barre key={p} label={p} valeur={n} total={s.total} couleur={PLATFORM_COLORS[p] || "#5493FF"}
+            <Barre key={p} label={p} valeur={n} total={s.total} couleur={PLATFORM_COLORS[p] || accent}
               suffixe={`${n} prêt${n > 1 ? "s" : ""}`} />
           ))}
           {s.parGenre.length > 0 && (
@@ -200,14 +200,14 @@ function Collection({ games, jour }) {
   return (
     <div>
       <Tuiles items={[
-        ["Total", s.total, "#5493FF"],
+        ["Total", s.total, accent],
         ["Physiques", s.physique, txt],
-        ["Démat", s.demat, "#5493FF"],
+        ["Démat", s.demat, accent],
       ]} />
 
       <Bloc titre="Par plateforme">
         {s.parPlateforme.map(([p, n]) => (
-          <Barre key={p} label={p} valeur={n} total={s.total} couleur={PLATFORM_COLORS[p] || "#5493FF"}
+          <Barre key={p} label={p} valeur={n} total={s.total} couleur={PLATFORM_COLORS[p] || accent}
             suffixe={`${n} · ${Math.round((n / s.total) * 100)} %`} />
         ))}
         {/* Seuls les exemplaires physiques se prêtent : ce partage dit quelle

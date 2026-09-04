@@ -36,6 +36,7 @@
   --demat: #10243d;     /* fond du badge « démat » */
 
   --accent: #5493ff;
+  --accent-doux: #5493ff22;   /* fond discret des boutons d'accent */
   --ok: #22c55e;
   --warn: #f59e0b;
   --danger: #ef4444;
@@ -69,7 +70,12 @@ html[data-theme="light"] {
   --mut: #5a6b87;
   --demat: #ddeeff;
 
-  --accent: #5493ff;
+  /* Assombri depuis #5493ff, qui ne donnait que 2,58:1 sur ce fond alors que
+     WCAG AA demande 4,5:1 pour du texte de 11 px. Celui-ci donne 5,75:1, et
+     le blanc posé dessus — bouton « + Ajouter », onglet actif — passe de 3,00
+     à 6,70:1. */
+  --accent: #1d4ed8;
+  --accent-doux: #1d4ed815;
   --ok: #16a34a;
   --warn: #b45309;
   --danger: #dc2626;

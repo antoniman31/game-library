@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { card, bdr, txt } from "../lib/theme.js";
 
 // Panneau glissant depuis le bas.
@@ -7,6 +8,34 @@ import { card, bdr, txt } from "../lib/theme.js";
 // jeu. Un panneau les sort du chemin sans les enterrer, et sa position basse
 // les laisse sous le pouce.
 export default function Sheet({ title, onClose, children }) {
+  // Échap ferme, et la page cesse de défiler derrière.
+  //
+  // Le fond noir arrêtait les clics mais rien d'autre : sur un ordinateur,
+  // Échap — le geste réflexe devant une fenêtre modale — ne faisait rien ; sur
+  // un téléphone, un doigt qui glisse à côté du panneau faisait défiler la
+  // liste derrière lui, si bien qu'en refermant on ne retrouvait plus l'endroit
+  // qu'on regardait.
+  // `onClose` est une fonction anonyme recréée à chaque rendu du parent : la
+  // passer en dépendance ferait poser et retirer l'écouteur, et sauvegarder puis
+  // restaurer le défilement, à chaque frappe dans le panneau. Une référence
+  // évite ce va-et-vient tout en appelant toujours la version courante.
+  const fermerRef = useRef(onClose);
+  fermerRef.current = onClose;
+  useEffect(() => {
+    const surTouche = (e) => { if (e.key === "Escape") fermerRef.current(); };
+    document.addEventListener("keydown", surTouche);
+    // Sur <html>, pas sur <body> : `min-height: 100vh` est posé sur les deux,
+    // et c'est l'élément racine qui défile ici — `document.scrollingElement` le
+    // confirme. Le verrou posé sur <body> ne bloquait donc rien du tout.
+    const racine = document.documentElement;
+    const avant = racine.style.overflow;
+    racine.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", surTouche);
+      racine.style.overflow = avant;
+    };
+  }, []);
+
   return (
     <div
       style={{ position: "fixed", inset: 0, background: "#000b", zIndex: 300, display: "flex", alignItems: "flex-end" }}

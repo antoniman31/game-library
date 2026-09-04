@@ -66,8 +66,16 @@ normalement et `/sync` répond `501` avec un message explicite.
 - `PUT /sync` avec l'en-tête `X-Sync-Code` et un corps `{"games": [...]}`
   enregistre la bibliothèque. L'horodatage est posé par le serveur : l'horloge
   d'un appareil peut être fausse, et c'est lui qui arbitre qui est le plus
-  récent.
-- `GET /sync` avec le même en-tête la rend.
+  récent. Il est **strictement croissant** — une milliseconde est ajoutée s'il
+  serait égal au précédent —, parce qu'il ne sert pas qu'à afficher une date :
+  c'est lui qui identifie la version, donc qui décide si la base annoncée par
+  un appareil est périmée. Deux envois dans la même milliseconde portaient le
+  même horodatage, et l'appareil resté en arrière écrasait l'autre en silence.
+- Le corps peut porter un champ **`prefs`**, un objet libre que le Worker
+  conserve **sans l'interpréter** : c'est l'application qui valide ce qu'elle
+  accepte d'en reprendre. Un envoi sans `prefs`, venu d'un appareil resté sur
+  une version antérieure, n'efface pas celles qui étaient déjà là.
+- `GET /sync` avec le même en-tête rend le tout.
 - `X-Sync-Base` porte l'horodatage de la sauvegarde que l'appareil a vue en
   dernier. S'il ne correspond plus à celle du relais, le Worker répond `409`
   avec l'état courant plutôt que d'écraser le travail d'un autre appareil en

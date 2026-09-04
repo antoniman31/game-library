@@ -18,7 +18,8 @@
 // fait pas échouer. `--strict` inverse ce choix.
 
 import { readFileSync } from "node:fs";
-import { migrateGames, normTitle, rapprochementDouteux, dureeEntreeHistorique, PRET_LONG_JOURS } from "../src/lib/model.js";
+import { migrateGames, normTitle, rapprochementDouteux, dureeEntreeHistorique, PRET_LONG_JOURS,
+  estDateISO, PLATFORMES_JEU } from "../src/lib/model.js";
 
 const args = process.argv.slice(2);
 const fichier = args.find(a => !a.startsWith("--"));
@@ -93,6 +94,34 @@ for (const g of jeux) {
   }
 }
 
+// ── Valeurs impossibles ────────────────────────────────────────────────────
+// L'import ramène désormais ces valeurs à quelque chose de sûr, mais un fichier
+// gardé de côté peut les contenir encore, et c'est justement ce qu'on veut
+// savoir avant de l'importer : une plateforme inconnue n'apparaît dans aucun
+// filtre, un format inventé n'est compté ni en physique ni en démat — les
+// tuiles de l'onglet Collection cessent alors de s'additionner —, et une date
+// illisible produit des NaN dans les statistiques.
+const PLATEFORMES = new Set([...PLATFORMES_JEU, "Xbox"]);
+for (const g of jeux) {
+  if (!PLATEFORMES.has(g.platform)) {
+    signaler("plateforme inconnue", `« ${g.title} » : ${JSON.stringify(g.platform)}`);
+  }
+  if (g.format !== "physique" && g.format !== "démat") {
+    signaler("format inconnu", `« ${g.title} » : ${JSON.stringify(g.format)}`);
+  }
+  if (g.metacritic != null && (typeof g.metacritic !== "number" || !Number.isFinite(g.metacritic) || g.metacritic < 0 || g.metacritic > 100)) {
+    signaler("note impossible", `« ${g.title} » : ${JSON.stringify(g.metacritic)}`);
+  }
+  if (g.lentDate && !estDateISO(g.lentDate)) {
+    signaler("date de prêt illisible", `« ${g.title} » : ${JSON.stringify(g.lentDate)}`);
+  }
+  for (const e of g.pretsPasses || []) {
+    if (!estDateISO(e.du) || !estDateISO(e.au)) {
+      signaler("date d'historique illisible", `« ${g.title} » : ${e.a}, du ${JSON.stringify(e.du)} au ${JSON.stringify(e.au)}`);
+    }
+  }
+}
+
 // ── Prêts ──────────────────────────────────────────────────────────────────
 for (const g of jeux) {
   // Un nom sans date, ou l'inverse : le prêt ne compte pas et n'alerte jamais.
@@ -109,6 +138,9 @@ for (const g of jeux) {
     }
   }
   for (const e of g.pretsPasses || []) {
+    // Les dates illisibles sont déjà signalées plus haut ; les comparer ici
+    // ajouterait un second constat pour le même défaut.
+    if (!estDateISO(e.du) || !estDateISO(e.au)) continue;
     if (e.au < e.du) signaler("historique incohérent", `« ${g.title} » : ${e.a}, rendu (${e.au}) avant le prêt (${e.du})`);
     if (dureeEntreeHistorique(e) > 365) signaler("prêt historique très long", `« ${g.title} » : ${e.a}, ${dureeEntreeHistorique(e)} jours`);
   }

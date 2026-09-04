@@ -1,8 +1,8 @@
 # Game Library
 
-Bibliothèque de jeux vidéo personnelle (Xbox / Switch) : suivi de progression,
-suivi des prêts, et enrichissement automatique des
-fiches depuis plusieurs bases de données publiques.
+Bibliothèque de jeux vidéo personnelle (Xbox / Switch) : catalogue, prêts,
+statistiques, et enrichissement automatique des fiches depuis plusieurs bases
+de données publiques.
 
 **➡️ [antoniman31.github.io/game-library](https://antoniman31.github.io/game-library/)** — installable en PWA sur mobile.
 
@@ -31,20 +31,23 @@ fois de relais CORS et de sauvegarde entre appareils.
 ## Démarrage rapide
 
 1. Ouvrir **[l'application](https://antoniman31.github.io/game-library/)**.
-2. Aller dans l'onglet **⚙️** et saisir ses clés API (voir ci-dessous).
-   Sans clé, l'application fonctionne mais sans jaquettes ni enrichissement.
+2. Aller dans l'onglet **⚙️ → Services** et saisir ses clés API (voir
+   ci-dessous). Sans clé, l'application fonctionne mais sans jaquettes ni
+   enrichissement.
 3. Sur mobile : menu du navigateur → **« Installer l'application »** / « Ajouter à
    l'écran d'accueil ».
-4. Pour transférer une bibliothèque existante : **Stats → Exporter** sur l'ancien
-   appareil, **Stats → Importer** sur le nouveau.
+4. Pour transférer une bibliothèque existante, deux chemins depuis **⚙️ →
+   Sauvegarde** : la **synchronisation par code** (elle emporte aussi
+   l'apparence, et les clés si on coche la case), ou la **copie hors ligne**
+   Exporter / Importer, qui ne demande aucun relais.
 
 ---
 
 ## Configuration des clés API
 
-⚠️ **Le dépôt ne contient aucune clé.** Chacun saisit les siennes dans l'onglet
-**⚙️** ; elles sont enregistrées **sur l'appareil** (`localStorage`, entrée
-`gl_keys`) et ne transitent que vers les services concernés.
+⚠️ **Le dépôt ne contient aucune clé.** Chacun saisit les siennes dans
+**⚙️ → Services** ; elles sont enregistrées **sur l'appareil** (`localStorage`,
+entrée `gl_keys`) et ne transitent que vers les services concernés.
 
 | Service | À quoi ça sert | Obtenir une clé | Obligatoire ? |
 |---|---|---|---|
@@ -64,8 +67,14 @@ dans le dépôt public. Les faire saisir par l'utilisateur règle le problème �
 racine — chacun utilise son propre quota, et le dépôt reste sain.
 
 L'**Export JSON contient les jeux mais jamais les clés**, afin qu'une sauvegarde
-puisse être partagée ou stockée sans fuite. Conséquence : sur un nouvel appareil,
-il faut importer l'export **et** ressaisir les clés.
+puisse être partagée ou stockée sans fuite. La synchronisation en ligne peut,
+elle, les emporter — mais seulement si l'on coche une case prévue pour, décochée
+par défaut (voir [Sauvegarde](#sauvegarde)).
+
+Une fois renseignée, chaque clé passe en **lecture seule** avec un cadenas :
+« Modifier » et « Supprimer » sont deux boutons distincts, chacun demandant
+confirmation. Ces valeurs n'existent nulle part ailleurs — ni dans l'export, ni
+dans le dépôt — et se perdaient d'un doigt qui glisse.
 
 ---
 
@@ -94,7 +103,7 @@ npx wrangler deploy
 ```
 
 Wrangler affiche une URL du type `https://game-library-proxy.<compte>.workers.dev`.
-La coller dans **⚙️ → « Relais CORS »** → Enregistrer.
+La coller dans **⚙️ → Services → « Relais CORS »** → Enregistrer.
 
 > **Relais déjà déployé pour ce projet :**
 > `https://game-library-proxy.antoniman31.workers.dev`
@@ -121,11 +130,15 @@ erreur CORS.
   exclue : un mot du résumé faisait remonter des jeux sans rapport.
 - **Filtres combinables** : plateforme, prêt (chez moi / prêtés), format (physique / démat).
 - **Tri** : A-Z, date, Metacritic.
-- **Filtre « 🎯 à finir »** : « en cours » + « non commencé », triés par ancienneté
-  de dernière session — pour attaquer la pile par le plus vieux.
-- **Prêts** : nom de l'emprunteur et date, durée affichée, alerte au-delà de 30 jours.
-- **Thème clair / sombre**.
-- **Suppression avec toast « Annuler »** (5 s) au lieu d'une popup bloquante.
+- **Tout est modifiable** : « Modifier la fiche » ouvre un panneau qui laisse
+  corriger ce que les sources automatiques ont écrit — titre, plateforme,
+  format, rétrocompatibilité, genres, note, date, description, jaquette et
+  jusqu'aux champs Wikidata. Avant, une erreur de RAWG ne se corrigeait qu'en
+  supprimant le jeu pour le recréer.
+- **Trois modes de thème** : automatique (il suit le réglage du téléphone, y
+  compris quand celui-ci bascule le soir), clair, et noir profond.
+- **Suppression avec toast « Annuler »** (5 s), précédée d'une confirmation qui
+  rappelle ce qui part avec le jeu.
 
 ### Prêts
 
@@ -140,14 +153,26 @@ C'est le seul état que l'application suive : ce jeu est-il chez moi, ou dehors 
   sous « Déjà rendus », et l'onglet Stats indique à qui l'on prête le plus.
   L'historique est borné à 20 entrées par jeu et voyage dans l'export.
 - Bouton **SMS** de relance (lien `sms:` pré-rempli).
+- Un prêt **saisi par erreur** s'efface sans être archivé, et chaque ligne de
+  « Déjà rendus » porte sa croix : sans ça, un essai fausse les moyennes pour
+  toujours. Les deux gestes demandent confirmation.
 
 ### Fiche de jeu
 
 Chaque fiche se déplie et regroupe, en accordéons repliés par défaut :
-**📤 Prêt**, **🔗 Liens & contenu** (recherches YouTube / JVC / IGN + 3 liens
-personnels), **📝 Notes**. Restent toujours visibles : genres, prêt, format,
-rétrocompatibilité et bloc « Temps de jeu ». La description est repliée à deux
-lignes avec un « Lire la suite ».
+**🔗 Liens & contenu** (recherches YouTube / JVC / IGN + 3 liens personnels) et
+**📝 Notes**. Restent toujours visibles : l'identité du jeu, l'infobox Wikidata
+et le bloc **Prêt**, seule action qu'on répète. La description est repliée avec
+un « Lire la suite ».
+
+Le format et la rétrocompatibilité ont quitté la fiche pour le panneau
+d'édition : on les règle une fois dans la vie d'un jeu, alors qu'ils occupaient
+une place permanente. Les pastilles « démat » et « 🔄 Compatible Series X » en
+haut de la carte continuent de les annoncer.
+
+Les quatre sources — correction manuelle, RAWG, titre français, jaquette —
+s'ouvrent en **panneau au premier plan** plutôt qu'à l'intérieur de la fiche,
+qui devenait interminable.
 
 ### Enrichissement automatique
 
@@ -165,13 +190,21 @@ est volontairement exclu. Les libellés sont résolus en `fr` → `en` → `mul`
 (Wikidata range les noms propres sous `mul`, ce qui explique que certains
 éditeurs ne remontent pas si on ne demande que `fr`/`en`).
 
-**Bouton « 🌐 Actualiser descriptions »** (en-tête) : régénère la description de
+**Bouton « Actualiser les descriptions »** (panneau ⋯ Actions) : régénère la description de
 toute la bibliothèque depuis Wikipédia. Il est **annulable en cours de route**,
 respecte un délai anti-rate-limit (~150 ms) et affiche en fin de course la
 **liste des jeux sans page Wikipédia trouvée**. Il retient le **meilleur titre**
 (exact → préfixe → premier résultat) pour éviter de récupérer la page de la
 *série* au lieu de celle du jeu — sans quoi « Assassin's Creed Unity » héritait
-de la description générique d'« Assassin's Creed ».
+de la description générique d'« Assassin's Creed ». Comme il **remplace** toutes
+les descriptions, y compris celles corrigées à la main, il demande confirmation
+en disant combien il va en écraser.
+
+**Bouton « Compléter les notes »** (même panneau) : cherche sur RAWG les scores
+Metacritic manquants, puis affiche un **rapport vérifiable** — pour chaque note
+trouvée, le titre RAWG qui a répondu. Un rapprochement douteux est marqué ⚠️ et
+se retire d'un bouton : sur une centaine de jeux, un titre approximatif finit
+toujours par ramener la note d'un autre jeu.
 
 ### Import de la bibliothèque Xbox Live
 
@@ -211,16 +244,63 @@ affiche ses jeux natifs plus ceux de la génération précédente marqués
 - **Xbox One** et **Switch 1** restent **stricts**
 
 Badge discret **« 🔄 Compatible Series X »** / **« 🔄 Compatible Switch 2 »**, et
-un toggle **« Jouable sur … : oui / non »** dans la fiche pour les rares
-exceptions. Ce choix manuel est protégé par une **migration versionnée par jeu**
+un choix **« Jouable sur … : oui / non »** dans le panneau d'édition pour les
+rares exceptions — il disparaît, et la valeur avec lui, si l'on choisit une
+plateforme sans console parente. Ce choix manuel est protégé par une **migration versionnée par jeu**
 (`bcV`) : le rattrapage automatique ne s'applique qu'une fois, il n'écrase donc
 jamais une décision prise à la main.
 
+### Statistiques
+
+Deux sous-onglets, parce que les deux familles ne répondent pas à la même
+question. Chaque bloc disparaît quand il n'a rien à dire : un « aucune donnée »
+répété six fois occupe autant de place qu'un vrai contenu.
+
+**Circulation** — ce qui sort. Nombre de prêts, durée moyenne, jeux jamais
+prêtés, taux de rotation de la collection, personnes distinctes, qui emprunte le
+plus et qui garde le plus longtemps (ce ne sont pas les mêmes), rythme mensuel
+sur un an, ce qui est dehors trié par ancienneté, et la **ponctualité** : a-t-il
+rendu quand il l'avait dit, ce qui n'est pas la même question que combien de
+temps il a gardé. Ne comptent là que les prêts rendus pour lesquels une date
+avait été fixée.
+
+**Collection** — ce qu'on possède. Répartition par plateforme, format et genre,
+note moyenne **et médiane** (deux mauvais jeux tirent une moyenne, pas une
+médiane), moyenne par plateforme et par genre, âge réel des jeux d'après leur
+date de sortie Wikidata, délai médian entre la sortie et l'achat, rythme
+d'ajout, studios et séries, et ce qui manque encore à remplir.
+
+S'y ajoutent deux listes qui ne sont pas des statistiques mais qui valent le
+reste : les **doublons possibles** — deux fiches sur deux plateformes, c'est
+normal ; deux fois la même plateforme, en rouge, est une saisie en double — et
+les **épisodes manquants**, déduits des champs « épisode précédent / suivant »
+de Wikidata : tu as Halo 5, tu n'as pas Halo 4, l'application te le dit.
+
+Un bouton **Recalculer**, en bas, relit l'heure. Les chiffres suivent la
+bibliothèque en direct ; seuls les jours écoulés et la fenêtre des douze mois se
+figent quand l'application reste ouverte plusieurs jours.
+
 ### Sauvegarde
 
-**Export / Import JSON** dans l'onglet **⚙️ Paramètres**, en mode *remplacer* ou
-*fusionner*, à côté de la synchronisation par code — les deux répondent au même
-besoin : sortir la bibliothèque de cet appareil et l'y ramener.
+Tout est dans **⚙️ → Sauvegarde**, où deux blocs répondent au même besoin —
+sortir la bibliothèque de cet appareil et l'y ramener — par deux chemins :
+
+- **Synchronisation par code** : dépose la bibliothèque sur le Worker et la
+  reprend ailleurs, avec le même code de 26 caractères sur chaque appareil.
+  Elle emporte aussi l'**apparence**, et les **clés des services** si l'on coche
+  la case prévue — décochée par défaut, parce que cocher change la nature du
+  code : il protège une liste de jeux, il protégerait des identifiants. Le code
+  lui-même reste sur l'appareil et ne part jamais dans l'export.
+- **Copie hors ligne** : Export / Import JSON, en mode *remplacer* ou
+  *fusionner*, sans aucun relais à déployer.
+
+Une récupération ne remplace rien sans confirmation, chiffres en main, et les
+préférences se reprennent sur une **seconde question** : on vient chercher une
+bibliothèque, pas forcément se faire changer son thème.
+
+Un envoi qui écraserait le travail d'un autre appareil est **refusé** : le
+Worker compare l'horodatage annoncé à celui qu'il détient et répond 409, et
+l'application pose alors le choix au lieu de trancher toute seule.
 
 ---
 
@@ -245,21 +325,31 @@ Un jeu est un objet simple, persisté dans `localStorage` sous la clé `gl_v2` :
   id, title, platform, format,       // "physique" | "démat"
   addedDate,                         // sert aussi de date de sortie (proxy)
   genre: [], style,                  // style = description
-  status,                            // cf. STATUTS
-  note, lentA, lentDate,             // prêt
-  cover, metacritic, hltb,
-  playedMinutes, manualMinutes, sessions: [{ date, minutes }],
-  myLinks: ["", "", ""], tips, tag, progression,
+  cover, metacritic,
+  lentA, lentDate, lentRetourPrevu,  // prêt en cours, date de retour convenue
+  pretsPasses: [{ a, du, au, prevu }],   // historique, borné à 20 par jeu
+  myLinks: ["", "", ""], tips, tag,
   backCompat, bcV,                   // rétrocompatibilité + version de migration
   infobox                            // données Wikidata, ou null
 }
 ```
 
-Les champs `note`, `tag` et `progression` ne sont plus affichés mais restent
-présents pour ne pas casser les anciennes sauvegardes.
+Sept champs ont été **supprimés** par la migration, pas seulement masqués :
+`status`, `playedMinutes`, `manualMinutes`, `sessions`, `hltb`, `note`,
+`progression`. Les garder ferait croire à des fonctions inexistantes, et ils
+voyageaient à chaque écriture et à chaque synchronisation.
 
-Les clés API sont stockées séparément, sous `gl_keys`, précisément pour qu'elles
-n'entrent jamais dans l'export.
+**Ce que l'application accepte d'un fichier.** L'import ne fait pas confiance à
+ce qu'on lui donne : une date illisible, une plateforme inconnue, un format
+inventé ou une note en toutes lettres sont ramenés à une valeur sûre, et le
+nombre d'entrées corrigées est annoncé. Le contrôle ne portait que sur les
+types — « pas une date » est une chaîne, donc ça passait, et le `NaN` qui en
+sortait remontait jusque dans les moyennes de l'onglet Stats, affiché comme une
+statistique.
+
+Trois autres clés vivent à part dans le `localStorage`, précisément pour ne
+jamais entrer dans l'export : `gl_keys` (clés des services), `gl_sync` (code de
+synchronisation) et `gl_theme` (mode d'apparence).
 
 ---
 
@@ -311,6 +401,21 @@ fournit directement un texte français rédigé, sans quota ni découpage.
   seul commit touche au projet. Si tu installes sous Windows, npm ajoutera les
   binaires win32 : commite le lockfile mis à jour, il portera alors les deux
   plateformes.
+- **Le sombre est un vrai noir.** Le noir profond a d'abord été une préférence
+  applicable par-dessus un sombre bleu nuit, ce qui faisait quatre commandes
+  dans un panneau qui en comptait déjà trois pour la même question — et pour un
+  choix qui n'en est pas un : entre un bleu nuit et un vrai noir, on tranche une
+  fois. Sur une dalle OLED, un pixel noir est un pixel éteint. Les cartes ne
+  sont pas noires elles aussi, sinon plus rien ne se distingue : ce sont les
+  bordures, remontées, qui portent la structure.
+- **Les gestes irréversibles demandent confirmation, en disant ce qu'ils
+  coûtent.** Supprimer un jeu emporte son historique de prêts et le retour
+  arrière ne dure que cinq secondes ; effacer une clé nomme le service qui
+  cessera de fonctionner ; remplacer le code de synchronisation rend
+  inaccessible la sauvegarde qu'il protégeait, ce qui ne se voit pas tout de
+  suite. Ces messages vivent dans `src/lib/garde-fous.js`, purs et testés :
+  c'est le genre de garde-fou qu'on écrit une fois et qu'on ne relit jamais,
+  jusqu'au jour où il ne se déclenche pas.
 - **Ce que l'application ne fait pas.** Elle a longtemps suivi la progression
   (non commencé, en cours, terminé, platine, abandonné) et le temps de jeu, avec
   chronomètre et historique de sessions. Les deux ont été retirés : la console
@@ -318,6 +423,12 @@ fournit directement un texte français rédigé, sans quota ni découpage.
   demandait du travail pour une information qu'on possède ailleurs. Il reste ce
   que la console ne sait pas faire — voir toute la bibliothèque d'un coup, et
   savoir chez qui sont les jeux.
+- **Les couleurs sont des jetons, y compris l'accent.** Le bleu était écrit en
+  dur une cinquantaine de fois dans le JavaScript ; le jeton `--accent` existait
+  mais ne servait à rien, si bien que le thème clair ne pouvait pas le corriger.
+  Or sur fond clair il ne donnait que 2,58:1 alors que WCAG AA demande 4,5:1 —
+  et c'est la couleur de presque tout le petit texte cliquable. Le thème clair
+  le remonte désormais à 5,75:1 ; le sombre garde exactement la même teinte.
 - **Le mobile d'abord.** L'en-tête collant empilait le titre, cinq boutons à
   libellé complet, les onglets, la recherche et quatre rangées de puces de
   filtres : 317 px sur un écran de 915, soit un tiers de la surface avant le
@@ -359,7 +470,7 @@ npm run dev      # http://localhost:5173/game-library/
 npm run build
 npm run preview
 npm run lint     # oxlint
-npm test         # 40 vérifications (modèle, import, prêts, Worker)
+npm test         # 83 tests (modèle, import, prêts, stats, thème, préférences, Worker)
 npm run audit -- ma-sauvegarde.json   # symptômes dans les données (voir plus bas)
 ```
 
@@ -378,9 +489,10 @@ npm run audit -- ma-sauvegarde.json --strict       # code de retour ≠ 0 s'il y
 
 Prend un export JSON et signale : doublons de titre sur une même plateforme,
 identifiants réutilisés, champs vides (jaquette, genre, description, note),
-dates d'ajout illisibles ou à venir, prêts incomplets ou très anciens, retours
-antérieurs au prêt, et séries Wikidata éloignées du titre — le signe qu'une
-source a répondu pour un autre jeu.
+valeurs impossibles (plateforme inconnue, format inventé, note hors bornes,
+dates illisibles), dates d'ajout à venir, prêts incomplets ou très anciens,
+retours antérieurs au prêt, et séries Wikidata éloignées du titre — le signe
+qu'une source a répondu pour un autre jeu.
 
 Ce n'est **pas** un test : `npm test` vérifie des invariants et doit rester vert,
 l'audit signale des *symptômes* qui peuvent être parfaitement légitimes. Deux
@@ -391,9 +503,9 @@ import, beaucoup moins.
 
 ```
 ├── .github/workflows/deploy.yml   Build + publication GitHub Pages
-├── worker/                        Relais CORS Cloudflare (sans secret) + sa doc
+├── worker/                        Relais CORS + sauvegarde en ligne (sans secret)
 │   ├── index.js
-│   ├── test.mjs                   16 vérifications, sans dépendance ni déploiement
+│   ├── test.mjs                   29 vérifications, sans dépendance ni déploiement
 │   ├── wrangler.toml
 │   └── README.md
 ├── scripts/
@@ -403,17 +515,24 @@ import, beaucoup moins.
 │   ├── App.jsx                    Ossature : état global, en-tête, onglets
 │   ├── main.jsx                   Montage + garde-fou d'erreurs global
 │   ├── index.css                  Jetons de thème, animations, survol
-│   ├── lib/
+│   ├── lib/                       Modules purs : testables sans navigateur
 │   │   ├── api.js                 RAWG, Wikipédia, Wikidata, SteamGridDB, xbl.io
-│   │   ├── model.js               Plateformes, prêts, migration, validation
+│   │   ├── model.js               Plateformes, prêts, migration, validation, édition
+│   │   ├── stats.js               Agrégats des deux sous-onglets Stats
+│   │   ├── apparence.js           Modes de thème et couleur de barre système
+│   │   ├── preferences.js         Ce que la sauvegarde emporte en plus des jeux
+│   │   ├── garde-fous.js          Messages des confirmations destructrices
+│   │   ├── maj.js                 Détection d'une version déjà installée
 │   │   ├── seed.js                Bibliothèque de démarrage
 │   │   ├── storage.js             localStorage instrumenté (alerte de quota)
 │   │   ├── sync.js                Sauvegarde sur le Worker
-│   │   └── theme.js               Alias vers les jetons CSS
+│   │   ├── theme.js               Alias vers les jetons CSS
+│   │   └── *.test.mjs             Tests des modules ci-dessus (node --test)
 │   └── components/
 │       ├── GameCard.jsx  AddModal.jsx  ImportModal.jsx
-│       ├── Sheet.jsx  FiltersSheet.jsx  ActionsSheet.jsx
-│       └── Cover.jsx  InfoboxView.jsx  ErrorBoundary.jsx
+│       ├── StatsView.jsx  SettingsView.jsx  ScoresSheet.jsx
+│       ├── Sheet.jsx  FiltersSheet.jsx  ActionsSheet.jsx  SousOnglets.jsx
+│       └── Cover.jsx  InfoboxView.jsx  ChampProtege.jsx  ErrorBoundary.jsx
 ├── index.html
 ├── vite.config.js                 base, PWA, proxys de dev
 ├── PROGRESS.md                    État des fonctionnalités
@@ -426,7 +545,7 @@ import, beaucoup moins.
 
 Automatique à chaque push sur `main`
 ([`.github/workflows/deploy.yml`](.github/workflows/deploy.yml)) : `npm ci`,
-`npm run lint`, `npm run test:worker`, `npm run build`, puis publication de
+`npm run lint`, `npm test`, `npm run build`, puis publication de
 `dist/` sur GitHub Pages via les actions
 officielles `configure-pages` / `upload-pages-artifact` / `deploy-pages`.
 
@@ -434,18 +553,27 @@ officielles `configure-pages` / `upload-pages-artifact` / `deploy-pages`.
 choix « clés saisies par l'utilisateur ».
 
 Le service worker est en `autoUpdate` : une nouvelle version est récupérée
-automatiquement au chargement suivant.
+automatiquement au chargement suivant. L'onglet déjà ouvert, lui, continue
+d'exécuter l'ancien code — d'où la bannière **« ✨ Nouvelle version »** avec son
+bouton Recharger, déclenchée par l'événement `controllerchange`. Sans elle, il
+fallait fermer l'application et la rouvrir sans jamais savoir s'il y avait
+quelque chose à voir.
+
+⚠️ **Le Worker ne se déploie pas avec le site.** GitHub Pages ne publie que
+`dist/` ; toute modification de `worker/index.js` demande un `npx wrangler
+deploy` séparé, sinon le relais en ligne reste sur son ancienne version.
 
 ---
 
 ## Limites connues
 
-- **La synchronisation est manuelle.** ⚙️ → Synchronisation dépose la
-  bibliothèque sur le Worker et la récupère, avec le même code sur chaque
-  appareil ; rien ne part ni n'arrive tout seul, et une récupération remplace la
-  bibliothèque locale après confirmation. Sans relais déployé, il reste l'Export
-  / Import JSON. Les clés d'API et le code de synchronisation sont à ressaisir
-  sur chaque appareil : ils ne figurent pas dans l'export.
+- **La synchronisation est manuelle.** ⚙️ → Sauvegarde dépose la bibliothèque
+  sur le Worker et la récupère, avec le même code sur chaque appareil ; rien ne
+  part ni n'arrive tout seul, et une récupération remplace la bibliothèque
+  locale après confirmation. Sans relais déployé, il reste la copie hors ligne.
+  Le **code de synchronisation** est à saisir sur chaque appareil — il ne
+  figure ni dans l'export ni dans la sauvegarde qu'il protège. Les clés des
+  services peuvent voyager, mais seulement si on le demande explicitement.
 - **SteamGridDB et l'import Xbox exigent le relais** déployé et renseigné dans ⚙️.
 - **xbl.io** expose l'historique joué, pas les achats, et aucun temps de jeu.
 - **Wikidata est incomplet** sur certains jeux (souvent les titres Nintendo ou
