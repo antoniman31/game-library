@@ -9,6 +9,7 @@
     "no-unused-vars": "error"
   },
   "overrides": [
-    { "files": ["worker/**"], "env": { "node": true } }
+    { "files": ["worker/**"], "env": { "node": true } },
+    { "files": ["scripts/**"], "env": { "node": true } }
   ]
 }

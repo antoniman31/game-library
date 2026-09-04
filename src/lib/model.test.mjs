@@ -16,8 +16,10 @@ import {
   joursDePret, pretEnRetard, isBackCompatPlatform,
   brouillonDepuisJeu, validerEdition, sortiesDepuisTexte, sortiesVersTexte, listeDepuisTexte,
   normTitle, rapprochementDouteux, jeuxSansScore,
+  rendreJeu, preterJeu, dureeEntreeHistorique, MAX_HISTORIQUE_PRET, aujourdhuiISO,
   BACK_COMPAT, XBOX_SERIES_CUTOFF, PRET_LONG_JOURS,
 } from "./model.js";
+import { ecouterMiseAJour } from "./maj.js";
 
 const jeu = (p = {}) => ({
   id: 1, title: "Jeu", platform: "Xbox Series X", format: "physique",
@@ -252,4 +254,124 @@ test("un rapprochement est douteux quand les titres ne se recouvrent pas", () =>
   assert.equal(rapprochementDouteux("Halo", "Halo Infinite"), false, "une édition plus précise reste plausible");
   assert.equal(rapprochementDouteux("Halo Infinite", "Doom Eternal"), true);
   assert.equal(rapprochementDouteux("Halo Infinite", ""), true, "sans titre en face, rien ne prouve le rapprochement");
+});
+
+
+// ── Prêts : historique et date de retour ───────────────────────────────────
+// « Rendu » remettait simplement lentA à null : la seule chose que
+// l'application soit censée savoir — à qui va ce jeu, et pour combien de
+// temps — s'effaçait à chaque retour.
+
+test("rendre un jeu archive le prêt au lieu de l'effacer", () => {
+  const g = jeu({ lentA: "Paul", lentDate: ilYA(12) });
+  const r = rendreJeu(g);
+  assert.equal(r.lentA, null);
+  assert.equal(r.lentDate, null);
+  assert.equal(r.pretsPasses.length, 1);
+  assert.equal(r.pretsPasses[0].a, "Paul");
+  assert.equal(r.pretsPasses[0].du, ilYA(12));
+  assert.equal(r.pretsPasses[0].au, aujourdhuiISO());
+  assert.equal(dureeEntreeHistorique(r.pretsPasses[0]), 12);
+  assert.equal(g.pretsPasses, undefined, "l'original n'est pas modifié");
+});
+
+test("rendre un jeu qui n'est pas prêté ne fabrique pas d'entrée", () => {
+  const g = jeu({ pretsPasses: [] });
+  assert.equal(rendreJeu(g), g);
+  assert.equal(rendreJeu(jeu({ lentA: "Paul", lentDate: null })).pretsPasses, undefined);
+});
+
+test("l'historique est borné et garde les prêts les plus récents", () => {
+  let g = jeu();
+  for (let i = 0; i < MAX_HISTORIQUE_PRET + 5; i++) {
+    g = rendreJeu({ ...g, lentA: `P${i}`, lentDate: ilYA(1) });
+  }
+  assert.equal(g.pretsPasses.length, MAX_HISTORIQUE_PRET);
+  assert.equal(g.pretsPasses[0].a, `P${MAX_HISTORIQUE_PRET + 4}`, "le plus récent est en tête");
+});
+
+test("prêter pose la date du jour, et la date de retour seulement si elle est valable", () => {
+  const g = jeu();
+  assert.equal(preterJeu(g, " Paul ").lentA, "Paul");
+  assert.equal(preterJeu(g, "Paul").lentDate, aujourdhuiISO());
+  assert.equal(preterJeu(g, "Paul").lentRetourPrevu, null);
+  assert.equal(preterJeu(g, "Paul", "2030-01-01").lentRetourPrevu, "2030-01-01");
+  assert.equal(preterJeu(g, "Paul", "01/01/2030").lentRetourPrevu, null, "un format inattendu ne passe pas");
+  assert.equal(preterJeu(g, "   "), g, "sans nom, rien ne bouge");
+});
+
+test("la date convenue remplace le seuil, dans les deux sens", () => {
+  const hier = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+  const demain = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
+  // Prêt d'hier, mais la date convenue est déjà passée : en retard.
+  assert.equal(pretEnRetard(jeu({ lentA: "Paul", lentDate: ilYA(1), lentRetourPrevu: hier })), true);
+  // Prêt de 90 jours, mais convenu jusqu'à demain : pas en retard.
+  assert.equal(pretEnRetard(jeu({ lentA: "Paul", lentDate: ilYA(90), lentRetourPrevu: demain })), false);
+  // Sans date convenue, le seuil de 30 jours reste le repli.
+  assert.equal(pretEnRetard(jeu({ lentA: "Paul", lentDate: ilYA(90) })), true);
+  assert.equal(pretEnRetard(jeu({ lentA: "Paul", lentDate: ilYA(2) })), false);
+});
+
+test("la migration prépare les champs de prêt sans écraser l'existant", () => {
+  const [neuf] = migrateGames([jeu()]);
+  assert.deepEqual(neuf.pretsPasses, []);
+  assert.equal(neuf.lentRetourPrevu, null);
+  const garde = [{ a: "Paul", du: "2024-01-01", au: "2024-01-10" }];
+  const [ancien] = migrateGames([jeu({ pretsPasses: garde, lentRetourPrevu: "2030-01-01" })]);
+  assert.deepEqual(ancien.pretsPasses, garde);
+  assert.equal(ancien.lentRetourPrevu, "2030-01-01");
+});
+
+test("un import n'avale que des entrées d'historique exploitables", () => {
+  const { jeux } = validerJeuxImportes([{
+    title: "Jeu",
+    pretsPasses: [
+      { a: "Paul", du: "2024-01-01", au: "2024-01-10" },
+      { a: "", du: "2024-01-01", au: "2024-01-10" },
+      { du: "2024-01-01", au: "2024-01-10" },
+      "n'importe quoi", null,
+    ],
+  }]);
+  assert.deepEqual(jeux[0].pretsPasses, [{ a: "Paul", du: "2024-01-01", au: "2024-01-10" }]);
+  assert.deepEqual(validerJeuxImportes([{ title: "X", pretsPasses: "oups" }]).jeux[0].pretsPasses, []);
+});
+
+// ── Détection de mise à jour ───────────────────────────────────────────────
+// Le service worker prend le contrôle tout seul, mais l'onglet ouvert exécute
+// encore l'ancien code. La distinction qui compte : une installation initiale
+// n'est pas une mise à jour, et un bandeau qui crierait à la nouveauté au
+// premier lancement serait pire que pas de bandeau du tout.
+
+test("un changement de contrôleur signale une mise à jour, sauf à la première visite", () => {
+  const faireSW = () => {
+    const abonnes = new Set();
+    return {
+      addEventListener: (_, fn) => abonnes.add(fn),
+      removeEventListener: (_, fn) => abonnes.delete(fn),
+      declencher: () => abonnes.forEach(fn => fn()),
+      get nbAbonnes() { return abonnes.size; },
+    };
+  };
+
+  let vues = 0;
+  const avec = faireSW();
+  const stop = ecouterMiseAJour(avec, true, () => vues++);
+  avec.declencher();
+  assert.equal(vues, 1);
+
+  // Première visite : le contrôleur apparaît, ce n'est pas une mise à jour.
+  let vuesPremiere = 0;
+  const sans = faireSW();
+  ecouterMiseAJour(sans, false, () => vuesPremiere++);
+  sans.declencher();
+  assert.equal(vuesPremiere, 0);
+
+  // Le désabonnement rend la main : pas d'écouteur qui survit à l'app.
+  stop();
+  assert.equal(avec.nbAbonnes, 0);
+  avec.declencher();
+  assert.equal(vues, 1);
+
+  // Sans service worker (navigateur qui n'en veut pas), rien ne casse.
+  assert.doesNotThrow(() => ecouterMiseAJour(null, true, () => {})());
 });

@@ -40,6 +40,8 @@ export function migrateGames(list) {
     else if ((ng.bcV || 1) < 2 && ng.platform === "Switch 1" && ng.backCompat === false) ng.backCompat = true;
     ng.bcV = BACK_COMPAT_VERSION;
     if (ng.infobox === undefined) ng.infobox = null;
+    if (ng.lentRetourPrevu === undefined) ng.lentRetourPrevu = null;
+    if (!Array.isArray(ng.pretsPasses)) ng.pretsPasses = [];
     // Sept champs devenus sans objet : la progression et le temps de jeu, que
     // la console tient déjà, plus `note` et `progression` qui n'ont jamais été
     // ni écrits ni lus. Les garder ferait croire à des fonctions inexistantes,
@@ -56,11 +58,55 @@ export function joursDePret(g) {
   return daysSince(new Date(g.lentDate));
 }
 
+// Date de retour convenue, facultative, posée au moment du prêt.
+// Un seuil unique de 30 jours traite de la même façon le jeu passé à un frère
+// pour le week-end et celui confié à un collègue pour l'été. Quand la date est
+// renseignée, c'est elle qui fait foi ; sinon le seuil reste le repli.
+export const aujourdhuiISO = () => new Date().toISOString().slice(0, 10);
+
 // Prêt qui s'éternise : le seul signal d'alerte que l'application ait encore
 // à donner. Le traitement visuel qui marquait les jeux délaissés lui revient.
 export function pretEnRetard(g) {
+  if (!g.lentA || !g.lentDate) return false;
+  if (g.lentRetourPrevu) return aujourdhuiISO() > g.lentRetourPrevu;
   const j = joursDePret(g);
   return j !== null && j > PRET_LONG_JOURS;
+}
+
+// ── Historique des prêts ────────────────────────────────────────────────────
+// « Rendu » remettait lentA et lentDate à null : le prêt disparaissait sans
+// laisser de trace. On ne savait plus à qui on avait déjà confié un jeu, ni
+// que la même personne met trois mois à chaque fois — alors que c'est
+// précisément ce que cette application est censée savoir.
+//
+// L'historique est porté par le jeu, donc il part dans l'export et dans la
+// synchronisation avec le reste. Il est borné : une ligne pèse peu, mais rien
+// ne doit croître sans limite dans un stockage plafonné à quelques Mo.
+export const MAX_HISTORIQUE_PRET = 20;
+
+export const dureeEntreeHistorique = (e) =>
+  Math.max(0, Math.round((new Date(e.au) - new Date(e.du)) / 86400000));
+
+// Rend le jeu et archive le prêt. Pure : retourne un nouvel objet.
+export function rendreJeu(g) {
+  if (!g.lentA || !g.lentDate) return g;
+  const entree = { a: g.lentA, du: g.lentDate, au: aujourdhuiISO() };
+  return {
+    ...g,
+    lentA: null, lentDate: null, lentRetourPrevu: null,
+    pretsPasses: [entree, ...(g.pretsPasses || [])].slice(0, MAX_HISTORIQUE_PRET),
+  };
+}
+
+// Prête le jeu. `retourPrevu` vide ou absent -> pas de date convenue.
+export function preterJeu(g, nom, retourPrevu) {
+  const n = String(nom || "").trim();
+  if (!n) return g;
+  const d = String(retourPrevu || "").trim();
+  return {
+    ...g, lentA: n, lentDate: aujourdhuiISO(),
+    lentRetourPrevu: /^\d{4}-\d{2}-\d{2}$/.test(d) ? d : null,
+  };
 }
 
 // Compte les filtres réellement appliqués. Le tri et le mode d'affichage n'en
@@ -183,9 +229,14 @@ export function validerEdition(b) {
 // qu'à laisser croire à un import complet.
 const JEU_VIDE = {
   platform: "Xbox Series X", format: "physique", genre: [], style: "",
-  lentA: null, lentDate: null, cover: null, metacritic: null,
+  lentA: null, lentDate: null, lentRetourPrevu: null, pretsPasses: [],
+  cover: null, metacritic: null,
   myLinks: ["", "", ""], tips: "", tag: "", infobox: null,
 };
+
+// Une entrée d'historique venue d'un fichier : trois chaînes, rien d'autre.
+const estEntreePret = (e) => !!e && typeof e === "object"
+  && estTexte(e.a) && !!e.a.trim() && estTexte(e.du) && estTexte(e.au);
 
 const estTexte = (v) => typeof v === "string";
 
@@ -218,6 +269,9 @@ export function validerJeuxImportes(data) {
       style: estTexte(brut.style) ? brut.style : "",
       tips: estTexte(brut.tips) ? brut.tips : "",
       tag: estTexte(brut.tag) ? brut.tag : "",
+      pretsPasses: Array.isArray(brut.pretsPasses)
+        ? brut.pretsPasses.filter(estEntreePret).slice(0, MAX_HISTORIQUE_PRET)
+        : [],
     });
   }
   return { jeux: migrateGames(jeux), rejetes };

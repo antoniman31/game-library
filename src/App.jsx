@@ -7,12 +7,15 @@ import ImportModal from "./components/ImportModal.jsx";
 import FiltersSheet from "./components/FiltersSheet.jsx";
 import ActionsSheet from "./components/ActionsSheet.jsx";
 import ScoresSheet from "./components/ScoresSheet.jsx";
+import StatsView from "./components/StatsView.jsx";
 
 import { hdr, card, bdr, txt, mut } from "./lib/theme.js";
 import { GAMES_INIT } from "./lib/seed.js";
-import { BACK_COMPAT, migrateGames, compterFiltres, validerJeuxImportes, pretEnRetard, jeuxSansScore } from "./lib/model.js";
+import { BACK_COMPAT, migrateGames, compterFiltres, validerJeuxImportes, pretEnRetard, jeuxSansScore,
+  dureeEntreeHistorique } from "./lib/model.js";
 import { lire, ecrire, surEchecStockage } from "./lib/storage.js";
 import { chargerSync, enregistrerSync, genererCode, envoyer, recuperer } from "./lib/sync.js";
+import { surMiseAJour } from "./lib/maj.js";
 import {
   loadKeys, setApiKeys, normTitle, hasRawgKey, rawgFirstResult,
   rawgSearch, rawgDetail, wikiFrenchTitles, wikiArticleData, pickBestWikiTitle,
@@ -85,6 +88,7 @@ export default function App() {
   const scoresCancelRef = useRef(false);
   const [deleted, setDeleted] = useState(null); // { game, index } pour l'undo
   const [alerteStockage, setAlerteStockage] = useState(null);
+  const [majDispo, setMajDispo] = useState(false);
   const [sync, setSync] = useState(() => chargerSync());
   const [syncEtat, setSyncEtat] = useState(null);   // { type: "ok" | "ko" | "…", texte }
   const undoRef = useRef(null);
@@ -205,6 +209,10 @@ export default function App() {
     setGames(gs => gs.map(g => g.id === id ? { ...g, metacritic: null } : g));
     setScoresBilan(b => (b?.trouves ? { ...b, trouves: b.trouves.filter(t => t.id !== id) } : b));
   }, []);
+
+  // Une version plus récente est déjà installée, mais cet onglet exécute
+  // encore l'ancienne : le seul remède est un rechargement, autant le dire.
+  useEffect(() => surMiseAJour(() => setMajDispo(true)), []);
 
   // Fetch covers + metacritic manquants au démarrage
   useEffect(() => {
@@ -426,12 +434,16 @@ export default function App() {
     const total = games.length;
     const pretes = games.filter(g => g.lentA).length;
     const enRetard = games.filter(pretEnRetard).length;
-    const byGenre = {}; games.forEach(g => g.genre.forEach(x => byGenre[x] = (byGenre[x]||0) + 1));
-    const topGenres = Object.entries(byGenre).sort((a,b) => b[1]-a[1]).slice(0,6);
-    return { total, pretes, enRetard, topGenres };
+    // Seul l'en-tête s'en sert encore : le détail vit dans StatsView.
+    return { total, pretes, enRetard };
   }, [games]);
 
   const lentGames = games.filter(g => g.lentA);
+  // Tous les prêts rendus, jeu par jeu, du plus récent au plus ancien.
+  const historique = useMemo(() => games
+    .flatMap(g => (g.pretsPasses || []).map(e => ({ ...e, titre: g.title })))
+    .sort((a, b) => (a.au < b.au ? 1 : a.au > b.au ? -1 : 0))
+    .slice(0, 50), [games]);
   const filtresActifs = compterFiltres({ plat, pretFil, fmtFil });
 
   // Ce qui est réellement monté. Le reste attend « Charger 30 de plus ».
@@ -592,21 +604,49 @@ export default function App() {
 
         {tab === "loans" && (
           <div>
-            {lentGames.length === 0 ? <div style={{ textAlign:"center", color:mut, padding:"60px 0" }}>Aucun jeu prêté actuellement</div>
+            {lentGames.length === 0 ? <div style={{ textAlign:"center", color:mut, padding:"40px 0" }}>Aucun jeu prêté actuellement</div>
             : lentGames.map(g => {
               const days = g.lentDate ? Math.floor((Date.now()-new Date(g.lentDate))/86400000) : null;
+              // Le seuil était réécrit ici en dur : la date de retour convenue
+              // n'aurait rien changé pour cet onglet.
+              const tard = pretEnRetard(g);
               return (
-                <div key={g.id} style={{ background:card, border:`1px solid ${days>30?"#ef4444":bdr}`, borderRadius:10, padding:"12px", marginBottom:8, display:"flex", gap:10, alignItems:"center" }}>
+                <div key={g.id} style={{ background:card, border:`1px solid ${tard?"#ef4444":bdr}`, borderRadius:10, padding:"12px", marginBottom:8, display:"flex", gap:10, alignItems:"center" }}>
                   <Cover src={g.cover} title={g.title} size={52} />
-                  <div style={{ flex:1 }}>
+                  <div style={{ flex:1, minWidth:0 }}>
                     <div style={{ color:txt, fontWeight:600, fontSize:13 }}>{g.title}</div>
                     <div style={{ color:"#f59e0b", fontSize:12 }}>📤 {g.lentA}</div>
-                    {days!==null && <div style={{ color:days>30?"#ef4444":mut, fontSize:11 }}>{days}j{days>30?" ⚠️ Prêt long !":""}</div>}
+                    {days!==null && (
+                      <div style={{ color:tard?"#ef4444":mut, fontSize:11 }}>
+                        {days}j
+                        {g.lentRetourPrevu
+                          ? ` · à rendre le ${new Date(g.lentRetourPrevu).toLocaleDateString("fr-FR")}`
+                          : ""}
+                        {tard ? " ⚠️" : ""}
+                      </div>
+                    )}
                   </div>
                   <a href={`sms:?body=${encodeURIComponent(`Salut ! Tu penses à me rendre ${g.title} ? 😊`)}`} style={{ background:"#f59e0b22", border:"1px solid #f59e0b", color:"#f59e0b", borderRadius:6, padding:"5px 10px", fontSize:11, textDecoration:"none" }}>SMS</a>
                 </div>
               );
             })}
+
+            {/* Les retours effaçaient toute trace du prêt. L'onglet ne montrait
+                donc jamais que la moitié vivante d'un sujet qui a une suite. */}
+            {historique.length > 0 && (
+              <>
+                <div style={{ color:txt, fontSize:12, fontWeight:600, margin:"18px 0 8px" }}>Déjà rendus</div>
+                {historique.map((e, i) => (
+                  <div key={i} style={{ display:"flex", gap:10, alignItems:"baseline", padding:"8px 2px", borderTop:`1px solid ${bdr}` }}>
+                    <div style={{ flex:1, minWidth:0 }}>
+                      <div style={{ color:txt, fontSize:12, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{e.titre}</div>
+                      <div style={{ color:mut, fontSize:11 }}>{e.a} · rendu le {new Date(e.au).toLocaleDateString("fr-FR")}</div>
+                    </div>
+                    <span style={{ color:mut, fontSize:11, flexShrink:0 }}>{dureeEntreeHistorique(e)} j</span>
+                  </div>
+                ))}
+              </>
+            )}
           </div>
         )}
 
@@ -752,27 +792,7 @@ export default function App() {
           );
         })()}
 
-        {tab === "stats" && (
-          <div>
-            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:16 }}>
-              {[["Total",stats.total,"#5493FF"],["Prêtés",stats.pretes,"#f59e0b"]].map(([l,v,c]) => (
-                <div key={l} style={{ background:card, border:`1px solid ${bdr}`, borderRadius:10, padding:"12px 14px" }}>
-                  <div style={{ color:mut, fontSize:10 }}>{l}</div>
-                  <div style={{ color:c, fontSize:20, fontWeight:700, marginTop:2 }}>{v}</div>
-                </div>
-              ))}
-            </div>
-            <div style={{ background:card, border:`1px solid ${bdr}`, borderRadius:10, padding:14, marginBottom:16 }}>
-              <div style={{ color:txt, fontWeight:600, fontSize:13, marginBottom:10 }}>Top genres</div>
-              {stats.topGenres.map(([genre,count]) => (
-                <div key={genre} style={{ marginBottom:8 }}>
-                  <div style={{ display:"flex", justifyContent:"space-between", marginBottom:3 }}><span style={{ color:txt, fontSize:12 }}>{genre}</span><span style={{ color:mut, fontSize:11 }}>{count}</span></div>
-                  <div style={{ height:4, background:bdr, borderRadius:2 }}><div style={{ width:`${stats.total ? count/stats.total*100 : 0}%`, height:"100%", background:"#5493FF", borderRadius:2 }} /></div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+        {tab === "stats" && <StatsView games={games} />}
       </div>
 
       {showAdd && <AddModal onAdd={addGame} onClose={() => setShowAdd(false)} />}
@@ -809,6 +829,16 @@ export default function App() {
       {scoresBilan && (scoresBilan.message
         ? null
         : <ScoresSheet bilan={scoresBilan} onAnnulerScore={retirerScore} onClose={() => setScoresBilan(null)} />)}
+
+      {majDispo && (
+        <div role="status" style={{ position:"fixed", bottom:20, left:"50%", transform:"translateX(-50%)", zIndex:401, display:"flex", alignItems:"center", gap:10, maxWidth:"calc(100vw - 24px)", background:card, border:"1px solid #5493FF", borderRadius:10, padding:"10px 14px", boxShadow:"0 8px 24px rgba(0,0,0,0.4)", animation:"toastIn 200ms ease" }}>
+          {/* Sur 412 px, les trois éléments ne tiennent que si le libellé ne
+              se casse pas : « installée » partait à la ligne, seul. */}
+          <span style={{ color:txt, fontSize:13, whiteSpace:"nowrap" }}>✨ Nouvelle version</span>
+          <button onClick={() => location.reload()} style={{ background:"#5493FF22", border:"1px solid #5493FF", color:"#5493FF", borderRadius:6, padding:"4px 12px", fontSize:12, fontWeight:600, cursor:"pointer" }}>Recharger</button>
+          <button onClick={() => setMajDispo(false)} aria-label="Plus tard" style={{ background:"transparent", border:"none", color:mut, fontSize:14, cursor:"pointer", lineHeight:1, padding:0 }}>✕</button>
+        </div>
+      )}
 
       {deleted && (
         <div style={{ position:"fixed", bottom:20, left:"50%", transform:"translateX(-50%)", zIndex:400, display:"flex", alignItems:"center", gap:14, background:card, border:`1px solid ${bdr}`, borderRadius:10, padding:"10px 14px", boxShadow:"0 8px 24px rgba(0,0,0,0.4)", animation:"toastIn 200ms ease" }}>

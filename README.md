@@ -127,22 +127,19 @@ erreur CORS.
 - **Thème clair / sombre**.
 - **Suppression avec toast « Annuler »** (5 s) au lieu d'une popup bloquante.
 
-### Suivi de jeu
-
-- **Chronomètre de session** (Jouer / Stop) qui alimente le temps total et
-  l'historique des 3 dernières sessions.
-- **Saisie manuelle** du temps déjà joué (heures / minutes, boutons **+** et **−**,
-  borné à 0).
-- **Barre de prêt** : la bande sous la jaquette passe à l'orange quand le jeu est dehors.
-- **Jeux « poussiéreux »** : un jeu « en cours » sans activité depuis plus de 30
-  jours est affiché estompé, bordure en pointillés.
-- **Compteur « jours depuis la dernière session »** sur les jeux en cours.
-
 ### Prêts
 
-- Prêter un jeu (nom de l'emprunteur + date) ; « ✓ Rendu » le fait revenir.
-- Onglet **Prêts** : **alerte au-delà de 30 jours** et bouton **SMS** de relance
-  (lien `sms:` pré-rempli).
+C'est le seul état que l'application suive : ce jeu est-il chez moi, ou dehors ?
+
+- Prêter un jeu — nom de l'emprunteur, et **date de retour facultative**.
+- **Alerte** : la date convenue quand elle existe, sinon un seuil de 30 jours.
+  La bande sous la jaquette passe à l'orange, la fiche et l'onglet Prêts
+  signalent le retard.
+- « ✓ Rendu » **archive** le prêt au lieu de l'effacer : la fiche rappelle à qui
+  le jeu a déjà été confié et combien de temps, l'onglet Prêts liste les retours
+  sous « Déjà rendus », et l'onglet Stats indique à qui l'on prête le plus.
+  L'historique est borné à 20 entrées par jeu et voyage dans l'export.
+- Bouton **SMS** de relance (lien `sms:` pré-rempli).
 
 ### Fiche de jeu
 
@@ -221,8 +218,9 @@ jamais une décision prise à la main.
 
 ### Sauvegarde
 
-**Export / Import JSON** dans l'onglet Stats, en mode *remplacer* ou *fusionner*.
-C'est le seul moyen de transférer sa bibliothèque d'un appareil à l'autre.
+**Export / Import JSON** dans l'onglet **⚙️ Paramètres**, en mode *remplacer* ou
+*fusionner*, à côté de la synchronisation par code — les deux répondent au même
+besoin : sortir la bibliothèque de cet appareil et l'y ramener.
 
 ---
 
@@ -361,12 +359,33 @@ npm run dev      # http://localhost:5173/game-library/
 npm run build
 npm run preview
 npm run lint     # oxlint
+npm test         # 40 vérifications (modèle, import, prêts, Worker)
+npm run audit -- ma-sauvegarde.json   # symptômes dans les données (voir plus bas)
 ```
 
 En développement, le proxy du serveur Vite joue exactement le rôle du Worker : il
 relaie `/sgdb/*` et `/xbl/*` **sans détenir de clé** (c'est le client qui envoie
 l'en-tête d'authentification). Il n'est donc **pas nécessaire de déployer le
 Worker pour travailler en local**.
+
+### Auditer ses données
+
+```bash
+npm run audit -- ma-sauvegarde.json                # rapport
+npm run audit -- ma-sauvegarde.json --jaquettes    # vérifie aussi les URLs (réseau)
+npm run audit -- ma-sauvegarde.json --strict       # code de retour ≠ 0 s'il y a des constats
+```
+
+Prend un export JSON et signale : doublons de titre sur une même plateforme,
+identifiants réutilisés, champs vides (jaquette, genre, description, note),
+dates d'ajout illisibles ou à venir, prêts incomplets ou très anciens, retours
+antérieurs au prêt, et séries Wikidata éloignées du titre — le signe qu'une
+source a répondu pour un autre jeu.
+
+Ce n'est **pas** un test : `npm test` vérifie des invariants et doit rester vert,
+l'audit signale des *symptômes* qui peuvent être parfaitement légitimes. Deux
+exemplaires du même jeu, c'est possible ; deux entrées identiques après un
+import, beaucoup moins.
 
 ### Structure
 
@@ -377,6 +396,8 @@ Worker pour travailler en local**.
 │   ├── test.mjs                   16 vérifications, sans dépendance ni déploiement
 │   ├── wrangler.toml
 │   └── README.md
+├── scripts/
+│   └── audit.mjs                  Audit des données d'un export (pas un test)
 ├── public/                        Icônes PWA (192/512, any + maskable), favicon
 ├── src/
 │   ├── App.jsx                    Ossature : état global, en-tête, onglets
