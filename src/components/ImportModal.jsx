@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { card, bdr, txt, mut, accent } from "../lib/theme.js";
+import { card, bdr, txt, mut, accent, accentFond, dangerDoux, ok, danger } from "../lib/theme.js";
 import { XBOX_SERIES_CUTOFF, isBackCompatPlatform } from "../lib/model.js";
 import { xblTitleHistory, normTitle, rawgSearch } from "../lib/api.js";
 
@@ -92,7 +92,7 @@ function ImportModal({ games, onImportGames, onClose }) {
                     <div style={{ color: txt, fontSize: 12, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.name}</div>
                     <div style={{ color: mut, fontSize: 9 }}>{t.devices.join(", ")}</div>
                   </div>
-                  <span style={{ fontSize: 9, color: t.isNew ? "#22c55e" : mut, border: `1px solid ${t.isNew ? "#22c55e" : bdr}`, borderRadius: 3, padding: "1px 5px", whiteSpace: "nowrap" }}>{t.isNew ? "Nouveau" : "Déjà présent"}</span>
+                  <span style={{ fontSize: 9, color: t.isNew ? ok : mut, border: `1px solid ${t.isNew ? ok : bdr}`, borderRadius: 3, padding: "1px 5px", whiteSpace: "nowrap" }}>{t.isNew ? "Nouveau" : "Déjà présent"}</span>
                 </label>
               ))}
             </div>
@@ -101,9 +101,9 @@ function ImportModal({ games, onImportGames, onClose }) {
               {!importing
                 ? <>
                     <button onClick={onClose} style={{ flex: 1, background: "transparent", border: `1px solid ${bdr}`, color: "#94a3b8", borderRadius: 8, padding: 10, cursor: "pointer", fontSize: 13 }}>Annuler</button>
-                    <button onClick={doImport} disabled={selectedCount === 0} style={{ flex: 2, background: accent, border: "none", color: "#fff", borderRadius: 8, padding: 10, cursor: selectedCount ? "pointer" : "default", opacity: selectedCount ? 1 : 0.5, fontSize: 13, fontWeight: 600 }}>Importer {selectedCount} jeu(x)</button>
+                    <button onClick={doImport} disabled={selectedCount === 0} style={{ flex: 2, background: accentFond, border: "none", color: "#fff", borderRadius: 8, padding: 10, cursor: selectedCount ? "pointer" : "default", opacity: selectedCount ? 1 : 0.5, fontSize: 13, fontWeight: 600 }}>Importer {selectedCount} jeu(x)</button>
                   </>
-                : <button onClick={() => { cancelRef.current = true; }} style={{ flex: 1, background: "#ef444422", border: "1px solid #ef4444", color: "#ef4444", borderRadius: 8, padding: 10, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>Arrêter l'import</button>}
+                : <button onClick={() => { cancelRef.current = true; }} style={{ flex: 1, background: dangerDoux, border: `1px solid ${danger}`, color: danger, borderRadius: 8, padding: 10, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>Arrêter l'import</button>}
             </div>
           </>
         )}

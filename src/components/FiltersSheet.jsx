@@ -1,5 +1,5 @@
 import Sheet from "./Sheet.jsx";
-import { bdr, txt, mut, accent, accentDoux } from "../lib/theme.js";
+import { bdr, txt, mut, accent, accentDoux, warn } from "../lib/theme.js";
 import { PLATFORMS, compterFiltres } from "../lib/model.js";
 
 const ACCENT = accent;
@@ -59,7 +59,7 @@ export default function FiltersSheet({
         options={[["tous", "Tous"], ["chez moi", "🏠 Chez moi"], ["prêtés", "📤 Prêtés"]]}
         value={pretFil}
         onChange={setPretFil}
-        colorOf={k => (k === "prêtés" ? "#f59e0b" : ACCENT)}
+        colorOf={k => (k === "prêtés" ? warn : ACCENT)}
       />
       <Groupe
         label="Format"

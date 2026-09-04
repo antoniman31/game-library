@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { card, bdr, txt, mut, accent } from "../lib/theme.js";
+import { card, bdr, txt, mut, accent, accentFond, ok, warn, warnFond, danger } from "../lib/theme.js";
 import { PLATFORM_COLORS } from "../lib/model.js";
 import { statsCirculation, statsCollection } from "../lib/stats.js";
 import SousOnglets from "./SousOnglets.jsx";
@@ -22,7 +22,7 @@ const Bloc = ({ titre, children }) => (
 // Une ligne de comptage avec sa barre. Le dénominateur est passé
 // explicitement : rapporter des genres à un total de jeux et des prêts à un
 // total de prêts ne se compare pas.
-const Barre = ({ label, valeur, total, couleur = accent, suffixe }) => (
+const Barre = ({ label, valeur, total, couleur = accentFond, suffixe }) => (
   <div style={{ marginBottom: 8 }}>
     <div style={{ display: "flex", justifyContent: "space-between", gap: 10, marginBottom: 3 }}>
       <span style={{ color: txt, fontSize: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{label}</span>
@@ -47,7 +47,7 @@ const Tuiles = ({ items }) => (
 
 // Trois séries temporelles partagent désormais cette forme. Une barre à zéro
 // garde deux pixels de gris : sans elle, un mois vide disparaît et l'axe ment.
-const Histogramme = ({ donnees, couleur = accent, etiquette = (c) => c }) => {
+const Histogramme = ({ donnees, couleur = accentFond, etiquette = (c) => c }) => {
   const max = Math.max(...donnees.map(([, n]) => n), 1);
   return (
     <div style={{ display: "flex", gap: 3, alignItems: "flex-end", height: 70 }}>
@@ -93,8 +93,8 @@ function Circulation({ games, jour }) {
   return (
     <div>
       <Tuiles items={[
-        ["Dehors", s.enCours, s.enCours ? "#f59e0b" : txt],
-        ["En retard", s.enRetard, s.enRetard ? "#ef4444" : txt],
+        ["Dehors", s.enCours, s.enCours ? warn : txt],
+        ["En retard", s.enRetard, s.enRetard ? danger : txt],
         ["Jamais prêtés", s.jamaisPretes, txt],
       ]} />
 
@@ -111,7 +111,7 @@ function Circulation({ games, jour }) {
           <Ligne
             gauche={`Le plus long : ${s.record.titre}`}
             droite={`${s.record.jours} j chez ${s.record.a}${s.record.enCours ? " (en cours)" : ""}`}
-            couleur={s.record.jours > 90 ? "#f59e0b" : mut}
+            couleur={s.record.jours > 90 ? warn : mut}
           />
         )}
       </Bloc>
@@ -121,14 +121,14 @@ function Circulation({ games, jour }) {
       {s.ponctualite && (
         <Bloc titre="Ponctualité">
           <Ligne gauche="Prêts avec une date convenue" droite={s.ponctualite.combien} />
-          <Ligne gauche="Rendus à temps" droite={s.ponctualite.aLHeure} couleur="#22c55e" />
-          <Ligne gauche="Rendus en retard" droite={s.ponctualite.enRetard} couleur={s.ponctualite.enRetard ? "#ef4444" : mut} />
+          <Ligne gauche="Rendus à temps" droite={s.ponctualite.aLHeure} couleur={ok} />
+          <Ligne gauche="Rendus en retard" droite={s.ponctualite.enRetard} couleur={s.ponctualite.enRetard ? danger : mut} />
           <Ligne gauche={s.ponctualite.ecartMoyen > 0 ? "Retard moyen" : "Avance moyenne"}
             droite={`${Math.abs(s.ponctualite.ecartMoyen)} j`}
-            couleur={s.ponctualite.ecartMoyen > 0 ? "#f59e0b" : "#22c55e"} />
+            couleur={s.ponctualite.ecartMoyen > 0 ? warn : ok} />
           {s.ponctualite.pire && (
             <Ligne gauche={`Pire : ${s.ponctualite.pire.titre}`}
-              droite={`${s.ponctualite.pire.jours} j de trop · ${s.ponctualite.pire.a}`} couleur="#ef4444" />
+              droite={`${s.ponctualite.pire.jours} j de trop · ${s.ponctualite.pire.a}`} couleur={danger} />
           )}
           <div style={{ color: mut, fontSize: 10, marginTop: 8, lineHeight: 1.4 }}>
             Ne comptent que les prêts pour lesquels une date de retour avait été fixée.
@@ -141,19 +141,19 @@ function Circulation({ games, jour }) {
           {s.dehors.map(d => (
             <Ligne key={`${d.titre}-${d.a}`} gauche={`${d.titre} · ${d.a}`}
               droite={`${d.jours} j${d.prevu ? ` · à rendre le ${new Date(d.prevu).toLocaleDateString("fr-FR")}` : ""}`}
-              couleur={d.prevu && d.prevu < new Date().toISOString().slice(0, 10) ? "#ef4444" : d.jours > 60 ? "#f59e0b" : mut} />
+              couleur={d.prevu && d.prevu < new Date().toISOString().slice(0, 10) ? danger : d.jours > 60 ? warn : mut} />
           ))}
         </Bloc>
       )}
 
       <Bloc titre="Rythme des prêts">
-        <Histogramme donnees={s.parMois} couleur="#f59e0b" etiquette={moisCourt} />
+        <Histogramme donnees={s.parMois} couleur={warnFond} etiquette={moisCourt} />
         <div style={{ color: mut, fontSize: 10, marginTop: 8 }}>Prêts commencés, mois par mois, sur un an.</div>
       </Bloc>
 
       <Bloc titre="Qui emprunte">
         {s.emprunteurs.map(e => (
-          <Barre key={e.nom} label={e.nom} valeur={e.prets} total={s.total} couleur="#f59e0b"
+          <Barre key={e.nom} label={e.nom} valeur={e.prets} total={s.total} couleur={warnFond}
             suffixe={`${e.prets} prêt${e.prets > 1 ? "s" : ""} · ${e.moyenne} j en moyenne`} />
         ))}
         {/* Emprunter souvent et garder longtemps sont deux travers distincts. */}
@@ -177,13 +177,13 @@ function Circulation({ games, jour }) {
       {s.parPlateforme.length > 0 && (
         <Bloc titre="Ce qui part">
           {s.parPlateforme.map(([p, n]) => (
-            <Barre key={p} label={p} valeur={n} total={s.total} couleur={PLATFORM_COLORS[p] || accent}
+            <Barre key={p} label={p} valeur={n} total={s.total} couleur={PLATFORM_COLORS[p] || accentFond}
               suffixe={`${n} prêt${n > 1 ? "s" : ""}`} />
           ))}
           {s.parGenre.length > 0 && (
             <div style={{ marginTop: 10, paddingTop: 8, borderTop: `1px solid ${bdr}` }}>
               {s.parGenre.map(([g, n]) => (
-                <Barre key={g} label={g} valeur={n} total={s.total} couleur="#f59e0b" suffixe={`${n}`} />
+                <Barre key={g} label={g} valeur={n} total={s.total} couleur={warnFond} suffixe={`${n}`} />
               ))}
             </div>
           )}
@@ -207,7 +207,7 @@ function Collection({ games, jour }) {
 
       <Bloc titre="Par plateforme">
         {s.parPlateforme.map(([p, n]) => (
-          <Barre key={p} label={p} valeur={n} total={s.total} couleur={PLATFORM_COLORS[p] || accent}
+          <Barre key={p} label={p} valeur={n} total={s.total} couleur={PLATFORM_COLORS[p] || accentFond}
             suffixe={`${n} · ${Math.round((n / s.total) * 100)} %`} />
         ))}
         {/* Seuls les exemplaires physiques se prêtent : ce partage dit quelle
@@ -232,8 +232,8 @@ function Collection({ games, jour }) {
           {/* La moyenne se laisse tirer par deux bouses ; la médiane dit où se
               tient vraiment le milieu de la collection. */}
           <Ligne gauche="Médiane" droite={s.note.mediane} />
-          {s.note.meilleur && <Ligne gauche={`↑ ${s.note.meilleur.titre}`} droite={s.note.meilleur.note} couleur="#22c55e" />}
-          {s.note.pire && <Ligne gauche={`↓ ${s.note.pire.titre}`} droite={s.note.pire.note} couleur="#ef4444" />}
+          {s.note.meilleur && <Ligne gauche={`↑ ${s.note.meilleur.titre}`} droite={s.note.meilleur.note} couleur={ok} />}
+          {s.note.pire && <Ligne gauche={`↓ ${s.note.pire.titre}`} droite={s.note.pire.note} couleur={danger} />}
         </Bloc>
       )}
 
@@ -293,7 +293,7 @@ function Collection({ games, jour }) {
             droite={s.delaiAchat.median >= 365
               ? `${(s.delaiAchat.median / 365).toFixed(1)} an${s.delaiAchat.median >= 730 ? "s" : ""}`
               : `${s.delaiAchat.median} j`} />
-          <Ligne gauche="Achetés dans les 3 mois" droite={s.delaiAchat.auLancement} couleur="#22c55e" />
+          <Ligne gauche="Achetés dans les 3 mois" droite={s.delaiAchat.auLancement} couleur={ok} />
           <Ligne gauche="Achetés plus d'un an après" droite={s.delaiAchat.apresUnAn} />
           <div style={{ color: mut, fontSize: 10, marginTop: 8, lineHeight: 1.4 }}>
             Sur {s.delaiAchat.combien} jeu{s.delaiAchat.combien > 1 ? "x" : ""} dont on connaît la date de sortie.
@@ -328,7 +328,7 @@ function Collection({ games, jour }) {
         <Bloc titre="Doublons possibles">
           {s.doublons.map(d => (
             <Ligne key={d.titre} gauche={d.titre} droite={d.plateformes.join(" · ")}
-              couleur={d.memePlateforme ? "#ef4444" : mut} />
+              couleur={d.memePlateforme ? danger : mut} />
           ))}
           <div style={{ color: mut, fontSize: 10, marginTop: 8, lineHeight: 1.4 }}>
             Deux fiches sur des plateformes différentes, c'est normal. Deux fois la même plateforme, en rouge, est une saisie en double.
@@ -351,7 +351,7 @@ function Collection({ games, jour }) {
       <Bloc titre="Ce qui manque">
         {s.completude.map(([label, n]) => (
           <Barre key={label} label={label} valeur={n} total={s.total}
-            couleur={n === s.total ? "#22c55e" : "#f59e0b"}
+            couleur={n === s.total ? ok : warn}
             suffixe={n === s.total ? "complet" : `${s.total - n} sans`} />
         ))}
       </Bloc>

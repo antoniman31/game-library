@@ -35,11 +35,26 @@
   --mut: #93a3bb;
   --demat: #10243d;     /* fond du badge « démat » */
 
-  --accent: #5493ff;
+  --accent: #5493ff;          /* texte, bordures : lu SUR le fond */
   --accent-doux: #5493ff22;   /* fond discret des boutons d'accent */
+  /* Un aplat qui porte du texte blanc, et c'est une autre contrainte : plus le
+     bleu est sombre, mieux le blanc s'y lit, mais moins il se lit lui-même sur
+     du noir. Un seul ton ne peut pas satisfaire les deux — celui-ci monte le
+     blanc de 3,00 à 5,17:1 pendant que --accent garde ses 6,99:1 en texte. */
+  --accent-fond: #2563eb;
+  /* Deux usages, deux contraintes. En texte, ces couleurs doivent se lire ;
+     en aplat — une barre de graphique, une pastille — elles ne portent aucun
+     caractère et n'ont donc pas de seuil de contraste à tenir. Le thème sombre
+     n'a pas besoin de les distinguer : la même valeur convient aux deux. */
   --ok: #22c55e;
+  --ok-doux: #22c55e22;
+  --ok-fond: #22c55e;
   --warn: #f59e0b;
+  --warn-doux: #f59e0b22;
+  --warn-fond: #f59e0b;
   --danger: #ef4444;
+  --danger-doux: #ef444422;
+  --danger-fond: #ef4444;
   --platine: #a855f7;
   --slate: #64748b;
 
@@ -76,9 +91,21 @@ html[data-theme="light"] {
      à 6,70:1. */
   --accent: #1d4ed8;
   --accent-doux: #1d4ed815;
-  --ok: #16a34a;
-  --warn: #b45309;
-  --danger: #dc2626;
+  --accent-fond: #1d4ed8;     /* blanc dessus : 6,70:1 */
+  /* Assombris pour passer la barre sur ce fond : le vert donnait 2,83:1, le
+     rouge 4,14 et l'orange 4,31, là où WCAG AA demande 4,5. Ces couleurs ne
+     décorent pas — elles disent un retard, une note, une alerte. */
+  --ok: #127034;              /* 5,31:1 */
+  --ok-doux: #12703415;
+  --warn: #92400e;            /* 6,08:1 */
+  --warn-doux: #92400e15;
+  --danger: #b91c1c;          /* 5,55:1 */
+  --danger-doux: #b91c1c15;
+  /* Les aplats gardent les teintes vives : assombrir une barre de graphique la
+     rendait brune sans rien gagner, puisqu'aucun texte ne s'y lit. */
+  --ok-fond: #16a34a;
+  --warn-fond: #ea8a04;
+  --danger-fond: #dc2626;
 }
 
 * {

@@ -157,12 +157,16 @@ export function statsCirculation(games, aujourdhui = aujourdhuiISO()) {
 }
 
 // ── Collection ─────────────────────────────────────────────────────────────
+// Les couleurs sont des jetons, pas des valeurs : ces tranches remplissent des
+// barres, et le thème clair a besoin de les redéfinir. Écrites en dur, elles
+// échappaient au thème — c'est tout le mal que ce module se donne à rester pur
+// qui serait perdu si l'affichage devait les corriger après coup.
 const TRANCHES = [
-  ["90 et +", n => n >= 90, "#22c55e"],
-  ["80 – 89", n => n >= 80 && n < 90, "#22c55e"],
-  ["70 – 79", n => n >= 70 && n < 80, "#f59e0b"],
-  ["60 – 69", n => n >= 60 && n < 70, "#f59e0b"],
-  ["moins de 60", n => n < 60, "#ef4444"],
+  ["90 et +", n => n >= 90, "var(--ok-fond)"],
+  ["80 – 89", n => n >= 80 && n < 90, "var(--ok-fond)"],
+  ["70 – 79", n => n >= 70 && n < 80, "var(--warn-fond)"],
+  ["60 – 69", n => n >= 60 && n < 70, "var(--warn-fond)"],
+  ["moins de 60", n => n < 60, "var(--danger-fond)"],
 ];
 
 function anneesCompletes(annees) {

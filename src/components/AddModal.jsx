@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
 import Sheet from "./Sheet.jsx";
-import { bg, card, bdr, txt, mut, accent } from "../lib/theme.js";
+import { bg, card, bdr, txt, mut, accent, accentFond } from "../lib/theme.js";
 import { PLATFORMS, isBackCompatPlatform } from "../lib/model.js";
 import {
   rawgSearch, rawgDetail, wikiFrenchTitles, wikiArticleData, wikidataInfobox,
@@ -190,7 +190,7 @@ function AddModal({ onAdd, onClose }) {
 
         <div style={{ display: "flex", gap: 8 }}>
           <button onClick={onClose} style={{ flex: 1, background: "transparent", border: `1px solid ${bdr}`, color: "#94a3b8", borderRadius: 8, padding: 10, cursor: "pointer", fontSize: 13 }}>Annuler</button>
-          <button onClick={handleAdd} style={{ flex: 2, background: accent, border: "none", color: "#fff", borderRadius: 8, padding: 10, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>Ajouter</button>
+          <button onClick={handleAdd} style={{ flex: 2, background: accentFond, border: "none", color: "#fff", borderRadius: 8, padding: 10, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>Ajouter</button>
         </div>
     </Sheet>
   );

@@ -2,7 +2,7 @@ import { memo, useState, useEffect, useRef } from "react";
 import Cover from "./Cover.jsx";
 import InfoboxView from "./InfoboxView.jsx";
 import Sheet from "./Sheet.jsx";
-import { bg, card, bdr, txt, mut, demat, accent, accentDoux } from "../lib/theme.js";
+import { bg, card, bdr, txt, mut, demat, accent, accentDoux, accentFond, okDoux, warnDoux, dangerDoux, ok, warn, warnFond, danger } from "../lib/theme.js";
 import { PLATFORM_COLORS, BACK_COMPAT_PARENT, PLATFORMES_JEU, estUrlImage, joursDePret, pretEnRetard, brouillonDepuisJeu, validerEdition,
   rendreJeu, preterJeu, annulerPret, dureeEntreeHistorique } from "../lib/model.js";
 import {
@@ -80,8 +80,8 @@ function GameCard({ g, onEdit, onDelete, onEnrich, autoOpen, onOuverte }) {
   // s'éternise se repère dans la liste sans ouvrir l'onglet Prêts.
   const enRetard = pretEnRetard(g);
   const jours = joursDePret(g);
-  const baseBorder = enRetard ? "#f59e0b" : bdr;
-  const noteCouleur = g.metacritic >= 80 ? "#22c55e" : g.metacritic >= 60 ? "#f59e0b" : "#ef4444";
+  const baseBorder = enRetard ? warn : bdr;
+  const noteCouleur = g.metacritic >= 80 ? ok : g.metacritic >= 60 ? warn : danger;
 
   const rawgQuery = (q) => { setRawgQ(q); clearTimeout(rawgDebRef.current); rawgDebRef.current = setTimeout(async () => setRawgSugg(await rawgSearch(q)), 350); };
   const rawgPick = async (s) => {
@@ -178,7 +178,7 @@ function GameCard({ g, onEdit, onDelete, onEnrich, autoOpen, onOuverte }) {
     // Fond plus sombre que la feuille, comme les champs de la fenêtre d'ajout :
     // sur fond `card`, un champ `card` ne se distinguait que par son liseré.
     width: "100%", boxSizing: "border-box", background: bg,
-    border: `1px solid ${erreurs[k] ? "#ef4444" : bdr}`, borderRadius: 6,
+    border: `1px solid ${erreurs[k] ? danger : bdr}`, borderRadius: 6,
     color: txt, padding: "7px 9px", fontSize: 12, outline: "none",
     fontFamily: "inherit", // sans quoi textarea et champ date passent en monospace
   });
@@ -190,7 +190,7 @@ function GameCard({ g, onEdit, onDelete, onEnrich, autoOpen, onOuverte }) {
         {label}{aide ? <span style={{ opacity: 0.75 }}> · {aide}</span> : null}
       </span>
       {controle}
-      {erreurs[cle] && <span style={{ display: "block", color: "#ef4444", fontSize: 11, marginTop: 3 }}>{erreurs[cle]}</span>}
+      {erreurs[cle] && <span style={{ display: "block", color: danger, fontSize: 11, marginTop: 3 }}>{erreurs[cle]}</span>}
     </Balise>
   );
 
@@ -213,10 +213,10 @@ function GameCard({ g, onEdit, onDelete, onEnrich, autoOpen, onOuverte }) {
         <Cover src={g.cover} title={g.title} size={46} />
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginBottom: 4 }}>
-            <span style={{ background: PLATFORM_COLORS[g.platform] || accent, color: "#fff", fontSize: 9, fontWeight: 700, borderRadius: 3, padding: "1px 5px" }}>{g.platform}</span>
+            <span style={{ background: PLATFORM_COLORS[g.platform] || accentFond, color: "#fff", fontSize: 9, fontWeight: 700, borderRadius: 3, padding: "1px 5px" }}>{g.platform}</span>
             {g.format === "démat" && <span style={{ background: demat, color: accent, fontSize: 9, borderRadius: 3, padding: "1px 5px" }}>démat</span>}
-            {BACK_COMPAT_PARENT[g.platform] && g.backCompat && <span title={`Rétrocompatible ${BACK_COMPAT_PARENT[g.platform]}`} style={{ background: "#107C1022", color: "#22c55e", fontSize: 9, borderRadius: 3, padding: "1px 5px" }}>🔄 Compatible {BACK_COMPAT_PARENT[g.platform].replace("Xbox ", "")}</span>}
-            {g.lentA && <span key={g.lentA} style={{ background: "#7c320044", color: "#f59e0b", fontSize: 9, borderRadius: 3, padding: "1px 5px", animation: "statusPop 200ms ease" }}>📤 {g.lentA}{jours !== null ? ` · ${jours}j` : ""}</span>}
+            {BACK_COMPAT_PARENT[g.platform] && g.backCompat && <span title={`Rétrocompatible ${BACK_COMPAT_PARENT[g.platform]}`} style={{ background: "#107C1022", color: ok, fontSize: 9, borderRadius: 3, padding: "1px 5px" }}>🔄 Compatible {BACK_COMPAT_PARENT[g.platform].replace("Xbox ", "")}</span>}
+            {g.lentA && <span key={g.lentA} style={{ background: "#7c320044", color: warn, fontSize: 9, borderRadius: 3, padding: "1px 5px", animation: "statusPop 200ms ease" }}>📤 {g.lentA}{jours !== null ? ` · ${jours}j` : ""}</span>}
             {/* Rien d'autre ici : les badges disent l'exemplaire, pas le contenu. */}
           </div>
           <div style={{ fontWeight: 600, fontSize: 13, color: txt, marginBottom: 2, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 1, WebkitBoxOrient: "vertical" }}>{g.title}</div>
@@ -231,7 +231,7 @@ function GameCard({ g, onEdit, onDelete, onEnrich, autoOpen, onOuverte }) {
         <span style={{ color: mut, alignSelf: "center" }}>{open ? "▲" : "▼"}</span>
       </div>
       {/* La barre encodait le statut ; elle encode désormais le seul état suivi. */}
-      <div style={{ height: 2, background: g.lentA ? "#f59e0b" : "transparent" }} />
+      <div style={{ height: 2, background: g.lentA ? warnFond : "transparent" }} />
 
       {open && (
         <div style={{ padding: "12px 14px", borderTop: `1px solid ${bdr}` }} onClick={e => e.stopPropagation()}>
@@ -282,8 +282,8 @@ function GameCard({ g, onEdit, onDelete, onEnrich, autoOpen, onOuverte }) {
               <span style={{ color: mut, fontSize: 11, flex: "0 0 52px", paddingTop: 10 }}>Prêt</span>
               {g.lentA ? (
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ color: "#f59e0b", fontSize: 12, fontWeight: 600, paddingTop: 2 }}>📤 Prêté à {g.lentA}</div>
-                  <div style={{ color: "#f59e0b", fontSize: 11, margin: "2px 0 8px" }}>
+                  <div style={{ color: warn, fontSize: 12, fontWeight: 600, paddingTop: 2 }}>📤 Prêté à {g.lentA}</div>
+                  <div style={{ color: warn, fontSize: 11, margin: "2px 0 8px" }}>
                     Depuis le {new Date(g.lentDate).toLocaleDateString("fr-FR")}
                     {jours !== null ? ` · ${jours} jour${jours > 1 ? "s" : ""}` : ""}
                     {enRetard ? " ⚠️" : ""}
@@ -291,7 +291,7 @@ function GameCard({ g, onEdit, onDelete, onEnrich, autoOpen, onOuverte }) {
                   </div>
                   <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                     <button onClick={() => { onEnrich(g.id, rendreJeu(g)); setLoanName(""); setLoanRetour(""); }}
-                      style={{ height: 36, padding: "0 14px", background: "#22c55e22", border: "1px solid #22c55e", color: "#22c55e", borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>✓ Rendu</button>
+                      style={{ height: 36, padding: "0 14px", background: okDoux, border: `1px solid ${ok}`, color: ok, borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>✓ Rendu</button>
                     <a href={`sms:?body=${encodeURIComponent(`Salut ! Tu penses à me rendre ${g.title} ? 😊`)}`}
                       style={{ height: 36, padding: "0 14px", display: "inline-flex", alignItems: "center", background: "transparent", border: `1px solid ${bdr}`, color: txt, borderRadius: 8, fontSize: 12, textDecoration: "none" }}>Relancer par SMS</a>
                     {/* « Rendu » archive et nourrit les statistiques ; un prêt
@@ -300,7 +300,7 @@ function GameCard({ g, onEdit, onDelete, onEnrich, autoOpen, onOuverte }) {
                         if (!window.confirm(`Supprimer ce prêt à ${g.lentA} ?\n\nIl ne sera pas enregistré dans l'historique — à utiliser si le prêt n'a jamais eu lieu.`)) return;
                         onEnrich(g.id, annulerPret(g)); setLoanName(""); setLoanRetour("");
                       }}
-                      style={{ height: 36, padding: "0 12px", background: "transparent", border: "none", color: "#ef4444", fontSize: 12, cursor: "pointer", opacity: 0.85 }}>Supprimer</button>
+                      style={{ height: 36, padding: "0 12px", background: "transparent", border: "none", color: danger, fontSize: 12, cursor: "pointer", opacity: 0.85 }}>Supprimer</button>
                   </div>
                 </div>
               ) : pretOuvert ? (
@@ -311,7 +311,7 @@ function GameCard({ g, onEdit, onDelete, onEnrich, autoOpen, onOuverte }) {
                       style={{ flex: 1, minWidth: 0, height: 36, background: "transparent", border: `1px solid ${bdr}`, borderRadius: 8, color: txt, padding: "0 10px", fontSize: 12, outline: "none", fontFamily: "inherit" }} />
                     <button onClick={() => { const j = preterJeu(g, loanName, loanRetour); if (j === g) return; onEnrich(g.id, j); setPretOuvert(false); setLoanRetour(""); }}
                       disabled={!loanName.trim()}
-                      style={{ height: 36, padding: "0 14px", background: loanName.trim() ? "#f59e0b22" : "transparent", border: `1px solid ${loanName.trim() ? "#f59e0b" : bdr}`, color: loanName.trim() ? "#f59e0b" : mut, borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: loanName.trim() ? "pointer" : "default" }}>Prêter</button>
+                      style={{ height: 36, padding: "0 14px", background: loanName.trim() ? warnDoux : "transparent", border: `1px solid ${loanName.trim() ? warn : bdr}`, color: loanName.trim() ? warn : mut, borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: loanName.trim() ? "pointer" : "default" }}>Prêter</button>
                   </div>
                   {/* Facultatif : sans date, le seuil de 30 jours reste le repli. */}
                   <label style={{ display: "flex", gap: 6, alignItems: "center", marginTop: 6 }}>
@@ -338,8 +338,8 @@ function GameCard({ g, onEdit, onDelete, onEnrich, autoOpen, onOuverte }) {
           {acc("links", "🔗 Liens & contenu", (
             <>
               <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginBottom: 8 }}>
-                <a href={`https://www.youtube.com/results?search_query=${encodeURIComponent(g.title + " official trailer")}`} target="_blank" rel="noreferrer" style={{ background: "#ef444422", border: "1px solid #ef4444", color: "#ef4444", borderRadius: 5, padding: "3px 8px", fontSize: 10, textDecoration: "none" }}>▶ Trailer</a>
-                <a href={`https://www.youtube.com/results?search_query=${encodeURIComponent(g.title + " gameplay français")}`} target="_blank" rel="noreferrer" style={{ background: "#ef444422", border: "1px solid #ef4444", color: "#ef4444", borderRadius: 5, padding: "3px 8px", fontSize: 10, textDecoration: "none" }}>▶ Gameplay FR</a>
+                <a href={`https://www.youtube.com/results?search_query=${encodeURIComponent(g.title + " official trailer")}`} target="_blank" rel="noreferrer" style={{ background: dangerDoux, border: `1px solid ${danger}`, color: danger, borderRadius: 5, padding: "3px 8px", fontSize: 10, textDecoration: "none" }}>▶ Trailer</a>
+                <a href={`https://www.youtube.com/results?search_query=${encodeURIComponent(g.title + " gameplay français")}`} target="_blank" rel="noreferrer" style={{ background: dangerDoux, border: `1px solid ${danger}`, color: danger, borderRadius: 5, padding: "3px 8px", fontSize: 10, textDecoration: "none" }}>▶ Gameplay FR</a>
                 <a href={`https://www.jeuxvideo.com/recherche/?q=${encodeURIComponent(g.title)}`} target="_blank" rel="noreferrer" style={{ background: accentDoux, border: `1px solid ${accent}`, color: accent, borderRadius: 5, padding: "3px 8px", fontSize: 10, textDecoration: "none" }}>JVC</a>
                 <a href={`https://www.ign.com/search?q=${encodeURIComponent(g.title)}`} target="_blank" rel="noreferrer" style={{ background: accentDoux, border: `1px solid ${accent}`, color: accent, borderRadius: 5, padding: "3px 8px", fontSize: 10, textDecoration: "none" }}>IGN</a>
               </div>
@@ -410,7 +410,7 @@ function GameCard({ g, onEdit, onDelete, onEnrich, autoOpen, onOuverte }) {
                   <div style={{ color: txt, fontSize: 11, fontWeight: 600, marginBottom: 4 }}>Résumé Wikipédia</div>
                   <div style={{ color: mut, fontSize: 11, fontStyle: "italic", lineHeight: 1.4, maxHeight: 96, overflowY: "auto", marginBottom: 6 }}>{wikiExtract}</div>
                   <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                    <button onClick={() => { onEdit(g.id, "style", wikiExtract); setWikiExtract(null); }} style={{ background: "#22c55e22", border: "1px solid #22c55e", color: "#22c55e", borderRadius: 6, padding: "0 10px", minHeight: 38, fontSize: 11, cursor: "pointer" }}>Utiliser ce résumé</button>
+                    <button onClick={() => { onEdit(g.id, "style", wikiExtract); setWikiExtract(null); }} style={{ background: okDoux, border: `1px solid ${ok}`, color: ok, borderRadius: 6, padding: "0 10px", minHeight: 38, fontSize: 11, cursor: "pointer" }}>Utiliser ce résumé</button>
                     <button onClick={() => setWikiExtract(null)} style={{ background: "transparent", border: `1px solid ${bdr}`, color: mut, borderRadius: 6, padding: "0 10px", minHeight: 38, fontSize: 11, cursor: "pointer" }}>Garder la description actuelle</button>
                   </div>
                 </div>
@@ -422,7 +422,7 @@ function GameCard({ g, onEdit, onDelete, onEnrich, autoOpen, onOuverte }) {
                   <div style={{ color: txt, fontSize: 11, fontWeight: 600, marginBottom: 4 }}>Jaquette Wikipédia</div>
                   <img src={wikiImage} alt="" style={{ maxWidth: 120, maxHeight: 160, objectFit: "contain", borderRadius: 6, border: `1px solid ${bdr}`, display: "block", marginBottom: 6 }} />
                   <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                    <button onClick={() => { onEdit(g.id, "cover", wikiImage); setWikiImage(null); }} style={{ background: "#22c55e22", border: "1px solid #22c55e", color: "#22c55e", borderRadius: 6, padding: "0 10px", minHeight: 38, fontSize: 11, cursor: "pointer" }}>Utiliser cette jaquette</button>
+                    <button onClick={() => { onEdit(g.id, "cover", wikiImage); setWikiImage(null); }} style={{ background: okDoux, border: `1px solid ${ok}`, color: ok, borderRadius: 6, padding: "0 10px", minHeight: 38, fontSize: 11, cursor: "pointer" }}>Utiliser cette jaquette</button>
                     <button onClick={() => setWikiImage(null)} style={{ background: "transparent", border: `1px solid ${bdr}`, color: mut, borderRadius: 6, padding: "0 10px", minHeight: 38, fontSize: 11, cursor: "pointer" }}>Garder la jaquette actuelle</button>
                   </div>
                 </div>
@@ -434,7 +434,7 @@ function GameCard({ g, onEdit, onDelete, onEnrich, autoOpen, onOuverte }) {
                   <div style={{ color: txt, fontSize: 11, fontWeight: 600, marginBottom: 4 }}>ℹ️ Infos (Wikidata)</div>
                   <div style={{ marginBottom: 6 }}><InfoboxView info={wikiInfo} /></div>
                   <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                    <button onClick={() => { onEdit(g.id, "infobox", wikiInfo); setWikiInfo(null); }} style={{ background: "#22c55e22", border: "1px solid #22c55e", color: "#22c55e", borderRadius: 6, padding: "0 10px", minHeight: 38, fontSize: 11, cursor: "pointer" }}>Utiliser ces infos</button>
+                    <button onClick={() => { onEdit(g.id, "infobox", wikiInfo); setWikiInfo(null); }} style={{ background: okDoux, border: `1px solid ${ok}`, color: ok, borderRadius: 6, padding: "0 10px", minHeight: 38, fontSize: 11, cursor: "pointer" }}>Utiliser ces infos</button>
                     <button onClick={() => setWikiInfo(null)} style={{ background: "transparent", border: `1px solid ${bdr}`, color: mut, borderRadius: 6, padding: "0 10px", minHeight: 38, fontSize: 11, cursor: "pointer" }}>Ignorer</button>
                   </div>
                 </div>
@@ -472,7 +472,7 @@ function GameCard({ g, onEdit, onDelete, onEnrich, autoOpen, onOuverte }) {
               ⋯ Modifier la fiche
             </button>
             <button onClick={() => onDelete(g)}
-              style={{ marginLeft: "auto", height: 38, padding: "0 10px", background: "transparent", border: "none", color: "#ef4444", fontSize: 12, cursor: "pointer", opacity: 0.85 }}>
+              style={{ marginLeft: "auto", height: 38, padding: "0 10px", background: "transparent", border: "none", color: danger, fontSize: 12, cursor: "pointer", opacity: 0.85 }}>
               Supprimer
             </button>
           </div>
@@ -510,7 +510,7 @@ function GameCard({ g, onEdit, onDelete, onEnrich, autoOpen, onOuverte }) {
               {BACK_COMPAT_PARENT[brouillon.platform] && ligneEdition(
                 `Jouable sur ${BACK_COMPAT_PARENT[brouillon.platform].replace("Xbox ", "")}`, "backCompat", (
                   <Segment valeur={brouillon.backCompat} onChange={v => champ("backCompat", v)}
-                    options={[["oui", true, "#22c55e"], ["non", false, "#ef4444"]]} />
+                    options={[["oui", true, ok], ["non", false, danger]]} />
                 ), "rétrocompatibilité", "div")}
 
               {ligneEdition("Genres", "genre", <input value={brouillon.genre} onChange={e => champ("genre", e.target.value)} placeholder="Action, Aventure…" style={champStyle("genre")} />, "séparés par des virgules")}
@@ -545,7 +545,7 @@ function GameCard({ g, onEdit, onDelete, onEnrich, autoOpen, onOuverte }) {
                   où on appuie sur Enregistrer : sans ce rappel, le bouton
                   paraît sans effet. */}
               {Object.keys(erreurs).length > 0 && (
-                <div role="alert" style={{ color: "#ef4444", fontSize: 11, marginTop: 8 }}>Rien n'a été enregistré : corrige les champs en rouge.</div>
+                <div role="alert" style={{ color: danger, fontSize: 11, marginTop: 8 }}>Rien n'a été enregistré : corrige les champs en rouge.</div>
               )}
             </Sheet>
           )}
