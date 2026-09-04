@@ -1,7 +1,8 @@
 import { useRef, useState } from "react";
-import { bg, card, bdr, txt, mut } from "../lib/theme.js";
+import { card, bdr, txt, mut } from "../lib/theme.js";
 import { MODES, LIBELLES, ICONES } from "../lib/apparence.js";
-import { pertesDeReglages, messageDePerte, messageCodeSync } from "../lib/garde-fous.js";
+import { pertesDeReglages, messageDePerte, messageCodeSync, CONSEQUENCES } from "../lib/garde-fous.js";
+import ChampProtege from "./ChampProtege.jsx";
 
 // Les réglages, refaits.
 //
@@ -44,17 +45,6 @@ const Bouton = ({ intention = "neutre", pleinePlace, disabled, children, ...rest
     }}
     {...reste}
   >{children}</button>
-);
-
-const Champ = ({ mono, ...reste }) => (
-  <input
-    style={{
-      width: "100%", boxSizing: "border-box", background: bg, border: `1px solid ${bdr}`,
-      borderRadius: 8, color: txt, padding: "9px 10px", fontSize: 12, outline: "none",
-      fontFamily: mono ? "ui-monospace, monospace" : "inherit",
-    }}
-    {...reste}
-  />
 );
 
 const Etiquette = ({ children }) => (
@@ -118,25 +108,38 @@ export default function SettingsView({
       <Section titre="Synchronisation"
         aide="Dépose la bibliothèque sur ton relais Cloudflare pour la retrouver sur un autre appareil. Saisis le même code partout ; il reste sur l'appareil et ne part jamais dans l'export.">
         <Etiquette>Code de synchronisation</Etiquette>
-        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 10 }}>
-          <div style={{ flex: "1 1 170px", minWidth: 0 }}>
-            <Champ mono type={visible ? "text" : "password"} value={codeAffiche} placeholder="aucun code"
-              aria-label="Code de synchronisation"
-              onChange={e => setCodeSaisi(e.target.value)}
-              onBlur={validerCode}
-              onKeyDown={e => e.key === "Enter" && e.currentTarget.blur()} />
-          </div>
-          <Bouton onClick={() => {
-            const message = messageCodeSync(sync.code, "nouveau");
-            if (message && !window.confirm(message)) return;
-            setCodeSaisi(null);
-            majSync({ ...sync, code: genererCode() });
-            setSyncEtat(null);
-          }}>Générer</Bouton>
-          <Bouton disabled={!sync.code} onClick={() => {
-            navigator.clipboard?.writeText(sync.code);
-            setSyncEtat({ type: "ok", texte: "Code copié." });
-          }}>Copier</Bouton>
+        <div style={{ marginBottom: 10 }}>
+          <ChampProtege
+            valeur={codeAffiche} visible={visible} placeholder="aucun code"
+            ariaLabel="Code de synchronisation"
+            quoi="le code de synchronisation"
+            consequence="La sauvegarde en ligne existera toujours, mais plus rien ici ne permettra de la retrouver."
+            onChange={setCodeSaisi}
+            onSupprimer={() => { setCodeSaisi(null); majSync({ ...sync, code: "" }); setSyncEtat(null); }}
+            actions={
+              <>
+                <Bouton onClick={() => {
+                  const message = messageCodeSync(sync.code, "nouveau");
+                  if (message && !window.confirm(message)) return;
+                  setCodeSaisi(null);
+                  majSync({ ...sync, code: genererCode() });
+                  setSyncEtat(null);
+                }}>Générer</Bouton>
+                <Bouton disabled={!sync.code} onClick={() => {
+                  navigator.clipboard?.writeText(sync.code);
+                  setSyncEtat({ type: "ok", texte: "Code copié." });
+                }}>Copier</Bouton>
+              </>
+            }
+          />
+          {/* La saisie s'applique en quittant le champ : sinon effacer pour
+              retaper détruit la valeur au premier caractère supprimé. */}
+          {codeSaisi !== null && codeSaisi.trim() !== sync.code && (
+            <div style={{ display: "flex", gap: 6, marginTop: 6, alignItems: "center" }}>
+              <Bouton intention="principal" onClick={validerCode}>Appliquer</Bouton>
+              <Bouton onClick={() => setCodeSaisi(null)}>Annuler</Bouton>
+            </div>
+          )}
         </div>
 
         {/* Les deux flèches se contredisaient : « ⬆ Envoyer » vers le relais et
@@ -178,17 +181,21 @@ export default function SettingsView({
               <a href={lien} target="_blank" rel="noreferrer" style={{ color: ACCENT, fontSize: 11, textDecoration: "none" }}>obtenir ↗</a>
               <span style={{ color: mut, fontSize: 11 }}>{quoi}</span>
             </div>
-            <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <Champ mono type={visible ? "text" : "password"} value={keys[id]} placeholder="non configurée"
-                  aria-label={`Clé ${nom}`}
-                  onChange={e => setKeys(k => ({ ...k, [id]: e.target.value.trim() }))} />
-              </div>
-              <Bouton disabled={!keys[id]} onClick={() => testerCle(id)}>Tester</Bouton>
-              <span aria-live="polite" style={{ fontSize: 14, width: 18, textAlign: "center", flexShrink: 0 }}>
-                {etatCles[id] === "ok" ? "✅" : etatCles[id] === "ko" ? "❌" : etatCles[id] === "…" ? "⏳" : ""}
-              </span>
-            </div>
+            <ChampProtege
+              valeur={keys[id]} visible={visible} placeholder="non configurée"
+              ariaLabel={`Clé ${nom}`}
+              quoi={CONSEQUENCES[id][0]} consequence={`Conséquence : ${CONSEQUENCES[id][1]}.`}
+              onChange={v => setKeys(k => ({ ...k, [id]: v.trim() }))}
+              onSupprimer={() => { const videes = { ...keys, [id]: "" }; setKeys(videes); appliquerCles.appliquer(videes); }}
+              actions={
+                <>
+                  <Bouton disabled={!keys[id]} onClick={() => testerCle(id)}>Tester</Bouton>
+                  <span aria-live="polite" style={{ fontSize: 14, width: 18, textAlign: "center", flexShrink: 0 }}>
+                    {etatCles[id] === "ok" ? "✅" : etatCles[id] === "ko" ? "❌" : etatCles[id] === "…" ? "⏳" : ""}
+                  </span>
+                </>
+              }
+            />
           </div>
         ))}
 
@@ -197,9 +204,13 @@ export default function SettingsView({
           <div style={{ color: mut, fontSize: 11, marginBottom: 4, lineHeight: 1.4 }}>
             Requis en ligne pour SteamGridDB, l'import Xbox et la synchronisation. À laisser vide en développement local.
           </div>
-          <Champ mono type="text" value={keys.proxy} placeholder="https://mon-worker.workers.dev"
-            aria-label="Adresse du relais"
-            onChange={e => setKeys(k => ({ ...k, proxy: e.target.value.trim() }))} />
+          <ChampProtege
+            valeur={keys.proxy} visible placeholder="https://mon-worker.workers.dev"
+            ariaLabel="Adresse du relais"
+            quoi={CONSEQUENCES.proxy[0]} consequence={`Conséquence : ${CONSEQUENCES.proxy[1]}.`}
+            onChange={v => setKeys(k => ({ ...k, proxy: v.trim() }))}
+            onSupprimer={() => { const videes = { ...keys, proxy: "" }; setKeys(videes); appliquerCles.appliquer(videes); }}
+          />
         </div>
 
         <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>

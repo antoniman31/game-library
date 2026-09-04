@@ -44,3 +44,13 @@ export function messageCodeSync(avant, apres) {
     ? "Remplacer le code de synchronisation ?\n\nLa sauvegarde en ligne liée à l'ancien code deviendra inaccessible sans lui. Note-le si tu comptes y revenir."
     : "Effacer le code de synchronisation ?\n\nLa sauvegarde en ligne existera toujours, mais plus rien ici ne permettra de la retrouver.";
 }
+
+// Déverrouiller un champ n'efface rien, mais c'est le geste qui précède
+// l'accident : on ouvre pour regarder, on tape par-dessus, on enregistre.
+export function messageDeverrouillage(quoi) {
+  return `Modifier ${quoi} ?\n\nLa valeur actuelle sera remplacée par ce que tu saisiras. Copie-la d'abord si tu veux pouvoir y revenir.`;
+}
+
+export function messageSuppression(quoi, consequence) {
+  return `Supprimer ${quoi} ?\n\n${consequence}\n\nCette valeur n'existe nulle part ailleurs : ni dans l'export, ni dans la sauvegarde en ligne.`;
+}

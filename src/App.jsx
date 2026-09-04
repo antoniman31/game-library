@@ -13,7 +13,7 @@ import SettingsView from "./components/SettingsView.jsx";
 import { hdr, card, bdr, txt, mut } from "./lib/theme.js";
 import { GAMES_INIT } from "./lib/seed.js";
 import { BACK_COMPAT, migrateGames, compterFiltres, validerJeuxImportes, pretEnRetard, jeuxSansScore,
-  dureeEntreeHistorique } from "./lib/model.js";
+  dureeEntreeHistorique, supprimerEntreeHistorique } from "./lib/model.js";
 import { lire, ecrire, surEchecStockage } from "./lib/storage.js";
 import { chargerSync, enregistrerSync, genererCode, envoyer, recuperer } from "./lib/sync.js";
 import { surMiseAJour } from "./lib/maj.js";
@@ -153,6 +153,13 @@ export default function App() {
   // Annulable (S6) ; garde un délai anti-rate-limit ; log des jeux sans page (S1).
   const refreshAllDescriptions = async () => {
     if (refreshing) return;
+    // Cette opération REMPLACE chaque description existante, y compris celles
+    // corrigées à la main. Elle se présentait comme une simple actualisation.
+    const ecrites = games.filter(g => g.style).length;
+    if (ecrites && !window.confirm(
+      `Recharger les descriptions des ${games.length} jeux depuis Wikipédia ?\n\n` +
+      `${ecrites} description(s) existante(s) seront remplacées, y compris celles que tu as écrites ou corrigées toi-même.`
+    )) return;
     refreshCancelRef.current = false;
     setRefreshing(true);
     setRefreshProg(0);
@@ -181,6 +188,13 @@ export default function App() {
     });
   };
   const cancelRefresh = () => { refreshCancelRef.current = true; };
+
+  // Une ligne d'historique fausse — un essai, une saisie ratée — fausse les
+  // moyennes pour toujours si rien ne peut l'effacer.
+  const supprimerPretPasse = (jeuId, index, e) => {
+    if (!window.confirm(`Supprimer ce prêt à ${e.a} de l'historique ?\n\nIl ne comptera plus dans les statistiques. Cette suppression est définitive.`)) return;
+    setGames(gs => gs.map(g => (g.id === jeuId ? supprimerEntreeHistorique(g, index) : g)));
+  };
 
   // Complète les notes Metacritic absentes depuis RAWG, sans toucher à celles
   // déjà renseignées.
@@ -316,6 +330,9 @@ export default function App() {
   };
   const cancelEnrich = () => { enrichCancelRef.current = true; };
   const deleteGame = useCallback((g) => {
+    // Le toast d'annulation ne dure que cinq secondes : passé ce délai, le jeu
+    // et son historique de prêts sont perdus sans recours.
+    if (!window.confirm(`Supprimer « ${g.title} » ?${(g.pretsPasses || []).length ? `\n\nSon historique de ${g.pretsPasses.length} prêt(s) disparaît avec lui.` : ""}`)) return;
     const index = games.findIndex(x => x.id === g.id);
     setGames(gs => gs.filter(x => x.id !== g.id));
     setDeleted({ game: g, index });
@@ -468,7 +485,7 @@ export default function App() {
   const lentGames = games.filter(g => g.lentA);
   // Tous les prêts rendus, jeu par jeu, du plus récent au plus ancien.
   const historique = useMemo(() => games
-    .flatMap(g => (g.pretsPasses || []).map(e => ({ ...e, titre: g.title })))
+    .flatMap(g => (g.pretsPasses || []).map((e, i) => ({ ...e, titre: g.title, jeuId: g.id, index: i })))
     .sort((a, b) => (a.au < b.au ? 1 : a.au > b.au ? -1 : 0))
     .slice(0, 50), [games]);
   const filtresActifs = compterFiltres({ plat, pretFil, fmtFil });
@@ -675,6 +692,9 @@ export default function App() {
                       <div style={{ color:mut, fontSize:11 }}>{e.a} · rendu le {new Date(e.au).toLocaleDateString("fr-FR")}</div>
                     </div>
                     <span style={{ color:mut, fontSize:11, flexShrink:0 }}>{dureeEntreeHistorique(e)} j</span>
+                    <button onClick={() => supprimerPretPasse(e.jeuId, e.index, e)}
+                      aria-label={`Supprimer le prêt de ${e.titre} à ${e.a}`} title="Supprimer de l'historique"
+                      style={{ flexShrink:0, minWidth:32, minHeight:32, background:"transparent", border:"none", color:mut, fontSize:14, cursor:"pointer", lineHeight:1 }}>✕</button>
                   </div>
                 ))}
               </>

@@ -4,7 +4,7 @@ import InfoboxView from "./InfoboxView.jsx";
 import Sheet from "./Sheet.jsx";
 import { bg, card, bdr, txt, mut, demat } from "../lib/theme.js";
 import { PLATFORM_COLORS, BACK_COMPAT_PARENT, PLATFORMES_JEU, estUrlImage, joursDePret, pretEnRetard, brouillonDepuisJeu, validerEdition,
-  rendreJeu, preterJeu, dureeEntreeHistorique } from "../lib/model.js";
+  rendreJeu, preterJeu, annulerPret, dureeEntreeHistorique } from "../lib/model.js";
 import {
   rawgSearch, rawgDetail, wikiFrenchTitles, wikiArticleData, wikidataInfobox,
   sgdbSearch, sgdbGrids,
@@ -279,6 +279,13 @@ function GameCard({ g, onEdit, onDelete, onEnrich, autoOpen }) {
                       style={{ height: 36, padding: "0 14px", background: "#22c55e22", border: "1px solid #22c55e", color: "#22c55e", borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>✓ Rendu</button>
                     <a href={`sms:?body=${encodeURIComponent(`Salut ! Tu penses à me rendre ${g.title} ? 😊`)}`}
                       style={{ height: 36, padding: "0 14px", display: "inline-flex", alignItems: "center", background: "transparent", border: `1px solid ${bdr}`, color: txt, borderRadius: 8, fontSize: 12, textDecoration: "none" }}>Relancer par SMS</a>
+                    {/* « Rendu » archive et nourrit les statistiques ; un prêt
+                        saisi par erreur doit pouvoir disparaître sans y entrer. */}
+                    <button onClick={() => {
+                        if (!window.confirm(`Supprimer ce prêt à ${g.lentA} ?\n\nIl ne sera pas enregistré dans l'historique — à utiliser si le prêt n'a jamais eu lieu.`)) return;
+                        onEnrich(g.id, annulerPret(g)); setLoanName(""); setLoanRetour("");
+                      }}
+                      style={{ height: 36, padding: "0 12px", background: "transparent", border: "none", color: "#ef4444", fontSize: 12, cursor: "pointer", opacity: 0.85 }}>Supprimer</button>
                   </div>
                 </div>
               ) : pretOuvert ? (
