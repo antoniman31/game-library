@@ -38,7 +38,7 @@ export default function ScoresSheet({ bilan, onAnnulerScore, onClose }) {
             </div>
             <span style={{ color: t.score >= 80 ? ok : t.score >= 60 ? warn : danger, fontSize: 13, fontWeight: 700, flexShrink: 0 }}>{t.score}</span>
             <button onClick={() => onAnnulerScore(t.id)} title="Retirer ce score"
-              style={{ flexShrink: 0, minHeight: 34, padding: "0 10px", background: "transparent", border: `1px solid ${bdr}`, color: mut, borderRadius: 6, fontSize: 11, cursor: "pointer" }}>
+              style={{ flexShrink: 0, minHeight: 34, padding: "0 10px", background: "transparent", border: `1px solid ${bdr}`, color: mut, borderRadius: "var(--r-sm)", fontSize: 11, cursor: "pointer" }}>
               Retirer
             </button>
           </div>

@@ -308,6 +308,42 @@ Une série de défauts qui avaient en commun de ne jamais se voir :
 - **Le manifeste PWA** habillait encore l'écran de démarrage en bleu nuit et la barre
   système en bleu, autour d'une application devenue noire.
 
+### Phase 13 — L'application mesurée contre les règles
+
+Jusqu'ici l'ergonomie se décidait à l'œil. Confrontée à Material Design 3, aux lois
+de l'UX et à un cahier des charges d'accessibilité, elle a rendu une liste de défauts
+qui avaient tous en commun d'être vérifiables — donc indiscutables.
+
+- **Quatre contrastes sous la barre**, dont trois par oubli : le bouton « Voir N jeux »
+  posait du blanc sur `--accent` (3,00:1) alors que `--accent-fond` existe exactement
+  pour ça, et deux « Annuler » gardaient un gris écrit en dur, à 2,32:1 sur le thème
+  clair. Le passage aux jetons avait été fait ; il n'avait pas été fini.
+- **Le focus clavier était invisible.** Douze champs posaient `outline: none` en style
+  inline sans rien mettre à la place. Retirer l'anneau du navigateur est un choix
+  esthétique légitime ; ne pas le redessiner ne l'est pas.
+- **Les croix de fermeture mesuraient une dizaine de pixels.** Sans cadre, sans
+  remplissage, la cible valait la taille du glyphe. Material demande 48 dp, Apple 44 pt,
+  WCAG 2.5.5 44 px : le plancher retenu est 44, le plus bas des trois, et il est
+  désormais tenu par une variable plutôt que par la vigilance.
+- **Les panneaux n'étaient pas des dialogues.** Ni `role`, ni `aria-modal`, ni piège de
+  focus : Tab continuait de parcourir la page cachée derrière, et refermer renvoyait le
+  focus au début du document.
+- **`Annuler` déclenchait une fusion.** L'import demandait « OK = REMPLACER, Annuler =
+  FUSIONNER » dans un `confirm()`. Deux actions distinctes ne tiennent pas dans un bouton
+  binaire : Échap, qui ferme sur Annuler, importait le fichier. Trois boutons nommés
+  remplacent la devinette, et annuler n'importe plus rien.
+- **Les champs de saisie sous 16 px** font zoomer Safari iOS à la prise de focus. C'est
+  un comportement du navigateur, pas un réglage : un plancher CSS le neutralise.
+- **Trois grammaires de bouton principal** cohabitaient — aplat bleu, contour teinté,
+  aplat plat. L'effet von Restorff ne fonctionne que si la forme remarquable est la même
+  partout : l'aplat est l'action principale, le contour teinté dit désormais « c'est ce
+  qui est choisi ». Au passage, neuf rayons de bordure sont devenus quatre jetons et neuf
+  tailles de police cinq.
+
+Le tout est vérifié dans le navigateur plutôt qu'à la lecture : un script mesure chaque
+élément interactif de chaque écran, à 360 et 412 px, dans les deux thèmes, et échoue s'il
+trouve une cible sous le plancher, un texte sous 11 px ou un débordement horizontal.
+
 ---
 
 ## 3. Architecture finale
@@ -508,9 +544,15 @@ mesure avec le simple en-tête `X-Authorization` de xbl.io.
   et le pattern VAPID est éprouvé dans un autre projet de l'auteur. Écarté : cela
   suppose un backend qui pousse, donc envoyer la liste des prêts à un serveur pour un
   gain quasi nul.
-- **Contraste du thème clair** — le vert et le rouge tournent entre 2,83 et 4,39:1, et
-  le blanc sur l'accent du thème sombre est à 3,00:1. Mesuré, non corrigé : cela touche
-  l'identité visuelle, ce n'est pas une décision technique.
+- **Corps de texte à 16 px** — les référentiels mobiles donnent 16 px pour le texte
+  courant ; l'application tourne entre 11 et 13. Les champs de saisie sont montés (le
+  zoom d'iOS l'imposait), le reste non : monter tout le corps change la densité de
+  chaque écran, donc le nombre de jeux visibles d'un coup d'œil. C'est un arbitrage de
+  produit, pas une correction.
+- **Navigation en bas d'écran** — les quatre onglets et le bouton « + Ajouter » sont en
+  haut, dans la zone que la cartographie du pouce désigne comme la plus difficile à
+  atteindre à une main. Une barre basse et un bouton flottant y répondraient ; c'est une
+  refonte de l'ossature, pas un correctif.
 - **Parcours SteamGridDB de bout en bout en ligne** — validé par le bouton « Tester »,
   mais le choix d'une jaquette depuis une fiche n'a pas été rejoué en production.
 - **Import Nintendo** — voir section 6. La bibliothèque Switch a finalement été

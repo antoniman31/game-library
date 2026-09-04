@@ -1,5 +1,5 @@
 import Sheet from "./Sheet.jsx";
-import { bdr, txt, mut, accent, accentDoux, warn } from "../lib/theme.js";
+import { bdr, txt, mut, accent, accentDoux, accentFond, warn } from "../lib/theme.js";
 import { PLATFORMS, compterFiltres } from "../lib/model.js";
 
 const ACCENT = accent;
@@ -9,7 +9,7 @@ const ACCENT = accent;
 function Groupe({ label, options, value, onChange, colorOf }) {
   return (
     <div style={{ marginBottom: 18 }}>
-      <div style={{ color: mut, fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 7 }}>
+      <div style={{ color: mut, fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 7 }}>
         {label}
       </div>
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -26,7 +26,7 @@ function Groupe({ label, options, value, onChange, colorOf }) {
                 background: actif ? (c === accent ? accentDoux : c + "22") : "transparent",
                 border: `1px solid ${actif ? c : bdr}`,
                 color: actif ? c : txt,
-                borderRadius: 8, padding: "6px 10px", fontSize: 12,
+                borderRadius: "var(--r-sm)", padding: "6px 10px", fontSize: 12,
                 fontWeight: actif ? 600 : 400, cursor: "pointer",
               }}
             >
@@ -86,7 +86,7 @@ export default function FiltersSheet({
           disabled={actifs === 0}
           style={{
             flex: 1, minHeight: "var(--tap)", background: "transparent",
-            border: `1px solid ${bdr}`, color: actifs ? txt : mut, borderRadius: 8,
+            border: `1px solid ${bdr}`, color: actifs ? txt : mut, borderRadius: "var(--r-sm)",
             fontSize: 13, cursor: actifs ? "pointer" : "default", opacity: actifs ? 1 : 0.5,
           }}
         >
@@ -95,8 +95,8 @@ export default function FiltersSheet({
         <button
           onClick={onClose}
           style={{
-            flex: 2, minHeight: "var(--tap)", background: ACCENT, border: "none",
-            color: "#fff", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: "pointer",
+            flex: 2, minHeight: "var(--tap)", background: accentFond, border: "none",
+            color: "#fff", borderRadius: "var(--r-sm)", fontSize: 13, fontWeight: 600, cursor: "pointer",
           }}
         >
           Voir {resultats} jeu{resultats > 1 ? "x" : ""}

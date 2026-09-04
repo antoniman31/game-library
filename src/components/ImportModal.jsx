@@ -79,20 +79,20 @@ function ImportModal({ games, onImportGames, onClose }) {
               {newOnes.length} nouveau(x) · {existingCount} déjà présent(s) · {list.length} jeux Xbox détectés
             </div>
             {newOnes.length > 0 && (
-              <button onClick={toggleAll} disabled={importing} style={{ alignSelf: "flex-start", background: "transparent", border: `1px solid ${bdr}`, color: mut, borderRadius: 5, padding: "3px 8px", fontSize: 10, cursor: "pointer", marginBottom: 8 }}>
+              <button onClick={toggleAll} disabled={importing} style={{ alignSelf: "flex-start", background: "transparent", border: `1px solid ${bdr}`, color: mut, borderRadius: "var(--r-xs)", padding: "3px 8px", fontSize: 11, cursor: "pointer", marginBottom: 8 }}>
                 {allChecked ? "Tout décocher" : "Tout cocher"}
               </button>
             )}
-            <div style={{ overflowY: "auto", flex: 1, border: `1px solid ${bdr}`, borderRadius: 8, marginBottom: 12 }}>
+            <div style={{ overflowY: "auto", flex: 1, border: `1px solid ${bdr}`, borderRadius: "var(--r-sm)", marginBottom: 12 }}>
               {list.map((t, i) => (
                 <label key={i} style={{ display: "flex", gap: 8, alignItems: "center", padding: "6px 9px", borderBottom: i < list.length - 1 ? `1px solid ${bdr}` : "none", cursor: t.isNew ? "pointer" : "default", opacity: t.isNew ? 1 : 0.5 }}>
                   <input type="checkbox" disabled={!t.isNew || importing} checked={!!checked[t.name]} onChange={e => setChecked(c => ({ ...c, [t.name]: e.target.checked }))} style={{ accentColor: accent }} />
-                  {t.image && <img src={t.image} alt="" style={{ width: 30, height: 45, minWidth: 30, objectFit: "cover", borderRadius: 3 }} />}
+                  {t.image && <img src={t.image} alt="" style={{ width: 30, height: 45, minWidth: 30, objectFit: "cover", borderRadius: "var(--r-xs)" }} />}
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ color: txt, fontSize: 12, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.name}</div>
-                    <div style={{ color: mut, fontSize: 9 }}>{t.devices.join(", ")}</div>
+                    <div style={{ color: mut, fontSize: 11 }}>{t.devices.join(", ")}</div>
                   </div>
-                  <span style={{ fontSize: 9, color: t.isNew ? ok : mut, border: `1px solid ${t.isNew ? ok : bdr}`, borderRadius: 3, padding: "1px 5px", whiteSpace: "nowrap" }}>{t.isNew ? "Nouveau" : "Déjà présent"}</span>
+                  <span style={{ fontSize: 11, color: t.isNew ? ok : mut, border: `1px solid ${t.isNew ? ok : bdr}`, borderRadius: "var(--r-xs)", padding: "1px 5px", whiteSpace: "nowrap" }}>{t.isNew ? "Nouveau" : "Déjà présent"}</span>
                 </label>
               ))}
             </div>
@@ -100,10 +100,10 @@ function ImportModal({ games, onImportGames, onClose }) {
             <div style={{ display: "flex", gap: 8 }}>
               {!importing
                 ? <>
-                    <button onClick={onClose} style={{ flex: 1, background: "transparent", border: `1px solid ${bdr}`, color: "#94a3b8", borderRadius: 8, padding: 10, cursor: "pointer", fontSize: 13 }}>Annuler</button>
-                    <button onClick={doImport} disabled={selectedCount === 0} style={{ flex: 2, background: accentFond, border: "none", color: "#fff", borderRadius: 8, padding: 10, cursor: selectedCount ? "pointer" : "default", opacity: selectedCount ? 1 : 0.5, fontSize: 13, fontWeight: 600 }}>Importer {selectedCount} jeu(x)</button>
+                    <button onClick={onClose} style={{ flex: 1, background: "transparent", border: `1px solid ${bdr}`, color: mut, borderRadius: "var(--r-sm)", padding: 10, cursor: "pointer", fontSize: 13 }}>Annuler</button>
+                    <button onClick={doImport} disabled={selectedCount === 0} style={{ flex: 2, background: accentFond, border: "none", color: "#fff", borderRadius: "var(--r-sm)", padding: 10, cursor: selectedCount ? "pointer" : "default", opacity: selectedCount ? 1 : 0.5, fontSize: 13, fontWeight: 600 }}>Importer {selectedCount} jeu(x)</button>
                   </>
-                : <button onClick={() => { cancelRef.current = true; }} style={{ flex: 1, background: dangerDoux, border: `1px solid ${danger}`, color: danger, borderRadius: 8, padding: 10, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>Arrêter l'import</button>}
+                : <button onClick={() => { cancelRef.current = true; }} style={{ flex: 1, background: dangerDoux, border: `1px solid ${danger}`, color: danger, borderRadius: "var(--r-sm)", padding: 10, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>Arrêter l'import</button>}
             </div>
           </>
         )}

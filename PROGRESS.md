@@ -238,6 +238,8 @@ game-library/
 ├── .github/workflows/    ← deploy.yml : lint, tests, build, publication Pages
 ├── worker/               ← relais CORS + sauvegarde KV (sans secret) + tests
 ├── scripts/audit.mjs     ← audit des données d'un export (pas un test)
+├── scripts/verif-ui.mjs  ← mesure les écrans rendus : cibles tactiles,
+│                           tailles de texte, débordements (npm run verif:ui)
 ├── vite.config.js        ← base '/game-library/', PWA, proxys de dev (sans clé)
 ├── PROGRESS.md           ← ce fichier
 └── src/

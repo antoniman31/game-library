@@ -11,13 +11,13 @@ const ACCENT = accent;
 
 export default function SousOnglets({ options, valeur, onChange }) {
   return (
-    <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
+    <div style={{ display: "flex", gap: "var(--ecart-tap)", marginBottom: 12 }}>
       {options.map(([cle, libelle]) => {
         const actif = valeur === cle;
         return (
           <button key={cle} onClick={() => onChange(cle)} aria-pressed={actif}
             style={{
-              flex: 1, minHeight: "var(--tap)", borderRadius: 8, fontSize: 13,
+              flex: 1, minHeight: "var(--tap)", borderRadius: "var(--r-sm)", fontSize: 13,
               cursor: "pointer", fontFamily: "inherit", fontWeight: actif ? 600 : 400,
               background: actif ? accentDoux : "transparent",
               border: `1px solid ${actif ? ACCENT : bdr}`,

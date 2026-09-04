@@ -42,20 +42,20 @@ export default class ErrorBoundary extends Component {
   render() {
     if (!this.state.erreur) return this.props.children;
     const btn = {
-      minHeight: "var(--tap)", borderRadius: 10, padding: "0 16px",
+      minHeight: "var(--tap)", borderRadius: "var(--r-md)", padding: "0 16px",
       fontSize: 13, fontWeight: 600, cursor: "pointer",
     };
     return (
       <div style={{ padding: "calc(40px + var(--safe-top)) 20px 40px", maxWidth: 520, margin: "0 auto" }}>
         <div style={{ fontSize: 40, marginBottom: 12 }}>💥</div>
-        <h1 style={{ color: "var(--txt)", fontSize: 18, margin: "0 0 8px" }}>L'application s'est arrêtée</h1>
+        <h1 style={{ color: "var(--txt)", fontSize: 19, margin: "0 0 8px" }}>L'application s'est arrêtée</h1>
         <p style={{ color: "var(--mut)", fontSize: 13, lineHeight: 1.5, margin: "0 0 12px" }}>
           Ta bibliothèque est intacte dans le stockage de cet appareil. Exporte-la
           avant toute chose, puis recharge la page.
         </p>
         <pre
           style={{
-            background: "var(--card)", border: "1px solid var(--bdr)", borderRadius: 10,
+            background: "var(--card)", border: "1px solid var(--bdr)", borderRadius: "var(--r-md)",
             padding: "10px 12px", color: "var(--danger)", fontSize: 11, lineHeight: 1.45,
             whiteSpace: "pre-wrap", wordBreak: "break-word", margin: "0 0 16px",
           }}

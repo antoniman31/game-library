@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "test:worker": "node worker/test.mjs",
     "test": "node --test src/lib/*.test.mjs worker/test.mjs",
-    "audit": "node scripts/audit.mjs"
+    "audit": "node scripts/audit.mjs",
+    "verif:ui": "node scripts/verif-ui.mjs"
   },
   "dependencies": {
     "react": "^19.2.7",
