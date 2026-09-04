@@ -2,7 +2,7 @@ import { memo, useState, useEffect, useRef } from "react";
 import Cover from "./Cover.jsx";
 import InfoboxView from "./InfoboxView.jsx";
 import Sheet from "./Sheet.jsx";
-import { bg, card, bdr, txt, mut, demat } from "../lib/theme.js";
+import { bg, card, bdr, txt, mut, demat, accent, accentDoux } from "../lib/theme.js";
 import { PLATFORM_COLORS, BACK_COMPAT_PARENT, PLATFORMES_JEU, estUrlImage, joursDePret, pretEnRetard, brouillonDepuisJeu, validerEdition,
   rendreJeu, preterJeu, annulerPret, dureeEntreeHistorique } from "../lib/model.js";
 import {
@@ -14,7 +14,7 @@ import {
 // quand le « non » compte autant que le « oui ».
 const Segment = ({ options, valeur, onChange }) => (
   <div style={{ display: "flex", border: `1px solid ${bdr}`, borderRadius: 8, overflow: "hidden", width: "fit-content" }}>
-    {options.map(([libelle, val, teinte = "#5493FF"]) => {
+    {options.map(([libelle, val, teinte = accent]) => {
       const actif = valeur === val;
       return (
         <button key={libelle} type="button" onClick={() => onChange(val)} aria-pressed={actif}
@@ -28,12 +28,19 @@ const Segment = ({ options, valeur, onChange }) => (
   </div>
 );
 
-const boutonSource = { height: 36, padding: "0 12px", background: "transparent", border: "1px solid #5493FF", color: "#5493FF", borderRadius: 8, fontSize: 11, cursor: "pointer" };
+const boutonSource = { height: 36, padding: "0 12px", background: "transparent", border: `1px solid ${accent}`, color: accent, borderRadius: 8, fontSize: 11, cursor: "pointer" };
 
-function GameCard({ g, onEdit, onDelete, onEnrich, autoOpen }) {
+function GameCard({ g, onEdit, onDelete, onEnrich, autoOpen, onOuverte }) {
   const [open, setOpen] = useState(!!autoOpen);
   const rootRef = useRef(null);
-  useEffect(() => { if (autoOpen) rootRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }); }, []); // eslint-disable-line
+  // L'ouverture automatique n'a lieu qu'une fois : le marqueur est consommé
+  // aussitôt, sans quoi la fiche se rouvre à chaque remontage — au retour d'un
+  // autre onglet, par exemple — alors qu'on l'avait refermée.
+  useEffect(() => {
+    if (!autoOpen) return;
+    rootRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    onOuverte?.();
+  }, []); // eslint-disable-line
   const [loanName, setLoanName] = useState(g.lentA || "");
   const [loanRetour, setLoanRetour] = useState("");
   const [rawgOpen, setRawgOpen] = useState(false);
@@ -206,8 +213,8 @@ function GameCard({ g, onEdit, onDelete, onEnrich, autoOpen }) {
         <Cover src={g.cover} title={g.title} size={46} />
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginBottom: 4 }}>
-            <span style={{ background: PLATFORM_COLORS[g.platform] || "#5493FF", color: "#fff", fontSize: 9, fontWeight: 700, borderRadius: 3, padding: "1px 5px" }}>{g.platform}</span>
-            {g.format === "démat" && <span style={{ background: demat, color: "#5493FF", fontSize: 9, borderRadius: 3, padding: "1px 5px" }}>démat</span>}
+            <span style={{ background: PLATFORM_COLORS[g.platform] || accent, color: "#fff", fontSize: 9, fontWeight: 700, borderRadius: 3, padding: "1px 5px" }}>{g.platform}</span>
+            {g.format === "démat" && <span style={{ background: demat, color: accent, fontSize: 9, borderRadius: 3, padding: "1px 5px" }}>démat</span>}
             {BACK_COMPAT_PARENT[g.platform] && g.backCompat && <span title={`Rétrocompatible ${BACK_COMPAT_PARENT[g.platform]}`} style={{ background: "#107C1022", color: "#22c55e", fontSize: 9, borderRadius: 3, padding: "1px 5px" }}>🔄 Compatible {BACK_COMPAT_PARENT[g.platform].replace("Xbox ", "")}</span>}
             {g.lentA && <span key={g.lentA} style={{ background: "#7c320044", color: "#f59e0b", fontSize: 9, borderRadius: 3, padding: "1px 5px", animation: "statusPop 200ms ease" }}>📤 {g.lentA}{jours !== null ? ` · ${jours}j` : ""}</span>}
             {/* Rien d'autre ici : les badges disent l'exemplaire, pas le contenu. */}
@@ -254,7 +261,7 @@ function GameCard({ g, onEdit, onDelete, onEnrich, autoOpen }) {
               {/* En italique gris coupé à deux lignes, le seul texte qu'on ait
                   envie de lire était le plus pénible de la fiche. */}
               <div style={{ color: txt, fontSize: 13, lineHeight: 1.5, ...(descOpen ? {} : { overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 4, WebkitBoxOrient: "vertical" }) }}>{g.style}</div>
-              {g.style.length > 160 && <button onClick={() => setDescOpen(o => !o)} style={{ background: "transparent", border: "none", color: "#5493FF", fontSize: 11, cursor: "pointer", padding: "6px 0 0" }}>{descOpen ? "▴ Réduire" : "▾ Lire la suite"}</button>}
+              {g.style.length > 160 && <button onClick={() => setDescOpen(o => !o)} style={{ background: "transparent", border: "none", color: accent, fontSize: 11, cursor: "pointer", padding: "6px 0 0" }}>{descOpen ? "▴ Réduire" : "▾ Lire la suite"}</button>}
             </div>
           )}
 
@@ -333,15 +340,15 @@ function GameCard({ g, onEdit, onDelete, onEnrich, autoOpen }) {
               <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginBottom: 8 }}>
                 <a href={`https://www.youtube.com/results?search_query=${encodeURIComponent(g.title + " official trailer")}`} target="_blank" rel="noreferrer" style={{ background: "#ef444422", border: "1px solid #ef4444", color: "#ef4444", borderRadius: 5, padding: "3px 8px", fontSize: 10, textDecoration: "none" }}>▶ Trailer</a>
                 <a href={`https://www.youtube.com/results?search_query=${encodeURIComponent(g.title + " gameplay français")}`} target="_blank" rel="noreferrer" style={{ background: "#ef444422", border: "1px solid #ef4444", color: "#ef4444", borderRadius: 5, padding: "3px 8px", fontSize: 10, textDecoration: "none" }}>▶ Gameplay FR</a>
-                <a href={`https://www.jeuxvideo.com/recherche/?q=${encodeURIComponent(g.title)}`} target="_blank" rel="noreferrer" style={{ background: "#5493FF22", border: "1px solid #5493FF", color: "#5493FF", borderRadius: 5, padding: "3px 8px", fontSize: 10, textDecoration: "none" }}>JVC</a>
-                <a href={`https://www.ign.com/search?q=${encodeURIComponent(g.title)}`} target="_blank" rel="noreferrer" style={{ background: "#5493FF22", border: "1px solid #5493FF", color: "#5493FF", borderRadius: 5, padding: "3px 8px", fontSize: 10, textDecoration: "none" }}>IGN</a>
+                <a href={`https://www.jeuxvideo.com/recherche/?q=${encodeURIComponent(g.title)}`} target="_blank" rel="noreferrer" style={{ background: accentDoux, border: `1px solid ${accent}`, color: accent, borderRadius: 5, padding: "3px 8px", fontSize: 10, textDecoration: "none" }}>JVC</a>
+                <a href={`https://www.ign.com/search?q=${encodeURIComponent(g.title)}`} target="_blank" rel="noreferrer" style={{ background: accentDoux, border: `1px solid ${accent}`, color: accent, borderRadius: 5, padding: "3px 8px", fontSize: 10, textDecoration: "none" }}>IGN</a>
               </div>
               {[0,1,2].map(i => (
                 <input key={i} value={g.myLinks[i] || ""} onChange={e => { const l = [...g.myLinks]; l[i] = e.target.value; onEdit(g.id, "myLinks", l); }}
                   placeholder={["Lien soluce…","Lien wiki…","Ma playlist YouTube…"][i]}
                   style={{ display: "block", width: "100%", background: "transparent", border: `1px solid ${bdr}`, borderRadius: 6, color: txt, padding: "4px 8px", fontSize: 11, outline: "none", marginBottom: 4, boxSizing: "border-box" }} />
               ))}
-              {g.myLinks.filter(Boolean).map((url, i) => <a key={i} href={url} target="_blank" rel="noreferrer" style={{ display: "block", color: "#5493FF", fontSize: 10, marginBottom: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{url}</a>)}
+              {g.myLinks.filter(Boolean).map((url, i) => <a key={i} href={url} target="_blank" rel="noreferrer" style={{ display: "block", color: accent, fontSize: 10, marginBottom: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{url}</a>)}
             </>
           ))}
 
@@ -365,7 +372,7 @@ function GameCard({ g, onEdit, onDelete, onEnrich, autoOpen }) {
           {rawgOpen && (
             <Sheet title="Ré-associer depuis RAWG" onClose={() => setRawgOpen(false)}>
               <input value={rawgQ} onChange={e => rawgQuery(e.target.value)} placeholder="Titre du jeu…" autoFocus style={{ width: "100%", boxSizing: "border-box", background: "transparent", border: `1px solid ${bdr}`, borderRadius: 6, color: txt, padding: "6px 8px", fontSize: 12, outline: "none" }} />
-              {rawgBusy && <div style={{ color: "#5493FF", fontSize: 11, marginTop: 4 }}>Récupération & traduction…</div>}
+              {rawgBusy && <div style={{ color: accent, fontSize: 11, marginTop: 4 }}>Récupération & traduction…</div>}
               {rawgSugg.length > 0 && !rawgBusy && (
                 <div style={{ marginTop: 6, background: card, border: `1px solid ${bdr}`, borderRadius: 8, maxHeight: 300, overflowY: "auto", boxShadow: "0 8px 24px #0008" }}>
                   {rawgSugg.map(s => (
@@ -382,20 +389,20 @@ function GameCard({ g, onEdit, onDelete, onEnrich, autoOpen }) {
           {wikiOpen && (
             <Sheet title="Titre français (Wikipédia)" onClose={() => setWikiOpen(false)}>
               <input value={wikiQ} onChange={e => wikiQuery(e.target.value)} placeholder="Titre du jeu…" autoFocus style={{ width: "100%", boxSizing: "border-box", background: "transparent", border: `1px solid ${bdr}`, borderRadius: 6, color: txt, padding: "6px 8px", fontSize: 12, outline: "none" }} />
-              {wikiBusy && <div style={{ color: "#5493FF", fontSize: 11, marginTop: 4 }}>Recherche…</div>}
+              {wikiBusy && <div style={{ color: accent, fontSize: 11, marginTop: 4 }}>Recherche…</div>}
               {!wikiBusy && wikiSugg.length > 0 && (
                 <div style={{ marginTop: 6, background: card, border: `1px solid ${bdr}`, borderRadius: 8, maxHeight: 300, overflowY: "auto", boxShadow: "0 8px 24px #0008" }}>
                   {wikiSugg.map((s, i) => (
                     <div key={i} className="gl-row" style={{ display: "flex", gap: 8, padding: "7px 9px", borderBottom: `1px solid ${bdr}`, alignItems: "center" }}>
                       <div onClick={() => wikiPick(s.title)} style={{ flex: 1, minWidth: 0, cursor: "pointer", color: txt, fontSize: 12, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.title}</div>
-                      {s.url && <a href={s.url} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()} title="Voir la page Wikipédia" style={{ color: "#5493FF", fontSize: 10, textDecoration: "none", flexShrink: 0 }}>↗ page</a>}
+                      {s.url && <a href={s.url} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()} title="Voir la page Wikipédia" style={{ color: accent, fontSize: 10, textDecoration: "none", flexShrink: 0 }}>↗ page</a>}
                     </div>
                   ))}
                 </div>
               )}
               {!wikiBusy && wikiDone && wikiSugg.length === 0 && !wikiPicked && <div style={{ color: mut, fontSize: 11, marginTop: 6 }}>Aucun titre français trouvé</div>}
 
-              {wikiFetching && <div style={{ color: "#5493FF", fontSize: 11, marginTop: 8 }}>Chargement de la fiche Wikipédia…</div>}
+              {wikiFetching && <div style={{ color: accent, fontSize: 11, marginTop: 8 }}>Chargement de la fiche Wikipédia…</div>}
 
               {/* Résumé Wikipédia */}
               {wikiExtract && (
@@ -438,7 +445,7 @@ function GameCard({ g, onEdit, onDelete, onEnrich, autoOpen }) {
           {sgdbOpen && (
             <Sheet title="Choisir une jaquette" onClose={() => setSgdbOpen(false)}>
               <input value={sgdbQ} onChange={e => sgdbQuery(e.target.value)} placeholder="Titre du jeu…" autoFocus style={{ width: "100%", boxSizing: "border-box", background: "transparent", border: `1px solid ${bdr}`, borderRadius: 6, color: txt, padding: "6px 8px", fontSize: 12, outline: "none" }} />
-              {sgdbBusy && <div style={{ color: "#5493FF", fontSize: 11, marginTop: 6 }}>Recherche des jaquettes…</div>}
+              {sgdbBusy && <div style={{ color: accent, fontSize: 11, marginTop: 6 }}>Recherche des jaquettes…</div>}
               {!sgdbBusy && sgdbGridsList.length > 0 && (
                 <>
                   {sgdbMatch && <div style={{ color: mut, fontSize: 11, marginTop: 6 }}>Trouvé : <span style={{ color: txt, fontWeight: 600 }}>{sgdbMatch}</span></div>}
@@ -461,7 +468,7 @@ function GameCard({ g, onEdit, onDelete, onEnrich, autoOpen }) {
               un jeu qu'une fois. */}
           <div style={{ display: "flex", gap: 8, alignItems: "center", paddingTop: 12, borderTop: `1px solid ${bdr}` }}>
             <button onClick={() => setSourcesOuvertes(o => !o)}
-              style={{ height: 38, padding: "0 14px", background: sourcesOuvertes ? "#5493FF22" : "transparent", border: `1px solid ${sourcesOuvertes ? "#5493FF" : bdr}`, color: sourcesOuvertes ? "#5493FF" : mut, borderRadius: 8, fontSize: 12, cursor: "pointer" }}>
+              style={{ height: 38, padding: "0 14px", background: sourcesOuvertes ? accentDoux : "transparent", border: `1px solid ${sourcesOuvertes ? accent : bdr}`, color: sourcesOuvertes ? accent : mut, borderRadius: 8, fontSize: 12, cursor: "pointer" }}>
               ⋯ Modifier la fiche
             </button>
             <button onClick={() => onDelete(g)}
@@ -473,7 +480,7 @@ function GameCard({ g, onEdit, onDelete, onEnrich, autoOpen }) {
           {sourcesOuvertes && (
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 10 }}>
               <button onClick={() => { setSourcesOuvertes(false); ouvrirEdition(); }}
-                style={{ ...boutonSource, background: "#5493FF22", fontWeight: 600 }}>✏️ À la main</button>
+                style={{ ...boutonSource, background: accentDoux, fontWeight: 600 }}>✏️ À la main</button>
               <button onClick={() => { setSourcesOuvertes(false); setRawgOpen(true); setRawgQ(g.title); rawgQuery(g.title); }} style={boutonSource}>🔄 RAWG</button>
               <button onClick={() => { setSourcesOuvertes(false); setWikiOpen(true); setWikiQ(g.title); setWikiDone(false); wikiQuery(g.title); }} style={boutonSource}>🇫🇷 Titre français</button>
               <button onClick={() => { setSourcesOuvertes(false); setSgdbOpen(true); setSgdbQ(g.title); setSgdbDone(false); sgdbQuery(g.title); }} style={boutonSource}>📦 Jaquette</button>
@@ -531,7 +538,7 @@ function GameCard({ g, onEdit, onDelete, onEnrich, autoOpen }) {
               {ligneEdition("Épisode suivant", "followedBy", <input value={brouillon.followedBy} onChange={e => champ("followedBy", e.target.value)} style={champStyle("followedBy")} />)}
 
               <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
-                <button onClick={enregistrer} style={{ height: 38, padding: "0 16px", background: "#5493FF22", border: "1px solid #5493FF", color: "#5493FF", borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>Enregistrer</button>
+                <button onClick={enregistrer} style={{ height: 38, padding: "0 16px", background: accentDoux, border: `1px solid ${accent}`, color: accent, borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>Enregistrer</button>
                 <button onClick={fermerEdition} style={{ height: 38, padding: "0 14px", background: "transparent", border: `1px solid ${bdr}`, color: mut, borderRadius: 8, fontSize: 12, cursor: "pointer" }}>Annuler</button>
               </div>
               {/* Le champ fautif peut être remonté hors de l'écran au moment

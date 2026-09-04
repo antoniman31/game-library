@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
 import Sheet from "./Sheet.jsx";
-import { bg, card, bdr, txt, mut } from "../lib/theme.js";
+import { bg, card, bdr, txt, mut, accent } from "../lib/theme.js";
 import { PLATFORMS, isBackCompatPlatform } from "../lib/model.js";
 import {
   rawgSearch, rawgDetail, wikiFrenchTitles, wikiArticleData, wikidataInfobox,
@@ -34,7 +34,7 @@ function AddModal({ onAdd, onClose }) {
   const sgDebRef = useRef(null);
 
   const inp = { background: bg, border: `1px solid ${bdr}`, borderRadius: 8, color: txt, padding: "8px 12px", fontSize: 13, outline: "none", width: "100%", boxSizing: "border-box", fontFamily: "inherit" };
-  const srcBtn = { background: "transparent", border: "1px solid #5493FF", color: "#5493FF", borderRadius: 6, padding: "5px 8px", fontSize: 11, cursor: "pointer" };
+  const srcBtn = { background: "transparent", border: `1px solid ${accent}`, color: accent, borderRadius: 6, padding: "5px 8px", fontSize: 11, cursor: "pointer" };
 
   const search = async (q) => setSugg(await rawgSearch(q));
 
@@ -112,7 +112,7 @@ function AddModal({ onAdd, onClose }) {
 
         <div style={{ position: "relative", marginBottom: 10 }}>
           <input value={title} onChange={e => { setTitle(e.target.value); clearTimeout(debRef.current); debRef.current = setTimeout(() => search(e.target.value), 350); }} placeholder="Titre du jeu *" style={inp} />
-          {loading && <div style={{ color: "#5493FF", fontSize: 11, marginTop: 3 }}>Recherche RAWG…</div>}
+          {loading && <div style={{ color: accent, fontSize: 11, marginTop: 3 }}>Recherche RAWG…</div>}
           {sugg.length > 0 && (
             <div style={{ position: "absolute", top: "100%", left: 0, right: 0, background: card, border: `1px solid ${bdr}`, borderRadius: 8, zIndex: 10, overflow: "hidden", boxShadow: "0 8px 24px #0008" }}>
               {sugg.map(s => (
@@ -147,13 +147,13 @@ function AddModal({ onAdd, onClose }) {
           <div style={{ background: card, border: `1px solid ${bdr}`, borderRadius: 8, padding: "10px 12px", marginBottom: 10 }}>
             <div style={{ color: txt, fontSize: 11, fontWeight: 600, marginBottom: 6 }}>Titre + description (Wikipédia)</div>
             <input defaultValue={title} onChange={e => wikiQuery(e.target.value)} placeholder="Titre du jeu…" style={{ ...inp, fontSize: 12, padding: "6px 8px" }} />
-            {wikiBusy && <div style={{ color: "#5493FF", fontSize: 11, marginTop: 4 }}>Recherche…</div>}
+            {wikiBusy && <div style={{ color: accent, fontSize: 11, marginTop: 4 }}>Recherche…</div>}
             {!wikiBusy && wikiSugg.length > 0 && (
               <div style={{ marginTop: 6, background: bg, border: `1px solid ${bdr}`, borderRadius: 8, maxHeight: 260, overflowY: "auto" }}>
                 {wikiSugg.map((s, i) => (
                   <div key={i} className="gl-row" style={{ display: "flex", gap: 8, padding: "7px 9px", borderBottom: `1px solid ${bdr}`, alignItems: "center" }}>
                     <div onClick={() => wikiPick(s.title)} style={{ flex: 1, minWidth: 0, cursor: "pointer", color: txt, fontSize: 12, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.title}</div>
-                    {s.url && <a href={s.url} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()} style={{ color: "#5493FF", fontSize: 10, textDecoration: "none", flexShrink: 0 }}>↗</a>}
+                    {s.url && <a href={s.url} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()} style={{ color: accent, fontSize: 10, textDecoration: "none", flexShrink: 0 }}>↗</a>}
                   </div>
                 ))}
               </div>
@@ -166,14 +166,14 @@ function AddModal({ onAdd, onClose }) {
           <div style={{ background: card, border: `1px solid ${bdr}`, borderRadius: 8, padding: "10px 12px", marginBottom: 10 }}>
             <div style={{ color: txt, fontSize: 11, fontWeight: 600, marginBottom: 6 }}>Jaquette SteamGridDB</div>
             <input defaultValue={title} onChange={e => sgQuery(e.target.value)} placeholder="Titre du jeu…" style={{ ...inp, fontSize: 12, padding: "6px 8px" }} />
-            {sgBusy && <div style={{ color: "#5493FF", fontSize: 11, marginTop: 6 }}>Recherche des jaquettes…</div>}
+            {sgBusy && <div style={{ color: accent, fontSize: 11, marginTop: 6 }}>Recherche des jaquettes…</div>}
             {!sgBusy && sgGrids.length > 0 && (
               <>
                 {sgMatch && <div style={{ color: mut, fontSize: 11, marginTop: 6 }}>Trouvé : <span style={{ color: txt, fontWeight: 600 }}>{sgMatch}</span></div>}
                 <div style={{ marginTop: 8, display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 6, maxHeight: 300, overflowY: "auto" }}>
                   {sgGrids.map((grid, i) => (
                     <img key={i} src={grid.thumb} alt="" loading="lazy" onClick={() => { setCover(grid.url); setSgOpen(false); }} title="Choisir cette jaquette"
-                      style={{ width: "100%", aspectRatio: "2 / 3", objectFit: "cover", borderRadius: 6, border: cover === grid.url ? "2px solid #5493FF" : `1px solid ${bdr}`, cursor: "pointer", display: "block" }} />
+                      style={{ width: "100%", aspectRatio: "2 / 3", objectFit: "cover", borderRadius: 6, border: cover === grid.url ? `2px solid ${accent}` : `1px solid ${bdr}`, cursor: "pointer", display: "block" }} />
                   ))}
                 </div>
               </>
@@ -190,7 +190,7 @@ function AddModal({ onAdd, onClose }) {
 
         <div style={{ display: "flex", gap: 8 }}>
           <button onClick={onClose} style={{ flex: 1, background: "transparent", border: `1px solid ${bdr}`, color: "#94a3b8", borderRadius: 8, padding: 10, cursor: "pointer", fontSize: 13 }}>Annuler</button>
-          <button onClick={handleAdd} style={{ flex: 2, background: "#5493FF", border: "none", color: "#fff", borderRadius: 8, padding: 10, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>Ajouter</button>
+          <button onClick={handleAdd} style={{ flex: 2, background: accent, border: "none", color: "#fff", borderRadius: 8, padding: 10, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>Ajouter</button>
         </div>
     </Sheet>
   );

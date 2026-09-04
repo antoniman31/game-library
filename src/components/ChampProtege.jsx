@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { bg, bdr, txt, mut } from "../lib/theme.js";
+import { bg, bdr, txt, mut, accent } from "../lib/theme.js";
 import { messageDeverrouillage, messageSuppression } from "../lib/garde-fous.js";
 
 // Un champ dont la valeur ne s'écrase pas par inadvertance.
@@ -15,7 +15,7 @@ import { messageDeverrouillage, messageSuppression } from "../lib/garde-fous.js"
 // demande confirmation avant d'agir. Un champ vide reste un champ normal :
 // il n'y a rien à protéger.
 
-const ACCENT = "#5493FF";
+const ACCENT = accent;
 
 const bouton = (couleur) => ({
   minHeight: 34, padding: "0 12px", background: "transparent",

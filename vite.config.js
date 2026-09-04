@@ -31,12 +31,18 @@ export default defineConfig({
         id: '/game-library/',
         name: 'Game Library',
         short_name: 'Game Library',
-        description: 'Bibliothèque de jeux vidéo : suivi, temps de jeu, prêts et statistiques.',
+        description: 'Bibliothèque de jeux vidéo Xbox et Switch : catalogue, prêts et statistiques.',
         lang: 'fr',
         display: 'standalone',
         orientation: 'portrait',
-        background_color: '#0f0f1a',
-        theme_color: '#5493FF',
+        // Ces deux couleurs habillent l'application AVANT qu'elle s'exécute :
+        // l'écran de démarrage de la PWA installée, et la barre système autour
+        // d'elle. Elles étaient restées sur le bleu nuit d'un thème sombre qui
+        // n'existe plus, et sur le bleu de l'accent : au lancement, un cadre
+        // bleu s'affichait une seconde autour d'une application noire.
+        // Une fois l'app démarrée, App.jsx ajuste la barre au thème réel.
+        background_color: '#000000',
+        theme_color: '#000000',
         icons: [
           { src: 'icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
           { src: 'icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },

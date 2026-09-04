@@ -267,18 +267,74 @@ const JEU_VIDE = {
   myLinks: ["", "", ""], tips: "", tag: "", infobox: null,
 };
 
-// Une entrée d'historique venue d'un fichier : trois chaînes, rien d'autre.
-const estEntreePret = (e) => !!e && typeof e === "object"
-  && estTexte(e.a) && !!e.a.trim() && estTexte(e.du) && estTexte(e.au);
-
 const estTexte = (v) => typeof v === "string";
 
+// Une date exploitable, et pas seulement une chaîne. Le contrôle ne portait que
+// sur le type : « pas une date » passait, puis `new Date()` en tirait un NaN qui
+// remontait jusque dans les moyennes de l'onglet Stats — « NaN j » affiché
+// comme une statistique. Un fichier bricolé à la main, un export tronqué, une
+// version future du format suffisent à produire ce cas.
+const DATE_ISO = /^\d{4}-\d{2}-\d{2}$/;
+export const estDateISO = (v) => estTexte(v) && DATE_ISO.test(v) && !Number.isNaN(Date.parse(v));
+
+// Une entrée d'historique venue d'un fichier : un nom et deux dates réelles.
+const estEntreePret = (e) => !!e && typeof e === "object"
+  && estTexte(e.a) && !!e.a.trim() && estDateISO(e.du) && estDateISO(e.au);
+
+// Les valeurs qui alimentent des calculs ou des filtres ne peuvent pas être
+// n'importe quoi : une plateforme inconnue n'apparaît dans aucun filtre et
+// n'est pas rééditable, un format inventé n'est compté ni en physique ni en
+// démat — les trois tuiles de l'onglet Collection cessent alors de s'additionner
+// —, et une note en toutes lettres passe pour renseignée sans jamais compter.
+// Elles sont ramenées à une valeur sûre plutôt que de faire rejeter le jeu :
+// c'est le titre qui a de la valeur, le reste se recorrige.
+const PLATEFORMES_ACCEPTEES = new Set([...PLATFORMES_JEU, "Xbox"]); // "Xbox" : ancien format, migrateGames tranche ensuite
+const FORMATS = new Set(["physique", "démat"]);
+
+function assainir(brut) {
+  let corrige = false;
+  const garder = (ok, valeur, defaut) => { if (ok) return valeur; corrige = true; return defaut; };
+
+  const platform = garder(PLATEFORMES_ACCEPTEES.has(brut.platform), brut.platform, JEU_VIDE.platform);
+  const format = garder(FORMATS.has(brut.format), brut.format, JEU_VIDE.format);
+  const metacritic = garder(
+    brut.metacritic == null || (typeof brut.metacritic === "number" && Number.isFinite(brut.metacritic) && brut.metacritic >= 0 && brut.metacritic <= 100),
+    brut.metacritic ?? null, null,
+  );
+  const addedDate = garder(estDateISO(brut.addedDate), brut.addedDate, aujourdhuiISO());
+
+  // Un prêt se mesure en jours : sans nom ou sans date valide, il n'est pas
+  // « incomplet », il n'existe pas. Le laisser à moitié renseigné produit un
+  // jeu marqué prêté dont la durée est NaN et que rien ne signale jamais.
+  const pretValide = estTexte(brut.lentA) && !!brut.lentA.trim() && estDateISO(brut.lentDate);
+  const lentA = pretValide ? brut.lentA.trim() : garder(!brut.lentA && !brut.lentDate, null, null);
+  const lentDate = pretValide ? brut.lentDate : null;
+  const lentRetourPrevu = !pretValide ? null
+    : garder(brut.lentRetourPrevu == null || estDateISO(brut.lentRetourPrevu), brut.lentRetourPrevu ?? null, null);
+
+  const historique = Array.isArray(brut.pretsPasses) ? brut.pretsPasses : [];
+  const retenues = historique.filter(estEntreePret).slice(0, MAX_HISTORIQUE_PRET);
+  if (retenues.length !== Math.min(historique.length, MAX_HISTORIQUE_PRET)) corrige = true;
+  const pretsPasses = retenues.map(e => (estDateISO(e.prevu) ? e : { a: e.a, du: e.du, au: e.au }));
+
+  return {
+    corrige,
+    champs: {
+      platform, format, metacritic, addedDate, lentA, lentDate, lentRetourPrevu, pretsPasses,
+      backCompat: typeof brut.backCompat === "boolean" ? brut.backCompat : undefined,
+      cover: estTexte(brut.cover) && brut.cover.trim() ? brut.cover : null,
+      infobox: brut.infobox && typeof brut.infobox === "object" && !Array.isArray(brut.infobox) ? brut.infobox : null,
+    },
+  };
+}
+
 export function validerJeuxImportes(data) {
-  if (!Array.isArray(data)) return { jeux: null, rejetes: 0 };
+  if (!Array.isArray(data)) return { jeux: null, rejetes: 0, corriges: 0 };
 
   const jeux = [];
   const idsVus = new Set();
   let rejetes = 0;
+  let corriges = 0;
 
   for (const brut of data) {
     if (!brut || typeof brut !== "object" || !estTexte(brut.title) || !brut.title.trim()) {
@@ -291,21 +347,23 @@ export function validerJeuxImportes(data) {
     while (idsVus.has(id)) id = Date.now() + Math.floor(Math.random() * 1e6);
     idsVus.add(id);
 
+    const { corrige, champs } = assainir(brut);
+    if (corrige) corriges++;
+
     jeux.push({
       ...JEU_VIDE,
       ...brut,
+      ...champs,
       id,
       title: brut.title.trim(),
-      addedDate: estTexte(brut.addedDate) && brut.addedDate ? brut.addedDate : new Date().toISOString().slice(0, 10),
       genre: Array.isArray(brut.genre) ? brut.genre.filter(estTexte) : [],
       myLinks: Array.isArray(brut.myLinks) ? [0, 1, 2].map(i => (estTexte(brut.myLinks[i]) ? brut.myLinks[i] : "")) : ["", "", ""],
       style: estTexte(brut.style) ? brut.style : "",
       tips: estTexte(brut.tips) ? brut.tips : "",
       tag: estTexte(brut.tag) ? brut.tag : "",
-      pretsPasses: Array.isArray(brut.pretsPasses)
-        ? brut.pretsPasses.filter(estEntreePret).slice(0, MAX_HISTORIQUE_PRET)
-        : [],
     });
+    // `backCompat: undefined` doit disparaître pour que la migration le décide.
+    if (champs.backCompat === undefined) delete jeux[jeux.length - 1].backCompat;
   }
-  return { jeux: migrateGames(jeux), rejetes };
+  return { jeux: migrateGames(jeux), rejetes, corriges };
 }

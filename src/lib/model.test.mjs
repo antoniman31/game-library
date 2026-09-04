@@ -17,7 +17,7 @@ import {
   brouillonDepuisJeu, validerEdition, sortiesDepuisTexte, sortiesVersTexte, listeDepuisTexte,
   normTitle, rapprochementDouteux, jeuxSansScore,
   rendreJeu, preterJeu, annulerPret, supprimerEntreeHistorique, dureeEntreeHistorique, MAX_HISTORIQUE_PRET, aujourdhuiISO,
-  BACK_COMPAT, XBOX_SERIES_CUTOFF, PRET_LONG_JOURS,
+  BACK_COMPAT, XBOX_SERIES_CUTOFF, PRET_LONG_JOURS, PLATFORMES_JEU,
 } from "./model.js";
 import { ecouterMiseAJour } from "./maj.js";
 
@@ -162,6 +162,76 @@ test("la migration retire les champs de progression et de temps de jeu", () => {
   assert.equal(g.title, "Jeu", "le reste du jeu est intact");
 });
 
+
+// ── Ce qu'un fichier abîmé ne doit pas pouvoir faire entrer ────────────────
+// Le contrôle ne portait que sur les types : « pas une date » est une chaîne,
+// donc ça passait, et le NaN qui en sortait remontait jusque dans les moyennes
+// de l'onglet Stats — affiché comme une statistique.
+
+test("une date illisible ne devient jamais un prêt", () => {
+  const { jeux, corriges } = validerJeuxImportes([
+    { title: "Prêt sans date valide", lentA: "Paul", lentDate: "pas une date" },
+    { title: "Prêt sans nom", lentDate: "2024-01-01" },
+  ]);
+  assert.equal(corriges, 2);
+  for (const g of jeux) {
+    assert.equal(g.lentA, null, `${g.title} : le prêt aurait dû être écarté`);
+    assert.equal(g.lentDate, null);
+    assert.equal(joursDePret(g), null, "un prêt à moitié renseigné produisait NaN");
+  }
+});
+
+test("une entrée d'historique sans dates réelles est écartée", () => {
+  const { jeux, corriges } = validerJeuxImportes([{
+    title: "Halo",
+    pretsPasses: [
+      { a: "Léa", du: "n'importe quoi", au: "pareil" },
+      { a: "Paul", du: "2024-01-01", au: "2024-01-11" },
+      { a: "Max", du: "2024-02-01", au: "2024-02-05", prevu: "pas une date" },
+    ],
+  }]);
+  assert.equal(corriges, 1, "la ligne illisible compte comme une correction");
+  assert.equal(jeux[0].pretsPasses.length, 2);
+  assert.equal(dureeEntreeHistorique(jeux[0].pretsPasses[0]), 10, "plus de NaN dans les durées");
+  assert.equal(jeux[0].pretsPasses[1].prevu, undefined, "une date convenue illisible ne survit pas");
+});
+
+test("une plateforme, un format ou une note inventés sont ramenés à une valeur sûre", () => {
+  const { jeux, corriges } = validerJeuxImportes([
+    { title: "Console imaginaire", platform: "PlayStation 5" },
+    { title: "Format imaginaire", format: "cartouche" },
+    { title: "Note en toutes lettres", metacritic: "quatre-vingts" },
+    { title: "Note hors bornes", metacritic: 250 },
+    { title: "Date d'ajout illisible", addedDate: "hier" },
+  ]);
+  assert.equal(corriges, 5);
+  // Une plateforme inconnue n'apparaît dans aucun filtre et n'est pas rééditable.
+  assert.ok(PLATFORMES_JEU.includes(jeux[0].platform));
+  // Un format inventé n'est compté ni en physique ni en démat : les tuiles de
+  // l'onglet Collection cessaient de s'additionner.
+  assert.equal(jeux[1].format, "physique");
+  assert.equal(jeux[2].metacritic, null);
+  assert.equal(jeux[3].metacritic, null);
+  assert.match(jeux[4].addedDate, /^\d{4}-\d{2}-\d{2}$/);
+});
+
+test("un fichier sain traverse la validation sans être touché", () => {
+  // Le garde-fou ne doit pas « corriger » ce qui va bien : un export normal
+  // ressort identique, sinon la mise en garde à l'import crierait au loup.
+  const propre = {
+    id: 7, title: "Halo Infinite", platform: "Xbox Series X", format: "démat",
+    addedDate: "2024-05-01", genre: ["FPS"], style: "Un jeu de tir.", cover: "https://x/y.jpg",
+    metacritic: 87, lentA: "Paul", lentDate: "2024-06-01", lentRetourPrevu: "2024-07-01",
+    pretsPasses: [{ a: "Léa", du: "2024-01-01", au: "2024-01-05" }],
+    myLinks: ["", "", ""], tips: "", tag: "", infobox: null, backCompat: false,
+  };
+  const { jeux, rejetes, corriges } = validerJeuxImportes([propre]);
+  assert.equal(rejetes, 0);
+  assert.equal(corriges, 0, "un export sain ne doit déclencher aucune correction");
+  for (const k of ["title", "platform", "format", "addedDate", "metacritic", "lentA", "lentDate", "lentRetourPrevu"]) {
+    assert.deepEqual(jeux[0][k], propre[k], `${k} a été modifié sans raison`);
+  }
+});
 
 // ── Édition manuelle ───────────────────────────────────────────────────────
 // La fiche laisse désormais réécrire ce que les sources automatiques ont

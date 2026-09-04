@@ -1,4 +1,4 @@
-import { bdr, mut } from "../lib/theme.js";
+import { bdr, mut, accent, accentDoux } from "../lib/theme.js";
 
 // Le sélecteur de sous-onglets, défini une fois.
 //
@@ -7,7 +7,7 @@ import { bdr, mut } from "../lib/theme.js";
 // qui fait qu'un écran a l'air d'appartenir à une autre application. Une seule
 // définition, deux appels.
 
-const ACCENT = "#5493FF";
+const ACCENT = accent;
 
 export default function SousOnglets({ options, valeur, onChange }) {
   return (
@@ -19,7 +19,7 @@ export default function SousOnglets({ options, valeur, onChange }) {
             style={{
               flex: 1, minHeight: "var(--tap)", borderRadius: 8, fontSize: 13,
               cursor: "pointer", fontFamily: "inherit", fontWeight: actif ? 600 : 400,
-              background: actif ? `${ACCENT}22` : "transparent",
+              background: actif ? accentDoux : "transparent",
               border: `1px solid ${actif ? ACCENT : bdr}`,
               color: actif ? ACCENT : mut,
             }}>{libelle}</button>
