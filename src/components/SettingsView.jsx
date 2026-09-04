@@ -69,7 +69,7 @@ const EnTeteChamp = ({ nom, lien, quoi }) => (
 );
 
 export default function SettingsView({
-  modeTheme, setModeTheme,
+  modeTheme, setModeTheme, noirProfond, setNoirProfond,
   keys, setKeys, appliquerCles, testerCle, etatCles,
   sync, majSync, genererCode, syncEtat, setSyncEtat, onEnvoyer, onRecuperer,
   onExporter, onImporter,
@@ -120,6 +120,21 @@ export default function SettingsView({
               {ICONES[m]} {LIBELLES[m]}
             </Bouton>
           ))}
+        </div>
+
+        {/* Une variante du sombre, pas un quatrième mode : elle s'applique
+            aussi quand c'est l'automatique qui a choisi le sombre. */}
+        <div style={{ marginTop: 10, paddingTop: 10, borderTop: `1px solid ${bdr}` }}>
+          <Bouton pleinePlace aria-pressed={!!noirProfond}
+            intention={noirProfond ? "principal" : "neutre"}
+            onClick={() => setNoirProfond(v => !v)}>
+            ⬛ Noir profond {noirProfond ? "· activé" : ""}
+          </Bouton>
+          <p style={{ color: mut, fontSize: 11, lineHeight: 1.5, margin: "6px 0 0" }}>
+            Fond vraiment noir plutôt que bleu nuit. Sur un écran OLED, un pixel noir est un pixel éteint :
+            pas de halo dans le noir, et un peu de batterie gagnée. En échange, les cartes se distinguent
+            par leur liseré plutôt que par leur fond.
+          </p>
         </div>
       </Section>
 

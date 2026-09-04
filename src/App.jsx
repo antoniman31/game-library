@@ -17,7 +17,7 @@ import { BACK_COMPAT, migrateGames, compterFiltres, validerJeuxImportes, pretEnR
 import { lire, ecrire, surEchecStockage } from "./lib/storage.js";
 import { chargerSync, enregistrerSync, genererCode, envoyer, recuperer } from "./lib/sync.js";
 import { surMiseAJour } from "./lib/maj.js";
-import { resoudreTheme, modeSuivant, modeValide, ICONES, LIBELLES } from "./lib/apparence.js";
+import { resoudreTheme, modeSuivant, modeValide, ICONES, LIBELLES, COULEUR_BARRE } from "./lib/apparence.js";
 import {
   loadKeys, setApiKeys, normTitle, hasRawgKey, rawgFirstResult,
   rawgSearch, rawgDetail, wikiFrenchTitles, wikiArticleData, pickBestWikiTitle,
@@ -80,7 +80,11 @@ export default function App() {
   const [systemeSombre, setSystemeSombre] = useState(
     () => typeof matchMedia === "function" && matchMedia("(prefers-color-scheme: dark)").matches
   );
-  const theme = resoudreTheme(modeTheme, systemeSombre);
+  // Le noir profond est une préférence à part, pas un mode : elle s'applique
+  // chaque fois que le thème est sombre, y compris quand c'est l'automatique
+  // qui l'a décidé.
+  const [noirProfond, setNoirProfond] = useState(() => lire("gl_oled") === "1");
+  const theme = resoudreTheme(modeTheme, systemeSombre, noirProfond);
   const [refreshing, setRefreshing] = useState(false);
   const [refreshProg, setRefreshProg] = useState(0);
   const [refreshMsg, setRefreshMsg] = useState(null); // bilan de fin de refresh (S1)
@@ -121,8 +125,12 @@ export default function App() {
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
+    // La barre d'état du téléphone suit le fond, sinon le bleu du manifeste
+    // coiffe une application noire.
+    document.querySelector('meta[name="theme-color"]')?.setAttribute("content", COULEUR_BARRE[theme]);
   }, [theme]);
   useEffect(() => { ecrire("gl_theme", modeTheme); }, [modeTheme]);
+  useEffect(() => { ecrire("gl_oled", noirProfond ? "1" : ""); }, [noirProfond]);
 
   // Le téléphone peut basculer pendant que l'application est ouverte — la nuit
   // tombe, ou l'économiseur de batterie s'enclenche. En mode automatique, elle
@@ -705,6 +713,7 @@ export default function App() {
         {tab === "settings" && (
           <SettingsView
             modeTheme={modeTheme} setModeTheme={setModeTheme}
+            noirProfond={noirProfond} setNoirProfond={setNoirProfond}
             keys={keys} setKeys={setKeys}
             appliquerCles={{ actuelles: loadKeys(), appliquer: setApiKeys }}
             testerCle={testerCle} etatCles={keyTest}

@@ -30,14 +30,17 @@
          Ce script duplique volontairement resoudreTheme() de src/lib/apparence.js :
          il doit s'exécuter avant tout module, donc avant que le bundle existe.
          Trois valeurs possibles dans gl_theme — "auto" (ou rien), "light",
-         "dark" — et l'automatique suit le réglage du téléphone. -->
+         "dark" — et l'automatique suit le réglage du téléphone. gl_oled est
+         une préférence à part : elle ne choisit pas entre clair et sombre,
+         elle décide quel sombre. -->
     <script>
       try {
         var t = localStorage.getItem("gl_theme");
-        if (t !== "light" && t !== "dark") {
-          t = matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
-        }
+        var sombre = t === "dark" || (t !== "light" && !matchMedia("(prefers-color-scheme: light)").matches);
+        t = sombre ? (localStorage.getItem("gl_oled") === "1" ? "oled" : "dark") : "light";
         document.documentElement.dataset.theme = t;
+        var m = document.querySelector('meta[name="theme-color"]');
+        if (m) m.content = t === "light" ? "#dde6f8" : t === "oled" ? "#000000" : "#12122a";
       } catch (e) { /* stockage indisponible : on reste sur le thème sombre */ }
     </script>
   </head>
