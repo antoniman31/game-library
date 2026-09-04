@@ -22,7 +22,7 @@ Dernière mise à jour : 2026-09-04.
   npm run dev   # http://localhost:5173/game-library/
   ```
 - Build de prod : `npm run build`. Vérifications : `npm run lint`, `npm test`
-  (83 tests + 29 vérifications du Worker).
+  (88 tests + 29 vérifications du Worker).
 - **En ligne (PWA installable)** : https://antoniman31.github.io/game-library/
   — déploiement automatique par GitHub Actions à chaque push sur `main`.
 
@@ -200,6 +200,23 @@ Deux sous-onglets. Chaque bloc disparaît quand il n'a rien à dire.
   verrouillés.
 - **Panneau d'édition** : plus rien n'est en lecture seule dans une fiche.
 
+## Garde-fous contre la dérive silencieuse
+
+Deux duplications existent, toutes deux délibérées, et `src/lib/coherence.test.mjs`
+les surveille — l'idée vient du `check_sources_sync.py` de gta6-backend, où une
+divergence entre deux copies d'une même liste était restée invisible des semaines.
+
+- Le script anti-clignotement d'`index.html` réécrit `resoudreTheme()` et les
+  couleurs de `COULEUR_BARRE` : il s'exécute avant que le bundle existe, donc il
+  ne peut rien importer. Le test **exécute réellement** ce script inline dans un
+  contexte minimal et compare son verdict à celui d'`apparence.js`, pour toutes
+  les valeurs possibles de `gl_theme` croisées avec le réglage du système. Il
+  compare des comportements, pas des chaînes : une réécriture qui change la forme
+  sans changer le résultat ne fait pas échouer la CI.
+- Chaque jeton nommé par `theme.js` doit être défini dans `index.css`, **et
+  redéfini pour le thème clair**. Un jeton nommé mais jamais défini rend du vide :
+  l'élément perd sa couleur et rien n'échoue.
+
 ## Prochaines étapes
 
 - **Déployer le Worker** (`cd worker && npx wrangler deploy`) : trois changements
@@ -229,7 +246,8 @@ game-library/
     ├── index.css         ← jetons de thème, animations, survol
     ├── lib/              ← api, model, stats, apparence, preferences,
     │                       garde-fous, maj, seed, storage, sync, theme
-    │                       (+ *.test.mjs)
+    │                       (+ *.test.mjs, dont coherence.test.mjs qui
+    │                        surveille ce qui est écrit deux fois)
     └── components/       ← GameCard, AddModal, ImportModal, StatsView,
                              SettingsView, ScoresSheet, Sheet, FiltersSheet,
                              ActionsSheet, SousOnglets, Cover, InfoboxView,

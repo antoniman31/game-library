@@ -423,6 +423,17 @@ fournit directement un texte français rédigé, sans quota ni découpage.
   demandait du travail pour une information qu'on possède ailleurs. Il reste ce
   que la console ne sait pas faire — voir toute la bibliothèque d'un coup, et
   savoir chez qui sont les jeux.
+- **Ce qui est écrit deux fois est surveillé.** Le script anti-clignotement
+  d'`index.html` réécrit à la main la logique de `resoudreTheme()` et les
+  couleurs de barre système — il le doit, il s'exécute avant que le bundle
+  existe. Rien n'obligeait ces deux copies à rester d'accord : une couleur de
+  fond changée d'un côté et oubliée de l'autre, et la barre d'état affiche
+  l'ancienne teinte le temps du chargement, ce que personne ne signale jamais.
+  `coherence.test.mjs` exécute le script inline dans un contexte minimal et
+  compare son verdict à celui du module, pour toutes les valeurs possibles. Il
+  vérifie aussi que chaque jeton nommé par `theme.js` est défini dans les deux
+  thèmes. L'idée vient du `check_sources_sync.py` d'un autre projet, écrit après
+  qu'une divergence du même genre soit restée invisible plusieurs semaines.
 - **Les couleurs sont des jetons, y compris l'accent.** Le bleu était écrit en
   dur une cinquantaine de fois dans le JavaScript ; le jeton `--accent` existait
   mais ne servait à rien, si bien que le thème clair ne pouvait pas le corriger.
@@ -470,7 +481,8 @@ npm run dev      # http://localhost:5173/game-library/
 npm run build
 npm run preview
 npm run lint     # oxlint
-npm test         # 83 tests (modèle, import, prêts, stats, thème, préférences, Worker)
+npm test         # 88 tests (modèle, import, prêts, stats, thème, préférences,
+                 #            cohérence des duplications, Worker)
 npm run audit -- ma-sauvegarde.json   # symptômes dans les données (voir plus bas)
 ```
 
@@ -485,7 +497,20 @@ Worker pour travailler en local**.
 npm run audit -- ma-sauvegarde.json                # rapport
 npm run audit -- ma-sauvegarde.json --jaquettes    # vérifie aussi les URLs (réseau)
 npm run audit -- ma-sauvegarde.json --strict       # code de retour ≠ 0 s'il y a des constats
+
+# Sortie JSON, pour comparer deux passages — après un gros import, la question
+# n'est pas « combien de constats » mais « lesquels sont apparus ». `--silent`
+# est nécessaire : sans lui la bannière de npm précède la sortie et le fichier
+# obtenu n'est plus du JSON.
+npm run --silent audit -- ma-sauvegarde.json --json > avant.json
 ```
+
+Les constats sont classés en trois niveaux, du plus grave au moins grave :
+**🔴 grave** (une date illisible qui produira des `NaN`, un identifiant en
+double qui casse l'édition), **🟠 à vérifier** (une valeur qui n'aurait pas dû
+entrer), **⚪ pour information** (un champ vide, à combler quand on veut). Un
+rapport à plat mettait « 60 jeux sans jaquette » au même rang qu'« identifiant
+en double » : il fallait tout relire pour trouver ce qui compte.
 
 Prend un export JSON et signale : doublons de titre sur une même plateforme,
 identifiants réutilisés, champs vides (jaquette, genre, description, note),
@@ -527,6 +552,7 @@ import, beaucoup moins.
 │   │   ├── storage.js             localStorage instrumenté (alerte de quota)
 │   │   ├── sync.js                Sauvegarde sur le Worker
 │   │   ├── theme.js               Alias vers les jetons CSS
+│   │   ├── coherence.test.mjs     Ce qui est écrit deux fois doit concorder
 │   │   └── *.test.mjs             Tests des modules ci-dessus (node --test)
 │   └── components/
 │       ├── GameCard.jsx  AddModal.jsx  ImportModal.jsx
