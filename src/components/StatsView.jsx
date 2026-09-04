@@ -73,8 +73,8 @@ const Ligne = ({ gauche, droite, couleur = mut }) => (
   </div>
 );
 
-function Circulation({ games }) {
-  const s = useMemo(() => statsCirculation(games), [games]);
+function Circulation({ games, jour }) {
+  const s = useMemo(() => statsCirculation(games, jour), [games, jour]);
 
   if (s.total === 0) {
     return (
@@ -188,8 +188,8 @@ function Circulation({ games }) {
   );
 }
 
-function Collection({ games }) {
-  const s = useMemo(() => statsCollection(games), [games]);
+function Collection({ games, jour }) {
+  const s = useMemo(() => statsCollection(games, jour), [games, jour]);
   if (s.total === 0) return <div style={{ textAlign: "center", color: mut, padding: "40px 0" }}>Bibliothèque vide</div>;
 
   return (
@@ -355,11 +355,35 @@ function Collection({ games }) {
 
 export default function StatsView({ games }) {
   const [vue, setVue] = useState("circulation");
+  // Les chiffres suivent la bibliothèque d'eux-mêmes : tout est recalculé dès
+  // que `games` change. Ce qui se fige, c'est la date — les jours de prêt
+  // écoulés et la fenêtre des douze mois sont lus au chargement de la page, et
+  // une application laissée ouverte trois jours affiche encore l'avant-veille.
+  //
+  // Le bouton relit l'heure et la passe aux calculs : c'est la seule chose
+  // qu'il puisse rafraîchir, parce que c'est la seule qui vieillit.
+  const [calculLe, setCalculLe] = useState(() => Date.now());
+  const jour = new Date(calculLe).toISOString().slice(0, 10);
+
   return (
     <div>
       <SousOnglets valeur={vue} onChange={setVue}
         options={[["circulation", "Circulation"], ["collection", "Collection"]]} />
-      {vue === "circulation" ? <Circulation games={games} /> : <Collection games={games} />}
+
+      {vue === "circulation"
+        ? <Circulation games={games} jour={jour} />
+        : <Collection games={games} jour={jour} />}
+
+      <button onClick={() => setCalculLe(Date.now())}
+        style={{
+          width: "100%", minHeight: "var(--tap)", marginTop: 4, background: "transparent",
+          border: `1px solid ${bdr}`, borderRadius: 10, color: mut, fontSize: 12,
+          cursor: "pointer", fontFamily: "inherit",
+        }}>↻ Recalculer</button>
+      <div style={{ color: mut, fontSize: 10, textAlign: "center", marginTop: 6, lineHeight: 1.5, opacity: 0.8 }}>
+        Calculé à {new Date(calculLe).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}.
+        Les chiffres suivent la bibliothèque en direct ; seuls les jours écoulés se figent.
+      </div>
     </div>
   );
 }

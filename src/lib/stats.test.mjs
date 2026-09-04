@@ -287,3 +287,16 @@ test("l'âge des jeux se lit sur la sortie la plus ancienne, pas la première li
   ]);
   assert.deepEqual(s.parDecennie, [["2000", 1]]);
 });
+
+test("la date du calcul est une entrée, pas une lecture cachée de l'horloge", () => {
+  // Un prêt en cours se mesure jusqu'à « aujourd'hui ». Tant que l'horloge
+  // était lue à l'intérieur, l'application ouverte trois jours affichait
+  // encore l'avant-veille, et rien ne pouvait le corriger.
+  const jeux = [jeu({ id: 1, lentA: "Paul", lentDate: "2026-01-01" })];
+  assert.equal(statsCirculation(jeux, "2026-01-11").dureeMoyenne, 10);
+  assert.equal(statsCirculation(jeux, "2026-01-14").dureeMoyenne, 13);
+  // La fenêtre des douze mois suit la même date.
+  const s = statsCollection([jeu({ id: 1, addedDate: "2026-01-05" })], "2026-01-31");
+  assert.equal(s.parMoisAjout.at(-1)[0], "2026-01");
+  assert.equal(statsCollection([jeu({ id: 1, addedDate: "2026-01-05" })], "2027-06-01").parMoisAjout.at(-1)[0], "2027-06");
+});

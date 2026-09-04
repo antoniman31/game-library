@@ -54,28 +54,28 @@ const arrondiSymetrique = (n) => (n < 0 ? -Math.round(-n) : Math.round(n));
 // Un prêt en cours compte comme les prêts rendus : l'historique vient d'être
 // créé, il est vide, et des blocs qui n'afficheraient rien pendant des mois
 // n'auraient aucune raison d'exister.
-export function lignesDePret(games) {
+export function lignesDePret(games, aujourdhui = aujourdhuiISO()) {
   const lignes = [];
   for (const g of games || []) {
     for (const e of g.pretsPasses || []) {
       lignes.push({ ...e, prevu: e.prevu || null, titre: g.title, id: g.id, plateforme: g.platform, genres: g.genre || [], enCours: false });
     }
     if (g.lentA && g.lentDate) {
-      lignes.push({ a: g.lentA, du: g.lentDate, au: aujourdhuiISO(), prevu: g.lentRetourPrevu || null,
+      lignes.push({ a: g.lentA, du: g.lentDate, au: aujourdhui, prevu: g.lentRetourPrevu || null,
         titre: g.title, id: g.id, plateforme: g.platform, genres: g.genre || [], enCours: true });
     }
   }
   return lignes;
 }
 
-export function statsCirculation(games) {
+export function statsCirculation(games, aujourdhui = aujourdhuiISO()) {
   const jeux = games || [];
-  const lignes = lignesDePret(jeux);
+  const lignes = lignesDePret(jeux, aujourdhui);
   const jours = lignes.map(dureeEntreeHistorique);
 
   // Un an glissant : dit si l'on prête plus ou moins qu'avant, ce qu'un total
   // cumulé depuis toujours ne peut pas dire.
-  const ilYaUnAn = new Date(Date.now() - 365 * 86400000).toISOString().slice(0, 10);
+  const ilYaUnAn = new Date(new Date(aujourdhui) - 365 * 86400000).toISOString().slice(0, 10);
 
   const parJeu = new Map();
   for (const l of lignes) {
@@ -143,7 +143,7 @@ export function statsCirculation(games) {
     record: record ? { titre: record.titre, a: record.a, jours: dureeEntreeHistorique(record), enCours: record.enCours } : null,
     ponctualite,
     dehors,
-    parMois: douzeDerniersMois(lignes.map(l => l.du)),
+    parMois: douzeDerniersMois(lignes.map(l => l.du), aujourdhui),
     // Part de la collection déjà sortie au moins une fois : une bibliothèque
     // qui ne circule pas est une bibliothèque, pas un prêteur.
     rotation: jeux.length
@@ -239,7 +239,7 @@ const moyenneParCle = (jeux, cle, minimum) => {
     .sort((a, b) => b[1] - a[1]);
 };
 
-export function statsCollection(games) {
+export function statsCollection(games, aujourdhui = aujourdhuiISO()) {
   const jeux = games || [];
   const total = jeux.length;
   const notes_ = jeux.filter(g => typeof g.metacritic === "number" && g.metacritic > 0);
@@ -309,7 +309,7 @@ export function statsCollection(games) {
         apresUnAn: ecarts.filter(j => j > 365).length,
       };
     })(),
-    parMoisAjout: douzeDerniersMois(jeux.map(g => g.addedDate).filter(Boolean)),
+    parMoisAjout: douzeDerniersMois(jeux.map(g => g.addedDate).filter(Boolean), aujourdhui),
     formatParPlateforme: [...new Set(jeux.map(g => g.platform).filter(Boolean))].map(p => [
       p,
       jeux.filter(g => g.platform === p && g.format === "physique").length,
