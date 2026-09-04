@@ -8,6 +8,7 @@ import FiltersSheet from "./components/FiltersSheet.jsx";
 import ActionsSheet from "./components/ActionsSheet.jsx";
 import ScoresSheet from "./components/ScoresSheet.jsx";
 import StatsView from "./components/StatsView.jsx";
+import SettingsView from "./components/SettingsView.jsx";
 
 import { hdr, card, bdr, txt, mut } from "./lib/theme.js";
 import { GAMES_INIT } from "./lib/seed.js";
@@ -16,6 +17,7 @@ import { BACK_COMPAT, migrateGames, compterFiltres, validerJeuxImportes, pretEnR
 import { lire, ecrire, surEchecStockage } from "./lib/storage.js";
 import { chargerSync, enregistrerSync, genererCode, envoyer, recuperer } from "./lib/sync.js";
 import { surMiseAJour } from "./lib/maj.js";
+import { resoudreTheme, modeSuivant, modeValide, ICONES, LIBELLES } from "./lib/apparence.js";
 import {
   loadKeys, setApiKeys, normTitle, hasRawgKey, rawgFirstResult,
   rawgSearch, rawgDetail, wikiFrenchTitles, wikiArticleData, pickBestWikiTitle,
@@ -58,9 +60,7 @@ export default function App() {
   const [showActions, setShowActions] = useState(false);
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const [keys, setKeys] = useState(() => loadKeys());   // clés API saisies par l'utilisateur
-  const [showKeys, setShowKeys] = useState(false);      // afficher/masquer les valeurs
   const [keyTest, setKeyTest] = useState({});           // résultat du bouton « Tester »
-  const [savedMsg, setSavedMsg] = useState(false);      // confirmation d'enregistrement
   const [importedIds, setImportedIds] = useState([]); // pour l'enrichissement post-import (E)
   const [enriching, setEnriching] = useState(false);
   const [enrichProg, setEnrichProg] = useState(0);
@@ -73,9 +73,14 @@ export default function App() {
   const [focusId, setFocusId] = useState(null);
   // Le thème est persisté : il repartait en sombre à chaque rechargement.
   // index.html le pose sur <html> avant le premier rendu pour éviter le clignotement.
-  const [theme, setTheme] = useState(() => {
-    return lire("gl_theme") === "light" ? "light" : "dark";
-  });
+  // Trois modes, pas deux : « automatique » suit le réglage du téléphone, qui
+  // bascule tout seul le soir. Les anciennes valeurs "light"/"dark" restent
+  // valides et gardent leur sens — un choix explicite tient.
+  const [modeTheme, setModeTheme] = useState(() => modeValide(lire("gl_theme")));
+  const [systemeSombre, setSystemeSombre] = useState(
+    () => typeof matchMedia === "function" && matchMedia("(prefers-color-scheme: dark)").matches
+  );
+  const theme = resoudreTheme(modeTheme, systemeSombre);
   const [refreshing, setRefreshing] = useState(false);
   const [refreshProg, setRefreshProg] = useState(0);
   const [refreshMsg, setRefreshMsg] = useState(null); // bilan de fin de refresh (S1)
@@ -92,7 +97,6 @@ export default function App() {
   const [sync, setSync] = useState(() => chargerSync());
   const [syncEtat, setSyncEtat] = useState(null);   // { type: "ok" | "ko" | "…", texte }
   const undoRef = useRef(null);
-  const importRef = useRef(null);
 
   // La bibliothèque entière était sérialisée à chaque changement de `games`.
   // Taper une note de 200 caractères déclenchait 200 écritures d'environ
@@ -117,8 +121,19 @@ export default function App() {
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
-    ecrire("gl_theme", theme);
   }, [theme]);
+  useEffect(() => { ecrire("gl_theme", modeTheme); }, [modeTheme]);
+
+  // Le téléphone peut basculer pendant que l'application est ouverte — la nuit
+  // tombe, ou l'économiseur de batterie s'enclenche. En mode automatique, elle
+  // doit suivre sans qu'on la relance.
+  useEffect(() => {
+    if (typeof matchMedia !== "function") return;
+    const mq = matchMedia("(prefers-color-scheme: dark)");
+    const suivre = e => setSystemeSombre(e.matches);
+    mq.addEventListener("change", suivre);
+    return () => mq.removeEventListener("change", suivre);
+  }, []);
 
   useEffect(() => {
     const t = setTimeout(() => setSearch(searchInput), 180);
@@ -342,6 +357,18 @@ export default function App() {
     setSyncEtat({ type: "ok", texte: `${games.length} jeux sauvegardés.` });
   };
 
+  // Vérifie qu'une clé répond, sans quitter les réglages.
+  const testerCle = async (id) => {
+    setKeyTest(t => ({ ...t, [id]: "…" }));
+    let ok = false;
+    try {
+      if (id === "rawg") ok = (await rawgSearch("halo")).length > 0;
+      if (id === "sgdb") ok = (await sgdbSearch("halo")).length > 0;
+      if (id === "xbl") ok = (await xblTitleHistory()).length > 0;
+    } catch { /* une clé refusée n'est pas une erreur de l'application */ }
+    setKeyTest(t => ({ ...t, [id]: ok ? "ok" : "ko" }));
+  };
+
   const recupererDuCloud = async () => {
     setSyncEtat({ type: "…", texte: "Récupération…" });
     const r = await recuperer(keys.proxy, sync.code);
@@ -480,7 +507,7 @@ export default function App() {
             {/* La ligne répond aux deux questions que l'application sert à poser :
                 combien de jeux, et combien sont dehors. */}
             <div style={{ fontSize: 10, color: mut, marginTop: 3 }}>
-              {stats.total} jeux{stats.pretes > 0 ? ` · ${stats.pretes} prêté${stats.pretes > 1 ? "s" : ""}` : ""}
+              {stats.total} jeu{stats.total > 1 ? "x" : ""}{stats.pretes > 0 ? ` · ${stats.pretes} prêté${stats.pretes > 1 ? "s" : ""}` : ""}
               {stats.enRetard > 0 ? <span style={{ color: "#f59e0b" }}> · {stats.enRetard} en retard</span> : null}
             </div>
           </div>
@@ -488,6 +515,11 @@ export default function App() {
               tenaient ici débordaient de l'écran de 13 px : elles sont passées
               dans le panneau « Actions ». */}
           <div style={{ display: "flex", gap: 8, alignItems: "center", flexShrink: 0 }}>
+            <button onClick={() => setModeTheme(modeSuivant)}
+              aria-label={`Thème : ${LIBELLES[modeTheme]}`} title={`Thème : ${LIBELLES[modeTheme]}`}
+              style={{ ...btnHdr, color: txt }}>
+              {ICONES[modeTheme]}
+            </button>
             <button onClick={() => setShowActions(true)} aria-label="Actions" title="Actions"
               style={{ ...btnHdr, color: refreshing || enriching ? ACCENT : txt, borderColor: refreshing || enriching ? ACCENT : bdr }}>
               {refreshing || enriching ? "⏳" : "⋯"}
@@ -650,147 +682,18 @@ export default function App() {
           </div>
         )}
 
-        {tab === "settings" && (() => {
-          const champs = [
-            ["rawg", "Clé RAWG", "Jaquettes, Metacritic, genres, dates de sortie", "https://rawg.io/apidocs"],
-            ["sgdb", "Clé SteamGridDB", "Jaquettes verticales format boîte", "https://www.steamgriddb.com/profile/preferences/api"],
-            ["xbl", "Clé xbl.io", "Import de la bibliothèque Xbox", "https://xbl.io/console"],
-          ];
-          const testKey = async (id) => {
-            setKeyTest(t => ({ ...t, [id]: "…" }));
-            let ok = false;
-            try {
-              if (id === "rawg") ok = (await rawgSearch("halo")).length > 0;
-              if (id === "sgdb") ok = (await sgdbSearch("halo")).length > 0;
-              if (id === "xbl") ok = (await xblTitleHistory()).length > 0;
-            } catch {}
-            setKeyTest(t => ({ ...t, [id]: ok ? "ok" : "ko" }));
-          };
-          const champStyle = { width: "100%", boxSizing: "border-box", background: card, border: `1px solid ${bdr}`, borderRadius: 6, color: txt, padding: "7px 9px", fontSize: 12, outline: "none", fontFamily: "monospace" };
-          return (
-            <div>
-              <div style={{ background: card, border:`1px solid ${bdr}`, borderRadius:10, padding:14, marginBottom:12 }}>
-                <div style={{ color:txt, fontWeight:600, fontSize:13, marginBottom:4 }}>Clés API</div>
-                <div style={{ color:mut, fontSize:11, marginBottom:12 }}>
-                  Elles restent <strong>sur cet appareil</strong> (stockage local du navigateur) et ne sont jamais envoyées ailleurs qu'aux services concernés.
-                  Elles ne figurent ni dans le code, ni dans l'export.
-                </div>
-                {champs.map(([id, label, desc, lien]) => (
-                  <div key={id} style={{ marginBottom: 12 }}>
-                    <div style={{ display:"flex", alignItems:"baseline", gap:6, marginBottom:3, flexWrap:"wrap" }}>
-                      <span style={{ color:txt, fontSize:12, fontWeight:600 }}>{label}</span>
-                      <a href={lien} target="_blank" rel="noreferrer" style={{ color:"#5493FF", fontSize:10, textDecoration:"none" }}>↗ obtenir</a>
-                      <span style={{ color:mut, fontSize:10 }}>— {desc}</span>
-                    </div>
-                    <div style={{ display:"flex", gap:6, alignItems:"center" }}>
-                      <input type={showKeys ? "text" : "password"} value={keys[id]} placeholder="non configurée"
-                        onChange={e => setKeys(k => ({ ...k, [id]: e.target.value.trim() }))} style={champStyle} />
-                      <button onClick={() => testKey(id)} disabled={!keys[id]}
-                        style={{ background:"transparent", border:`1px solid ${bdr}`, color:mut, borderRadius:5, padding:"5px 9px", fontSize:10, cursor: keys[id] ? "pointer":"default", opacity: keys[id]?1:0.5, whiteSpace:"nowrap" }}>Tester</button>
-                      <span style={{ fontSize:14, width:16, textAlign:"center" }}>
-                        {keyTest[id] === "ok" ? "✅" : keyTest[id] === "ko" ? "❌" : keyTest[id] === "…" ? "⏳" : ""}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-                <div style={{ marginBottom: 12 }}>
-                  <div style={{ color:txt, fontSize:12, fontWeight:600, marginBottom:3 }}>Relais CORS (Cloudflare Worker)</div>
-                  <div style={{ color:mut, fontSize:10, marginBottom:3 }}>
-                    Requis en ligne pour SteamGridDB et xbl.io, qui refusent les appels directs du navigateur. Laisser vide en développement local.
-                  </div>
-                  <input type="text" value={keys.proxy} placeholder="https://mon-worker.workers.dev"
-                    onChange={e => setKeys(k => ({ ...k, proxy: e.target.value.trim() }))} style={champStyle} />
-                </div>
-                <div style={{ display:"flex", gap:8, alignItems:"center", flexWrap:"wrap" }}>
-                  <button onClick={() => { setApiKeys(keys); setKeyTest({}); setSavedMsg(true); setTimeout(() => setSavedMsg(false), 2000); }}
-                    style={{ background:"#5493FF", border:"none", color:"#fff", borderRadius:8, padding:"8px 14px", fontSize:12, fontWeight:600, cursor:"pointer" }}>Enregistrer</button>
-                  <button onClick={() => setShowKeys(v => !v)}
-                    style={{ background:"transparent", border:`1px solid ${bdr}`, color:mut, borderRadius:8, padding:"8px 12px", fontSize:12, cursor:"pointer" }}>{showKeys ? "Masquer" : "Afficher"}</button>
-                  {savedMsg && <span style={{ color:"#22c55e", fontSize:11 }}>Enregistré ✓</span>}
-                </div>
-              </div>
-              <div style={{ background: card, border:`1px solid ${bdr}`, borderRadius:10, padding:14, marginBottom:12 }}>
-                <div style={{ color:txt, fontWeight:600, fontSize:13, marginBottom:4 }}>Synchronisation</div>
-                <div style={{ color:mut, fontSize:11, marginBottom:12, lineHeight:1.5 }}>
-                  Dépose la bibliothèque sur ton relais Cloudflare, pour la retrouver sur un autre
-                  appareil et ne plus dépendre du seul stockage de ce navigateur.
-                  Saisis <strong>le même code</strong> sur chaque appareil. Il reste ici et ne part
-                  jamais dans l'export JSON.
-                </div>
-
-                <div style={{ color:txt, fontSize:12, fontWeight:600, marginBottom:3 }}>Code de synchronisation</div>
-                <div style={{ display:"flex", gap:6, alignItems:"center", flexWrap:"wrap", marginBottom:10 }}>
-                  <input type={showKeys ? "text" : "password"} value={sync.code} placeholder="aucun code"
-                    onChange={e => majSync({ ...sync, code: e.target.value.trim() })}
-                    style={{ ...champStyle, flex:"1 1 180px", width:"auto" }} />
-                  <button onClick={() => {
-                      if (sync.code && !window.confirm("Remplacer le code actuel ? La sauvegarde qui lui est liée deviendra inaccessible sans lui.")) return;
-                      majSync({ ...sync, code: genererCode() });
-                      setSyncEtat(null);
-                    }}
-                    style={{ background:"transparent", border:`1px solid ${bdr}`, color:txt, borderRadius:8, minHeight:38, padding:"0 12px", fontSize:11, cursor:"pointer", whiteSpace:"nowrap" }}>Générer</button>
-                  <button onClick={() => { navigator.clipboard?.writeText(sync.code); setSyncEtat({ type:"ok", texte:"Code copié." }); }}
-                    disabled={!sync.code}
-                    style={{ background:"transparent", border:`1px solid ${bdr}`, color:txt, borderRadius:8, minHeight:38, padding:"0 12px", fontSize:11, cursor: sync.code ? "pointer":"default", opacity: sync.code ? 1:0.5, whiteSpace:"nowrap" }}>Copier</button>
-                </div>
-
-                <div style={{ display:"flex", gap:8, marginBottom:8 }}>
-                  <button onClick={() => envoyerAuCloud()} disabled={syncEtat?.type === "…"}
-                    style={{ flex:1, minHeight:"var(--tap)", background:"#5493FF22", border:"1px solid #5493FF", color:"#5493FF", borderRadius:8, fontSize:12, fontWeight:600, cursor:"pointer" }}>⬆ Envoyer</button>
-                  <button onClick={recupererDuCloud} disabled={syncEtat?.type === "…"}
-                    style={{ flex:1, minHeight:"var(--tap)", background:"transparent", border:`1px solid ${bdr}`, color:txt, borderRadius:8, fontSize:12, fontWeight:600, cursor:"pointer" }}>⬇ Récupérer</button>
-                </div>
-
-                {syncEtat && (
-                  <div style={{ color: syncEtat.type === "ko" ? "#ef4444" : syncEtat.type === "ok" ? "#22c55e" : mut, fontSize:11, lineHeight:1.4 }}>
-                    {syncEtat.type === "ok" ? "✓ " : syncEtat.type === "ko" ? "✕ " : "⏳ "}{syncEtat.texte}
-                  </div>
-                )}
-                {sync.majLe && syncEtat?.type !== "…" && (
-                  <div style={{ color:mut, fontSize:10, marginTop:4 }}>
-                    Dernière synchronisation : {new Date(sync.majLe).toLocaleString("fr-FR")}
-                  </div>
-                )}
-              </div>
-
-              {/* La copie hors ligne, juste sous la synchronisation : les deux
-                  répondent au même besoin — sortir la bibliothèque de cet
-                  appareil et l'y ramener. Le bloc vivait dans l'onglet Stats,
-                  au point que l'avertissement ci-dessous devait donner des
-                  indications routières vers un autre onglet. */}
-              <div style={{ background: card, border:`1px solid ${bdr}`, borderRadius:10, padding:14, marginBottom:12 }}>
-                <div style={{ color:txt, fontWeight:600, fontSize:13, marginBottom:4 }}>Copie hors ligne</div>
-                <div style={{ color:mut, fontSize:11, marginBottom:10, lineHeight:1.5 }}>
-                  Un fichier JSON sur cet appareil, utile avant une manipulation risquée
-                  ou quand le relais n'est pas configuré.
-                </div>
-                <div style={{ display:"flex", gap:8 }}>
-                  <button onClick={exportJSON} style={{ flex:1, minHeight:"var(--tap)", background:"#5493FF22", border:"1px solid #5493FF", color:"#5493FF", borderRadius:8, fontSize:12, fontWeight:600, cursor:"pointer" }}>⬇ Exporter</button>
-                  <button onClick={() => importRef.current?.click()} style={{ flex:1, minHeight:"var(--tap)", background:"transparent", border:`1px solid ${bdr}`, color:txt, borderRadius:8, fontSize:12, fontWeight:600, cursor:"pointer" }}>⬆ Importer</button>
-                  <input ref={importRef} type="file" accept="application/json,.json" onChange={importJSON} style={{ display:"none" }} />
-                </div>
-              </div>
-
-              {/* Le thème est une préférence, pas une action : il quitte le
-                  panneau « ⋯ », qui ne garde que les opérations ponctuelles. */}
-              <div style={{ background: card, border:`1px solid ${bdr}`, borderRadius:10, padding:14, marginBottom:12, display:"flex", alignItems:"center", gap:12 }}>
-                <div style={{ flex:1, minWidth:0 }}>
-                  <div style={{ color:txt, fontWeight:600, fontSize:13 }}>Thème</div>
-                  <div style={{ color:mut, fontSize:11, marginTop:2 }}>{theme === "dark" ? "Sombre" : "Clair"}</div>
-                </div>
-                <button onClick={() => setTheme(t => (t === "dark" ? "light" : "dark"))}
-                  style={{ minHeight:"var(--tap)", padding:"0 14px", background:"transparent", border:`1px solid ${bdr}`, color:txt, borderRadius:8, fontSize:12, cursor:"pointer", whiteSpace:"nowrap" }}>
-                  {theme === "dark" ? "☀️ Passer en clair" : "🌙 Passer en sombre"}
-                </button>
-              </div>
-
-              <div style={{ background: card, border:`1px solid ${bdr}`, borderRadius:10, padding:14, color:mut, fontSize:11, lineHeight:1.5 }}>
-                ⚠️ L'<strong>export JSON</strong> contient tes jeux mais <strong>ni tes clés ni ton code de synchronisation</strong> — c'est volontaire, pour pouvoir partager ou sauvegarder un export sans fuite.
-                Sur un nouvel appareil, il faut donc récupérer la bibliothèque <em>et</em> resaisir ces valeurs ici.
-              </div>
-            </div>
-          );
-        })()}
+        {tab === "settings" && (
+          <SettingsView
+            modeTheme={modeTheme} setModeTheme={setModeTheme}
+            keys={keys} setKeys={setKeys}
+            appliquerCles={{ actuelles: loadKeys(), appliquer: setApiKeys }}
+            testerCle={testerCle} etatCles={keyTest}
+            sync={sync} majSync={majSync} genererCode={genererCode}
+            syncEtat={syncEtat} setSyncEtat={setSyncEtat}
+            onEnvoyer={() => envoyerAuCloud()} onRecuperer={recupererDuCloud}
+            onExporter={exportJSON} onImporter={importJSON}
+          />
+        )}
 
         {tab === "stats" && <StatsView games={games} />}
       </div>
