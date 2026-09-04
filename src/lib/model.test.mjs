@@ -16,7 +16,7 @@ import {
   joursDePret, pretEnRetard, isBackCompatPlatform,
   brouillonDepuisJeu, validerEdition, sortiesDepuisTexte, sortiesVersTexte, listeDepuisTexte,
   normTitle, rapprochementDouteux, jeuxSansScore,
-  rendreJeu, preterJeu, emprunteurs, dureeEntreeHistorique, MAX_HISTORIQUE_PRET, aujourdhuiISO,
+  rendreJeu, preterJeu, dureeEntreeHistorique, MAX_HISTORIQUE_PRET, aujourdhuiISO,
   BACK_COMPAT, XBOX_SERIES_CUTOFF, PRET_LONG_JOURS,
 } from "./model.js";
 import { ecouterMiseAJour } from "./maj.js";
@@ -334,19 +334,6 @@ test("un import n'avale que des entrées d'historique exploitables", () => {
   }]);
   assert.deepEqual(jeux[0].pretsPasses, [{ a: "Paul", du: "2024-01-01", au: "2024-01-10" }]);
   assert.deepEqual(validerJeuxImportes([{ title: "X", pretsPasses: "oups" }]).jeux[0].pretsPasses, []);
-});
-
-test("les emprunteurs comptent le prêt en cours avec les anciens", () => {
-  const liste = [
-    jeu({ id: 1, pretsPasses: [{ a: "Paul", du: "2024-01-01", au: "2024-01-11" }] }),
-    jeu({ id: 2, lentA: "Paul", lentDate: ilYA(4) }),
-    jeu({ id: 3, pretsPasses: [{ a: "Léa", du: "2024-01-01", au: "2024-03-01" }] }),
-  ];
-  const e = emprunteurs(liste);
-  assert.deepEqual(e.map(x => x.nom), ["Paul", "Léa"], "trié par nombre de prêts");
-  assert.equal(e[0].prets, 2);
-  assert.equal(e[0].jours, 14, "10 jours rendus + 4 jours en cours");
-  assert.deepEqual(emprunteurs(null), []);
 });
 
 // ── Détection de mise à jour ───────────────────────────────────────────────

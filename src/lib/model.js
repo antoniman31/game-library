@@ -109,25 +109,6 @@ export function preterJeu(g, nom, retourPrevu) {
   };
 }
 
-// Qui emprunte le plus, prêts en cours compris. Alimente l'onglet Stats, qui
-// ne savait rien dire du seul sujet réellement suivi.
-export function emprunteurs(games) {
-  const par = new Map();
-  for (const g of games || []) {
-    const lignes = [...(g.pretsPasses || [])];
-    if (g.lentA && g.lentDate) lignes.push({ a: g.lentA, du: g.lentDate, au: aujourdhuiISO() });
-    for (const e of lignes) {
-      const cle = e.a.trim();
-      if (!cle) continue;
-      const v = par.get(cle) || { nom: cle, prets: 0, jours: 0 };
-      v.prets++;
-      v.jours += dureeEntreeHistorique(e);
-      par.set(cle, v);
-    }
-  }
-  return [...par.values()].sort((a, b) => b.prets - a.prets || b.jours - a.jours);
-}
-
 // Compte les filtres réellement appliqués. Le tri et le mode d'affichage n'en
 // sont pas : ils changent l'ordre ou la densité, jamais ce qui est montré.
 export function compterFiltres({ plat, pretFil, fmtFil }) {

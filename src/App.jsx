@@ -7,11 +7,12 @@ import ImportModal from "./components/ImportModal.jsx";
 import FiltersSheet from "./components/FiltersSheet.jsx";
 import ActionsSheet from "./components/ActionsSheet.jsx";
 import ScoresSheet from "./components/ScoresSheet.jsx";
+import StatsView from "./components/StatsView.jsx";
 
 import { hdr, card, bdr, txt, mut } from "./lib/theme.js";
 import { GAMES_INIT } from "./lib/seed.js";
 import { BACK_COMPAT, migrateGames, compterFiltres, validerJeuxImportes, pretEnRetard, jeuxSansScore,
-  dureeEntreeHistorique, emprunteurs } from "./lib/model.js";
+  dureeEntreeHistorique } from "./lib/model.js";
 import { lire, ecrire, surEchecStockage } from "./lib/storage.js";
 import { chargerSync, enregistrerSync, genererCode, envoyer, recuperer } from "./lib/sync.js";
 import { surMiseAJour } from "./lib/maj.js";
@@ -433,11 +434,8 @@ export default function App() {
     const total = games.length;
     const pretes = games.filter(g => g.lentA).length;
     const enRetard = games.filter(pretEnRetard).length;
-    const byGenre = {}; games.forEach(g => g.genre.forEach(x => byGenre[x] = (byGenre[x]||0) + 1));
-    const topGenres = Object.entries(byGenre).sort((a,b) => b[1]-a[1]).slice(0,6);
-    // L'onglet ne disait rien du seul sujet que l'application suive vraiment.
-    const topEmprunteurs = emprunteurs(games).slice(0, 6);
-    return { total, pretes, enRetard, topGenres, topEmprunteurs };
+    // Seul l'en-tête s'en sert encore : le détail vit dans StatsView.
+    return { total, pretes, enRetard };
   }, [games]);
 
   const lentGames = games.filter(g => g.lentA);
@@ -794,43 +792,7 @@ export default function App() {
           );
         })()}
 
-        {tab === "stats" && (
-          <div>
-            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:16 }}>
-              {[["Total",stats.total,"#5493FF"],["Prêtés",stats.pretes,"#f59e0b"]].map(([l,v,c]) => (
-                <div key={l} style={{ background:card, border:`1px solid ${bdr}`, borderRadius:10, padding:"12px 14px" }}>
-                  <div style={{ color:mut, fontSize:10 }}>{l}</div>
-                  <div style={{ color:c, fontSize:20, fontWeight:700, marginTop:2 }}>{v}</div>
-                </div>
-              ))}
-            </div>
-            <div style={{ background:card, border:`1px solid ${bdr}`, borderRadius:10, padding:14, marginBottom:16 }}>
-              <div style={{ color:txt, fontWeight:600, fontSize:13, marginBottom:10 }}>Top genres</div>
-              {stats.topGenres.map(([genre,count]) => (
-                <div key={genre} style={{ marginBottom:8 }}>
-                  <div style={{ display:"flex", justifyContent:"space-between", marginBottom:3 }}><span style={{ color:txt, fontSize:12 }}>{genre}</span><span style={{ color:mut, fontSize:11 }}>{count}</span></div>
-                  <div style={{ height:4, background:bdr, borderRadius:2 }}><div style={{ width:`${stats.total ? count/stats.total*100 : 0}%`, height:"100%", background:"#5493FF", borderRadius:2 }} /></div>
-                </div>
-              ))}
-            </div>
-
-            {/* Le prêt est le seul état que l'application suive ; l'onglet n'en
-                disait rien au-delà d'un compteur. */}
-            {stats.topEmprunteurs.length > 0 && (
-              <div style={{ background:card, border:`1px solid ${bdr}`, borderRadius:10, padding:14, marginBottom:16 }}>
-                <div style={{ color:txt, fontWeight:600, fontSize:13, marginBottom:10 }}>À qui je prête</div>
-                {stats.topEmprunteurs.map(e => (
-                  <div key={e.nom} style={{ display:"flex", justifyContent:"space-between", alignItems:"baseline", padding:"6px 0", borderTop:`1px solid ${bdr}` }}>
-                    <span style={{ color:txt, fontSize:12 }}>{e.nom}</span>
-                    <span style={{ color:mut, fontSize:11 }}>
-                      {e.prets} prêt{e.prets > 1 ? "s" : ""} · {Math.round(e.jours / e.prets)} j en moyenne
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
+        {tab === "stats" && <StatsView games={games} />}
       </div>
 
       {showAdd && <AddModal onAdd={addGame} onClose={() => setShowAdd(false)} />}
