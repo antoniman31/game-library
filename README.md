@@ -19,6 +19,7 @@ fois de relais CORS et de sauvegarde entre appareils.
 - [Configuration des clés API](#configuration-des-clés-api)
 - [Le relais CORS](#le-relais-cors-worker-cloudflare)
 - [Fonctionnalités](#fonctionnalités)
+- [Ergonomie et système visuel](#ergonomie-et-système-visuel)
 - [Sources de données](#sources-de-données)
 - [Modèle de données](#modèle-de-données)
 - [Architecture et choix techniques](#architecture-et-choix-techniques)
@@ -291,8 +292,10 @@ sortir la bibliothèque de cet appareil et l'y ramener — par deux chemins :
   la case prévue — décochée par défaut, parce que cocher change la nature du
   code : il protège une liste de jeux, il protégerait des identifiants. Le code
   lui-même reste sur l'appareil et ne part jamais dans l'export.
-- **Copie hors ligne** : Export / Import JSON, en mode *remplacer* ou
-  *fusionner*, sans aucun relais à déployer.
+- **Copie hors ligne** : Export / Import JSON, sans aucun relais à déployer.
+  À l'import, un panneau annonce ce que contient le fichier — jeux valides,
+  entrées ignorées, valeurs corrigées — et propose **Fusionner**, **Remplacer**
+  ou **Annuler** ; chaque bouton dit sa conséquence, chiffres en main.
 
 Une récupération ne remplace rien sans confirmation, chiffres en main, et les
 préférences se reprennent sur une **seconde question** : on vient chercher une
@@ -301,6 +304,51 @@ bibliothèque, pas forcément se faire changer son thème.
 Un envoi qui écraserait le travail d'un autre appareil est **refusé** : le
 Worker compare l'horodatage annoncé à celui qu'il détient et répond 409, et
 l'application pose alors le choix au lieu de trancher toute seule.
+
+---
+
+## Ergonomie et système visuel
+
+L'interface a été confrontée à Material Design 3, aux lois de l'UX et à un
+cahier des charges d'accessibilité. Ce qui en est ressorti ne vit pas dans une
+note d'intention mais dans des jetons CSS (`src/index.css`) : une règle qu'on
+peut recopier de travers finit par l'être.
+
+| Jeton | Valeur | Ce qu'il tient |
+|---|---|---|
+| `--tap` | 48 px | Hauteur d'une commande principale (Material) |
+| `--tap-min` | 44 px | Plancher d'une commande posée dans une ligne (Apple HIG, WCAG 2.5.5) |
+| `--ecart-tap` | 8 px | Séparation entre deux cibles voisines |
+| `--ecart-bloc` | 28 px | Séparation entre deux blocs — contre 12 px à l'intérieur d'un bloc |
+| `--t-legende` → `--t-chiffre` | 12 → 24 px | Cinq rôles typographiques, texte courant à 16 |
+| `--r-xs` → `--r-lg` | 4 → 16 px | Échelle de formes |
+
+Quelques règles qui ne se voient qu'à l'usage :
+
+- **Le texte courant fait 16 px, les champs de saisie aussi.** Sous ce seuil,
+  Safari iOS zoome tout seul à la prise de focus : ce n'est pas un réglage,
+  c'est un comportement du navigateur. Le prix est la densité — cinq jeux par
+  écran au lieu de huit, contre une longueur de ligne qui rentre enfin dans la
+  fourchette conseillée sur mobile.
+- **`--accent` se lit SUR le fond, `--accent-fond` porte du blanc.** Un seul
+  bleu ne peut pas satisfaire les deux contraintes ; les confondre fait tomber
+  le contraste de 5,17 à 3,00:1.
+- **Un bouton a cinq états** : repos, survol (réservé aux pointeurs fins),
+  focus (anneau de 2 px sur `:focus-visible`, jamais au doigt), pressé, et
+  désactivé.
+- **L'aplat bleu est l'action principale, partout.** Le contour teinté ne dit
+  pas « fais ceci » mais « c'est ce qui est choisi ».
+- **Les panneaux sont de vrais dialogues** : `role="dialog"`, `aria-modal`,
+  focus enfermé dedans et rendu à la fermeture, Échap qui ferme, défilement
+  bloqué derrière.
+- **Aucun choix destructeur ne se cache derrière « Annuler ».** L'import
+  proposait autrefois « OK = REMPLACER / Annuler = FUSIONNER » dans une boîte
+  du navigateur : Échap, qui ferme sur Annuler, importait le fichier. Trois
+  boutons nommés, et annuler n'importe rien.
+
+Ces règles ne se relisent pas, elles se mesurent : `npm run verif:ui` ouvre
+l'application construite et échoue si une cible passe sous le plancher, si un
+texte descend sous 12 px, si un libellé se tronque ou si la page déborde.
 
 ---
 
@@ -445,8 +493,11 @@ fournit directement un texte français rédigé, sans quota ni découpage.
   filtres : 317 px sur un écran de 915, soit un tiers de la surface avant le
   premier jeu, et une rangée de boutons qui débordait de 13 px et faisait
   défiler la page latéralement. Filtres et actions sont passés dans des
-  panneaux glissants, les cibles tactiles à 44 px, et la liste est paginée par
-  30 au lieu de monter les 94 fiches d'un coup.
+  panneaux glissants, et la liste est paginée par 30 au lieu de monter les 94
+  fiches d'un coup. Les cibles tactiles, longtemps à 44 px « pour ne pas faire
+  exploser la densité », sont passées à 48 — le chiffre de Material — après
+  qu'un audit a montré que le compromis avait été fait avec nous-mêmes et non
+  avec l'utilisateur.
 - **Rien n'échoue plus en silence.** Une exception de rendu vidait `#root` sans
   un mot ; un `ErrorBoundary` affiche désormais l'erreur et propose d'exporter
   la bibliothèque avant toute chose. Les écritures dans `localStorage` étaient
@@ -483,6 +534,7 @@ npm run preview
 npm run lint     # oxlint
 npm test         # 88 tests (modèle, import, prêts, stats, thème, préférences,
                  #            cohérence des duplications, Worker)
+npm run verif:ui                      # mesure les écrans rendus (voir plus bas)
 npm run audit -- ma-sauvegarde.json   # symptômes dans les données (voir plus bas)
 ```
 
@@ -490,6 +542,25 @@ En développement, le proxy du serveur Vite joue exactement le rôle du Worker :
 relaie `/sgdb/*` et `/xbl/*` **sans détenir de clé** (c'est le client qui envoie
 l'en-tête d'authentification). Il n'est donc **pas nécessaire de déployer le
 Worker pour travailler en local**.
+
+### Vérifier l'interface rendue
+
+Les règles d'ergonomie portent sur des pixels affichés, pas sur des
+déclarations : un bouton peut être écrit correctement et mesurer 34 px une fois
+la police appliquée et la ligne calculée. Trois défauts ont été trouvés ainsi,
+et par aucun autre moyen.
+
+```bash
+npm run build
+npx vite preview --port 4173 &
+npm run verif:ui
+```
+
+Le script ouvre sept écrans, à 360 et 412 px, dans les deux thèmes, et échoue
+s'il trouve une cible sous 44 × 24 px, un texte sous 12 px, un champ de saisie
+sous 16 px, un libellé tronqué, un débordement horizontal ou une erreur
+JavaScript. Il demande Playwright et un navigateur, d'où son absence de
+`npm test`, qui tourne sur des modules purs.
 
 ### Auditer ses données
 
@@ -534,12 +605,13 @@ import, beaucoup moins.
 │   ├── wrangler.toml
 │   └── README.md
 ├── scripts/
-│   └── audit.mjs                  Audit des données d'un export (pas un test)
+│   ├── audit.mjs                  Audit des données d'un export (pas un test)
+│   └── verif-ui.mjs               Mesure les écrans rendus : cibles, tailles, débordements
 ├── public/                        Icônes PWA (192/512, any + maskable), favicon
 ├── src/
 │   ├── App.jsx                    Ossature : état global, en-tête, onglets
 │   ├── main.jsx                   Montage + garde-fou d'erreurs global
-│   ├── index.css                  Jetons de thème, animations, survol
+│   ├── index.css                  Jetons : couleurs, cibles tactiles, typographie, formes
 │   ├── lib/                       Modules purs : testables sans navigateur
 │   │   ├── api.js                 RAWG, Wikipédia, Wikidata, SteamGridDB, xbl.io
 │   │   ├── model.js               Plateformes, prêts, migration, validation, édition
@@ -606,6 +678,11 @@ deploy` séparé, sinon le relais en ligne reste sur son ancienne version.
   très récents) : l'infobox s'affiche alors partiellement, sans casser la fiche.
 - **Le classement Xbox One / Series X repose sur `addedDate`**, faute de date de
   sortie stockée séparément.
+- **La navigation est en haut de l'écran.** Les quatre onglets et le bouton
+  « + Ajouter » occupent la zone que la cartographie du pouce désigne comme la
+  plus difficile à atteindre à une main. Une barre basse et un bouton flottant
+  y répondraient : c'est la seule règle du cahier des charges qui reste sans
+  application, parce qu'elle déplace l'ossature et non trois valeurs.
 - **`localStorage` n'est pas un coffre-fort** : les clés y sont lisibles par tout
   script s'exécutant sur la page. Acceptable pour une application personnelle
   sans contenu tiers.
