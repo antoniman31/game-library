@@ -395,6 +395,15 @@ types — « pas une date » est une chaîne, donc ça passait, et le `NaN` qui 
 sortait remontait jusque dans les moyennes de l'onglet Stats, affiché comme une
 statistique.
 
+Le format ne suffit pourtant pas non plus. **« 0001-01-01 » est une date ISO
+parfaitement valide**, et l'histogramme des ajouts, qui comble toutes les années
+entre la plus ancienne et la plus récente, en tirait deux mille colonnes larges
+de zéro pixel — quinze secondes de rendu pour une année mal tapée dans un champ
+date. Une date doit donc aussi être **plausible** : entre 1970 et dix ans devant
+(une date de retour convenue est légitimement dans le futur). Même raisonnement
+pour les liens d'une fiche : ils finissent dans un `href`, et `javascript:` en
+est un — seuls `http://` et `https://` entrent, et sont rendus.
+
 Trois autres clés vivent à part dans le `localStorage`, précisément pour ne
 jamais entrer dans l'export : `gl_keys` (clés des services), `gl_sync` (code de
 synchronisation) et `gl_theme` (mode d'apparence).
@@ -532,7 +541,7 @@ npm run dev      # http://localhost:5173/game-library/
 npm run build
 npm run preview
 npm run lint     # oxlint
-npm test         # 88 tests (modèle, import, prêts, stats, thème, préférences,
+npm test         # 96 tests (modèle, import, prêts, stats, thème, préférences,
                  #            cohérence des duplications, Worker)
 npm run verif:ui                      # mesure les écrans rendus (voir plus bas)
 npm run audit -- ma-sauvegarde.json   # symptômes dans les données (voir plus bas)
@@ -586,9 +595,10 @@ en double » : il fallait tout relire pour trouver ce qui compte.
 Prend un export JSON et signale : doublons de titre sur une même plateforme,
 identifiants réutilisés, champs vides (jaquette, genre, description, note),
 valeurs impossibles (plateforme inconnue, format inventé, note hors bornes,
-dates illisibles), dates d'ajout à venir, prêts incomplets ou très anciens,
-retours antérieurs au prêt, et séries Wikidata éloignées du titre — le signe
-qu'une source a répondu pour un autre jeu.
+dates illisibles), **années d'ajout invraisemblables** et **liens non ouvrables**
+— les deux qui ont la bonne forme sans être des données —, dates d'ajout à
+venir, prêts incomplets ou très anciens, retours antérieurs au prêt, et séries
+Wikidata éloignées du titre, signe qu'une source a répondu pour un autre jeu.
 
 Ce n'est **pas** un test : `npm test` vérifie des invariants et doit rester vert,
 l'audit signale des *symptômes* qui peuvent être parfaitement légitimes. Deux
@@ -601,7 +611,7 @@ import, beaucoup moins.
 ├── .github/workflows/deploy.yml   Build + publication GitHub Pages
 ├── worker/                        Relais CORS + sauvegarde en ligne (sans secret)
 │   ├── index.js
-│   ├── test.mjs                   29 vérifications, sans dépendance ni déploiement
+│   ├── test.mjs                   32 vérifications, sans dépendance ni déploiement
 │   ├── wrangler.toml
 │   └── README.md
 ├── scripts/

@@ -142,7 +142,9 @@ Deux sous-onglets. Chaque bloc disparaît quand il n'a rien à dire.
   Worker et la reprend ailleurs, avec le même code de 26 caractères. Elle emporte
   aussi l'**apparence**, et les **clés des services** si l'on coche la case prévue,
   décochée par défaut. Le code reste sur l'appareil et ne part jamais dans l'export.
-- **Copie hors ligne** : Export / Import JSON, en mode remplacer ou fusionner.
+- **Copie hors ligne** : Export / Import JSON. À l'import, un panneau annonce ce que
+  contient le fichier — jeux valides, entrées ignorées, valeurs corrigées — et propose
+  **Fusionner**, **Remplacer** ou **Annuler**, chaque bouton disant sa conséquence.
 - Un envoi qui écraserait le travail d'un autre appareil est **refusé** (409) : l'app
   pose le choix, chiffres en main.
 - L'import ne fait pas confiance au fichier : date illisible, plateforme inconnue,
@@ -179,11 +181,19 @@ Deux sous-onglets. Chaque bloc disparaît quand il n'a rien à dire.
   best-effort, sans casser la fiche.
 - **Le classement Xbox One / Series X repose sur `addedDate`**, faute de date de
   sortie stockée séparément.
-- **Contraste du thème clair** : le vert et le rouge tournent entre 2,83 et 4,39:1 là
-  où WCAG AA demande 4,5:1, et le blanc sur l'accent du thème sombre est à 3,00:1.
-  Mesuré, non corrigé — ça touche l'identité visuelle.
+- **La navigation est en haut de l'écran** : les quatre onglets et « + Ajouter »
+  occupent la zone la plus difficile à atteindre d'une main. Une barre basse et un
+  bouton flottant y répondraient — refonte de l'ossature, pas correctif.
 
 ## Fait récemment
+
+- **Audit du code** : cinq défauts que le format laissait passer — une année d'ajout
+  invraisemblable qui faisait tracer deux mille colonnes à l'histogramme, un « NaN j »
+  affiché comme une durée, deux tableaux non garantis par la migration, un lien
+  `javascript:` posé dans un `href`, une réponse du Worker illisible par le navigateur.
+- **Ergonomie** : audit contre Material Design 3, les lois de l'UX et un cahier des
+  charges d'accessibilité — contrastes, focus clavier, cibles tactiles, dialogues,
+  échelle typographique à 16 px, et `npm run verif:ui` qui mesure les écrans rendus.
 
 - **Audit complet** : validation des valeurs à l'import (une date illisible produisait
   des `NaN` jusque dans les moyennes de l'onglet Stats), fiche qui se rouvrait toute

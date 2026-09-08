@@ -42,6 +42,14 @@ export function migrateGames(list) {
     if (ng.infobox === undefined) ng.infobox = null;
     if (ng.lentRetourPrevu === undefined) ng.lentRetourPrevu = null;
     if (!Array.isArray(ng.pretsPasses)) ng.pretsPasses = [];
+    // `genre` et `myLinks` sont lus sans précaution à chaque rendu de la liste
+    // (`g.genre.some(...)`, `g.myLinks[i]`) : absents d'un enregistrement écrit
+    // par une version ancienne, ils font échouer le premier rendu et
+    // l'application entière tombe sur son garde-fou d'erreurs. Cette fonction
+    // existe pour rendre sûr ce qui vient du stockage ; elle le fait déjà pour
+    // trois champs, elle le fait pour ces deux-là aussi.
+    if (!Array.isArray(ng.genre)) ng.genre = [];
+    if (!Array.isArray(ng.myLinks)) ng.myLinks = ["", "", ""];
     // Sept champs devenus sans objet : la progression et le temps de jeu, que
     // la console tient déjà, plus `note` et `progression` qui n'ont jamais été
     // ni écrits ni lus. Les garder ferait croire à des fonctions inexistantes,
@@ -53,8 +61,15 @@ export function migrateGames(list) {
 
 export function daysSince(date) { return Math.floor((Date.now() - date) / 86400000); }
 // Nombre de jours depuis le prêt, ou null si le jeu est chez soi.
+//
+// Une date qui n'est pas plausible rend null, elle aussi. Illisible, elle
+// produisait un NaN que l'onglet Prêts affichait tel quel — « NaNj » présenté
+// comme une durée, alors qu'un commentaire de l'application affirmait déjà que
+// cette fonction s'en gardait. Lisible mais impossible, elle donnait pire : un
+// « 739866 j » qui a l'air d'un nombre. L'import refuse déjà ces prêts-là ;
+// cette fonction applique la même règle sur ce qui est déjà en place.
 export function joursDePret(g) {
-  if (!g.lentA || !g.lentDate) return null;
+  if (!g.lentA || !estDatePlausible(g.lentDate)) return null;
   return daysSince(new Date(g.lentDate));
 }
 
@@ -84,8 +99,14 @@ export function pretEnRetard(g) {
 // ne doit croître sans limite dans un stockage plafonné à quelques Mo.
 export const MAX_HISTORIQUE_PRET = 20;
 
-export const dureeEntreeHistorique = (e) =>
-  Math.max(0, Math.round((new Date(e.au) - new Date(e.du)) / 86400000));
+// Une entrée dont les dates sont illisibles vaut zéro jour plutôt que NaN :
+// un NaN se propage dans toutes les moyennes de l'onglet Stats et les rend
+// toutes illisibles, là où un zéro ne fausse que sa propre ligne. L'audit des
+// données signale l'entrée fautive, c'est son travail.
+export const dureeEntreeHistorique = (e) => {
+  if (!estDatePlausible(e?.du) || !estDatePlausible(e?.au)) return 0;
+  return Math.max(0, Math.round((new Date(e.au) - new Date(e.du)) / 86400000));
+};
 
 // Rend le jeu et archive le prêt. Pure : retourne un nouvel objet.
 // `prevu` conserve la date de retour convenue au moment du prêt. Sans elle,
@@ -224,7 +245,9 @@ export function validerEdition(b) {
   }
 
   const date = String(b.addedDate || "").trim();
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || Number.isNaN(Date.parse(date))) erreurs.addedDate = "Date invalide";
+  const anneeMax = Number(aujourdhuiISO().slice(0, 4)) + ANNEES_A_VENIR;
+  if (!estDateISO(date)) erreurs.addedDate = "Date invalide";
+  else if (!estDatePlausible(date)) erreurs.addedDate = `Année attendue entre ${ANNEE_MIN} et ${anneeMax}`;
 
   const cover = String(b.cover || "").trim();
   if (cover && !URL_JAQUETTE.test(cover)) erreurs.cover = "URL d'image attendue (https://…)";
@@ -277,9 +300,35 @@ const estTexte = (v) => typeof v === "string";
 const DATE_ISO = /^\d{4}-\d{2}-\d{2}$/;
 export const estDateISO = (v) => estTexte(v) && DATE_ISO.test(v) && !Number.isNaN(Date.parse(v));
 
+// Lisible ne veut pas dire plausible. « 0001-01-01 » respecte le format, se
+// lit sans erreur, et fait tracer à l'onglet Stats un histogramme de deux mille
+// colonnes larges de zéro pixel : quinze secondes de rendu et huit mille
+// éléments, pour une année mal tapée dans un champ date — ce qu'un doigt fait
+// en une seconde sur un téléphone.
+//
+// La fenêtre est large exprès : elle n'est pas là pour juger une date, mais
+// pour écarter celles qui ne peuvent pas appartenir à la vie de cette
+// bibliothèque. Elle va jusqu'à dix ans devant parce qu'une date de retour
+// convenue, elle, est légitimement dans le futur.
+export const ANNEE_MIN = 1970;
+export const ANNEES_A_VENIR = 10;
+export function estDatePlausible(v, aujourdhui = aujourdhuiISO()) {
+  if (!estDateISO(v)) return false;
+  const an = Number(v.slice(0, 4));
+  return an >= ANNEE_MIN && an <= Number(aujourdhui.slice(0, 4)) + ANNEES_A_VENIR;
+}
+
+// Un lien que l'on peut poser dans un href. `javascript:` en est un aussi, et
+// React ne filtre rien : un fichier importé, ou une sauvegarde récupérée avec
+// un code partagé, suffirait à placer dans une fiche un lien qui s'exécute
+// dans l'application — avec accès au stockage, donc aux clés et au code de
+// synchronisation.
+const LIEN_SUR = /^https?:\/\//i;
+export const estLienSur = (u) => LIEN_SUR.test(String(u || "").trim());
+
 // Une entrée d'historique venue d'un fichier : un nom et deux dates réelles.
 const estEntreePret = (e) => !!e && typeof e === "object"
-  && estTexte(e.a) && !!e.a.trim() && estDateISO(e.du) && estDateISO(e.au);
+  && estTexte(e.a) && !!e.a.trim() && estDatePlausible(e.du) && estDatePlausible(e.au);
 
 // Les valeurs qui alimentent des calculs ou des filtres ne peuvent pas être
 // n'importe quoi : une plateforme inconnue n'apparaît dans aucun filtre et
@@ -301,21 +350,21 @@ function assainir(brut) {
     brut.metacritic == null || (typeof brut.metacritic === "number" && Number.isFinite(brut.metacritic) && brut.metacritic >= 0 && brut.metacritic <= 100),
     brut.metacritic ?? null, null,
   );
-  const addedDate = garder(estDateISO(brut.addedDate), brut.addedDate, aujourdhuiISO());
+  const addedDate = garder(estDatePlausible(brut.addedDate), brut.addedDate, aujourdhuiISO());
 
   // Un prêt se mesure en jours : sans nom ou sans date valide, il n'est pas
   // « incomplet », il n'existe pas. Le laisser à moitié renseigné produit un
   // jeu marqué prêté dont la durée est NaN et que rien ne signale jamais.
-  const pretValide = estTexte(brut.lentA) && !!brut.lentA.trim() && estDateISO(brut.lentDate);
+  const pretValide = estTexte(brut.lentA) && !!brut.lentA.trim() && estDatePlausible(brut.lentDate);
   const lentA = pretValide ? brut.lentA.trim() : garder(!brut.lentA && !brut.lentDate, null, null);
   const lentDate = pretValide ? brut.lentDate : null;
   const lentRetourPrevu = !pretValide ? null
-    : garder(brut.lentRetourPrevu == null || estDateISO(brut.lentRetourPrevu), brut.lentRetourPrevu ?? null, null);
+    : garder(brut.lentRetourPrevu == null || estDatePlausible(brut.lentRetourPrevu), brut.lentRetourPrevu ?? null, null);
 
   const historique = Array.isArray(brut.pretsPasses) ? brut.pretsPasses : [];
   const retenues = historique.filter(estEntreePret).slice(0, MAX_HISTORIQUE_PRET);
   if (retenues.length !== Math.min(historique.length, MAX_HISTORIQUE_PRET)) corrige = true;
-  const pretsPasses = retenues.map(e => (estDateISO(e.prevu) ? e : { a: e.a, du: e.du, au: e.au }));
+  const pretsPasses = retenues.map(e => (estDatePlausible(e.prevu) ? e : { a: e.a, du: e.du, au: e.au }));
 
   return {
     corrige,
@@ -357,7 +406,12 @@ export function validerJeuxImportes(data) {
       id,
       title: brut.title.trim(),
       genre: Array.isArray(brut.genre) ? brut.genre.filter(estTexte) : [],
-      myLinks: Array.isArray(brut.myLinks) ? [0, 1, 2].map(i => (estTexte(brut.myLinks[i]) ? brut.myLinks[i] : "")) : ["", "", ""],
+      // Un lien de fiche finit dans un `href`. Tout ce qui n'est pas http(s) est
+      // écarté à l'entrée plutôt que filtré à l'affichage : le stockage ne doit
+      // pas contenir ce qu'on refusera de rendre.
+      myLinks: Array.isArray(brut.myLinks)
+        ? [0, 1, 2].map(i => (estLienSur(brut.myLinks[i]) ? brut.myLinks[i].trim() : ""))
+        : ["", "", ""],
       style: estTexte(brut.style) ? brut.style : "",
       tips: estTexte(brut.tips) ? brut.tips : "",
       tag: estTexte(brut.tag) ? brut.tag : "",

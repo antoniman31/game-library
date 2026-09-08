@@ -191,7 +191,13 @@ export default {
       return sauvegarde(request, env, origine);
     }
 
-    if (request.method !== "GET") return new Response("Méthode non autorisée", { status: 405 });
+    // Avec les en-têtes CORS, comme toutes les autres réponses : sans eux, le
+    // navigateur refuse de lire le corps et signale une erreur CORS à la place
+    // du 405 — on cherche alors un problème d'origine là où il n'y a qu'une
+    // méthode interdite.
+    if (request.method !== "GET") {
+      return new Response("Méthode non autorisée", { status: 405, headers: corsHeaders(origine) });
+    }
 
     const prefixe = Object.keys(CIBLES).find((p) => url.pathname.startsWith(p + "/"));
     if (!prefixe) {

@@ -18,6 +18,7 @@ import {
   normTitle, rapprochementDouteux, jeuxSansScore,
   rendreJeu, preterJeu, annulerPret, supprimerEntreeHistorique, dureeEntreeHistorique, MAX_HISTORIQUE_PRET, aujourdhuiISO,
   BACK_COMPAT, XBOX_SERIES_CUTOFF, PRET_LONG_JOURS, PLATFORMES_JEU,
+  estDatePlausible, estLienSur, ANNEE_MIN, ANNEES_A_VENIR,
 } from "./model.js";
 import { ecouterMiseAJour } from "./maj.js";
 
@@ -500,4 +501,93 @@ test("une entrée d'historique se supprime par sa position, pas par son nom", ()
   assert.equal(supprimerEntreeHistorique(g, -1), g);
   assert.equal(supprimerEntreeHistorique(g, 3), g);
   assert.equal(supprimerEntreeHistorique(jeu(), 0).pretsPasses, undefined);
+});
+
+
+// ── Ce qui passait le format sans être une donnée ──────────────────────────
+//
+// Les trois vérifications qui suivent portent sur des valeurs que rien ne
+// refusait parce qu'elles ont la bonne forme : une date lisible mais
+// impossible, une date de prêt illisible qui devenait un NaN affiché comme une
+// durée, un tableau absent d'un enregistrement ancien.
+
+test("une date lisible n'est pas forcément plausible", () => {
+  const jour = "2026-09-08";
+  assert.equal(estDatePlausible("2026-09-08", jour), true);
+  assert.equal(estDatePlausible("1999-12-31", jour), true);
+  // Une année mal tapée dans un champ date : le format est bon, l'année non.
+  assert.equal(estDatePlausible("0001-01-01", jour), false);
+  assert.equal(estDatePlausible("9999-12-31", jour), false);
+  assert.equal(estDatePlausible(`${ANNEE_MIN}-01-01`, jour), true);
+  assert.equal(estDatePlausible(`${ANNEE_MIN - 1}-12-31`, jour), false);
+  // Une date de retour convenue est légitimement devant : la fenêtre s'ouvre
+  // assez loin pour ne pas la refuser.
+  const dansCinqAns = `${2026 + 5}-01-01`;
+  assert.equal(estDatePlausible(dansCinqAns, jour), true);
+  assert.equal(estDatePlausible(`${2026 + ANNEES_A_VENIR + 1}-01-01`, jour), false);
+  assert.equal(estDatePlausible("pas une date", jour), false);
+  assert.equal(estDatePlausible(null, jour), false);
+});
+
+test("l'import ramène une année invraisemblable à aujourd'hui", () => {
+  // Sans quoi elle atteint l'histogramme des ajouts, qui comble toutes les
+  // années entre la plus ancienne et la plus récente : deux mille colonnes.
+  const { jeux, corriges } = validerJeuxImportes([
+    { id: 1, title: "Année aberrante", addedDate: "0001-01-01" },
+  ]);
+  assert.equal(jeux[0].addedDate, aujourdhuiISO());
+  assert.equal(corriges, 1, "la correction est annoncée, pas faite en silence");
+});
+
+test("un prêt daté d'une année impossible n'est pas un prêt", () => {
+  const { jeux } = validerJeuxImportes([
+    { id: 1, title: "T", lentA: "Paul", lentDate: "0001-05-05" },
+  ]);
+  assert.equal(jeux[0].lentA, null);
+  assert.equal(jeux[0].lentDate, null);
+});
+
+test("une date de prêt illisible ne produit plus de NaN", () => {
+  // L'onglet Prêts affichait « NaNj » comme une durée, et un commentaire de
+  // l'application affirmait déjà que cette fonction s'en gardait.
+  assert.equal(joursDePret({ lentA: "Paul", lentDate: "pas une date" }), null);
+  assert.equal(joursDePret({ lentA: "Paul", lentDate: "0001-01-01" }), null,
+    "hors fenêtre plausible mais lisible : le format seul ne suffit pas non plus");
+  assert.equal(dureeEntreeHistorique({ du: "x", au: "y" }), 0);
+  assert.equal(dureeEntreeHistorique({}), 0);
+  // Une entrée saine continue de compter normalement.
+  assert.equal(dureeEntreeHistorique({ du: "2024-01-01", au: "2024-01-11" }), 10);
+});
+
+test("la migration garantit les tableaux que le rendu déréference", () => {
+  // `g.genre.some(...)` et `g.myLinks[i]` sont lus sans précaution à chaque
+  // rendu : absents d'un enregistrement écrit par une version ancienne, ils
+  // faisaient tomber l'application entière sur son garde-fou d'erreurs.
+  const [g] = migrateGames([{ title: "Vieux jeu", platform: "Xbox One" }]);
+  assert.deepEqual(g.genre, []);
+  assert.deepEqual(g.myLinks, ["", "", ""]);
+  assert.deepEqual(g.pretsPasses, []);
+  // Ce qui est déjà correct n'est pas écrasé.
+  const [h] = migrateGames([{ title: "T", genre: ["Action"], myLinks: ["https://a", "", ""] }]);
+  assert.deepEqual(h.genre, ["Action"]);
+  assert.equal(h.myLinks[0], "https://a");
+});
+
+test("seuls les liens http(s) entrent dans une fiche", () => {
+  // Un lien de fiche finit dans un href : `javascript:` s'exécuterait dans
+  // l'application, avec accès au stockage — donc aux clés et au code de
+  // synchronisation.
+  assert.equal(estLienSur("https://exemple.fr"), true);
+  assert.equal(estLienSur("http://exemple.fr"), true);
+  assert.equal(estLienSur("  https://exemple.fr  "), true);
+  assert.equal(estLienSur("javascript:alert(1)"), false);
+  assert.equal(estLienSur("JavaScript:alert(1)"), false);
+  assert.equal(estLienSur("data:text/html,<script>"), false);
+  assert.equal(estLienSur(""), false);
+  assert.equal(estLienSur(null), false);
+
+  const { jeux } = validerJeuxImportes([
+    { id: 1, title: "T", myLinks: ["javascript:alert(1)", "https://ok.fr", 42] },
+  ]);
+  assert.deepEqual(jeux[0].myLinks, ["", "https://ok.fr", ""]);
 });

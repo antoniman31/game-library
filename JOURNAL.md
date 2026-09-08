@@ -374,6 +374,48 @@ Deux règles du cahier des charges restaient par ailleurs non appliquées :
 - **Les erreurs de champ ne portaient que du rouge.** La couleur seule ne dit
   rien à qui ne la distingue pas ; un pictogramme la double désormais.
 
+### Phase 15 — Ce qui a la bonne forme sans être une donnée
+
+L'application se défendait bien contre ce qui ne ressemble à rien : un fichier
+qui n'est pas du JSON, un titre absent, un tableau qui n'en est pas un. Elle ne
+se défendait pas contre ce qui a la bonne forme et n'est pourtant pas une
+donnée — et c'est là que se trouvaient les cinq défauts de cet audit.
+
+- **« 0001-01-01 » est une date ISO valide.** Elle passait tous les contrôles,
+  et l'histogramme des ajouts, qui comble toutes les années entre la plus
+  ancienne et la plus récente, en tirait deux mille vingt-six colonnes larges
+  de zéro pixel : huit mille éléments, quinze secondes de rendu. Une année mal
+  tapée dans un champ date suffit, et le champ est là, dans « Modifier la
+  fiche ». Trois défenses désormais : l'import ramène la date à aujourd'hui en
+  l'annonçant, l'édition refuse en disant quelle année elle attend, et le calcul
+  cesse de combler au-delà de quarante ans d'étendue — le graphique perd son
+  échelle régulière, mais il s'affiche.
+- **`joursDePret` produisait un NaN** sur une date illisible, que l'onglet
+  Prêts affichait tel quel : « NaNj » présenté comme une durée. Un commentaire
+  de l'application affirmait déjà que cette fonction s'en gardait ; il décrivait
+  une intention, pas le code.
+- **La migration ne garantissait pas `genre` ni `myLinks`**, alors que la liste
+  les déréférence sans précaution à chaque rendu (`g.genre.some(...)`,
+  `g.myLinks[i]`). Un enregistrement écrit par une version ancienne faisait
+  donc tomber l'application entière sur son garde-fou d'erreurs. Cette fonction
+  existe pour rendre sûr ce qui vient du stockage ; elle le faisait pour trois
+  champs sur cinq.
+- **Un lien de fiche finit dans un `href`, et `javascript:` en est un.** React
+  ne filtre rien. Un fichier importé, ou une sauvegarde récupérée avec un code
+  partagé un jour d'imprudence, suffisait à placer dans une fiche un lien qui
+  s'exécute dans l'application — avec accès au stockage, donc aux clés et au
+  code de synchronisation. Filtré à l'entrée et au rendu ; un lien refusé reste
+  affiché en texte, pour qu'on comprenne pourquoi il ne s'ouvre plus.
+- **Une réponse du Worker sortait sans en-têtes CORS.** Le navigateur refuse
+  alors d'en lire le corps et signale une erreur d'origine à la place du vrai
+  statut : on cherche un problème de configuration là où il n'y a qu'une méthode
+  interdite.
+
+Les cinq sont couverts par des tests qui échouent sur le code d'avant — c'est
+la seule preuve qu'un test vaut quelque chose. L'audit des données a gagné deux
+règles au passage : une année d'ajout invraisemblable et un lien non ouvrable
+sont désormais signalés comme graves.
+
 ---
 
 ## 3. Architecture finale
