@@ -300,3 +300,38 @@ test("la date du calcul est une entrée, pas une lecture cachée de l'horloge", 
   assert.equal(s.parMoisAjout.at(-1)[0], "2026-01");
   assert.equal(statsCollection([jeu({ id: 1, addedDate: "2026-01-05" })], "2027-06-01").parMoisAjout.at(-1)[0], "2027-06");
 });
+
+
+test("une année aberrante ne fait plus exploser l'histogramme des ajouts", () => {
+  // Le remplissage des années vides va du minimum au maximum, et ces bornes
+  // viennent des données : « 0001-01-01 » produisait deux mille colonnes larges
+  // de zéro pixel, huit mille éléments et quinze secondes de rendu — pour une
+  // année mal tapée dans un champ date.
+  const jeu = (d) => ({ id: d, title: `T${d}`, platform: "Xbox Series X", format: "physique", genre: [], addedDate: d });
+
+  const explose = statsCollection([jeu("0001-01-01"), jeu("2026-09-01")], "2026-09-08");
+  assert.equal(explose.parAnnee.length, 2, "seules les années présentes sont rendues");
+  assert.deepEqual(explose.parAnnee.map(([a]) => a), ["0001", "2026"]);
+
+  // En dessous de l'étendue limite, le comblement continue : c'est lui qui
+  // empêche une courbe de resserrer le temps et d'inventer une régularité.
+  const normal = statsCollection([jeu("2019-01-01"), jeu("2026-09-01")], "2026-09-08");
+  assert.equal(normal.parAnnee.length, 8);
+  assert.deepEqual(normal.parAnnee.find(([a]) => a === "2022"), ["2022", 0]);
+});
+
+test("une entrée d'historique aux dates impossibles ne pollue pas les moyennes", () => {
+  // Un NaN se propage dans toutes les moyennes de l'onglet ; un zéro ne fausse
+  // que sa propre ligne, et l'audit des données signale l'entrée fautive.
+  const jeux = [{
+    id: 1, title: "T", platform: "Xbox Series X", format: "physique", genre: [],
+    addedDate: "2024-01-01",
+    pretsPasses: [
+      { a: "Paul", du: "2024-01-01", au: "2024-01-11" },
+      { a: "Léa", du: "pas une date", au: "non plus" },
+    ],
+  }];
+  const s = statsCirculation(jeux, "2026-09-08");
+  assert.ok(Number.isFinite(s.dureeMoyenne), "la moyenne reste un nombre");
+  assert.equal(s.dureeMoyenne, 5, "10 jours et 0 jour font 5 de moyenne");
+});

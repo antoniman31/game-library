@@ -174,5 +174,22 @@ test("sans espace KV -> 501 explicite", r.status === 501, (await r.json()).erreu
 r = await appel("GET", "/inconnu/x");
 test("chemin non relayable -> 404", r.status === 404);
 
+// Toute réponse doit être lisible par le navigateur.
+//
+// Sans en-tête CORS, le navigateur refuse de lire le corps et signale une
+// erreur d'origine à la place du vrai statut : on cherche alors un problème de
+// configuration là où il n'y a qu'une méthode interdite. Le 405 du relais était
+// le seul à sortir sans ces en-têtes.
+for (const [nom, methode, chemin] of [
+  ["405 du relais", "POST", "/sgdb/search"],
+  ["405 de /sync", "DELETE", "/sync"],
+  ["404 d'un chemin inconnu", "GET", "/inconnu/x"],
+]) {
+  const rep = await appel(methode, chemin, { code: CODE });
+  test(`${nom} reste lisible par le navigateur`,
+    rep.headers.get("Access-Control-Allow-Origin") === ORIG,
+    `${rep.status}, Access-Control-Allow-Origin = ${rep.headers.get("Access-Control-Allow-Origin")}`);
+}
+
 console.log(echecs ? `\n${echecs} échec(s)` : "\nTout passe.");
 process.exit(echecs ? 1 : 0);

@@ -25,7 +25,7 @@
 
 import { readFileSync } from "node:fs";
 import { migrateGames, normTitle, rapprochementDouteux, dureeEntreeHistorique, PRET_LONG_JOURS,
-  estDateISO, PLATFORMES_JEU } from "../src/lib/model.js";
+  estDateISO, estDatePlausible, estLienSur, ANNEE_MIN, PLATFORMES_JEU } from "../src/lib/model.js";
 
 const args = process.argv.slice(2);
 const fichier = args.find(a => !a.startsWith("--"));
@@ -105,8 +105,26 @@ const aujourdhui = new Date().toISOString().slice(0, 10);
 for (const g of jeux) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(g.addedDate || "")) {
     signaler("date d'ajout illisible", `« ${g.title} » : ${JSON.stringify(g.addedDate)}`, "grave");
+  } else if (!estDatePlausible(g.addedDate, aujourdhui)) {
+    // Lisible mais impossible. « 0001-01-01 » passe tous les contrôles de
+    // format et faisait tracer à l'onglet Stats un histogramme allant de l'an 1
+    // à aujourd'hui — deux mille colonnes pour une année mal tapée.
+    signaler("année d'ajout invraisemblable",
+      `« ${g.title} » : ${g.addedDate} (attendu : ${ANNEE_MIN} ou après)`, "grave");
   } else if (g.addedDate > aujourdhui) {
     signaler("date d'ajout à venir", `« ${g.title} » : ${g.addedDate}`);
+  }
+}
+
+// ── Liens de fiche ─────────────────────────────────────────────────────────
+// Un lien de fiche finit dans un `href`. Tout ce qui n'est pas http(s) en est
+// un aussi — `javascript:` le premier — et s'exécuterait dans l'application,
+// avec accès au stockage donc aux clés et au code de synchronisation.
+for (const g of jeux) {
+  for (const lien of g.myLinks || []) {
+    if (lien && !estLienSur(lien)) {
+      signaler("lien non ouvrable", `« ${g.title} » : ${JSON.stringify(lien)}`, "grave");
+    }
   }
 }
 

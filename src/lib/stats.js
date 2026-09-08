@@ -169,13 +169,28 @@ const TRANCHES = [
   ["moins de 60", n => n < 60, "var(--danger-fond)"],
 ];
 
+// Les années sans aucun ajout comptent : sans elles, l'histogramme resserre le
+// temps et suggère un rythme régulier qui n'a pas eu lieu. Mais le remplissage
+// va du minimum au maximum, et ces deux bornes viennent des données : une seule
+// date aberrante — « 0001-01-01 », une année mal tapée dans un champ date —
+// produisait deux mille colonnes larges de zéro pixel, huit mille éléments et
+// quinze secondes de rendu.
+//
+// Au-delà de cette étendue, on cesse de combler et on n'affiche que les années
+// réellement présentes : le graphique perd son échelle régulière, mais il
+// s'affiche, et l'année aberrante se voit au lieu de tout noyer.
+const ETENDUE_MAX_ANNEES = 40;
 function anneesCompletes(annees) {
   if (!annees.length) return [];
   const m = new Map();
   for (const a of annees) m.set(a, (m.get(a) || 0) + 1);
   const nums = [...m.keys()].map(Number);
+  const min = Math.min(...nums), max = Math.max(...nums);
+  if (max - min + 1 > ETENDUE_MAX_ANNEES) {
+    return [...m.entries()].sort((a, b) => (a[0] < b[0] ? -1 : 1));
+  }
   const sortie = [];
-  for (let a = Math.min(...nums); a <= Math.max(...nums); a++) sortie.push([String(a), m.get(String(a)) || 0]);
+  for (let a = min; a <= max; a++) sortie.push([String(a), m.get(String(a)) || 0]);
   return sortie;
 }
 

@@ -3,7 +3,7 @@ import Cover from "./Cover.jsx";
 import InfoboxView from "./InfoboxView.jsx";
 import Sheet from "./Sheet.jsx";
 import { bg, card, bdr, txt, mut, demat, accent, accentDoux, accentFond, okDoux, warnDoux, dangerDoux, ok, warn, warnFond, danger } from "../lib/theme.js";
-import { PLATFORM_COLORS, BACK_COMPAT_PARENT, PLATFORMES_JEU, estUrlImage, joursDePret, pretEnRetard, brouillonDepuisJeu, validerEdition,
+import { PLATFORM_COLORS, BACK_COMPAT_PARENT, PLATFORMES_JEU, estUrlImage, estLienSur, joursDePret, pretEnRetard, brouillonDepuisJeu, validerEdition,
   rendreJeu, preterJeu, annulerPret, dureeEntreeHistorique } from "../lib/model.js";
 import {
   rawgSearch, rawgDetail, wikiFrenchTitles, wikiArticleData, wikidataInfobox,
@@ -352,7 +352,18 @@ function GameCard({ g, onEdit, onDelete, onEnrich, autoOpen, onOuverte }) {
                     style={{ display: "block", width: "100%", background: "transparent", border: `1px solid ${bdr}`, borderRadius: "var(--r-sm)", color: txt, padding: "4px 8px", fontSize: "var(--t-legende)", boxSizing: "border-box" }} />
                 </label>
               ))}
-              {g.myLinks.filter(Boolean).map((url, i) => <a key={i} href={url} target="_blank" rel="noreferrer" style={{ display: "block", color: accent, fontSize: "var(--t-legende)", marginBottom: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{url}</a>)}
+              {/* Le filtrage a lieu à l'import ; il a lieu ici aussi. Une
+                  bibliothèque enregistrée avant ce filtre peut encore contenir
+                  un lien qui n'en est pas un, et c'est ici qu'il deviendrait
+                  cliquable. Il reste affiché, en texte : cacher la valeur
+                  empêcherait de comprendre pourquoi le lien ne fonctionne
+                  plus. */}
+              {g.myLinks.filter(Boolean).map((url, i) => {
+                const style = { display: "block", fontSize: "var(--t-legende)", marginBottom: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" };
+                return estLienSur(url)
+                  ? <a key={i} href={url} target="_blank" rel="noreferrer" style={{ ...style, color: accent }}>{url}</a>
+                  : <span key={i} title="Seuls les liens http:// et https:// sont ouverts" style={{ ...style, color: mut }}>⚠️ {url}</span>;
+              })}
             </>
           ))}
 
