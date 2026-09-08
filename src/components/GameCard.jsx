@@ -21,14 +21,14 @@ const Segment = ({ options, valeur, onChange }) => (
           style={{
             background: actif ? `${teinte}22` : "transparent", border: "none",
             color: actif ? teinte : mut, fontWeight: actif ? 600 : 400,
-            fontSize: 12, padding: "0 16px", minHeight: "var(--tap-min)", cursor: "pointer", fontFamily: "inherit",
+            fontSize: "var(--t-petit)", padding: "0 16px", minHeight: "var(--tap-min)", cursor: "pointer", fontFamily: "inherit",
           }}>{libelle}</button>
       );
     })}
   </div>
 );
 
-const boutonSource = { minHeight: "var(--tap-min)", padding: "0 12px", background: "transparent", border: `1px solid ${accent}`, color: accent, borderRadius: "var(--r-sm)", fontSize: 11, cursor: "pointer" };
+const boutonSource = { minHeight: "var(--tap-min)", padding: "0 12px", background: "transparent", border: `1px solid ${accent}`, color: accent, borderRadius: "var(--r-sm)", fontSize: "var(--t-legende)", cursor: "pointer" };
 
 function GameCard({ g, onEdit, onDelete, onEnrich, autoOpen, onOuverte }) {
   const [open, setOpen] = useState(!!autoOpen);
@@ -179,18 +179,18 @@ function GameCard({ g, onEdit, onDelete, onEnrich, autoOpen, onOuverte }) {
     // sur fond `card`, un champ `card` ne se distinguait que par son liseré.
     width: "100%", boxSizing: "border-box", background: bg, minHeight: "var(--tap-min)",
     border: `1px solid ${erreurs[k] ? danger : bdr}`, borderRadius: "var(--r-sm)",
-    color: txt, padding: "7px 9px", fontSize: 12,
+    color: txt, padding: "7px 9px", fontSize: "var(--t-petit)",
     fontFamily: "inherit", // sans quoi textarea et champ date passent en monospace
   });
   // Balise : un <label> autour de boutons transmet le clic sur le texte au
   // premier bouton — soit, pour « Format », un basculement à « physique ».
   const ligneEdition = (label, cle, controle, aide, Balise = "label") => (
     <Balise style={{ display: "block", marginBottom: 10 }}>
-      <span style={{ display: "block", color: mut, fontSize: 11, marginBottom: 4 }}>
+      <span style={{ display: "block", color: mut, fontSize: "var(--t-legende)", marginBottom: 4 }}>
         {label}{aide ? <span style={{ opacity: 0.75 }}> · {aide}</span> : null}
       </span>
       {controle}
-      {erreurs[cle] && <span style={{ display: "block", color: danger, fontSize: 11, marginTop: 3 }}>{erreurs[cle]}</span>}
+      {erreurs[cle] && <span style={{ display: "block", color: danger, fontSize: "var(--t-legende)", marginTop: 3 }}>⚠️ {erreurs[cle]}</span>}
     </Balise>
   );
 
@@ -198,7 +198,7 @@ function GameCard({ g, onEdit, onDelete, onEnrich, autoOpen, onOuverte }) {
     // Un filet suffit à séparer : encadrer chaque section donnait six
     // rectangles de poids identique, et donc aucune hiérarchie.
     <div>
-      <button onClick={() => toggle(id)} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%", boxSizing: "border-box", background: "transparent", border: "none", borderTop: `1px solid ${bdr}`, minHeight: "var(--tap-min)", padding: "13px 2px", color: txt, fontSize: 12, fontWeight: 600, cursor: "pointer", textAlign: "left" }}>
+      <button onClick={() => toggle(id)} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%", boxSizing: "border-box", background: "transparent", border: "none", borderTop: `1px solid ${bdr}`, minHeight: "var(--tap-min)", padding: "13px 2px", color: txt, fontSize: "var(--t-petit)", fontWeight: 600, cursor: "pointer", textAlign: "left" }}>
         <span>{title}</span>
         <span style={{ color: mut }}>{section === id ? "▾" : "▸"}</span>
       </button>
@@ -213,16 +213,16 @@ function GameCard({ g, onEdit, onDelete, onEnrich, autoOpen, onOuverte }) {
         <Cover src={g.cover} title={g.title} size={46} />
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginBottom: 4 }}>
-            <span style={{ background: PLATFORM_COLORS[g.platform] || accentFond, color: "#fff", fontSize: 11, fontWeight: 700, borderRadius: "var(--r-xs)", padding: "1px 5px" }}>{g.platform}</span>
-            {g.format === "démat" && <span style={{ background: demat, color: accent, fontSize: 11, borderRadius: "var(--r-xs)", padding: "1px 5px" }}>démat</span>}
-            {BACK_COMPAT_PARENT[g.platform] && g.backCompat && <span title={`Rétrocompatible ${BACK_COMPAT_PARENT[g.platform]}`} style={{ background: "#107C1022", color: ok, fontSize: 11, borderRadius: "var(--r-xs)", padding: "1px 5px" }}>🔄 Compatible {BACK_COMPAT_PARENT[g.platform].replace("Xbox ", "")}</span>}
-            {g.lentA && <span key={g.lentA} style={{ background: "#7c320044", color: warn, fontSize: 11, borderRadius: "var(--r-xs)", padding: "1px 5px", animation: "statusPop 200ms ease" }}>📤 {g.lentA}{jours !== null ? ` · ${jours}j` : ""}</span>}
+            <span style={{ background: PLATFORM_COLORS[g.platform] || accentFond, color: "#fff", fontSize: "var(--t-legende)", fontWeight: 700, borderRadius: "var(--r-xs)", padding: "1px 5px" }}>{g.platform}</span>
+            {g.format === "démat" && <span style={{ background: demat, color: accent, fontSize: "var(--t-legende)", borderRadius: "var(--r-xs)", padding: "1px 5px" }}>démat</span>}
+            {BACK_COMPAT_PARENT[g.platform] && g.backCompat && <span title={`Rétrocompatible ${BACK_COMPAT_PARENT[g.platform]}`} style={{ background: "#107C1022", color: ok, fontSize: "var(--t-legende)", borderRadius: "var(--r-xs)", padding: "1px 5px" }}>🔄 Compatible {BACK_COMPAT_PARENT[g.platform].replace("Xbox ", "")}</span>}
+            {g.lentA && <span key={g.lentA} style={{ background: "#7c320044", color: warn, fontSize: "var(--t-legende)", borderRadius: "var(--r-xs)", padding: "1px 5px", animation: "statusPop 200ms ease" }}>📤 {g.lentA}{jours !== null ? ` · ${jours}j` : ""}</span>}
             {/* Rien d'autre ici : les badges disent l'exemplaire, pas le contenu. */}
           </div>
-          <div style={{ fontWeight: 600, fontSize: 13, color: txt, marginBottom: 2, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 1, WebkitBoxOrient: "vertical" }}>{g.title}</div>
+          <div style={{ fontWeight: 600, fontSize: "var(--t-corps)", color: txt, marginBottom: 2, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>{g.title}</div>
           {/* Le titre laissait un grand vide à sa droite ; la note, le genre et
               la date d'ajout le remplissent, et la liste se lit sans déplier. */}
-          <div style={{ display: "flex", gap: 8, alignItems: "center", overflow: "hidden", whiteSpace: "nowrap", fontSize: 11, color: mut }}>
+          <div style={{ display: "flex", gap: 8, alignItems: "center", overflow: "hidden", whiteSpace: "nowrap", fontSize: "var(--t-legende)", color: mut }}>
             {g.metacritic && <span style={{ color: noteCouleur, fontWeight: 700 }}>MC {g.metacritic}</span>}
             {g.genre[0] && <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{g.genre[0]}</span>}
             <span style={{ flexShrink: 0 }}>{new Date(g.addedDate).toLocaleDateString("fr-FR")}</span>
@@ -246,8 +246,8 @@ function GameCard({ g, onEdit, onDelete, onEnrich, autoOpen, onOuverte }) {
           <div style={{ display: "flex", gap: 14, marginBottom: g.style ? 12 : 16 }}>
             <Cover src={g.cover} title={g.title} size={96} />
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 19, fontWeight: 700, lineHeight: 1.25, color: txt, marginBottom: 6 }}>{g.title}</div>
-              <div style={{ color: mut, fontSize: 11, lineHeight: 1.7 }}>
+              <div style={{ fontSize: "var(--t-chiffre)", fontWeight: 700, lineHeight: 1.25, color: txt, marginBottom: 6 }}>{g.title}</div>
+              <div style={{ color: mut, fontSize: "var(--t-legende)", lineHeight: 1.7 }}>
                 <b style={{ color: txt, fontWeight: 600 }}>{g.platform}</b> · {g.format}
                 {g.genre.length > 0 && <><br />{g.genre.join(" · ")}</>}
                 {g.metacritic ? <><br />Metacritic <b style={{ color: noteCouleur, fontWeight: 700 }}>{g.metacritic}</b></> : null}
@@ -260,8 +260,8 @@ function GameCard({ g, onEdit, onDelete, onEnrich, autoOpen, onOuverte }) {
             <div style={{ marginBottom: 16 }}>
               {/* En italique gris coupé à deux lignes, le seul texte qu'on ait
                   envie de lire était le plus pénible de la fiche. */}
-              <div style={{ color: txt, fontSize: 13, lineHeight: 1.5, ...(descOpen ? {} : { overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 4, WebkitBoxOrient: "vertical" }) }}>{g.style}</div>
-              {g.style.length > 160 && <button onClick={() => setDescOpen(o => !o)} style={{ background: "transparent", border: "none", color: accent, fontSize: 11, cursor: "pointer", padding: "6px 0 0" }}>{descOpen ? "▴ Réduire" : "▾ Lire la suite"}</button>}
+              <div style={{ color: txt, fontSize: "var(--t-corps)", lineHeight: 1.5, ...(descOpen ? {} : { overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 4, WebkitBoxOrient: "vertical" }) }}>{g.style}</div>
+              {g.style.length > 160 && <button onClick={() => setDescOpen(o => !o)} style={{ background: "transparent", border: "none", color: accent, fontSize: "var(--t-legende)", cursor: "pointer", padding: "6px 0 0" }}>{descOpen ? "▴ Réduire" : "▾ Lire la suite"}</button>}
             </div>
           )}
 
@@ -279,11 +279,11 @@ function GameCard({ g, onEdit, onDelete, onEnrich, autoOpen, onOuverte }) {
               champ du nom. */}
           <div style={{ background: bg, borderRadius: "var(--r-md)", padding: 12, marginBottom: 4 }}>
             <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
-              <span style={{ color: mut, fontSize: 11, flex: "0 0 52px", paddingTop: 10 }}>Prêt</span>
+              <span style={{ color: mut, fontSize: "var(--t-legende)", flex: "0 0 52px", paddingTop: 10 }}>Prêt</span>
               {g.lentA ? (
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ color: warn, fontSize: 12, fontWeight: 600, paddingTop: 2 }}>📤 Prêté à {g.lentA}</div>
-                  <div style={{ color: warn, fontSize: 11, margin: "2px 0 8px" }}>
+                  <div style={{ color: warn, fontSize: "var(--t-petit)", fontWeight: 600, paddingTop: 2 }}>📤 Prêté à {g.lentA}</div>
+                  <div style={{ color: warn, fontSize: "var(--t-legende)", margin: "2px 0 8px" }}>
                     Depuis le {new Date(g.lentDate).toLocaleDateString("fr-FR")}
                     {jours !== null ? ` · ${jours} jour${jours > 1 ? "s" : ""}` : ""}
                     {enRetard ? " ⚠️" : ""}
@@ -291,46 +291,46 @@ function GameCard({ g, onEdit, onDelete, onEnrich, autoOpen, onOuverte }) {
                   </div>
                   <div style={{ display: "flex", gap: "var(--ecart-tap)", flexWrap: "wrap" }}>
                     <button onClick={() => { onEnrich(g.id, rendreJeu(g)); setLoanName(""); setLoanRetour(""); }}
-                      style={{ minHeight: "var(--tap-min)", padding: "0 14px", background: okDoux, border: `1px solid ${ok}`, color: ok, borderRadius: "var(--r-sm)", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>✓ Rendu</button>
+                      style={{ minHeight: "var(--tap-min)", padding: "0 14px", background: okDoux, border: `1px solid ${ok}`, color: ok, borderRadius: "var(--r-sm)", fontSize: "var(--t-petit)", fontWeight: 600, cursor: "pointer" }}>✓ Rendu</button>
                     <a href={`sms:?body=${encodeURIComponent(`Salut ! Tu penses à me rendre ${g.title} ? 😊`)}`}
-                      style={{ minHeight: "var(--tap-min)", padding: "0 14px", display: "inline-flex", alignItems: "center", background: "transparent", border: `1px solid ${bdr}`, color: txt, borderRadius: "var(--r-sm)", fontSize: 12, textDecoration: "none" }}>Relancer par SMS</a>
+                      style={{ minHeight: "var(--tap-min)", padding: "0 14px", display: "inline-flex", alignItems: "center", background: "transparent", border: `1px solid ${bdr}`, color: txt, borderRadius: "var(--r-sm)", fontSize: "var(--t-petit)", textDecoration: "none" }}>Relancer par SMS</a>
                     {/* « Rendu » archive et nourrit les statistiques ; un prêt
                         saisi par erreur doit pouvoir disparaître sans y entrer. */}
                     <button onClick={() => {
                         if (!window.confirm(`Supprimer ce prêt à ${g.lentA} ?\n\nIl ne sera pas enregistré dans l'historique — à utiliser si le prêt n'a jamais eu lieu.`)) return;
                         onEnrich(g.id, annulerPret(g)); setLoanName(""); setLoanRetour("");
                       }}
-                      style={{ minHeight: "var(--tap-min)", padding: "0 12px", background: "transparent", border: "none", color: danger, fontSize: 12, cursor: "pointer", opacity: 0.85 }}>Supprimer</button>
+                      style={{ minHeight: "var(--tap-min)", padding: "0 12px", background: "transparent", border: "none", color: danger, fontSize: "var(--t-petit)", cursor: "pointer", opacity: 0.85 }}>Supprimer</button>
                   </div>
                 </div>
               ) : pretOuvert ? (
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <span style={{ display: "block", color: mut, fontSize: 11, marginBottom: 4 }}>Prêté à</span>
+                  <span style={{ display: "block", color: mut, fontSize: "var(--t-legende)", marginBottom: 4 }}>Prêté à</span>
                   <div style={{ display: "flex", gap: "var(--ecart-tap)" }}>
                     <input value={loanName} onChange={e => setLoanName(e.target.value)} placeholder="Nom…" autoFocus
                       aria-label="Nom de la personne à qui prêter ce jeu"
-                      style={{ flex: 1, minWidth: 0, minHeight: "var(--tap-min)", background: "transparent", border: `1px solid ${bdr}`, borderRadius: "var(--r-sm)", color: txt, padding: "0 10px", fontSize: 12, fontFamily: "inherit" }} />
+                      style={{ flex: 1, minWidth: 0, minHeight: "var(--tap-min)", background: "transparent", border: `1px solid ${bdr}`, borderRadius: "var(--r-sm)", color: txt, padding: "0 10px", fontSize: "var(--t-petit)", fontFamily: "inherit" }} />
                     <button onClick={() => { const j = preterJeu(g, loanName, loanRetour); if (j === g) return; onEnrich(g.id, j); setPretOuvert(false); setLoanRetour(""); }}
                       disabled={!loanName.trim()}
-                      style={{ minHeight: "var(--tap-min)", padding: "0 14px", background: loanName.trim() ? warnDoux : "transparent", border: `1px solid ${loanName.trim() ? warn : bdr}`, color: loanName.trim() ? warn : mut, borderRadius: "var(--r-sm)", fontSize: 12, fontWeight: 600, cursor: loanName.trim() ? "pointer" : "default" }}>Prêter</button>
+                      style={{ minHeight: "var(--tap-min)", padding: "0 14px", background: loanName.trim() ? warnDoux : "transparent", border: `1px solid ${loanName.trim() ? warn : bdr}`, color: loanName.trim() ? warn : mut, borderRadius: "var(--r-sm)", fontSize: "var(--t-petit)", fontWeight: 600, cursor: loanName.trim() ? "pointer" : "default" }}>Prêter</button>
                   </div>
                   {/* Facultatif : sans date, le seuil de 30 jours reste le repli. */}
                   <label style={{ display: "flex", gap: 6, alignItems: "center", marginTop: 6 }}>
-                    <span style={{ color: mut, fontSize: 11, flexShrink: 0 }}>À rendre le</span>
+                    <span style={{ color: mut, fontSize: "var(--t-legende)", flexShrink: 0 }}>À rendre le</span>
                     <input type="date" value={loanRetour} onChange={e => setLoanRetour(e.target.value)}
-                      style={{ flex: 1, minWidth: 0, minHeight: "var(--tap-min)", background: "transparent", border: `1px solid ${bdr}`, borderRadius: "var(--r-sm)", color: txt, padding: "0 8px", fontSize: 12, fontFamily: "inherit" }} />
+                      style={{ flex: 1, minWidth: 0, minHeight: "var(--tap-min)", background: "transparent", border: `1px solid ${bdr}`, borderRadius: "var(--r-sm)", color: txt, padding: "0 8px", fontSize: "var(--t-petit)", fontFamily: "inherit" }} />
                   </label>
                 </div>
               ) : (
                 <button onClick={() => setPretOuvert(true)}
-                  style={{ minHeight: "var(--tap-min)", padding: "0 14px", background: "transparent", border: `1px solid ${bdr}`, color: txt, borderRadius: "var(--r-sm)", fontSize: 12, cursor: "pointer" }}>📤 Prêter ce jeu</button>
+                  style={{ minHeight: "var(--tap-min)", padding: "0 14px", background: "transparent", border: `1px solid ${bdr}`, color: txt, borderRadius: "var(--r-sm)", fontSize: "var(--t-petit)", cursor: "pointer" }}>📤 Prêter ce jeu</button>
               )}
             </div>
           </div>
 
           {/* Ce jeu a-t-il déjà voyagé ? La question que « Rendu » effaçait. */}
           {g.pretsPasses?.length > 0 && (
-            <div style={{ color: mut, fontSize: 11, lineHeight: 1.6, padding: "10px 2px 2px" }}>
+            <div style={{ color: mut, fontSize: "var(--t-legende)", lineHeight: 1.6, padding: "10px 2px 2px" }}>
               Déjà prêté {g.pretsPasses.length} fois : {g.pretsPasses.map(e => `${e.a} (${dureeEntreeHistorique(e)} j)`).join(" · ")}
             </div>
           )}
@@ -339,50 +339,50 @@ function GameCard({ g, onEdit, onDelete, onEnrich, autoOpen, onOuverte }) {
           {acc("links", "🔗 Liens & contenu", (
             <>
               <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginBottom: 8 }}>
-                <a href={`https://www.youtube.com/results?search_query=${encodeURIComponent(g.title + " official trailer")}`} target="_blank" rel="noreferrer" style={{ background: dangerDoux, border: `1px solid ${danger}`, color: danger, borderRadius: "var(--r-xs)", padding: "3px 8px", fontSize: 11, textDecoration: "none" }}>▶ Trailer</a>
-                <a href={`https://www.youtube.com/results?search_query=${encodeURIComponent(g.title + " gameplay français")}`} target="_blank" rel="noreferrer" style={{ background: dangerDoux, border: `1px solid ${danger}`, color: danger, borderRadius: "var(--r-xs)", padding: "3px 8px", fontSize: 11, textDecoration: "none" }}>▶ Gameplay FR</a>
-                <a href={`https://www.jeuxvideo.com/recherche/?q=${encodeURIComponent(g.title)}`} target="_blank" rel="noreferrer" style={{ background: accentDoux, border: `1px solid ${accent}`, color: accent, borderRadius: "var(--r-xs)", padding: "3px 8px", fontSize: 11, textDecoration: "none" }}>JVC</a>
-                <a href={`https://www.ign.com/search?q=${encodeURIComponent(g.title)}`} target="_blank" rel="noreferrer" style={{ background: accentDoux, border: `1px solid ${accent}`, color: accent, borderRadius: "var(--r-xs)", padding: "3px 8px", fontSize: 11, textDecoration: "none" }}>IGN</a>
+                <a href={`https://www.youtube.com/results?search_query=${encodeURIComponent(g.title + " official trailer")}`} target="_blank" rel="noreferrer" style={{ background: dangerDoux, border: `1px solid ${danger}`, color: danger, borderRadius: "var(--r-xs)", padding: "3px 8px", fontSize: "var(--t-legende)", textDecoration: "none" }}>▶ Trailer</a>
+                <a href={`https://www.youtube.com/results?search_query=${encodeURIComponent(g.title + " gameplay français")}`} target="_blank" rel="noreferrer" style={{ background: dangerDoux, border: `1px solid ${danger}`, color: danger, borderRadius: "var(--r-xs)", padding: "3px 8px", fontSize: "var(--t-legende)", textDecoration: "none" }}>▶ Gameplay FR</a>
+                <a href={`https://www.jeuxvideo.com/recherche/?q=${encodeURIComponent(g.title)}`} target="_blank" rel="noreferrer" style={{ background: accentDoux, border: `1px solid ${accent}`, color: accent, borderRadius: "var(--r-xs)", padding: "3px 8px", fontSize: "var(--t-legende)", textDecoration: "none" }}>JVC</a>
+                <a href={`https://www.ign.com/search?q=${encodeURIComponent(g.title)}`} target="_blank" rel="noreferrer" style={{ background: accentDoux, border: `1px solid ${accent}`, color: accent, borderRadius: "var(--r-xs)", padding: "3px 8px", fontSize: "var(--t-legende)", textDecoration: "none" }}>IGN</a>
               </div>
               {[0,1,2].map(i => (
                 <label key={i} style={{ display: "block", marginBottom: 6 }}>
-                  <span style={{ display: "block", color: mut, fontSize: 11, marginBottom: 2 }}>{["Soluce","Wiki","Ma playlist YouTube"][i]}</span>
+                  <span style={{ display: "block", color: mut, fontSize: "var(--t-legende)", marginBottom: 2 }}>{["Soluce","Wiki","Ma playlist YouTube"][i]}</span>
                   <input value={g.myLinks[i] || ""} onChange={e => { const l = [...g.myLinks]; l[i] = e.target.value; onEdit(g.id, "myLinks", l); }}
                     placeholder="https://…"
-                    style={{ display: "block", width: "100%", background: "transparent", border: `1px solid ${bdr}`, borderRadius: "var(--r-sm)", color: txt, padding: "4px 8px", fontSize: 11, boxSizing: "border-box" }} />
+                    style={{ display: "block", width: "100%", background: "transparent", border: `1px solid ${bdr}`, borderRadius: "var(--r-sm)", color: txt, padding: "4px 8px", fontSize: "var(--t-legende)", boxSizing: "border-box" }} />
                 </label>
               ))}
-              {g.myLinks.filter(Boolean).map((url, i) => <a key={i} href={url} target="_blank" rel="noreferrer" style={{ display: "block", color: accent, fontSize: 11, marginBottom: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{url}</a>)}
+              {g.myLinks.filter(Boolean).map((url, i) => <a key={i} href={url} target="_blank" rel="noreferrer" style={{ display: "block", color: accent, fontSize: "var(--t-legende)", marginBottom: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{url}</a>)}
             </>
           ))}
 
           {/* Notes (accordéon) */}
           {acc("notes", "📝 Notes", (
             <>
-              <textarea value={g.tips || ""} onChange={e => onEdit(g.id, "tips", e.target.value)} placeholder="Notes & tips perso…" rows={2} style={{ width: "100%", background: "transparent", border: `1px solid ${bdr}`, borderRadius: "var(--r-sm)", color: txt, padding: "6px 8px", fontSize: 11, resize: "vertical", boxSizing: "border-box" }} />
+              <textarea value={g.tips || ""} onChange={e => onEdit(g.id, "tips", e.target.value)} placeholder="Notes & tips perso…" rows={2} style={{ width: "100%", background: "transparent", border: `1px solid ${bdr}`, borderRadius: "var(--r-sm)", color: txt, padding: "6px 8px", fontSize: "var(--t-legende)", resize: "vertical", boxSizing: "border-box" }} />
               {/* La recherche interrogeait déjà `g.tag`, mais rien ne permettait
                   de l'écrire : chercher par tag ne pouvait par construction rien
                   trouver. */}
               <div style={{ display: "flex", gap: 6, alignItems: "center", marginTop: 6 }}>
-                <span style={{ color: mut, fontSize: 11, flexShrink: 0 }}>Tag :</span>
+                <span style={{ color: mut, fontSize: "var(--t-legende)", flexShrink: 0 }}>Tag :</span>
                 <input value={g.tag || ""} onChange={e => onEdit(g.id, "tag", e.target.value)}
                   placeholder="coop, à revendre, prêt à Paul…"
                   aria-label="Tag libre, utilisable dans la recherche"
-                  style={{ flex: 1, minWidth: 0, minHeight: "var(--tap-min)", background: "transparent", border: `1px solid ${bdr}`, borderRadius: "var(--r-sm)", color: txt, padding: "2px 8px", fontSize: 11 }} />
+                  style={{ flex: 1, minWidth: 0, minHeight: "var(--tap-min)", background: "transparent", border: `1px solid ${bdr}`, borderRadius: "var(--r-sm)", color: txt, padding: "2px 8px", fontSize: "var(--t-legende)" }} />
               </div>
             </>
           ))}
           {/* Re-association RAWG */}
           {rawgOpen && (
             <Sheet title="Ré-associer depuis RAWG" onClose={() => setRawgOpen(false)}>
-              <input value={rawgQ} onChange={e => rawgQuery(e.target.value)} placeholder="Titre du jeu…" autoFocus style={{ width: "100%", boxSizing: "border-box", background: "transparent", border: `1px solid ${bdr}`, borderRadius: "var(--r-sm)", color: txt, padding: "6px 8px", fontSize: 12 }} />
-              {rawgBusy && <div style={{ color: accent, fontSize: 11, marginTop: 4 }}>Récupération & traduction…</div>}
+              <input value={rawgQ} onChange={e => rawgQuery(e.target.value)} placeholder="Titre du jeu…" autoFocus style={{ width: "100%", boxSizing: "border-box", background: "transparent", border: `1px solid ${bdr}`, borderRadius: "var(--r-sm)", color: txt, padding: "6px 8px", fontSize: "var(--t-petit)" }} />
+              {rawgBusy && <div style={{ color: accent, fontSize: "var(--t-legende)", marginTop: 4 }}>Récupération & traduction…</div>}
               {rawgSugg.length > 0 && !rawgBusy && (
                 <div style={{ marginTop: 6, background: card, border: `1px solid ${bdr}`, borderRadius: "var(--r-sm)", maxHeight: 300, overflowY: "auto", boxShadow: "0 8px 24px #0008" }}>
                   {rawgSugg.map(s => (
                     <div key={s.id} className="gl-row" onClick={() => rawgPick(s)} style={{ display: "flex", gap: 8, padding: "7px 9px", cursor: "pointer", borderBottom: `1px solid ${bdr}`, alignItems: "center" }}>
                       {s.background_image && <img src={s.background_image} alt="" style={{ width: 34, height: 51, minWidth: 34, objectFit: "cover", borderRadius: "var(--r-xs)" }} />}
-                      <div style={{ minWidth: 0 }}><div style={{ color: txt, fontSize: 12, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.name}</div><div style={{ color: mut, fontSize: 11 }}>{s.released}{s.metacritic ? ` · MC ${s.metacritic}` : ""}</div></div>
+                      <div style={{ minWidth: 0 }}><div style={{ color: txt, fontSize: "var(--t-petit)", fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.name}</div><div style={{ color: mut, fontSize: "var(--t-legende)" }}>{s.released}{s.metacritic ? ` · MC ${s.metacritic}` : ""}</div></div>
                     </div>
                   ))}
                 </div>
@@ -392,30 +392,30 @@ function GameCard({ g, onEdit, onDelete, onEnrich, autoOpen, onOuverte }) {
           {/* Titre français via Wikipédia FR */}
           {wikiOpen && (
             <Sheet title="Titre français (Wikipédia)" onClose={() => setWikiOpen(false)}>
-              <input value={wikiQ} onChange={e => wikiQuery(e.target.value)} placeholder="Titre du jeu…" autoFocus style={{ width: "100%", boxSizing: "border-box", background: "transparent", border: `1px solid ${bdr}`, borderRadius: "var(--r-sm)", color: txt, padding: "6px 8px", fontSize: 12 }} />
-              {wikiBusy && <div style={{ color: accent, fontSize: 11, marginTop: 4 }}>Recherche…</div>}
+              <input value={wikiQ} onChange={e => wikiQuery(e.target.value)} placeholder="Titre du jeu…" autoFocus style={{ width: "100%", boxSizing: "border-box", background: "transparent", border: `1px solid ${bdr}`, borderRadius: "var(--r-sm)", color: txt, padding: "6px 8px", fontSize: "var(--t-petit)" }} />
+              {wikiBusy && <div style={{ color: accent, fontSize: "var(--t-legende)", marginTop: 4 }}>Recherche…</div>}
               {!wikiBusy && wikiSugg.length > 0 && (
                 <div style={{ marginTop: 6, background: card, border: `1px solid ${bdr}`, borderRadius: "var(--r-sm)", maxHeight: 300, overflowY: "auto", boxShadow: "0 8px 24px #0008" }}>
                   {wikiSugg.map((s, i) => (
                     <div key={i} className="gl-row" style={{ display: "flex", gap: 8, padding: "7px 9px", borderBottom: `1px solid ${bdr}`, alignItems: "center" }}>
-                      <div onClick={() => wikiPick(s.title)} style={{ flex: 1, minWidth: 0, cursor: "pointer", color: txt, fontSize: 12, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.title}</div>
-                      {s.url && <a href={s.url} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()} title="Voir la page Wikipédia" style={{ color: accent, fontSize: 11, textDecoration: "none", flexShrink: 0 }}>↗ page</a>}
+                      <div onClick={() => wikiPick(s.title)} style={{ flex: 1, minWidth: 0, cursor: "pointer", color: txt, fontSize: "var(--t-petit)", fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.title}</div>
+                      {s.url && <a href={s.url} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()} title="Voir la page Wikipédia" style={{ color: accent, fontSize: "var(--t-legende)", textDecoration: "none", flexShrink: 0 }}>↗ page</a>}
                     </div>
                   ))}
                 </div>
               )}
-              {!wikiBusy && wikiDone && wikiSugg.length === 0 && !wikiPicked && <div style={{ color: mut, fontSize: 11, marginTop: 6 }}>Aucun titre français trouvé</div>}
+              {!wikiBusy && wikiDone && wikiSugg.length === 0 && !wikiPicked && <div style={{ color: mut, fontSize: "var(--t-legende)", marginTop: 6 }}>Aucun titre français trouvé</div>}
 
-              {wikiFetching && <div style={{ color: accent, fontSize: 11, marginTop: 8 }}>Chargement de la fiche Wikipédia…</div>}
+              {wikiFetching && <div style={{ color: accent, fontSize: "var(--t-legende)", marginTop: 8 }}>Chargement de la fiche Wikipédia…</div>}
 
               {/* Résumé Wikipédia */}
               {wikiExtract && (
                 <div style={{ marginTop: 10, borderTop: `1px solid ${bdr}`, paddingTop: 8 }}>
-                  <div style={{ color: txt, fontSize: 11, fontWeight: 600, marginBottom: 4 }}>Résumé Wikipédia</div>
-                  <div style={{ color: mut, fontSize: 11, fontStyle: "italic", lineHeight: 1.4, maxHeight: 96, overflowY: "auto", marginBottom: 6 }}>{wikiExtract}</div>
+                  <div style={{ color: txt, fontSize: "var(--t-legende)", fontWeight: 600, marginBottom: 4 }}>Résumé Wikipédia</div>
+                  <div style={{ color: mut, fontSize: "var(--t-legende)", fontStyle: "italic", lineHeight: 1.4, maxHeight: 96, overflowY: "auto", marginBottom: 6 }}>{wikiExtract}</div>
                   <div style={{ display: "flex", gap: "var(--ecart-tap)", flexWrap: "wrap" }}>
-                    <button onClick={() => { onEdit(g.id, "style", wikiExtract); setWikiExtract(null); }} style={{ background: okDoux, border: `1px solid ${ok}`, color: ok, borderRadius: "var(--r-sm)", padding: "0 10px", minHeight: "var(--tap-min)", fontSize: 11, cursor: "pointer" }}>Utiliser ce résumé</button>
-                    <button onClick={() => setWikiExtract(null)} style={{ background: "transparent", border: `1px solid ${bdr}`, color: mut, borderRadius: "var(--r-sm)", padding: "0 10px", minHeight: "var(--tap-min)", fontSize: 11, cursor: "pointer" }}>Garder la description actuelle</button>
+                    <button onClick={() => { onEdit(g.id, "style", wikiExtract); setWikiExtract(null); }} style={{ background: okDoux, border: `1px solid ${ok}`, color: ok, borderRadius: "var(--r-sm)", padding: "0 10px", minHeight: "var(--tap-min)", fontSize: "var(--t-legende)", cursor: "pointer" }}>Utiliser ce résumé</button>
+                    <button onClick={() => setWikiExtract(null)} style={{ background: "transparent", border: `1px solid ${bdr}`, color: mut, borderRadius: "var(--r-sm)", padding: "0 10px", minHeight: "var(--tap-min)", fontSize: "var(--t-legende)", cursor: "pointer" }}>Garder la description actuelle</button>
                   </div>
                 </div>
               )}
@@ -423,11 +423,11 @@ function GameCard({ g, onEdit, onDelete, onEnrich, autoOpen, onOuverte }) {
               {/* Jaquette Wikipédia */}
               {wikiImage && (
                 <div style={{ marginTop: 10, borderTop: `1px solid ${bdr}`, paddingTop: 8 }}>
-                  <div style={{ color: txt, fontSize: 11, fontWeight: 600, marginBottom: 4 }}>Jaquette Wikipédia</div>
+                  <div style={{ color: txt, fontSize: "var(--t-legende)", fontWeight: 600, marginBottom: 4 }}>Jaquette Wikipédia</div>
                   <img src={wikiImage} alt="" style={{ maxWidth: 120, maxHeight: 160, objectFit: "contain", borderRadius: "var(--r-sm)", border: `1px solid ${bdr}`, display: "block", marginBottom: 6 }} />
                   <div style={{ display: "flex", gap: "var(--ecart-tap)", flexWrap: "wrap" }}>
-                    <button onClick={() => { onEdit(g.id, "cover", wikiImage); setWikiImage(null); }} style={{ background: okDoux, border: `1px solid ${ok}`, color: ok, borderRadius: "var(--r-sm)", padding: "0 10px", minHeight: "var(--tap-min)", fontSize: 11, cursor: "pointer" }}>Utiliser cette jaquette</button>
-                    <button onClick={() => setWikiImage(null)} style={{ background: "transparent", border: `1px solid ${bdr}`, color: mut, borderRadius: "var(--r-sm)", padding: "0 10px", minHeight: "var(--tap-min)", fontSize: 11, cursor: "pointer" }}>Garder la jaquette actuelle</button>
+                    <button onClick={() => { onEdit(g.id, "cover", wikiImage); setWikiImage(null); }} style={{ background: okDoux, border: `1px solid ${ok}`, color: ok, borderRadius: "var(--r-sm)", padding: "0 10px", minHeight: "var(--tap-min)", fontSize: "var(--t-legende)", cursor: "pointer" }}>Utiliser cette jaquette</button>
+                    <button onClick={() => setWikiImage(null)} style={{ background: "transparent", border: `1px solid ${bdr}`, color: mut, borderRadius: "var(--r-sm)", padding: "0 10px", minHeight: "var(--tap-min)", fontSize: "var(--t-legende)", cursor: "pointer" }}>Garder la jaquette actuelle</button>
                   </div>
                 </div>
               )}
@@ -435,11 +435,11 @@ function GameCard({ g, onEdit, onDelete, onEnrich, autoOpen, onOuverte }) {
               {/* Infos Wikidata */}
               {wikiInfo && (
                 <div style={{ marginTop: 10, borderTop: `1px solid ${bdr}`, paddingTop: 8 }}>
-                  <div style={{ color: txt, fontSize: 11, fontWeight: 600, marginBottom: 4 }}>ℹ️ Infos (Wikidata)</div>
+                  <div style={{ color: txt, fontSize: "var(--t-legende)", fontWeight: 600, marginBottom: 4 }}>ℹ️ Infos (Wikidata)</div>
                   <div style={{ marginBottom: 6 }}><InfoboxView info={wikiInfo} /></div>
                   <div style={{ display: "flex", gap: "var(--ecart-tap)", flexWrap: "wrap" }}>
-                    <button onClick={() => { onEdit(g.id, "infobox", wikiInfo); setWikiInfo(null); }} style={{ background: okDoux, border: `1px solid ${ok}`, color: ok, borderRadius: "var(--r-sm)", padding: "0 10px", minHeight: "var(--tap-min)", fontSize: 11, cursor: "pointer" }}>Utiliser ces infos</button>
-                    <button onClick={() => setWikiInfo(null)} style={{ background: "transparent", border: `1px solid ${bdr}`, color: mut, borderRadius: "var(--r-sm)", padding: "0 10px", minHeight: "var(--tap-min)", fontSize: 11, cursor: "pointer" }}>Ignorer</button>
+                    <button onClick={() => { onEdit(g.id, "infobox", wikiInfo); setWikiInfo(null); }} style={{ background: okDoux, border: `1px solid ${ok}`, color: ok, borderRadius: "var(--r-sm)", padding: "0 10px", minHeight: "var(--tap-min)", fontSize: "var(--t-legende)", cursor: "pointer" }}>Utiliser ces infos</button>
+                    <button onClick={() => setWikiInfo(null)} style={{ background: "transparent", border: `1px solid ${bdr}`, color: mut, borderRadius: "var(--r-sm)", padding: "0 10px", minHeight: "var(--tap-min)", fontSize: "var(--t-legende)", cursor: "pointer" }}>Ignorer</button>
                   </div>
                 </div>
               )}
@@ -448,11 +448,11 @@ function GameCard({ g, onEdit, onDelete, onEnrich, autoOpen, onOuverte }) {
           {/* Jaquettes SteamGridDB */}
           {sgdbOpen && (
             <Sheet title="Choisir une jaquette" onClose={() => setSgdbOpen(false)}>
-              <input value={sgdbQ} onChange={e => sgdbQuery(e.target.value)} placeholder="Titre du jeu…" autoFocus style={{ width: "100%", boxSizing: "border-box", background: "transparent", border: `1px solid ${bdr}`, borderRadius: "var(--r-sm)", color: txt, padding: "6px 8px", fontSize: 12 }} />
-              {sgdbBusy && <div style={{ color: accent, fontSize: 11, marginTop: 6 }}>Recherche des jaquettes…</div>}
+              <input value={sgdbQ} onChange={e => sgdbQuery(e.target.value)} placeholder="Titre du jeu…" autoFocus style={{ width: "100%", boxSizing: "border-box", background: "transparent", border: `1px solid ${bdr}`, borderRadius: "var(--r-sm)", color: txt, padding: "6px 8px", fontSize: "var(--t-petit)" }} />
+              {sgdbBusy && <div style={{ color: accent, fontSize: "var(--t-legende)", marginTop: 6 }}>Recherche des jaquettes…</div>}
               {!sgdbBusy && sgdbGridsList.length > 0 && (
                 <>
-                  {sgdbMatch && <div style={{ color: mut, fontSize: 11, marginTop: 6 }}>Trouvé : <span style={{ color: txt, fontWeight: 600 }}>{sgdbMatch}</span></div>}
+                  {sgdbMatch && <div style={{ color: mut, fontSize: "var(--t-legende)", marginTop: 6 }}>Trouvé : <span style={{ color: txt, fontWeight: 600 }}>{sgdbMatch}</span></div>}
                   <div style={{ marginTop: 8, display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 6, maxHeight: 320, overflowY: "auto" }}>
                     {sgdbGridsList.map((grid, i) => (
                       <img key={i} className="gl-thumb" src={grid.thumb} alt="" loading="lazy" onClick={() => sgdbPick(grid.url)} title="Utiliser cette jaquette"
@@ -461,7 +461,7 @@ function GameCard({ g, onEdit, onDelete, onEnrich, autoOpen, onOuverte }) {
                   </div>
                 </>
               )}
-              {!sgdbBusy && sgdbDone && sgdbGridsList.length === 0 && <div style={{ color: mut, fontSize: 11, marginTop: 6 }}>Aucune jaquette trouvée sur SteamGridDB</div>}
+              {!sgdbBusy && sgdbDone && sgdbGridsList.length === 0 && <div style={{ color: mut, fontSize: "var(--t-legende)", marginTop: 6 }}>Aucune jaquette trouvée sur SteamGridDB</div>}
             </Sheet>
           )}
           {/* Outils. « Ajouté le » était orphelin en bas à gauche, calé contre
@@ -472,11 +472,11 @@ function GameCard({ g, onEdit, onDelete, onEnrich, autoOpen, onOuverte }) {
               un jeu qu'une fois. */}
           <div style={{ display: "flex", gap: 8, alignItems: "center", paddingTop: 12, borderTop: `1px solid ${bdr}` }}>
             <button onClick={() => setSourcesOuvertes(o => !o)}
-              style={{ minHeight: "var(--tap-min)", padding: "0 14px", background: sourcesOuvertes ? accentDoux : "transparent", border: `1px solid ${sourcesOuvertes ? accent : bdr}`, color: sourcesOuvertes ? accent : mut, borderRadius: "var(--r-sm)", fontSize: 12, cursor: "pointer" }}>
+              style={{ minHeight: "var(--tap-min)", padding: "0 14px", background: sourcesOuvertes ? accentDoux : "transparent", border: `1px solid ${sourcesOuvertes ? accent : bdr}`, color: sourcesOuvertes ? accent : mut, borderRadius: "var(--r-sm)", fontSize: "var(--t-petit)", cursor: "pointer" }}>
               ⋯ Modifier la fiche
             </button>
             <button onClick={() => onDelete(g)}
-              style={{ marginLeft: "auto", minHeight: "var(--tap-min)", padding: "0 10px", background: "transparent", border: "none", color: danger, fontSize: 12, cursor: "pointer", opacity: 0.85 }}>
+              style={{ marginLeft: "auto", minHeight: "var(--tap-min)", padding: "0 10px", background: "transparent", border: "none", color: danger, fontSize: "var(--t-petit)", cursor: "pointer", opacity: 0.85 }}>
               Supprimer
             </button>
           </div>
@@ -532,7 +532,7 @@ function GameCard({ g, onEdit, onDelete, onEnrich, autoOpen, onOuverte }) {
                 </div>
               ))}
 
-              <div style={{ color: mut, fontSize: 11, fontWeight: 600, margin: "14px 0 8px", paddingTop: 10, borderTop: `1px solid ${bdr}` }}>Fiche Wikidata</div>
+              <div style={{ color: mut, fontSize: "var(--t-legende)", fontWeight: 600, margin: "14px 0 8px", paddingTop: 10, borderTop: `1px solid ${bdr}` }}>Fiche Wikidata</div>
               {ligneEdition("Développeur", "developers", <input value={brouillon.developers} onChange={e => champ("developers", e.target.value)} style={champStyle("developers")} />, "séparés par des virgules")}
               {ligneEdition("Éditeur", "publishers", <input value={brouillon.publishers} onChange={e => champ("publishers", e.target.value)} style={champStyle("publishers")} />, "séparés par des virgules")}
               {ligneEdition("Sorties", "releases", <textarea value={brouillon.releases} onChange={e => champ("releases", e.target.value)} rows={3} placeholder={"2020-11-10 (Xbox Series X)"} style={{ ...champStyle("releases"), resize: "vertical" }} />, "une par ligne")}
@@ -542,14 +542,14 @@ function GameCard({ g, onEdit, onDelete, onEnrich, autoOpen, onOuverte }) {
               {ligneEdition("Épisode suivant", "followedBy", <input value={brouillon.followedBy} onChange={e => champ("followedBy", e.target.value)} style={champStyle("followedBy")} />)}
 
               <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
-                <button onClick={enregistrer} style={{ minHeight: "var(--tap)", padding: "0 16px", background: accentFond, border: "1px solid transparent", color: "#fff", borderRadius: "var(--r-sm)", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>Enregistrer</button>
-                <button onClick={fermerEdition} style={{ minHeight: "var(--tap)", padding: "0 14px", background: "transparent", border: `1px solid ${bdr}`, color: mut, borderRadius: "var(--r-sm)", fontSize: 12, cursor: "pointer" }}>Annuler</button>
+                <button onClick={enregistrer} style={{ minHeight: "var(--tap)", padding: "0 16px", background: accentFond, border: "1px solid transparent", color: "#fff", borderRadius: "var(--r-sm)", fontSize: "var(--t-petit)", fontWeight: 600, cursor: "pointer" }}>Enregistrer</button>
+                <button onClick={fermerEdition} style={{ minHeight: "var(--tap)", padding: "0 14px", background: "transparent", border: `1px solid ${bdr}`, color: mut, borderRadius: "var(--r-sm)", fontSize: "var(--t-petit)", cursor: "pointer" }}>Annuler</button>
               </div>
               {/* Le champ fautif peut être remonté hors de l'écran au moment
                   où on appuie sur Enregistrer : sans ce rappel, le bouton
                   paraît sans effet. */}
               {Object.keys(erreurs).length > 0 && (
-                <div role="alert" style={{ color: danger, fontSize: 11, marginTop: 8 }}>⚠️ Rien n'a été enregistré : {Object.keys(erreurs).length} champ{Object.keys(erreurs).length > 1 ? "s sont signalés" : " est signalé"} plus haut, avec l'explication sous chacun.</div>
+                <div role="alert" style={{ color: danger, fontSize: "var(--t-legende)", marginTop: 8 }}>⚠️ Rien n'a été enregistré : {Object.keys(erreurs).length} champ{Object.keys(erreurs).length > 1 ? "s sont signalés" : " est signalé"} plus haut, avec l'explication sous chacun.</div>
               )}
             </Sheet>
           )}

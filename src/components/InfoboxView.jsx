@@ -31,7 +31,7 @@ export default function InfoboxView({ info }) {
   return (
     <dl style={{ margin: 0, borderTop: `1px solid ${bdr}` }}>
       {lignes.map(([label, valeur]) => (
-        <div key={label} style={{ display: "flex", gap: 10, padding: "7px 0", borderBottom: `1px solid ${bdr}`, fontSize: 12 }}>
+        <div key={label} style={{ display: "flex", gap: 10, padding: "7px 0", borderBottom: `1px solid ${bdr}`, fontSize: "var(--t-petit)" }}>
           <dt style={{ color: mut, flex: "0 0 92px" }}>{label}</dt>
           <dd style={{ color: txt, flex: 1, minWidth: 0, margin: 0, lineHeight: 1.4 }}>{valeur}</dd>
         </div>

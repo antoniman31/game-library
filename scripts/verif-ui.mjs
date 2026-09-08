@@ -10,7 +10,7 @@
 // Ce script ouvre l'application construite, à la largeur de deux téléphones
 // courants, dans les deux thèmes, et échoue s'il trouve :
 //   - une cible interactive sous 44 × 24 px (Apple HIG, WCAG 2.5.5) ;
-//   - un texte sous 11 px ;
+//   - un texte sous 12 px ;
 //   - un champ de saisie sous 16 px (sous quoi Safari iOS zoome tout seul) ;
 //   - un débordement horizontal de la page ;
 //   - une erreur JavaScript.
@@ -30,7 +30,7 @@ import { chromium } from "playwright";
 const URL = process.env.URL || "http://localhost:4173/game-library/";
 const PLANCHER_HAUTEUR = 44;   // HIG, WCAG 2.5.5
 const PLANCHER_LARGEUR = 24;   // WCAG 2.5.8, pour les commandes en ligne
-const PLANCHER_TEXTE = 11;
+const PLANCHER_TEXTE = 12;   // plancher d'une pastille ou d'un horodatage
 const PLANCHER_CHAMP = 16;     // au-dessous, Safari iOS zoome à la prise de focus
 
 const ECRANS = [[360, "dark"], [360, "light"], [412, "dark"]];
@@ -51,7 +51,7 @@ const mesurer = () => ({
   textes: [...new Set([...document.querySelectorAll("*")]
     .filter(el => !el.children.length && el.textContent.trim())
     .map(el => [parseFloat(getComputedStyle(el).fontSize), el.textContent.trim().slice(0, 24)])
-    .filter(([t]) => t < 11)
+    .filter(([t]) => t < 12)
     .map(([t, c]) => `${Math.round(t)}px — ${c}`))],
   champs: [...new Set([...document.querySelectorAll("input, textarea, select")]
     .map(el => parseFloat(getComputedStyle(el).fontSize))

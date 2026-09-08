@@ -70,16 +70,16 @@ function ImportModal({ games, onImportGames, onClose }) {
   return (
     <div style={{ position: "fixed", inset: 0, background: "#000b", zIndex: 300, display: "flex", alignItems: "flex-end" }} onClick={importing ? undefined : onClose}>
       <div style={{ background: card, border: `1px solid ${bdr}`, borderRadius: "16px 16px 0 0", padding: "20px 20px calc(20px + var(--safe-bottom))", width: "100%", maxWidth: 500, margin: "0 auto", maxHeight: "85vh", display: "flex", flexDirection: "column" }} onClick={e => e.stopPropagation()}>
-        <div style={{ fontWeight: 700, fontSize: 15, color: txt, marginBottom: 4 }}>🎮 Importer ma bibliothèque Xbox</div>
-        {loading && <div style={{ color: accent, fontSize: 12, padding: "16px 0" }}>Récupération de l'historique Xbox…</div>}
+        <div style={{ fontWeight: 700, fontSize: "var(--t-titre)", color: txt, marginBottom: 4 }}>🎮 Importer ma bibliothèque Xbox</div>
+        {loading && <div style={{ color: accent, fontSize: "var(--t-petit)", padding: "16px 0" }}>Récupération de l'historique Xbox…</div>}
 
         {!loading && list && (
           <>
-            <div style={{ color: mut, fontSize: 11, marginBottom: 10 }}>
+            <div style={{ color: mut, fontSize: "var(--t-legende)", marginBottom: 10 }}>
               {newOnes.length} nouveau(x) · {existingCount} déjà présent(s) · {list.length} jeux Xbox détectés
             </div>
             {newOnes.length > 0 && (
-              <button onClick={toggleAll} disabled={importing} style={{ alignSelf: "flex-start", background: "transparent", border: `1px solid ${bdr}`, color: mut, borderRadius: "var(--r-xs)", padding: "3px 8px", fontSize: 11, cursor: "pointer", marginBottom: 8 }}>
+              <button onClick={toggleAll} disabled={importing} style={{ alignSelf: "flex-start", background: "transparent", border: `1px solid ${bdr}`, color: mut, borderRadius: "var(--r-xs)", padding: "3px 8px", fontSize: "var(--t-legende)", cursor: "pointer", marginBottom: 8 }}>
                 {allChecked ? "Tout décocher" : "Tout cocher"}
               </button>
             )}
@@ -89,27 +89,27 @@ function ImportModal({ games, onImportGames, onClose }) {
                   <input type="checkbox" disabled={!t.isNew || importing} checked={!!checked[t.name]} onChange={e => setChecked(c => ({ ...c, [t.name]: e.target.checked }))} style={{ accentColor: accent }} />
                   {t.image && <img src={t.image} alt="" style={{ width: 30, height: 45, minWidth: 30, objectFit: "cover", borderRadius: "var(--r-xs)" }} />}
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ color: txt, fontSize: 12, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.name}</div>
-                    <div style={{ color: mut, fontSize: 11 }}>{t.devices.join(", ")}</div>
+                    <div style={{ color: txt, fontSize: "var(--t-petit)", fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.name}</div>
+                    <div style={{ color: mut, fontSize: "var(--t-legende)" }}>{t.devices.join(", ")}</div>
                   </div>
-                  <span style={{ fontSize: 11, color: t.isNew ? ok : mut, border: `1px solid ${t.isNew ? ok : bdr}`, borderRadius: "var(--r-xs)", padding: "1px 5px", whiteSpace: "nowrap" }}>{t.isNew ? "Nouveau" : "Déjà présent"}</span>
+                  <span style={{ fontSize: "var(--t-legende)", color: t.isNew ? ok : mut, border: `1px solid ${t.isNew ? ok : bdr}`, borderRadius: "var(--r-xs)", padding: "1px 5px", whiteSpace: "nowrap" }}>{t.isNew ? "Nouveau" : "Déjà présent"}</span>
                 </label>
               ))}
             </div>
-            {importing && <div style={{ color: accent, fontSize: 11, marginBottom: 8 }}>Import en cours… {progress}/{selectedCount} (récupération des dates de sortie)</div>}
+            {importing && <div style={{ color: accent, fontSize: "var(--t-legende)", marginBottom: 8 }}>Import en cours… {progress}/{selectedCount} (récupération des dates de sortie)</div>}
             <div style={{ display: "flex", gap: 8 }}>
               {!importing
                 ? <>
-                    <button onClick={onClose} style={{ flex: 1, background: "transparent", border: `1px solid ${bdr}`, color: mut, borderRadius: "var(--r-sm)", padding: 10, cursor: "pointer", fontSize: 13 }}>Annuler</button>
-                    <button onClick={doImport} disabled={selectedCount === 0} style={{ flex: 2, background: accentFond, border: "none", color: "#fff", borderRadius: "var(--r-sm)", padding: 10, cursor: selectedCount ? "pointer" : "default", opacity: selectedCount ? 1 : 0.5, fontSize: 13, fontWeight: 600 }}>Importer {selectedCount} jeu(x)</button>
+                    <button onClick={onClose} style={{ flex: 1, background: "transparent", border: `1px solid ${bdr}`, color: mut, borderRadius: "var(--r-sm)", padding: 10, cursor: "pointer", fontSize: "var(--t-corps)" }}>Annuler</button>
+                    <button onClick={doImport} disabled={selectedCount === 0} style={{ flex: 2, background: accentFond, border: "none", color: "#fff", borderRadius: "var(--r-sm)", padding: 10, cursor: selectedCount ? "pointer" : "default", opacity: selectedCount ? 1 : 0.5, fontSize: "var(--t-corps)", fontWeight: 600 }}>Importer {selectedCount} jeu(x)</button>
                   </>
-                : <button onClick={() => { cancelRef.current = true; }} style={{ flex: 1, background: dangerDoux, border: `1px solid ${danger}`, color: danger, borderRadius: "var(--r-sm)", padding: 10, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>Arrêter l'import</button>}
+                : <button onClick={() => { cancelRef.current = true; }} style={{ flex: 1, background: dangerDoux, border: `1px solid ${danger}`, color: danger, borderRadius: "var(--r-sm)", padding: 10, cursor: "pointer", fontSize: "var(--t-corps)", fontWeight: 600 }}>Arrêter l'import</button>}
             </div>
           </>
         )}
 
         {!loading && list && list.length === 0 && (
-          <div style={{ color: mut, fontSize: 12, padding: "8px 0 16px" }}>Aucun jeu Xbox détecté (ou connexion xbl.io indisponible).</div>
+          <div style={{ color: mut, fontSize: "var(--t-petit)", padding: "8px 0 16px" }}>Aucun jeu Xbox détecté (ou connexion xbl.io indisponible).</div>
         )}
       </div>
     </div>

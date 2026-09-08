@@ -21,10 +21,10 @@ function Action({ icone, titre, detail, onClick, disabled, destructif }) {
         opacity: disabled ? 0.5 : 1,
       }}
     >
-      <span style={{ fontSize: 19, flexShrink: 0 }}>{icone}</span>
+      <span style={{ fontSize: "var(--t-chiffre)", flexShrink: 0 }}>{icone}</span>
       <span style={{ minWidth: 0 }}>
-        <span style={{ display: "block", color: c, fontSize: 13, fontWeight: 600 }}>{titre}</span>
-        {detail && <span style={{ display: "block", color: mut, fontSize: 11, marginTop: 1 }}>{detail}</span>}
+        <span style={{ display: "block", color: c, fontSize: "var(--t-corps)", fontWeight: 600 }}>{titre}</span>
+        {detail && <span style={{ display: "block", color: mut, fontSize: "var(--t-legende)", marginTop: 1 }}>{detail}</span>}
       </span>
     </button>
   );

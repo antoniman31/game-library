@@ -13,8 +13,8 @@ import SousOnglets from "./SousOnglets.jsx";
 // six fois occupe autant de place qu'un vrai contenu et n'en apporte aucun.
 
 const Bloc = ({ titre, children }) => (
-  <div style={{ background: card, border: `1px solid ${bdr}`, borderRadius: "var(--r-md)", padding: 14, marginBottom: 12 }}>
-    <div style={{ color: txt, fontWeight: 600, fontSize: 13, marginBottom: 10 }}>{titre}</div>
+  <div style={{ background: card, border: `1px solid ${bdr}`, borderRadius: "var(--r-md)", padding: 14, marginBottom: "var(--ecart-bloc)" }}>
+    <div style={{ color: txt, fontWeight: 600, fontSize: "var(--t-corps)", marginBottom: 10 }}>{titre}</div>
     {children}
   </div>
 );
@@ -25,8 +25,8 @@ const Bloc = ({ titre, children }) => (
 const Barre = ({ label, valeur, total, couleur = accentFond, suffixe }) => (
   <div style={{ marginBottom: 8 }}>
     <div style={{ display: "flex", justifyContent: "space-between", gap: 10, marginBottom: 3 }}>
-      <span style={{ color: txt, fontSize: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{label}</span>
-      <span style={{ color: mut, fontSize: 11, flexShrink: 0 }}>{suffixe ?? valeur}</span>
+      <span style={{ color: txt, fontSize: "var(--t-petit)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{label}</span>
+      <span style={{ color: mut, fontSize: "var(--t-legende)", flexShrink: 0 }}>{suffixe ?? valeur}</span>
     </div>
     <div style={{ height: 4, background: bdr, borderRadius: "var(--r-xs)" }}>
       <div style={{ width: `${total ? (valeur / total) * 100 : 0}%`, height: "100%", background: couleur, borderRadius: "var(--r-xs)" }} />
@@ -35,11 +35,11 @@ const Barre = ({ label, valeur, total, couleur = accentFond, suffixe }) => (
 );
 
 const Tuiles = ({ items }) => (
-  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 12 }}>
+  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "var(--ecart-tap)", marginBottom: "var(--ecart-bloc)" }}>
     {items.map(([l, v, c]) => (
       <div key={l} style={{ background: card, border: `1px solid ${bdr}`, borderRadius: "var(--r-md)", padding: "10px 12px" }}>
-        <div style={{ color: mut, fontSize: 11, lineHeight: 1.3 }}>{l}</div>
-        <div style={{ color: c, fontSize: 19, fontWeight: 700, marginTop: 2 }}>{v}</div>
+        <div style={{ color: mut, fontSize: "var(--t-legende)", lineHeight: 1.3 }}>{l}</div>
+        <div style={{ color: c, fontSize: "var(--t-chiffre)", fontWeight: 700, marginTop: 2 }}>{v}</div>
       </div>
     ))}
   </div>
@@ -53,9 +53,9 @@ const Histogramme = ({ donnees, couleur = accentFond, etiquette = (c) => c }) =>
     <div style={{ display: "flex", gap: 3, alignItems: "flex-end", height: 70 }}>
       {donnees.map(([cle, n]) => (
         <div key={cle} style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", alignItems: "center", gap: 3 }}>
-          <span style={{ color: mut, fontSize: 11 }}>{n || ""}</span>
+          <span style={{ color: mut, fontSize: "var(--t-legende)" }}>{n || ""}</span>
           <div title={`${cle} : ${n}`} style={{ width: "100%", height: `${Math.max(2, (n / max) * 42)}px`, background: n ? couleur : bdr, borderRadius: "2px 2px 0 0" }} />
-          <span style={{ color: mut, fontSize: 11 }}>{etiquette(cle)}</span>
+          <span style={{ color: mut, fontSize: "var(--t-legende)" }}>{etiquette(cle)}</span>
         </div>
       ))}
     </div>
@@ -73,8 +73,8 @@ const moisCourt = (cle) => cle.slice(5);
 // et le tronquer perdrait précisément l'information qu'on vient lire ici.
 const Ligne = ({ gauche, droite, couleur = mut }) => (
   <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "baseline", padding: "6px 0", borderTop: `1px solid ${bdr}` }}>
-    <span style={{ color: txt, fontSize: 12, minWidth: 0, overflowWrap: "anywhere" }}>{gauche}</span>
-    <span style={{ color: couleur, fontSize: 11, textAlign: "right", minWidth: 0, overflowWrap: "anywhere" }}>{droite}</span>
+    <span style={{ color: txt, fontSize: "var(--t-petit)", minWidth: 0, overflowWrap: "anywhere" }}>{gauche}</span>
+    <span style={{ color: couleur, fontSize: "var(--t-legende)", textAlign: "right", minWidth: 0, overflowWrap: "anywhere" }}>{droite}</span>
   </div>
 );
 
@@ -83,7 +83,7 @@ function Circulation({ games, jour }) {
 
   if (s.total === 0) {
     return (
-      <div style={{ textAlign: "center", color: mut, fontSize: 12, padding: "40px 20px", lineHeight: 1.6 }}>
+      <div style={{ textAlign: "center", color: mut, fontSize: "var(--t-petit)", padding: "40px 20px", lineHeight: 1.6 }}>
         Aucun prêt, ni en cours ni passé.<br />
         Les chiffres apparaîtront au premier jeu confié à quelqu'un.
       </div>
@@ -130,7 +130,7 @@ function Circulation({ games, jour }) {
             <Ligne gauche={`Pire : ${s.ponctualite.pire.titre}`}
               droite={`${s.ponctualite.pire.jours} j de trop · ${s.ponctualite.pire.a}`} couleur={danger} />
           )}
-          <div style={{ color: mut, fontSize: 11, marginTop: 8, lineHeight: 1.4 }}>
+          <div style={{ color: mut, fontSize: "var(--t-legende)", marginTop: 8, lineHeight: 1.4 }}>
             Ne comptent que les prêts pour lesquels une date de retour avait été fixée.
           </div>
         </Bloc>
@@ -148,7 +148,7 @@ function Circulation({ games, jour }) {
 
       <Bloc titre="Rythme des prêts">
         <Histogramme donnees={s.parMois} couleur={warnFond} etiquette={moisCourt} />
-        <div style={{ color: mut, fontSize: 11, marginTop: 8 }}>Prêts commencés, mois par mois, sur un an.</div>
+        <div style={{ color: mut, fontSize: "var(--t-legende)", marginTop: 8 }}>Prêts commencés, mois par mois, sur un an.</div>
       </Bloc>
 
       <Bloc titre="Qui emprunte">
@@ -158,7 +158,7 @@ function Circulation({ games, jour }) {
         ))}
         {/* Emprunter souvent et garder longtemps sont deux travers distincts. */}
         {s.lePlusLent && s.lePlusLent.moyenne > 0 && (
-          <div style={{ color: mut, fontSize: 11, marginTop: 8, paddingTop: 8, borderTop: `1px solid ${bdr}` }}>
+          <div style={{ color: mut, fontSize: "var(--t-legende)", marginTop: 8, paddingTop: 8, borderTop: `1px solid ${bdr}` }}>
             Garde le plus longtemps : <span style={{ color: txt }}>{s.lePlusLent.nom}</span>, {s.lePlusLent.moyenne} j en moyenne.
           </div>
         )}
@@ -213,12 +213,12 @@ function Collection({ games, jour }) {
         {/* Seuls les exemplaires physiques se prêtent : ce partage dit quelle
             part de la collection est concernée par le sujet de l'application. */}
         {s.physique > 0 && (
-          <div style={{ color: mut, fontSize: 11, marginTop: 6, paddingTop: 8, borderTop: `1px solid ${bdr}` }}>
+          <div style={{ color: mut, fontSize: "var(--t-legende)", marginTop: 6, paddingTop: 8, borderTop: `1px solid ${bdr}` }}>
             {Math.round((s.physique / s.total) * 100)} % de la collection est prêtable.
           </div>
         )}
         {s.retrocompatibles.map(([parent, n]) => (
-          <div key={parent} style={{ color: mut, fontSize: 11, marginTop: 4 }}>
+          <div key={parent} style={{ color: mut, fontSize: "var(--t-legende)", marginTop: 4 }}>
             {n} jeu{n > 1 ? "x" : ""} jouable{n > 1 ? "s" : ""} sur {parent}.
           </div>
         ))}
@@ -254,7 +254,7 @@ function Collection({ games, jour }) {
           {s.noteParGenre.map(([g, note, n]) => (
             <Ligne key={`g${g}`} gauche={g} droite={`${note} · ${n} jeux`} />
           ))}
-          <div style={{ color: mut, fontSize: 11, marginTop: 8, lineHeight: 1.4 }}>
+          <div style={{ color: mut, fontSize: "var(--t-legende)", marginTop: 8, lineHeight: 1.4 }}>
             Trois jeux notés au minimum : en dessous, une moyenne ne dit rien.
           </div>
         </Bloc>
@@ -279,7 +279,7 @@ function Collection({ games, jour }) {
           {s.parDecennie.map(([d, n]) => (
             <Barre key={d} label={`années ${d.slice(2)}`} valeur={n} total={s.total} suffixe={`${n}`} />
           ))}
-          <div style={{ color: mut, fontSize: 11, marginTop: 8, lineHeight: 1.4 }}>
+          <div style={{ color: mut, fontSize: "var(--t-legende)", marginTop: 8, lineHeight: 1.4 }}>
             D'après la date de sortie Wikidata, pas la date d'ajout : c'est l'âge du jeu, pas le tien dans la collection.
           </div>
         </Bloc>
@@ -295,7 +295,7 @@ function Collection({ games, jour }) {
               : `${s.delaiAchat.median} j`} />
           <Ligne gauche="Achetés dans les 3 mois" droite={s.delaiAchat.auLancement} couleur={ok} />
           <Ligne gauche="Achetés plus d'un an après" droite={s.delaiAchat.apresUnAn} />
-          <div style={{ color: mut, fontSize: 11, marginTop: 8, lineHeight: 1.4 }}>
+          <div style={{ color: mut, fontSize: "var(--t-legende)", marginTop: 8, lineHeight: 1.4 }}>
             Sur {s.delaiAchat.combien} jeu{s.delaiAchat.combien > 1 ? "x" : ""} dont on connaît la date de sortie.
           </div>
         </Bloc>
@@ -330,7 +330,7 @@ function Collection({ games, jour }) {
             <Ligne key={d.titre} gauche={d.titre} droite={d.plateformes.join(" · ")}
               couleur={d.memePlateforme ? danger : mut} />
           ))}
-          <div style={{ color: mut, fontSize: 11, marginTop: 8, lineHeight: 1.4 }}>
+          <div style={{ color: mut, fontSize: "var(--t-legende)", marginTop: 8, lineHeight: 1.4 }}>
             Deux fiches sur des plateformes différentes, c'est normal. Deux fois la même plateforme, en rouge, est une saisie en double.
           </div>
         </Bloc>
@@ -342,7 +342,7 @@ function Collection({ games, jour }) {
             <Ligne key={m.titre} gauche={m.titre}
               droite={`cité par ${m.depuis[0]}${m.depuis.length > 1 ? ` et ${m.depuis.length - 1} autre${m.depuis.length > 2 ? "s" : ""}` : ""}`} />
           ))}
-          <div style={{ color: mut, fontSize: 11, marginTop: 8, lineHeight: 1.4 }}>
+          <div style={{ color: mut, fontSize: "var(--t-legende)", marginTop: 8, lineHeight: 1.4 }}>
             Des jeux que tes fiches Wikidata désignent comme épisode précédent ou suivant, et que tu n'as pas.
           </div>
         </Bloc>
@@ -383,10 +383,10 @@ export default function StatsView({ games }) {
       <button onClick={() => setCalculLe(Date.now())}
         style={{
           width: "100%", minHeight: "var(--tap)", marginTop: 4, background: "transparent",
-          border: `1px solid ${bdr}`, borderRadius: "var(--r-md)", color: mut, fontSize: 12,
+          border: `1px solid ${bdr}`, borderRadius: "var(--r-md)", color: mut, fontSize: "var(--t-petit)",
           cursor: "pointer", fontFamily: "inherit",
         }}>↻ Recalculer</button>
-      <div style={{ color: mut, fontSize: 11, textAlign: "center", marginTop: 6, lineHeight: 1.5, opacity: 0.8 }}>
+      <div style={{ color: mut, fontSize: "var(--t-legende)", textAlign: "center", marginTop: 6, lineHeight: 1.5, opacity: 0.8 }}>
         Calculé à {new Date(calculLe).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}.
         Les chiffres suivent la bibliothèque en direct ; seuls les jours écoulés se figent.
       </div>

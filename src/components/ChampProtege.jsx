@@ -20,7 +20,7 @@ const ACCENT = accent;
 const bouton = (couleur) => ({
   minHeight: "var(--tap-min)", padding: "0 12px", background: "transparent",
   border: `1px solid ${couleur}`, color: couleur, borderRadius: "var(--r-sm)",
-  fontSize: 11, cursor: "pointer", whiteSpace: "nowrap", fontFamily: "inherit",
+  fontSize: "var(--t-legende)", cursor: "pointer", whiteSpace: "nowrap", fontFamily: "inherit",
 });
 
 export default function ChampProtege({
@@ -42,7 +42,7 @@ export default function ChampProtege({
       style={{
         width: "100%", boxSizing: "border-box", background: bg, minHeight: "var(--tap-min)",
         border: `1px solid ${bdr}`, borderRadius: "var(--r-sm)", color: verrou ? mut : txt,
-        padding: "9px 10px", fontSize: 12,
+        padding: "9px 10px", fontSize: "var(--t-petit)",
         fontFamily: "ui-monospace, monospace", cursor: verrou ? "default" : "text",
       }}
     />
@@ -55,7 +55,7 @@ export default function ChampProtege({
           {champ}
           {/* Dire que c'est verrouillé, sinon le champ passe pour cassé. */}
           {verrou && (
-            <span aria-hidden="true" style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", fontSize: 12, opacity: 0.6 }}>🔒</span>
+            <span aria-hidden="true" style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", fontSize: "var(--t-petit)", opacity: 0.6 }}>🔒</span>
           )}
         </div>
         {actions}
