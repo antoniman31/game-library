@@ -13,7 +13,7 @@ import SousOnglets from "./SousOnglets.jsx";
 // six fois occupe autant de place qu'un vrai contenu et n'en apporte aucun.
 
 const Bloc = ({ titre, children }) => (
-  <div style={{ background: card, border: `1px solid ${bdr}`, borderRadius: "var(--r-md)", padding: 14, marginBottom: 12 }}>
+  <div style={{ background: card, border: `1px solid ${bdr}`, borderRadius: "var(--r-md)", padding: 14, marginBottom: "var(--ecart-bloc)" }}>
     <div style={{ color: txt, fontWeight: 600, fontSize: 13, marginBottom: 10 }}>{titre}</div>
     {children}
   </div>
@@ -35,7 +35,7 @@ const Barre = ({ label, valeur, total, couleur = accentFond, suffixe }) => (
 );
 
 const Tuiles = ({ items }) => (
-  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 12 }}>
+  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "var(--ecart-tap)", marginBottom: "var(--ecart-bloc)" }}>
     {items.map(([l, v, c]) => (
       <div key={l} style={{ background: card, border: `1px solid ${bdr}`, borderRadius: "var(--r-md)", padding: "10px 12px" }}>
         <div style={{ color: mut, fontSize: 11, lineHeight: 1.3 }}>{l}</div>

@@ -83,6 +83,13 @@
   --tap-min: 44px;
   --ecart-tap: 8px;
 
+  /* Écart entre deux blocs. Il valait 12 px — exactement l'écart entre deux
+     champs À L'INTÉRIEUR d'un bloc. Rien ne distinguait donc « ces éléments
+     vont ensemble » de « ces éléments n'ont rien à voir » : le regroupement ne
+     tenait plus qu'au cadre des cartes. La loi de proximité veut un rapport
+     net entre les deux, pas une égalité. */
+  --ecart-bloc: 28px;
+
   /* Échelle de formes. Neuf rayons différents cohabitaient (3, 4, 5, 6, 8, 9,
      10, 12, 16), sans qu'aucun n'ait été décidé contre un autre. Quatre
      suffisent, et deux éléments de même nature se ressemblent enfin. */

@@ -31,7 +31,7 @@ import SousOnglets from "./SousOnglets.jsx";
 const ACCENT = accent;
 
 const Section = ({ titre, aide, children }) => (
-  <section style={{ background: card, border: `1px solid ${bdr}`, borderRadius: "var(--r-md)", padding: 14, marginBottom: 12 }}>
+  <section style={{ background: card, border: `1px solid ${bdr}`, borderRadius: "var(--r-md)", padding: 14, marginBottom: "var(--ecart-bloc)" }}>
     <h2 style={{ color: txt, fontWeight: 600, fontSize: 13, margin: 0 }}>{titre}</h2>
     {aide && <p style={{ color: mut, fontSize: 11, lineHeight: 1.5, margin: "4px 0 0" }}>{aide}</p>}
     <div style={{ marginTop: 12 }}>{children}</div>
