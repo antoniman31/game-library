@@ -90,6 +90,23 @@
      net entre les deux, pas une égalité. */
   --ecart-bloc: 28px;
 
+  /* Échelle typographique, base 16.
+     L'application tournait entre 11 et 13 px : lisible sur la capture d'écran
+     d'un développeur assis, moins dans un canapé à bout de bras. Les
+     référentiels mobiles donnent 16 px pour le texte courant, et c'est le
+     nombre auquel tout le reste se rapporte.
+
+     Cinq rôles, pas cinq tailles choisies au coup par coup : ce que l'écran
+     dit (--t-corps), ce qu'il précise (--t-petit), ce qu'il étiquette
+     (--t-legende), ce qu'il titre (--t-titre) et le chiffre qu'on vient lire
+     (--t-chiffre). La légende ne descend pas sous 12 px, plancher des
+     référentiels pour une pastille ou un horodatage. */
+  --t-legende: 12px;   /* pastilles, dates, mentions */
+  --t-petit: 14px;     /* étiquettes de champ, aides, second niveau */
+  --t-corps: 16px;     /* texte courant, saisie */
+  --t-titre: 20px;     /* titres de section, titre d'une fiche */
+  --t-chiffre: 24px;   /* la valeur d'une tuile de statistique */
+
   /* Échelle de formes. Neuf rayons différents cohabitaient (3, 4, 5, 6, 8, 9,
      10, 12, 16), sans qu'aucun n'ait été décidé contre un autre. Quatre
      suffisent, et deux éléments de même nature se ressemblent enfin. */
@@ -149,6 +166,8 @@ body,
 
 body {
   font-family: 'Inter', 'Segoe UI', sans-serif;
+  font-size: var(--t-corps);
+  line-height: 1.5;
   background: var(--bg);
   color: var(--txt);
   /* Le rebond de fin de liste ferait apparaître une bande de fond derrière
@@ -236,5 +255,19 @@ body {
 input,
 textarea,
 select {
-  font-size: 16px !important;
+  font-size: var(--t-corps) !important;
+}
+
+/* ── État pressé ───────────────────────────────────────────────────────────
+   Un bouton doit cinq états : repos, survol, focus, pressé, désactivé. Les
+   quatre premiers existaient ; le pressé manquait partout. Sur un écran
+   tactile c'est le seul retour immédiat qu'on ait — le doigt cache le bouton,
+   et sans lui on ne sait pas si le toucher a été pris avant que l'écran ne
+   change. D'où un enfoncement, pas une animation : il doit être là au moment
+   du contact, pas 100 ms après. */
+button:not(:disabled):active,
+a:active,
+[role="button"]:active {
+  transform: scale(0.97);
+  filter: brightness(0.93);
 }

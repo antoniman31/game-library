@@ -32,8 +32,8 @@ const ACCENT = accent;
 
 const Section = ({ titre, aide, children }) => (
   <section style={{ background: card, border: `1px solid ${bdr}`, borderRadius: "var(--r-md)", padding: 14, marginBottom: "var(--ecart-bloc)" }}>
-    <h2 style={{ color: txt, fontWeight: 600, fontSize: 13, margin: 0 }}>{titre}</h2>
-    {aide && <p style={{ color: mut, fontSize: 11, lineHeight: 1.5, margin: "4px 0 0" }}>{aide}</p>}
+    <h2 style={{ color: txt, fontWeight: 600, fontSize: "var(--t-corps)", margin: 0 }}>{titre}</h2>
+    {aide && <p style={{ color: mut, fontSize: "var(--t-legende)", lineHeight: 1.5, margin: "4px 0 0" }}>{aide}</p>}
     <div style={{ marginTop: 12 }}>{children}</div>
   </section>
 );
@@ -53,14 +53,19 @@ const STYLES_BOUTON = {
   danger: { background: "transparent", border: `1px solid ${danger}`, color: danger, fontWeight: 600 },
 };
 
-const Bouton = ({ intention = "neutre", pleinePlace, disabled, children, ...reste }) => (
+// `multiligne` : à 16 px de base, « 🌑 Noir profond » ne tient plus sur une
+// ligne dans un tiers de 360 px — le bouton débordait de la page. Trois
+// libellés raccourcis auraient coûté leur sens ; deux lignes ne coûtent rien.
+const Bouton = ({ intention = "neutre", pleinePlace, multiligne, disabled, children, ...reste }) => (
   <button
     disabled={disabled}
     style={{
       ...STYLES_BOUTON[intention],
-      minHeight: "var(--tap)", padding: "0 14px", borderRadius: "var(--r-sm)", fontSize: 12,
+      minHeight: "var(--tap)", padding: multiligne ? "6px 8px" : "0 14px",
+      borderRadius: "var(--r-sm)", fontSize: "var(--t-petit)",
       cursor: disabled ? "default" : "pointer", opacity: disabled ? 0.45 : 1,
-      whiteSpace: "nowrap", flex: pleinePlace ? 1 : "0 0 auto", fontFamily: "inherit",
+      whiteSpace: multiligne ? "normal" : "nowrap", lineHeight: multiligne ? 1.25 : "inherit",
+      flex: pleinePlace ? 1 : "0 0 auto", fontFamily: "inherit",
     }}
     {...reste}
   >{children}</button>
@@ -76,18 +81,18 @@ const Bouton = ({ intention = "neutre", pleinePlace, disabled, children, ...rest
 const EnTeteChamp = ({ nom, lien, quoi }) => (
   <div style={{ marginBottom: 4 }}>
     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "var(--ecart-tap)", minHeight: "var(--tap-min)" }}>
-      <span style={{ color: txt, fontSize: 12, fontWeight: 600, minWidth: 0 }}>{nom}</span>
+      <span style={{ color: txt, fontSize: "var(--t-petit)", fontWeight: 600, minWidth: 0 }}>{nom}</span>
       {lien && (
         <a href={lien} target="_blank" rel="noreferrer"
           style={{
             display: "inline-flex", alignItems: "center", flexShrink: 0,
             minHeight: "var(--tap-min)", padding: "0 10px",
             border: `1px solid ${bdr}`, borderRadius: "var(--r-sm)",
-            color: ACCENT, fontSize: 11, textDecoration: "none",
+            color: ACCENT, fontSize: "var(--t-legende)", textDecoration: "none",
           }}>obtenir ↗</a>
       )}
     </div>
-    {quoi && <span style={{ display: "block", color: mut, fontSize: 11, lineHeight: 1.4 }}>{quoi}</span>}
+    {quoi && <span style={{ display: "block", color: mut, fontSize: "var(--t-legende)", lineHeight: 1.4 }}>{quoi}</span>}
   </div>
 );
 
@@ -137,7 +142,7 @@ export default function SettingsView({
       <Section titre="Apparence" aide="« Automatique » suit le réglage clair/sombre du téléphone, y compris quand il bascule tout seul le soir. Le sombre est un vrai noir : sur une dalle OLED, un pixel noir est un pixel éteint.">
         <div style={{ display: "flex", gap: "var(--ecart-tap)" }}>
           {MODES.map(m => (
-            <Bouton key={m} pleinePlace aria-pressed={modeTheme === m}
+            <Bouton key={m} pleinePlace multiligne aria-pressed={modeTheme === m}
               intention={modeTheme === m ? "selection" : "neutre"}
               onClick={() => setModeTheme(m)}>
               {ICONES[m]} {LIBELLES[m]}
@@ -198,7 +203,7 @@ export default function SettingsView({
             </div>
 
             {syncEtat && (
-              <div role="status" style={{ marginTop: 10, fontSize: 11, lineHeight: 1.4, color: syncEtat.type === "ko" ? danger : syncEtat.type === "ok" ? ok : mut }}>
+              <div role="status" style={{ marginTop: 10, fontSize: "var(--t-legende)", lineHeight: 1.4, color: syncEtat.type === "ko" ? danger : syncEtat.type === "ok" ? ok : mut }}>
                 {syncEtat.type === "ok" ? "✓ " : syncEtat.type === "ko" ? "✕ " : "⏳ "}{syncEtat.texte}
               </div>
             )}
@@ -210,8 +215,8 @@ export default function SettingsView({
             onChange={e => majSync({ ...sync, avecCles: e.target.checked })}
             style={{ marginTop: 2, width: 16, height: 16, accentColor: ACCENT, flexShrink: 0 }} />
           <span>
-            <span style={{ color: txt, fontSize: 12, fontWeight: 600 }}>Inclure les clés des services</span>
-            <span style={{ display: "block", color: mut, fontSize: 11, lineHeight: 1.5, marginTop: 2 }}>
+            <span style={{ color: txt, fontSize: "var(--t-petit)", fontWeight: 600 }}>Inclure les clés des services</span>
+            <span style={{ display: "block", color: mut, fontSize: "var(--t-legende)", lineHeight: 1.5, marginTop: 2 }}>
               Un appareil neuf devient utilisable dès la saisie du code, sans aller rechercher les clés
               sur trois sites. En échange, elles sont stockées en clair sur ton relais et le code de
               synchronisation devient le seul verrou qui les protège — ne le partage plus en croyant
@@ -222,7 +227,7 @@ export default function SettingsView({
         </label>
 
         {sync.majLe && syncEtat?.type !== "…" && (
-              <div style={{ color: mut, fontSize: 11, marginTop: 6 }}>
+              <div style={{ color: mut, fontSize: "var(--t-legende)", marginTop: 6 }}>
                 Dernière synchronisation : {new Date(sync.majLe).toLocaleString("fr-FR")}
               </div>
             )}
@@ -252,7 +257,7 @@ export default function SettingsView({
                 actions={
                   <>
                     <Bouton disabled={!keys[id]} onClick={() => testerCle(id)}>Tester</Bouton>
-                    <span aria-live="polite" style={{ fontSize: 15, width: 18, textAlign: "center", flexShrink: 0 }}>
+                    <span aria-live="polite" style={{ fontSize: "var(--t-titre)", width: 18, textAlign: "center", flexShrink: 0 }}>
                       {etatCles[id] === "ok" ? "✅" : etatCles[id] === "ko" ? "❌" : etatCles[id] === "…" ? "⏳" : ""}
                     </span>
                   </>
@@ -276,7 +281,7 @@ export default function SettingsView({
           <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
             <Bouton intention="principal" onClick={enregistrerCles}>Enregistrer</Bouton>
             <Bouton onClick={() => setVisible(v => !v)}>{visible ? "Masquer" : "Afficher"}</Bouton>
-            {enregistre && <span role="status" style={{ color: ok, fontSize: 11 }}>Enregistré ✓</span>}
+            {enregistre && <span role="status" style={{ color: ok, fontSize: "var(--t-legende)" }}>Enregistré ✓</span>}
           </div>
         </Section>
       )}

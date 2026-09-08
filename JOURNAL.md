@@ -344,6 +344,36 @@ Le tout est vérifié dans le navigateur plutôt qu'à la lecture : un script me
 élément interactif de chaque écran, à 360 et 412 px, dans les deux thèmes, et échoue s'il
 trouve une cible sous le plancher, un texte sous 11 px ou un débordement horizontal.
 
+### Phase 14 — Seize pixels
+
+Le corps de texte tournait entre 11 et 13 px. C'est lisible sur la capture
+d'écran d'un développeur assis devant son écran, moins dans un canapé à bout de
+bras — et les référentiels mobiles donnent 16 px pour le texte courant.
+
+Le passage n'est pas un remplacement de nombres : cinq rôles remplacent neuf
+tailles choisies au coup par coup. Ce que l'écran dit (16), ce qu'il précise
+(14), ce qu'il étiquette (12), ce qu'il titre (20), et le chiffre qu'on vient
+lire dans une tuile (24). Rien ne descend sous 12 px.
+
+Le coût est réel et assumé : la liste montre cinq jeux par écran au lieu de
+huit. En échange, la longueur de ligne d'une description passe d'environ 55
+caractères à 40 — dans la fourchette conseillée sur mobile, alors qu'elle en
+sortait.
+
+Deux conséquences ont dû être réglées : « 🌑 Noir profond » ne tenait plus dans
+un tiers de 360 px et faisait déborder la page (le libellé passe sur deux lignes
+plutôt que d'être raccourci, ce qui lui coûterait son sens), et un titre de jeu
+sur deux se coupait dans la liste (« Animal Crossing New… » ne dit pas quel
+épisode c'est : deux lignes au lieu d'une).
+
+Deux règles du cahier des charges restaient par ailleurs non appliquées :
+
+- **L'état pressé n'existait nulle part.** Un bouton doit cinq états ; quatre
+  étaient là. Sur un écran tactile, le pressé est le seul retour immédiat qu'on
+  ait, puisque le doigt cache le bouton.
+- **Les erreurs de champ ne portaient que du rouge.** La couleur seule ne dit
+  rien à qui ne la distingue pas ; un pictogramme la double désormais.
+
 ---
 
 ## 3. Architecture finale
@@ -544,11 +574,6 @@ mesure avec le simple en-tête `X-Authorization` de xbl.io.
   et le pattern VAPID est éprouvé dans un autre projet de l'auteur. Écarté : cela
   suppose un backend qui pousse, donc envoyer la liste des prêts à un serveur pour un
   gain quasi nul.
-- **Corps de texte à 16 px** — les référentiels mobiles donnent 16 px pour le texte
-  courant ; l'application tourne entre 11 et 13. Les champs de saisie sont montés (le
-  zoom d'iOS l'imposait), le reste non : monter tout le corps change la densité de
-  chaque écran, donc le nombre de jeux visibles d'un coup d'œil. C'est un arbitrage de
-  produit, pas une correction.
 - **Navigation en bas d'écran** — les quatre onglets et le bouton « + Ajouter » sont en
   haut, dans la zone que la cartographie du pouce désigne comme la plus difficile à
   atteindre à une main. Une barre basse et un bouton flottant y répondraient ; c'est une

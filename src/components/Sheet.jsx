@@ -88,13 +88,13 @@ export default function Sheet({ title, onClose, children }) {
         {/* La poignée dit d'où vient le panneau et par où il repart. */}
         <div style={{ width: 36, height: 4, borderRadius: "var(--r-xs)", background: bdr, margin: "0 auto 12px" }} />
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-          <div id={titreId} style={{ fontWeight: 700, fontSize: 15, color: txt }}>{title}</div>
+          <div id={titreId} style={{ fontWeight: 700, fontSize: "var(--t-titre)", color: txt }}>{title}</div>
           <button
             onClick={onClose}
             aria-label="Fermer"
             style={{
               background: "transparent", border: `1px solid ${bdr}`, color: txt, borderRadius: "var(--r-sm)",
-              width: "var(--tap)", height: "var(--tap)", fontSize: 15, cursor: "pointer", flexShrink: 0,
+              width: "var(--tap)", height: "var(--tap)", fontSize: "var(--t-titre)", cursor: "pointer", flexShrink: 0,
             }}
           >
             ✕

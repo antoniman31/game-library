@@ -17,7 +17,7 @@ export default function SousOnglets({ options, valeur, onChange }) {
         return (
           <button key={cle} onClick={() => onChange(cle)} aria-pressed={actif}
             style={{
-              flex: 1, minHeight: "var(--tap)", borderRadius: "var(--r-sm)", fontSize: 13,
+              flex: 1, minHeight: "var(--tap)", borderRadius: "var(--r-sm)", fontSize: "var(--t-corps)",
               cursor: "pointer", fontFamily: "inherit", fontWeight: actif ? 600 : 400,
               background: actif ? accentDoux : "transparent",
               border: `1px solid ${actif ? ACCENT : bdr}`,
