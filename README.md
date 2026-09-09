@@ -387,6 +387,23 @@ Sept champs ont été **supprimés** par la migration, pas seulement masqués :
 `progression`. Les garder ferait croire à des fonctions inexistantes, et ils
 voyageaient à chaque écriture et à chaque synchronisation.
 
+**Les genres parlent une seule langue.** Ils viennent de deux endroits qui ne
+s'accordaient pas : la bibliothèque de départ, écrite à la main en français
+(Aventure, Plateforme, Course, Furtif), et RAWG, qui répond en anglais. Sur une
+bibliothèque réelle de 154 jeux, cela donnait **33 valeurs dont la moitié en
+double** — « Adventure » 21 et « Aventure » 20, « Platformer » 16 et
+« Plateforme » 17, « Racing » 10 et « Course » 6. Un filtre par genre aurait
+coupé la collection en deux moitiés arbitraires, selon la source qui avait
+répondu la première.
+
+Une table de correspondance ramène chaque genre à la forme du projet, à
+l'enregistrement comme à l'import et à l'édition : 33 valeurs deviennent 28, et
+aucun jeu ne perd de genre. Elle règle aussi la casse — « aventure » tapé à la
+main ne compte plus à part. La fonction est idempotente, donc la migration la
+rejoue à chaque chargement sans numéro de version. Un genre absent de la table
+garde sa forme : elle corrige des doublons connus, elle n'impose pas un
+vocabulaire fermé.
+
 **Ce que l'application accepte d'un fichier.** L'import ne fait pas confiance à
 ce qu'on lui donne : une date illisible, une plateforme inconnue, un format
 inventé ou une note en toutes lettres sont ramenés à une valeur sûre, et le
@@ -541,8 +558,8 @@ npm run dev      # http://localhost:5173/game-library/
 npm run build
 npm run preview
 npm run lint     # oxlint
-npm test         # 103 tests (modèle, import, prêts, stats, thème, préférences,
-                 #             cohérence des duplications, audit, Worker)
+npm test         # 109 tests (modèle, import, genres, prêts, stats, thème,
+                 #             préférences, cohérence, audit, Worker)
 npm run test:worker                   # 32 vérifications du relais, sans déploiement
 npm run verif:ui                      # mesure les écrans rendus (voir plus bas)
 npm run audit -- ma-sauvegarde.json   # symptômes dans les données (voir plus bas)

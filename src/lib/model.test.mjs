@@ -18,7 +18,7 @@ import {
   normTitle, rapprochementDouteux, jeuxSansScore,
   rendreJeu, preterJeu, annulerPret, supprimerEntreeHistorique, dureeEntreeHistorique, MAX_HISTORIQUE_PRET, aujourdhuiISO,
   BACK_COMPAT, XBOX_SERIES_CUTOFF, PRET_LONG_JOURS, PLATFORMES_JEU,
-  estDatePlausible, estLienSur, ANNEE_MIN, ANNEES_A_VENIR,
+  estDatePlausible, estLienSur, ANNEE_MIN, ANNEES_A_VENIR, normaliserGenres,
 } from "./model.js";
 import { ecouterMiseAJour } from "./maj.js";
 
@@ -590,4 +590,70 @@ test("seuls les liens http(s) entrent dans une fiche", () => {
     { id: 1, title: "T", myLinks: ["javascript:alert(1)", "https://ok.fr", 42] },
   ]);
   assert.deepEqual(jeux[0].myLinks, ["", "https://ok.fr", ""]);
+});
+
+
+// ── Genres ─────────────────────────────────────────────────────────────────
+//
+// Deux sources, deux langues : la bibliothèque de départ parle français, RAWG
+// répond en anglais. Sur 154 jeux réels, 33 valeurs dont la moitié en double —
+// « Adventure » 21 et « Aventure » 20, « Platformer » 16 et « Plateforme » 17.
+// Un filtre par genre aurait coupé la bibliothèque en deux moitiés arbitraires.
+
+test("les deux langues d'un même genre se rejoignent", () => {
+  assert.deepEqual(normaliserGenres(["Adventure"]), ["Aventure"]);
+  assert.deepEqual(normaliserGenres(["Platformer"]), ["Plateforme"]);
+  assert.deepEqual(normaliserGenres(["Racing"]), ["Course"]);
+  assert.deepEqual(normaliserGenres(["Sports"]), ["Sport"]);
+  assert.deepEqual(normaliserGenres(["Fighting"]), ["Combat"]);
+  assert.deepEqual(normaliserGenres(["Strategy"]), ["Stratégie"]);
+  assert.deepEqual(normaliserGenres(["Horror"]), ["Horreur"]);
+  assert.deepEqual(normaliserGenres(["Réflexion"]), ["Puzzle"]);
+});
+
+test("la casse et les accents ne créent plus de genres distincts", () => {
+  // Saisis à la main, « aventure », « Aventure » et « AVENTURE » produisaient
+  // trois entrées dans les filtres.
+  assert.deepEqual(normaliserGenres(["aventure", "Aventure", "AVENTURE"]), ["Aventure"]);
+  assert.deepEqual(normaliserGenres(["ADVENTURE", "aventure"]), ["Aventure"]);
+  assert.deepEqual(normaliserGenres(["  Racing  "]), ["Course"]);
+});
+
+test("un genre inconnu garde sa forme", () => {
+  // La table corrige des doublons connus ; elle n'impose pas un vocabulaire
+  // fermé, sinon un genre saisi à la main disparaîtrait sans prévenir.
+  assert.deepEqual(normaliserGenres(["Soulslike", "Musou", "Jeu de société"]),
+    ["Soulslike", "Musou", "Jeu de société"]);
+});
+
+test("l'ordre est conservé et rien n'apparaît deux fois", () => {
+  assert.deepEqual(normaliserGenres(["Action", "Adventure", "Aventure", "Action"]),
+    ["Action", "Aventure"]);
+  assert.deepEqual(normaliserGenres(["Racing", "Course"]), ["Course"]);
+});
+
+test("normaliserGenres est idempotente et supporte n'importe quelle entrée", () => {
+  // Idempotente, donc pas besoin d'un numéro de version comme la migration
+  // `bcV` : la migration peut la rejouer à chaque chargement.
+  const une = normaliserGenres(["Adventure", "Racing"]);
+  assert.deepEqual(normaliserGenres(une), une);
+  assert.deepEqual(normaliserGenres([]), []);
+  assert.deepEqual(normaliserGenres(null), []);
+  assert.deepEqual(normaliserGenres("Action"), [], "une chaîne n'est pas une liste de genres");
+  assert.deepEqual(normaliserGenres([null, 42, "", "   ", "Action"]), ["Action"]);
+});
+
+test("les trois portes d'entrée d'un genre appliquent la table", () => {
+  // Le stockage, l'import et l'édition manuelle : si l'une d'elles l'oubliait,
+  // le doublon reviendrait par là.
+  assert.deepEqual(migrateGames([{ title: "T", genre: ["Adventure", "Racing"] }])[0].genre,
+    ["Aventure", "Course"]);
+
+  const { jeux } = validerJeuxImportes([{ id: 1, title: "T", genre: ["Platformer", "Plateforme"] }]);
+  assert.deepEqual(jeux[0].genre, ["Plateforme"]);
+
+  const { valeurs } = validerEdition({
+    ...brouillonDepuisJeu(jeu()), genre: "Adventure, Racing, action",
+  });
+  assert.deepEqual(valeurs.genre, ["Aventure", "Course", "Action"]);
 });

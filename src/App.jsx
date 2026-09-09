@@ -13,7 +13,7 @@ import SettingsView from "./components/SettingsView.jsx";
 
 import { hdr, card, bdr, txt, mut, accent, accentDoux, accentFond, warnDoux, dangerDoux, ok, warn, warnFond, danger } from "./lib/theme.js";
 import { GAMES_INIT } from "./lib/seed.js";
-import { BACK_COMPAT, migrateGames, compterFiltres, validerJeuxImportes, pretEnRetard, jeuxSansScore,
+import { BACK_COMPAT, migrateGames, compterFiltres, validerJeuxImportes, pretEnRetard, jeuxSansScore, normaliserGenres,
   dureeEntreeHistorique, supprimerEntreeHistorique, joursDePret } from "./lib/model.js";
 import { lire, ecrire, surEchecStockage } from "./lib/storage.js";
 import { chargerSync, enregistrerSync, genererCode, envoyer, recuperer } from "./lib/sync.js";
@@ -340,7 +340,7 @@ export default function App() {
           const res = await rawgSearch(title);
           if (res[0]) {
             const d = await rawgDetail(res[0].id);
-            if (d) setGames(gs => gs.map(x => x.id === ids[i] ? { ...x, cover: x.cover || d.background_image || null, metacritic: x.metacritic ?? d.metacritic ?? null, genre: x.genre?.length ? x.genre : (d.genres?.map(z => z.name) || []) } : x));
+            if (d) setGames(gs => gs.map(x => x.id === ids[i] ? { ...x, cover: x.cover || d.background_image || null, metacritic: x.metacritic ?? d.metacritic ?? null, genre: x.genre?.length ? x.genre : normaliserGenres(d.genres?.map(z => z.name)) } : x));
           }
           const titles = await wikiFrenchTitles(title);
           const best = pickBestWikiTitle(title, titles);

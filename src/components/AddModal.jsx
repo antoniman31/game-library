@@ -1,7 +1,7 @@
 import { useState, useRef } from "react";
 import Sheet from "./Sheet.jsx";
 import { bg, card, bdr, txt, mut, accent, accentFond } from "../lib/theme.js";
-import { PLATFORMS, isBackCompatPlatform } from "../lib/model.js";
+import { PLATFORMS, isBackCompatPlatform, normaliserGenres } from "../lib/model.js";
 import {
   rawgSearch, rawgDetail, wikiFrenchTitles, wikiArticleData, wikidataInfobox,
   sgdbSearch, sgdbGrids,
@@ -94,7 +94,7 @@ function AddModal({ onAdd, onClose }) {
     onAdd({
       id: Date.now(), title: title.trim(), platform, format: fmt,
       addedDate: date || new Date().toISOString().slice(0, 10),
-      genre: rawg?.genres?.map(g => g.name) || [],
+      genre: normaliserGenres(rawg?.genres?.map(g => g.name)),
       style: wikiExtract || "",
       lentA: null, lentDate: null,
       cover: cover || rawg?.background_image || null,
