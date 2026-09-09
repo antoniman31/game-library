@@ -707,6 +707,10 @@ mécanique donne aussi les jeux notés plus de 80, ceux d'un genre ou d'une sér
 Un second sélecteur aurait redit ce que le panneau des filtres dit mieux, et
 deux endroits pour dire la même chose finissent toujours par se contredire.
 
+La note Metacritic, elle, a été retirée après coup. Elle sert à trier sa propre
+bibliothèque ; affichée dans une liste qu'on envoie, elle range les jeux qu'on
+prête en bons et en mauvais avant même qu'on les ait proposés.
+
 Chaque ligne porte le format, et pas pour faire joli : un jeu démat est attaché à
 un compte, personne ne peut l'emprunter, et sans la mention la liste promet des
 jeux qu'on ne peut pas prêter. Les jeux prêtés y restent avec la date de retour

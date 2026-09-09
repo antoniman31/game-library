@@ -4,21 +4,20 @@ import { texteListe, ligneJeu } from "./partage.js";
 
 const jeu = (p = {}) => ({ title: "Jeu", platform: "Xbox Series X", format: "", metacritic: null, lentA: null, lentRetourPrevu: null, ...p });
 
-test("une ligne dit le titre, la note, le format et le prêt", () => {
+test("une ligne dit le titre, le format et le prêt — et pas la note", () => {
   assert.equal(ligneJeu(jeu({ title: "Halo" })), "- Halo");
-  assert.equal(ligneJeu(jeu({ title: "Halo", metacritic: 87 })), "- Halo · 87");
   // Le format compte pour qui reçoit la liste : un démat ne s'emprunte pas.
   assert.equal(ligneJeu(jeu({ title: "Halo", format: "démat" })), "- Halo · démat");
-  assert.equal(ligneJeu(jeu({ title: "Halo", metacritic: 87, format: "physique" })), "- Halo · 87 · physique");
   assert.equal(ligneJeu(jeu({ title: "Halo", lentA: "Théo" })), "- Halo · prêté à Théo");
-  // Une note de zéro est une note : `if (metacritic)` l'aurait effacée.
-  assert.equal(ligneJeu(jeu({ title: "Nul", metacritic: 0 })), "- Nul · 0");
+  // La note sert à trier sa propre bibliothèque, pas à conseiller quelqu'un.
+  assert.equal(ligneJeu(jeu({ title: "Halo", metacritic: 87, format: "physique" })), "- Halo · physique");
+  assert.equal(ligneJeu(jeu({ title: "Nul", metacritic: 0 })), "- Nul");
   assert.equal(ligneJeu({}), "- Sans titre");
 });
 
 test("un jeu prêté dit jusqu'à quand, quand la date a été convenue", () => {
   assert.equal(
-    ligneJeu(jeu({ title: "Halo", format: "physique", lentA: "Théo", lentRetourPrevu: "2026-10-15" })),
+    ligneJeu(jeu({ title: "Halo", format: "physique", metacritic: 87, lentA: "Théo", lentRetourPrevu: "2026-10-15" })),
     "- Halo · physique · prêté à Théo, retour le 15/10/2026");
   // Le prêt sans date convenue ne doit pas inventer d'échéance.
   assert.equal(ligneJeu(jeu({ title: "Halo", lentA: "Théo", lentRetourPrevu: "" })), "- Halo · prêté à Théo");

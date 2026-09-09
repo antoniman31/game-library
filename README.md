@@ -256,8 +256,9 @@ est volontairement exclu. Les libellés sont résolus en `fr` → `en` → `mul`
 éditeurs ne remontent pas si on ne demande que `fr`/`en`).
 
 **Bouton « Partager la liste »** (panneau ⋯ Actions) : produit la liste **affichée** en
-texte lisible — groupée par plateforme, un jeu par ligne avec sa note, son format et, le
-cas échéant, le prêt en cours avec sa date de retour convenue — et l'envoie au menu de partage du téléphone, ou la copie
+texte lisible — groupée par plateforme, un jeu par ligne avec son format et, le cas
+échéant, le prêt en cours avec sa date de retour convenue ; la note Metacritic n'y figure
+pas, elle sert à trier sa propre bibliothèque, pas à conseiller quelqu'un d'autre — et l'envoie au menu de partage du téléphone, ou la copie
 dans le presse-papier ailleurs. Pas de sélecteur de plateforme : le panneau des filtres a
 déjà composé la liste, et deux endroits pour dire la même chose finiraient par se
 contredire.
