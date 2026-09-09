@@ -541,8 +541,8 @@ npm run dev      # http://localhost:5173/game-library/
 npm run build
 npm run preview
 npm run lint     # oxlint
-npm test         # 96 tests (modèle, import, prêts, stats, thème, préférences,
-                 #            cohérence des duplications, Worker)
+npm test         # 103 tests (modèle, import, prêts, stats, thème, préférences,
+                 #             cohérence des duplications, audit, Worker)
 npm run test:worker                   # 32 vérifications du relais, sans déploiement
 npm run verif:ui                      # mesure les écrans rendus (voir plus bas)
 npm run audit -- ma-sauvegarde.json   # symptômes dans les données (voir plus bas)
@@ -601,6 +601,22 @@ dates illisibles), **années d'ajout invraisemblables** et **liens non ouvrables
 venir, prêts incomplets ou très anciens, retours antérieurs au prêt, et séries
 Wikidata éloignées du titre, signe qu'une source a répondu pour un autre jeu.
 
+Cette dernière règle demandait autrefois que le titre et la série se préfixent
+l'un l'autre. C'est un test d'égalité déguisé appliqué à deux chaînes qui n'ont
+aucune raison d'être égales : un titre nomme un jeu, une série nomme une
+famille. Passée sur une bibliothèque réelle de 154 jeux, **elle s'est trompée
+vingt fois sur vingt** — « Sonic Generations → Sonic the Hedgehog » signalé, le
+mot « Sonic » sous les yeux. Une catégorie qui a toujours tort n'est pas neutre :
+elle apprend à sauter la ligne. Elle exige désormais qu'aucun mot significatif
+ne soit commun au titre et à la série (20 constats → 4), **et** qu'aucun autre
+jeu ne porte cette série (4 → 2) : si quatre fiches annoncent « The Legend of
+Zelda », la série existe.
+
+L'audit lui-même est testé (`scripts/audit.test.mjs`) : il est lancé en
+sous-processus avec sa sortie `--json`, pour vérifier le programme tel qu'il
+s'exécute plutôt qu'une fonction extraite pour l'occasion. Une règle fausse ne
+casse rien — elle ment, et rien ne le signale.
+
 Ce n'est **pas** un test : `npm test` vérifie des invariants et doit rester vert,
 l'audit signale des *symptômes* qui peuvent être parfaitement légitimes. Deux
 exemplaires du même jeu, c'est possible ; deux entrées identiques après un
@@ -617,6 +633,7 @@ import, beaucoup moins.
 │   └── README.md
 ├── scripts/
 │   ├── audit.mjs                  Audit des données d'un export (pas un test)
+│   ├── audit.test.mjs             …mais l'audit, lui, est testé
 │   └── verif-ui.mjs               Mesure les écrans rendus : cibles, tailles, débordements
 ├── public/                        Icônes PWA (192/512, any + maskable), favicon
 ├── src/
