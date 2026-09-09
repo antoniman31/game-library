@@ -270,7 +270,10 @@ function GameCard({ g, onEdit, onDelete, onEnrich, onSerie, autoOpen, onOuverte 
               {/* En italique gris coupé à deux lignes, le seul texte qu'on ait
                   envie de lire était le plus pénible de la fiche. */}
               <div style={{ color: txt, fontSize: "var(--t-corps)", lineHeight: 1.5, ...(descOpen ? {} : { overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 4, WebkitBoxOrient: "vertical" }) }}>{g.style}</div>
-              {g.style.length > 160 && <button onClick={() => setDescOpen(o => !o)} style={{ background: "transparent", border: "none", color: accent, fontSize: "var(--t-legende)", cursor: "pointer", padding: "6px 0 0" }}>{descOpen ? "▴ Réduire" : "▾ Lire la suite"}</button>}
+              {/* 20 px de haut : le seul bouton de la fiche à ne jamais avoir
+                  reçu de hauteur de cible. Le rembourrage la pose sans
+                  déplacer le texte, qui reste aligné sur la description. */}
+              {g.style.length > 160 && <button onClick={() => setDescOpen(o => !o)} style={{ background: "transparent", border: "none", color: accent, fontSize: "var(--t-legende)", cursor: "pointer", minHeight: "var(--tap-min)", padding: "6px 12px 6px 0", fontFamily: "inherit" }}>{descOpen ? "▴ Réduire" : "▾ Lire la suite"}</button>}
             </div>
           )}
 

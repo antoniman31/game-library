@@ -11,7 +11,7 @@
     "test:worker": "node worker/test.mjs",
     "test": "node --test src/lib/*.test.mjs scripts/*.test.mjs worker/test.mjs",
     "audit": "node scripts/audit.mjs",
-    "verif:ui": "node scripts/verif-ui.mjs"
+    "verif:ui": "vite build && node scripts/verif-ui.mjs"
   },
   "dependencies": {
     "react": "^19.2.7",
