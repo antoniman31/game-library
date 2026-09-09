@@ -23,7 +23,7 @@ import {
   jeuPasseSeuil, jeuACompleter, completudeManquante, compterFichesIncompletes,
   dateDeSortie, serieDuJeu, empreinteMelange,
   fusionnerInfobox, infoboxDepuisRawg, sourcesInfobox, libelleSources, infoboxVide,
-  viderChamps, CHAMPS_VIDABLES,
+  viderChamps, CHAMPS_VIDABLES, FILTRES, FILTRES_VIDES,
 } from "./model.js";
 import { ecouterMiseAJour } from "./maj.js";
 
@@ -939,4 +939,16 @@ test("le vidage ne touche que ce qui est coché et présent", () => {
   assert.deepEqual(viderChamps(jeu({ infobox: { series: "S" } }), ["metacritic", "infobox"]), { infobox: null });
   // Les cinq champs vidables sont ceux que « À compléter » sait retrouver.
   assert.deepEqual(CHAMPS_VIDABLES.map(([c]) => c).sort(), ["cover", "genre", "infobox", "metacritic", "style"]);
+});
+
+
+test("la remise à zéro éteint tous les filtres, un par un", () => {
+  assert.equal(compterFiltres(FILTRES_VIDES), 0);
+  // Chacun compte pour un, et chacun s'éteint : un filtre absent de FILTRES
+  // serait ici invisible, d'où la garde de cohérence sur App.jsx.
+  for (const f of FILTRES) {
+    assert.equal(compterFiltres({ ...FILTRES_VIDES, [f]: "quelque chose" }), 1, `${f} n'est pas compté`);
+  }
+  assert.equal(compterFiltres({}), 0, "un état vide n'invente pas de filtre actif");
+  assert.equal(compterFiltres(null), 0);
 });

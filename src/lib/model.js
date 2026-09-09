@@ -154,11 +154,25 @@ export function preterJeu(g, nom, retourPrevu) {
   };
 }
 
+// Les filtres, nommés une fois pour toutes.
+//
+// Trois endroits les remettaient à zéro, chacun avec sa propre énumération :
+// le bouton « Réinitialiser » du panneau, l'ajout d'un jeu et l'import Xbox.
+// Les deux derniers n'en citaient que trois — ceux qui existaient le jour où
+// ils ont été écrits — si bien qu'ajouter un jeu depuis une liste filtrée par
+// série le faisait entrer dans la bibliothèque sans l'afficher. Il avait l'air
+// supprimé ; il était caché par un filtre que personne n'avait songé à lever.
+//
+// Une seule liste, donc, et un test qui vérifie que la remise à zéro les couvre
+// tous : le prochain filtre ajouté ne pourra plus être oublié en silence.
+export const FILTRES = ["plat", "pretFil", "fmtFil", "genreFil", "modeFil", "noteFil", "completFil", "serieFil"];
+
+export const FILTRES_VIDES = Object.freeze(Object.fromEntries(FILTRES.map(f => [f, "tous"])));
+
 // Compte les filtres réellement appliqués. Le tri et le mode d'affichage n'en
 // sont pas : ils changent l'ordre ou la densité, jamais ce qui est montré.
-export function compterFiltres({ plat, pretFil, fmtFil, genreFil, modeFil, noteFil, completFil, serieFil }) {
-  return [plat, pretFil, fmtFil, genreFil, modeFil, noteFil, completFil, serieFil]
-    .filter(v => v && v !== "tous").length;
+export function compterFiltres(etat) {
+  return FILTRES.map(f => etat?.[f]).filter(v => v && v !== "tous").length;
 }
 
 // ── Genres ─────────────────────────────────────────────────────────────────

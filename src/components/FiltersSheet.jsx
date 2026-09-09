@@ -103,7 +103,7 @@ export default function FiltersSheet({
   genreFil, setGenreFil, modeFil, setModeFil, genres, sansMode,
   noteFil, setNoteFil, completFil, setCompletFil, aCompleter, fichesIncompletes,
   serieFil, setSerieFil, groupePar, setGroupePar,
-  view, setView, onClose, resultats,
+  view, setView, onClose, resultats, onReinitialiser,
 }) {
   // Tous les filtres, sans exception : oublier les nouveaux ici laisserait
   // « Réinitialiser » grisé alors qu'il y a bien quelque chose à réinitialiser.
@@ -303,12 +303,12 @@ export default function FiltersSheet({
         position: "sticky", bottom: 0, background: card,
         paddingTop: 12, marginTop: 16, borderTop: `1px solid ${bdr}`,
       }}>
+        {/* La remise à zéro vient d'en haut : ce bouton l'énumérait de son côté,
+            comme l'ajout d'un jeu et l'import, et les trois listes ont fini par
+            diverger — au point qu'un jeu ajouté sous un filtre de série
+            disparaissait de l'écran. Une seule liste, un seul effacement. */}
         <button
-          onClick={() => {
-            setPlat("tous"); setAvecRetro(true); setPretFil("tous"); setFmtFil("tous");
-            setGenreFil("tous"); setModeFil("tous"); setNoteFil("tous");
-            setCompletFil("tous"); setSerieFil("tous");
-          }}
+          onClick={onReinitialiser}
           disabled={actifs === 0}
           style={{
             flex: 1, minHeight: "var(--tap)", background: "transparent",
