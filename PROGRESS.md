@@ -181,7 +181,6 @@ Deux sous-onglets. Chaque bloc disparaît quand il n'a rien à dire.
 - **Tri** au-dessus de la liste, plus dans le panneau : titre, ajout, sortie, note, au
   hasard, avec inverseur de sens. **Vues** : liste, compacte, grille, et regroupement
   facultatif par plateforme, série ou genre.
-- **Vues** liste et grille (jaquettes 2:3), liste paginée par 30.
 - **Trois modes de thème** : automatique (suit le téléphone, y compris quand il
   bascule le soir), clair, noir profond. Bouton dans l'en-tête, choix dans ⚙️.
 - **Panneaux glissants** pour les filtres, les actions et les sources : Échap ferme,

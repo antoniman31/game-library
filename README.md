@@ -591,8 +591,10 @@ fournit directement un texte français rédigé, sans quota ni découpage.
   filtres : 317 px sur un écran de 915, soit un tiers de la surface avant le
   premier jeu, et une rangée de boutons qui débordait de 13 px et faisait
   défiler la page latéralement. Filtres et actions sont passés dans des
-  panneaux glissants, et la liste est paginée par 30 au lieu de monter les 94
-  fiches d'un coup. Les cibles tactiles, longtemps à 44 px « pour ne pas faire
+  panneaux glissants. La liste a longtemps été paginée par 30, jusqu'à ce que la
+  mesure montre que tout monter d'un coup ne coûte qu'une seconde de plus au
+  démarrage sur un vieux téléphone : le bouton « Charger 30 de plus » a disparu
+  et la bibliothèque s'affiche entière. Les cibles tactiles, longtemps à 44 px « pour ne pas faire
   exploser la densité », sont passées à 48 — le chiffre de Material — après
   qu'un audit a montré que le compromis avait été fait avec nous-mêmes et non
   avec l'utilisateur.
