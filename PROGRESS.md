@@ -62,9 +62,10 @@ en lecture seule, avec « Modifier » et « Supprimer » séparés et confirmés
 ### Sources d'enrichissement par jeu
 
 - **🔄 RAWG** : ré-associe un jeu mal matché → remplace jaquette, Metacritic, genres.
-- **🇫🇷 Titre français (Wikipédia)** : recherche full-text FR → titre commercial
-  officiel, puis au choix le **résumé**, la **jaquette** d'infobox et les **infos
-  Wikidata**, chacun applicable indépendamment.
+- **📚 Wikipédia** : recherche full-text FR → le **titre commercial** officiel, puis au
+  choix le **résumé**, la **jaquette** d'infobox et les **infos Wikidata**, chacun
+  applicable indépendamment. Une fiche sans infobox le dit à la place de celle-ci et
+  ouvre cette recherche d'un bouton.
 - **📦 Jaquette SteamGridDB** : vignettes verticales 600×900, 3 par ligne.
 
 ### Actions de masse (panneau ⋯)
