@@ -608,6 +608,14 @@ donc à une loupe dès que le bouton de tri porte son libellé — un signe enti
 plutôt qu'un mot amputé. Le nom accessible du champ est écrit à part, sinon un
 lecteur d'écran annoncerait l'émoji.
 
+Relue contre les règles du document, la ligne avait un défaut qu'elle venait
+d'introduire : un tri choisi et un filtre posé donnaient deux boutons au
+traitement identique — contour accentué, texte accentué — côte à côte et sans
+la même importance, ce que le document interdit et qui affaiblit l'effet von
+Restorff. Le contour accentué est désormais réservé à « Filtres », seul bouton
+qui porte un compteur et ouvre un panneau ; le tri se signale par la couleur de
+son texte, le sens par un fond légèrement teinté.
+
 ---
 
 ## 3. Architecture finale
