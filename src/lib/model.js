@@ -48,7 +48,7 @@ export function migrateGames(list) {
     // l'application entière tombe sur son garde-fou d'erreurs. Cette fonction
     // existe pour rendre sûr ce qui vient du stockage ; elle le fait déjà pour
     // trois champs, elle le fait pour ces deux-là aussi.
-    if (!Array.isArray(ng.genre)) ng.genre = [];
+    ng.genre = normaliserGenres(ng.genre);
     if (!Array.isArray(ng.myLinks)) ng.myLinks = ["", "", ""];
     // Sept champs devenus sans objet : la progression et le temps de jeu, que
     // la console tient déjà, plus `note` et `progression` qui n'ont jamais été
@@ -160,6 +160,88 @@ export function compterFiltres({ plat, pretFil, fmtFil }) {
   return [plat, pretFil, fmtFil].filter(v => v !== "tous").length;
 }
 
+// ── Genres ─────────────────────────────────────────────────────────────────
+// Les genres viennent de deux endroits qui ne parlent pas la même langue : la
+// bibliothèque de départ, écrite à la main en français (Aventure, Plateforme,
+// Course, Furtif), et RAWG, qui répond en anglais. Sur une bibliothèque réelle
+// de 154 jeux, ça donnait 33 valeurs dont la moitié en double :
+//
+//   Adventure 21 · Aventure 20    Platformer 16 · Plateforme 17
+//   Racing 10 · Course 6          Sports 2 · Sport 4
+//
+// Un filtre par genre — le premier auquel on pense — aurait coupé la
+// bibliothèque en deux moitiés arbitraires selon la source qui a répondu la
+// première. Aucune fiche ne portait les deux formes : chacune tenait ses genres
+// d'une seule source, ce qui rend la fusion sûre.
+//
+// Le français est la forme de référence parce que c'est celle du projet, pas
+// parce qu'elle est plus juste. La table se lit et se corrige d'un coup d'œil :
+// c'est un choix de vocabulaire, pas un algorithme.
+// Le vocabulaire du projet : la forme exacte sous laquelle chaque genre
+// s'affiche et se filtre. Saisi autrement — « aventure », « ADVENTURE » — un
+// genre est ramené à sa forme d'ici. Sans cette liste, un genre tapé en
+// minuscules restait en minuscules et se comptait à part.
+const GENRES_CONNUS = [
+  "Action", "Aventure", "Plateforme", "Course", "Combat", "Sport", "Stratégie",
+  "Horreur", "Puzzle", "RPG", "Simulation", "Arcade", "Furtif", "Exploration",
+  "Multijoueur", "Open World", "Indie", "Shooter", "FPS", "TPS", "Beat'em up",
+  "Soulslike", "Musou", "Jeu de société", "Créatif", "Vie", "Family",
+  "Massively Multiplayer", "Autre",
+];
+
+// Ce que RAWG répond en anglais, et la forme du projet en face.
+const SYNONYMES_GENRE = {
+  adventure: "Aventure",
+  platformer: "Plateforme",
+  racing: "Course",
+  sports: "Sport",
+  fighting: "Combat",
+  strategy: "Stratégie",
+  horror: "Horreur",
+  // « Puzzle » et « Réflexion » cohabitaient dans les seules données de départ,
+  // sans qu'aucune source n'impose l'un ou l'autre. « Puzzle » l'emporte parce
+  // que c'est la forme que RAWG renvoie et la seule des deux qu'on trouve dans
+  // une bibliothèque réelle.
+  reflexion: "Puzzle",
+};
+
+// Clé de comparaison d'un genre : minuscules, sans accents, sans ponctuation.
+// « aventure », « Aventure » et « AVENTURE » sont le même genre — saisis à la
+// main, ils produisaient trois entrées distinctes dans les filtres.
+const cleGenre = (v) => String(v || "").toLowerCase().normalize("NFD")
+  .replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "").trim();
+
+const FORMES_GENRE = new Map([
+  ...GENRES_CONNUS.map(v => [cleGenre(v), v]),
+  ...Object.entries(SYNONYMES_GENRE),
+]);
+
+// Ramène une liste de genres à la forme de référence, sans doublon et dans
+// l'ordre d'origine. Idempotente : l'appliquer deux fois ne change rien, donc
+// elle n'a pas besoin d'un numéro de version comme la migration `bcV`.
+export function normaliserGenres(liste) {
+  if (!Array.isArray(liste)) return [];
+  const sortie = [];
+  const vues = new Set();
+  for (const brut of liste) {
+    if (typeof brut !== "string") continue;
+    const nettoye = brut.trim();
+    if (!nettoye) continue;
+    const cle = cleGenre(nettoye);
+    if (!cle || vues.has(cle)) continue;
+    const canonique = FORMES_GENRE.get(cle);
+    // Un genre qu'on ne connaît pas garde sa forme : la table corrige les
+    // doublons connus, elle n'impose pas un vocabulaire fermé.
+    const valeur = canonique || nettoye;
+    const cleFinale = cleGenre(valeur);
+    if (vues.has(cleFinale)) continue;
+    vues.add(cle);
+    vues.add(cleFinale);
+    sortie.push(valeur);
+  }
+  return sortie;
+}
+
 // Normalisation d'un titre pour comparaison : minuscules, sans accents ni
 // ponctuation. Sert à la recherche, à la déduplication d'import, et à repérer
 // un rapprochement RAWG douteux.
@@ -267,7 +349,7 @@ export function validerEdition(b) {
     erreurs,
     valeurs: {
       title: titre, platform: b.platform, format, backCompat,
-      genre: listeDepuisTexte(b.genre),
+      genre: normaliserGenres(listeDepuisTexte(b.genre)),
       metacritic: mc, addedDate: date, style: String(b.style || "").trim(),
       cover: cover || null, infobox: infoVide ? null : info,
     },
@@ -405,7 +487,7 @@ export function validerJeuxImportes(data) {
       ...champs,
       id,
       title: brut.title.trim(),
-      genre: Array.isArray(brut.genre) ? brut.genre.filter(estTexte) : [],
+      genre: normaliserGenres(brut.genre),
       // Un lien de fiche finit dans un `href`. Tout ce qui n'est pas http(s) est
       // écarté à l'entrée plutôt que filtré à l'affichage : le stockage ne doit
       // pas contenir ce qu'on refusera de rendre.

@@ -3,7 +3,7 @@ import Cover from "./Cover.jsx";
 import InfoboxView from "./InfoboxView.jsx";
 import Sheet from "./Sheet.jsx";
 import { bg, card, bdr, txt, mut, demat, accent, accentDoux, accentFond, okDoux, warnDoux, dangerDoux, ok, warn, warnFond, danger } from "../lib/theme.js";
-import { PLATFORM_COLORS, BACK_COMPAT_PARENT, PLATFORMES_JEU, estUrlImage, estLienSur, joursDePret, pretEnRetard, brouillonDepuisJeu, validerEdition,
+import { PLATFORM_COLORS, BACK_COMPAT_PARENT, PLATFORMES_JEU, estUrlImage, estLienSur, normaliserGenres, joursDePret, pretEnRetard, brouillonDepuisJeu, validerEdition,
   rendreJeu, preterJeu, annulerPret, dureeEntreeHistorique } from "../lib/model.js";
 import {
   rawgSearch, rawgDetail, wikiFrenchTitles, wikiArticleData, wikidataInfobox,
@@ -93,7 +93,7 @@ function GameCard({ g, onEdit, onDelete, onEnrich, autoOpen, onOuverte }) {
       onEnrich(g.id, {
         cover: d.background_image || g.cover,
         metacritic: d.metacritic ?? g.metacritic,
-        genre: d.genres?.map(x => x.name) || g.genre,
+        genre: d.genres ? normaliserGenres(d.genres.map(x => x.name)) : g.genre,
       });
     }
     setRawgBusy(false);

@@ -416,6 +416,41 @@ la seule preuve qu'un test vaut quelque chose. L'audit des données a gagné deu
 règles au passage : une année d'ajout invraisemblable et un lien non ouvrable
 sont désormais signalés comme graves.
 
+### Phase 16 — Deux langues pour la même chose
+
+La question de départ était d'ajouter des filtres. En mesurant lesquels
+vaudraient quelque chose sur une bibliothèque réelle de 154 jeux, le filtre
+auquel on pense en premier s'est révélé inutilisable : les genres comptaient
+33 valeurs dont la moitié étaient le même genre écrit deux fois.
+
+    Adventure 21 · Aventure 20      Platformer 16 · Plateforme 17
+    Racing 10 · Course 6            Sports 2 · Sport 4
+
+La cause n'est pas une faute mais une rencontre : la bibliothèque de départ a
+été écrite à la main en français, et RAWG répond en anglais. Chaque fiche tenait
+ses genres d'une seule source — aucune ne portait les deux formes — si bien que
+la collection s'était silencieusement séparée en deux moitiés selon qui avait
+répondu le premier. Un filtre par genre aurait donné, pour « Aventure », la
+moitié des jeux d'aventure.
+
+Le français est la forme de référence parce que c'est celle du projet, pas parce
+qu'elle serait plus juste. Une table de correspondance, lisible et corrigeable
+d'un coup d'œil, s'applique aux trois portes d'entrée d'un genre : le stockage,
+l'import, l'édition manuelle. Elle règle au passage la casse — « aventure » tapé
+à la main comptait à part.
+
+Deux choix méritent d'être dits parce qu'ils sont discutables. « Puzzle »
+l'emporte sur « Réflexion », qui cohabitaient dans les seules données de départ,
+parce que c'est la forme que RAWG renvoie et la seule des deux qu'on trouve dans
+une bibliothèque réelle. Et « Shooter », « FPS » et « TPS » restent trois genres
+distincts : ce ne sont pas des synonymes, la vue à la première ou à la troisième
+personne est une information, pas une traduction.
+
+Résultat mesuré : 33 valeurs deviennent 28, aucun jeu ne perd de genre, et les
+comptes s'additionnent exactement — Aventure passe de 20 à 41, Plateforme de 17
+à 33. La fonction est idempotente, donc la migration la rejoue à chaque
+chargement sans numéro de version, contrairement à `bcV`.
+
 ---
 
 ## 3. Architecture finale

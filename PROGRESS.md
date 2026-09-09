@@ -155,6 +155,9 @@ Deux sous-onglets. Chaque bloc disparaît quand il n'a rien à dire.
 
 - **Recherche** sur titre + genre + tag, insensible à la casse et aux accents. La
   description est volontairement exclue (trop de faux positifs).
+- **Genres normalisés** : RAWG répond en anglais, le projet parle français. Une table
+  de correspondance ramène chaque genre à une forme unique — sur 154 jeux réels,
+  33 valeurs deviennent 28 sans qu'aucun jeu perde de genre.
 - **Filtres** combinables : plateforme, prêt, format. **Tri** : A-Z, date, Metacritic.
 - **Vues** liste et grille (jaquettes 2:3), liste paginée par 30.
 - **Trois modes de thème** : automatique (suit le téléphone, y compris quand il
