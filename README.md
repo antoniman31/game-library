@@ -144,6 +144,11 @@ erreur CORS.
 - **Le tri est au-dessus de la liste**, plus dans le panneau : ce n'est pas un filtre,
   le badge ne le compte pas. La ligne indique aussi combien de jeux l'écran montre,
   quand ce nombre diffère du total.
+- **Les statistiques disent la même chose que les filtres.** Le bloc « Par plateforme »
+  annonçait « 82 jeux jouables sur Xbox Series X » juste sous une barre marquée 19 :
+  deux chiffres justes que rien ne reliait, alors que le filtre, lui, en montrait 101.
+  Chaque console qui en accueille une autre porte désormais une ligne complète —
+  « Sur Xbox Series X : 19 natifs et 82 hérités de Xbox One, soit 101 jouables ».
 - **Le mode de jeu** répond à la question qu'une ludothèque de cent cinquante jeux
   rend difficile — « on est deux ce soir, on lance quoi ». Il vient de la fiche
   Wikidata, dont les étiquettes ne forment pas un vocabulaire (« solo », « Solo »,

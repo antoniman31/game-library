@@ -265,11 +265,22 @@ export function statsCollection(games, aujourdhui = aujourdhuiISO()) {
   const notes = notes_.map(g => g.metacritic);
   const parNote = [...notes_].sort((a, b) => b.metacritic - a.metacritic);
 
-  // Combien de jeux d'une plateforme ancienne tournent sur la récente. La
-  // donnée existait par jeu, elle n'était additionnée nulle part.
-  const retro = compter(jeux
-    .filter(g => g.backCompat && BACK_COMPAT_PARENT[g.platform])
-    .map(g => BACK_COMPAT_PARENT[g.platform]));
+  // Ce qu'on peut lancer sur chaque console, natifs et hérités additionnés.
+  //
+  // Le bloc ne disait que « 82 jeux jouables sur Xbox Series X », à côté d'une
+  // barre annonçant 19 jeux Series X : deux chiffres justes que rien ne reliait,
+  // et c'est leur somme qui répond à la question qu'on pose à une ludothèque —
+  // qu'est-ce que je peux lancer sur la console posée sous la télé. Le filtre
+  // par plateforme, lui, montre bien 101. La statistique disait autre chose que
+  // l'écran d'à côté.
+  const retro = Object.entries(BACK_COMPAT_PARENT)
+    .map(([enfant, parent]) => {
+      const herites = jeux.filter(g => g.platform === enfant && g.backCompat).length;
+      return { parent, enfant, herites, natifs: jeux.filter(g => g.platform === parent).length };
+    })
+    .filter(r => r.herites > 0)
+    .map(r => ({ ...r, jouables: r.natifs + r.herites }))
+    .sort((a, b) => b.jouables - a.jouables);
 
   const annee = (d) => (/^\d{4}/.test(d || "") ? d.slice(0, 4) : null);
 

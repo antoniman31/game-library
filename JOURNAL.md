@@ -516,6 +516,15 @@ accueille une autre, elle annonce combien de jeux elle ajoute, et la ligne
 repliée dit « Xbox Series X seul » quand elle est décochée — un filtre plus
 étroit que la normale doit se voir sans être ouvert.
 
+Les statistiques disaient alors autre chose que les filtres. Le bloc « Par
+plateforme » annonçait « 82 jeux jouables sur Xbox Series X » juste sous une
+barre marquée 19 : deux chiffres justes que rien ne reliait, et c'est leur somme
+— 101, exactement ce que montre le filtre — qui répond à la question posée à une
+ludothèque. Chaque console qui en accueille une autre porte désormais la phrase
+entière. Les barres continuent de compter chaque jeu une fois, sur la console
+pour laquelle il a été acheté ; ces lignes disent l'autre vérité, celle du soir
+où l'on choisit quoi jouer.
+
 ---
 
 ## 3. Architecture finale
