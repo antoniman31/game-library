@@ -788,6 +788,43 @@ secondes identiques à chaque essai, et il fallait mesurer sur `dist/`. Et
 les jaquettes distantes que le proxy de cet environnement refuse — treize
 secondes de plus, constantes, qui n'avaient rien à voir avec l'application.
 
+### Phase 26 — Ce qu'on retrouve en rouvrant, et l'âge de la sauvegarde
+
+Deux manques trouvés en répondant à une question — « la synchronisation envoie
+vraiment le plus de choses possible ? ». Sur le fond, oui : la sauvegarde
+emporte la totalité de chaque fiche, jusqu'à l'historique des prêts passés et la
+provenance des infos, plus le mode d'apparence, plus les clés si la case est
+cochée. Les seules exclusions sont voulues et se justifient l'une comme l'autre
+— l'adresse du relais, qu'on ne peut pas restaurer depuis la sauvegarde qu'elle
+sert à joindre, et le code, qui est ce qui la protège.
+
+Mais deux choses manquaient autour.
+
+La vue, le tri, son sens et le regroupement ne survivaient à aucun lancement :
+on rouvrait en liste triée de A à Z ce qu'on avait quitté en grille par date de
+sortie. Ce n'était pas un trou de la synchronisation, c'était une absence de
+persistance — ces réglages n'étaient écrits nulle part, pas même en local. Ils
+le sont maintenant, et relus comme tout ce qui vient du stockage : une valeur
+inconnue retombe sur le défaut plutôt que d'entrer telle quelle.
+
+Les filtres, eux, restent volontairement dehors. Un réglage d'affichage change
+comment on regarde ; un filtre change ce qu'on voit. Un filtre qui survivrait au
+redémarrage donnerait une bibliothèque amputée sans qu'on sache pourquoi —
+exactement le défaut de la phase précédente, mais permanent.
+
+L'autre manque était plus sérieux. La synchronisation est manuelle, et c'est
+bien ainsi ; mais une sauvegarde qu'on oublie de faire n'existe pas, et son âge
+ne se lisait que sous forme de date brute, dans un panneau qu'on n'ouvre jamais.
+Passé sept jours — assez long pour qu'une semaine sans jouer ne réclame rien,
+assez court pour ne jamais perdre plus d'une semaine d'ajouts — une pastille
+apparaît sur l'onglet des réglages, et la ligne y dit « il y a 12 jours » suivie
+de ce que ça coûte : ce qui a été ajouté depuis n'existe que sur cet appareil.
+Pas de bannière, rien à écarter : le retard cesse simplement d'être invisible.
+
+Deux cas limites traités par les tests plutôt que découverts en usage : une date
+de sauvegarde illisible ne produit pas un âge de `NaN` jours, et une date dans le
+futur — deux appareils dont les horloges divergent — ne donne pas un âge négatif.
+
 ---
 
 ## 3. Architecture finale

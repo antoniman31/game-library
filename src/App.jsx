@@ -20,9 +20,10 @@ import { migrateGames, compterFiltres, FILTRES, validerJeuxImportes, pretEnRetar
   empreinteMelange, compterFichesIncompletes, PLATFORM_COLORS } from "./lib/model.js";
 import { lire, ecrire, surEchecStockage } from "./lib/storage.js";
 import { chargerSync, enregistrerSync, genererCode, envoyer, recuperer } from "./lib/sync.js";
-import { preferencesASauvegarder, preferencesRecues, resumePreferences } from "./lib/preferences.js";
+import { preferencesASauvegarder, preferencesRecues, resumePreferences,
+  affichageRecu, etatSauvegarde } from "./lib/preferences.js";
 import { surMiseAJour } from "./lib/maj.js";
-import { libelleTri, TRI_DEFAUT } from "./lib/tri.js";
+import { libelleTri, TRI_DEFAUT, TRIS } from "./lib/tri.js";
 import { texteListe, partagerTexte } from "./lib/partage.js";
 import { resoudreTheme, modeSuivant, modeValide, ICONES, LIBELLES, COULEUR_BARRE } from "./lib/apparence.js";
 import {
@@ -77,14 +78,22 @@ export default function App() {
   // Posée depuis une fiche, jamais depuis le panneau : cinquante-huit séries
   // ne tiennent pas dans une grille de boutons.
   const [serieFil, setSerieFil] = useState("tous");
-  const [sortDir, setSortDir] = useState(1);
+  // Vue, tri, sens et regroupement repartaient à zéro à chaque lancement : on
+  // rouvrait en liste triée de A à Z ce qu'on avait quitté en grille par date
+  // de sortie. Ils sont relus du stockage, et validés comme tout ce qui en
+  // vient — une valeur inconnue retombe sur le défaut.
+  const affichage = useMemo(() => {
+    try { return affichageRecu(JSON.parse(lire("gl_affichage") || "null"), TRIS.map(([c]) => c)); }
+    catch { return affichageRecu(null, TRIS.map(([c]) => c)); }
+  }, []);
+  const [sortDir, setSortDir] = useState(affichage.sortDir);
   // La graine du tri aléatoire. Elle ne change qu'à la demande, sinon la liste
   // se rebattrait sous le doigt à chaque frappe dans la recherche.
   const [graine, setGraine] = useState(() => Date.now() % 100000);
-  const [groupePar, setGroupePar] = useState("aucun");
+  const [groupePar, setGroupePar] = useState(affichage.groupePar);
   const [modeFil, setModeFil] = useState("tous");
-  const [sort, setSort] = useState(TRI_DEFAUT);
-  const [view, setView] = useState("liste");
+  const [sort, setSort] = useState(affichage.sort);
+  const [view, setView] = useState(affichage.view);
   const [tab, setTab] = useState("library");
   const [showAdd, setShowAdd] = useState(false);
   const [showImport, setShowImport] = useState(false);
@@ -166,6 +175,10 @@ export default function App() {
     document.querySelector('meta[name="theme-color"]')?.setAttribute("content", COULEUR_BARRE[theme]);
   }, [theme]);
   useEffect(() => { ecrire("gl_theme", modeTheme); }, [modeTheme]);
+  // Les filtres ne sont volontairement pas de la partie : un filtre qui survit
+  // au lancement, c'est une bibliothèque amputée sans qu'on sache pourquoi.
+  useEffect(() => { ecrire("gl_affichage", JSON.stringify({ view, sort, sortDir, groupePar })); },
+    [view, sort, sortDir, groupePar]);
 
   // Le téléphone peut basculer pendant que l'application est ouverte — la nuit
   // tombe, ou l'économiseur de batterie s'enclenche. En mode automatique, elle
@@ -617,6 +630,10 @@ export default function App() {
     .flatMap(g => (g.pretsPasses || []).map((e, i) => ({ ...e, titre: g.title, jeuId: g.id, index: i })))
     .sort((a, b) => (a.au < b.au ? 1 : a.au > b.au ? -1 : 0))
     .slice(0, 50), [games]);
+  // Le relais ne voyage jamais dans la sauvegarde : il vit avec les clés.
+  const sauvegarde = etatSauvegarde({ ...sync, proxy: keys.proxy });
+  const sauvegardeAlerte = sauvegarde.configuree && sauvegarde.niveau !== "fraiche";
+
   const filtresActifs = compterFiltres({ plat, pretFil, fmtFil, genreFil, modeFil, noteFil, completFil, serieFil });
   // Dérivés de TOUTE la bibliothèque, pas de la liste filtrée : sinon les
   // options disparaîtraient au fur et à mesure qu'on s'en sert.
@@ -810,14 +827,29 @@ export default function App() {
             // Le dernier onglet n'a qu'un émoji pour libellé : un lecteur
             // d'écran annonçait « engrenage », ce qui ne dit pas où l'on va.
             <button key={k} onClick={() => setTab(k)} aria-pressed={tab === k}
-              aria-label={k === "settings" ? "Réglages" : undefined}
+              aria-label={k === "settings"
+                ? (sauvegardeAlerte ? "Réglages — sauvegarde à faire" : "Réglages")
+                : undefined}
               style={{
+                position: "relative",
                 flex: k === "settings" ? "0 0 auto" : 1, minWidth: k === "settings" ? "var(--tap)" : 0,
                 minHeight: "var(--tap)", background: tab===k ? accentFond : "transparent",
                 border: `1px solid ${tab===k ? accentFond : bdr}`, color: tab===k ? "#fff" : mut,
                 borderRadius: "var(--r-md)", padding: "0 8px", fontSize: "var(--t-petit)", fontWeight: tab===k ? 600 : 400,
                 cursor: "pointer", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
-              }}>{l}</button>
+              }}>
+              {l}
+              {/* La synchronisation est manuelle, et c'est bien ainsi. Mais une
+                  sauvegarde qu'on oublie de faire n'existe pas, et son âge ne
+                  se lisait que dans un panneau qu'on n'ouvre jamais. Une pastille
+                  sur l'engrenage, rien de plus : pas de bannière à écarter. */}
+              {k === "settings" && sauvegardeAlerte && (
+                <span aria-hidden="true" style={{
+                  position: "absolute", top: 8, right: 8, width: 8, height: 8,
+                  borderRadius: "50%", background: warn,
+                }} />
+              )}
+            </button>
           ))}
         </div>
 

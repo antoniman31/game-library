@@ -493,9 +493,30 @@ date. Une date doit donc aussi être **plausible** : entre 1970 et dix ans devan
 pour les liens d'une fiche : ils finissent dans un `href`, et `javascript:` en
 est un — seuls `http://` et `https://` entrent, et sont rendus.
 
-Trois autres clés vivent à part dans le `localStorage`, précisément pour ne
+Quatre autres clés vivent à part dans le `localStorage`, précisément pour ne
 jamais entrer dans l'export : `gl_keys` (clés des services), `gl_sync` (code de
-synchronisation) et `gl_theme` (mode d'apparence).
+synchronisation), `gl_theme` (mode d'apparence) et `gl_affichage` (vue, tri, sens
+et regroupement — pas les filtres, voir plus bas).
+
+**Ce que la synchronisation emporte** : la totalité de chaque fiche, sans
+exception — jusqu'à l'historique des prêts passés et la provenance des infos —
+plus le mode d'apparence, plus les clés des services si la case est cochée. Ce
+qu'elle n'emporte jamais : l'adresse du relais, sans laquelle on ne peut pas la
+joindre (la restaurer depuis elle-même serait circulaire), et le code de
+synchronisation, qui est ce qui la protège.
+
+**Les réglages d'affichage survivent au lancement, les filtres non.** Un
+réglage d'affichage change comment on regarde ; un filtre change ce qu'on voit.
+Un filtre qui survit au redémarrage, c'est une bibliothèque amputée sans qu'on
+sache pourquoi — exactement le défaut corrigé sur l'ajout d'un jeu, mais
+permanent.
+
+**L'âge de la sauvegarde se voit.** La synchronisation est manuelle, et le
+reste : personne ne veut qu'une application pousse ses données sans qu'on le lui
+demande. Mais une sauvegarde qu'on oublie de faire n'existe pas. Passé sept
+jours, une pastille orange apparaît sur l'onglet ⚙️ et la ligne des réglages dit
+« il y a 12 jours » au lieu d'une date à convertir de tête. Rien à écarter,
+aucune bannière : seulement un retard qui cesse d'être invisible.
 
 ---
 

@@ -70,3 +70,63 @@ export function resumePreferences(p) {
   if (n) morceaux.push(`${n} clé${n > 1 ? "s" : ""} de service`);
   return morceaux.join(" et ");
 }
+
+
+// ── Âge de la sauvegarde en ligne ──────────────────────────────────────────
+//
+// La synchronisation est manuelle, et c'est bien : personne ne veut qu'une
+// application pousse ses données sans qu'on le lui demande. Mais une
+// sauvegarde qu'on oublie de faire est une sauvegarde qui n'existe pas, et
+// l'écran ne disait son âge que sous la forme d'une date à convertir de tête,
+// dans un panneau qu'on n'ouvre jamais.
+//
+// Sept jours : assez long pour qu'une semaine sans jouer ne réclame rien,
+// assez court pour qu'on ne perde jamais plus d'une semaine d'ajouts.
+export const JOURS_SAUVEGARDE_VIEILLE = 7;
+
+export function etatSauvegarde({ majLe, code, proxy } = {}, maintenant = Date.now()) {
+  // Sans code ni relais, il n'y a pas de sauvegarde à vieillir : on ne
+  // réclame pas une synchronisation à qui n'en a pas voulu.
+  if (!String(code || "").trim() || !String(proxy || "").trim()) return { configuree: false, niveau: "aucune" };
+  const t = majLe ? new Date(majLe).getTime() : NaN;
+  if (!Number.isFinite(t)) return { configuree: true, niveau: "jamais", jours: null };
+  const jours = Math.max(0, Math.floor((maintenant - t) / 86400000));
+  return { configuree: true, niveau: jours >= JOURS_SAUVEGARDE_VIEILLE ? "vieille" : "fraiche", jours };
+}
+
+export function texteAgeSauvegarde(etat) {
+  if (!etat?.configuree) return "";
+  if (etat.niveau === "jamais") return "jamais envoyée depuis cet appareil";
+  if (etat.jours === 0) return "aujourd'hui";
+  if (etat.jours === 1) return "hier";
+  return `il y a ${etat.jours} jours`;
+}
+
+
+// ── Réglages d'affichage ───────────────────────────────────────────────────
+//
+// La vue, le tri, son sens et le regroupement repartaient à zéro à chaque
+// lancement : on rouvrait l'application en vue liste, triée de A à Z, alors
+// qu'on l'avait quittée en grille par date de sortie. Ils vivent maintenant
+// dans le stockage local.
+//
+// Les filtres, eux, n'y vont pas, et c'est délibéré. Un filtre survivant au
+// lancement, c'est une bibliothèque amputée sans qu'on sache pourquoi — le
+// défaut qu'on vient de corriger sur l'ajout d'un jeu, mais permanent. Un
+// réglage d'affichage change comment on regarde, un filtre change ce qu'on
+// voit : seul le premier a vocation à durer.
+export const AFFICHAGE_DEFAUT = { view: "liste", sort: "titre", sortDir: 1, groupePar: "aucun" };
+
+const VUES = ["liste", "compact", "grille"];
+const GROUPES = ["aucun", "plateforme", "serie", "genre"];
+
+export function affichageRecu(brut, trisConnus = []) {
+  const p = { ...AFFICHAGE_DEFAUT };
+  if (!brut || typeof brut !== "object") return p;
+  if (VUES.includes(brut.view)) p.view = brut.view;
+  if (GROUPES.includes(brut.groupePar)) p.groupePar = brut.groupePar;
+  if (trisConnus.includes(brut.sort)) p.sort = brut.sort;
+  // Le sens ne vaut que 1 ou -1 : tout le reste renverserait le comparateur.
+  if (brut.sortDir === -1 || brut.sortDir === 1) p.sortDir = brut.sortDir;
+  return p;
+}

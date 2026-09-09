@@ -1,7 +1,8 @@
 import { useRef, useState } from "react";
-import { card, bdr, txt, mut, accent, accentDoux, accentFond, ok, danger } from "../lib/theme.js";
+import { card, bdr, txt, mut, accent, accentDoux, accentFond, ok, warn, danger } from "../lib/theme.js";
 import { MODES, LIBELLES, ICONES } from "../lib/apparence.js";
 import { pertesDeReglages, messageDePerte, messageCodeSync, CONSEQUENCES } from "../lib/garde-fous.js";
+import { etatSauvegarde, texteAgeSauvegarde } from "../lib/preferences.js";
 import ChampProtege from "./ChampProtege.jsx";
 import SousOnglets from "./SousOnglets.jsx";
 
@@ -102,6 +103,10 @@ export default function SettingsView({
   sync, majSync, genererCode, syncEtat, setSyncEtat, onEnvoyer, onRecuperer,
   onExporter, onImporter,
 }) {
+  // Le relais vit avec les clés et ne part jamais dans la sauvegarde : sans
+  // lui, il n'y a rien à joindre, donc rien à réclamer.
+  const ageSauvegarde = etatSauvegarde({ ...sync, proxy: keys.proxy });
+
   const [onglet, setOnglet] = useState("sauvegarde");
   const [visible, setVisible] = useState(false);
   const [enregistre, setEnregistre] = useState(false);
@@ -226,9 +231,24 @@ export default function SettingsView({
           </span>
         </label>
 
-        {sync.majLe && syncEtat?.type !== "…" && (
-              <div style={{ color: mut, fontSize: "var(--t-legende)", marginTop: 6 }}>
-                Dernière synchronisation : {new Date(sync.majLe).toLocaleString("fr-FR")}
+        {/* Une date à convertir de tête n'apprend rien : ce qu'on veut savoir,
+            c'est s'il faut envoyer maintenant. L'âge se lit en clair, et
+            au-delà d'une semaine il passe en orange — la synchronisation reste
+            manuelle, mais son retard cesse d'être invisible. */}
+        {ageSauvegarde.configuree && syncEtat?.type !== "…" && (
+              <div style={{
+                color: ageSauvegarde.niveau === "fraiche" ? mut : warn,
+                fontSize: "var(--t-legende)", marginTop: 8, lineHeight: 1.5,
+              }}>
+                {ageSauvegarde.niveau === "fraiche" ? "✓ " : "⚠️ "}
+                Dernière sauvegarde : {texteAgeSauvegarde(ageSauvegarde)}
+                {sync.majLe && ageSauvegarde.niveau !== "jamais"
+                  ? ` (${new Date(sync.majLe).toLocaleString("fr-FR")})` : ""}
+                {ageSauvegarde.niveau !== "fraiche" && (
+                  <span style={{ display: "block", color: mut }}>
+                    Tout ce que tu as ajouté depuis n'existe que sur cet appareil.
+                  </span>
+                )}
               </div>
             )}
           </Section>

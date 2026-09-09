@@ -6,7 +6,8 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { preferencesASauvegarder, preferencesRecues, resumePreferences } from "./preferences.js";
+import { preferencesASauvegarder, preferencesRecues, resumePreferences,
+  etatSauvegarde, texteAgeSauvegarde, affichageRecu, AFFICHAGE_DEFAUT, JOURS_SAUVEGARDE_VIEILLE } from "./preferences.js";
 
 const CLES = { rawg: "R", sgdb: "S", xbl: "X", proxy: "https://relais.workers.dev" };
 
@@ -55,4 +56,56 @@ test("le résumé dit ce qui va être appliqué avant qu'on l'applique", () => {
   assert.equal(resumePreferences({ modeTheme: "dark" }), "l'apparence");
   assert.equal(resumePreferences({ keys: { rawg: "R" } }), "1 clé de service");
   assert.equal(resumePreferences({ modeTheme: "dark", keys: { rawg: "R", xbl: "X" } }), "l'apparence et 2 clés de service");
+});
+
+
+// ── Âge de la sauvegarde ───────────────────────────────────────────────────
+
+const JOUR = 86400000;
+const T0 = new Date("2026-09-09T12:00:00Z").getTime();
+
+test("sans code ni relais, aucune sauvegarde à réclamer", () => {
+  assert.equal(etatSauvegarde({ majLe: null, code: "", proxy: "https://x" }, T0).configuree, false);
+  assert.equal(etatSauvegarde({ majLe: null, code: "abc", proxy: "  " }, T0).configuree, false);
+  assert.equal(etatSauvegarde(undefined, T0).configuree, false);
+  assert.equal(texteAgeSauvegarde({ configuree: false }), "");
+});
+
+test("une sauvegarde configurée dit son âge, et se signale au bout d'une semaine", () => {
+  const sync = { code: "abc", proxy: "https://x" };
+  assert.deepEqual(etatSauvegarde({ ...sync, majLe: null }, T0), { configuree: true, niveau: "jamais", jours: null });
+  assert.equal(etatSauvegarde({ ...sync, majLe: new Date(T0).toISOString() }, T0).niveau, "fraiche");
+  assert.equal(etatSauvegarde({ ...sync, majLe: new Date(T0 - 6 * JOUR).toISOString() }, T0).jours, 6);
+  assert.equal(etatSauvegarde({ ...sync, majLe: new Date(T0 - 6 * JOUR).toISOString() }, T0).niveau, "fraiche");
+  // Le seuil est atteint, pas dépassé : sept jours pile se signalent déjà.
+  assert.equal(etatSauvegarde({ ...sync, majLe: new Date(T0 - JOURS_SAUVEGARDE_VIEILLE * JOUR).toISOString() }, T0).niveau, "vieille");
+  // Une date illisible ne doit pas produire un âge de NaN jours.
+  assert.equal(etatSauvegarde({ ...sync, majLe: "bientôt" }, T0).niveau, "jamais");
+  // Une date dans le futur — horloge décalée entre deux appareils — ne donne
+  // pas un âge négatif.
+  assert.equal(etatSauvegarde({ ...sync, majLe: new Date(T0 + 3 * JOUR).toISOString() }, T0).jours, 0);
+});
+
+test("l'âge se dit en français, pas en millisecondes", () => {
+  const sync = { code: "abc", proxy: "https://x" };
+  const age = (j) => texteAgeSauvegarde(etatSauvegarde({ ...sync, majLe: new Date(T0 - j * JOUR).toISOString() }, T0));
+  assert.equal(age(0), "aujourd'hui");
+  assert.equal(age(1), "hier");
+  assert.equal(age(12), "il y a 12 jours");
+  assert.equal(texteAgeSauvegarde({ configuree: true, niveau: "jamais" }), "jamais envoyée depuis cet appareil");
+});
+
+// ── Réglages d'affichage ───────────────────────────────────────────────────
+
+test("les réglages d'affichage relus sont ceux qu'on connaît, ou ceux par défaut", () => {
+  const tris = ["titre", "date", "sortie", "metacritic", "aleatoire"];
+  assert.deepEqual(affichageRecu(null, tris), AFFICHAGE_DEFAUT);
+  assert.deepEqual(affichageRecu({ view: "grille", sort: "sortie", sortDir: -1, groupePar: "serie" }, tris),
+    { view: "grille", sort: "sortie", sortDir: -1, groupePar: "serie" });
+  // Une valeur inconnue — vieille version, fichier bricolé — retombe sur le
+  // défaut plutôt que d'entrer telle quelle et de casser l'affichage.
+  assert.deepEqual(affichageRecu({ view: "mosaique", sort: "prix", sortDir: 0, groupePar: "editeur" }, tris), AFFICHAGE_DEFAUT);
+  // Le sens de tri n'accepte que 1 et -1 : un 2 renverserait le comparateur.
+  assert.equal(affichageRecu({ sortDir: 2 }, tris).sortDir, 1);
+  assert.equal(affichageRecu({ sortDir: -1 }, tris).sortDir, -1);
 });
