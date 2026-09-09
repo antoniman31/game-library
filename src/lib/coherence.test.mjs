@@ -116,3 +116,28 @@ test("les modes de thème connus sont exactement ceux que le script sait traiter
     assert.ok(html.includes(`"${mode}"`), `index.html ne reconnaît pas le mode "${mode}"`);
   }
 });
+
+
+// ── Les filtres et leur effacement ─────────────────────────────────────────
+//
+// `FILTRES` dit quels filtres existent ; `SETTEURS_FILTRE`, dans App.jsx, dit
+// comment on les éteint. Rien dans le langage n'oblige les deux à s'accorder,
+// et c'est exactement ainsi que le défaut est arrivé : six filtres ajoutés
+// d'un côté, une remise à zéro restée à trois de l'autre, et un jeu ajouté
+// depuis une liste filtrée par série qui n'apparaissait nulle part.
+//
+// Le test lit la table dans le source plutôt que de monter l'application :
+// on vérifie qu'aucun filtre n'a été oublié, pas qu'un composant réagit.
+test("chaque filtre a de quoi être éteint dans App.jsx", async () => {
+  const { FILTRES } = await import("./model.js");
+  const app = lire("../App.jsx");
+  const table = app.match(/const SETTEURS_FILTRE = \{([\s\S]*?)\};/);
+  assert.ok(table, "App.jsx devrait définir SETTEURS_FILTRE");
+  const nommes = [...table[1].matchAll(/(\w+)\s*:/g)].map(m => m[1]);
+  for (const f of FILTRES) {
+    assert.ok(nommes.includes(f), `le filtre « ${f} » n'a pas d'effacement dans SETTEURS_FILTRE`);
+  }
+  for (const n of nommes) {
+    assert.ok(FILTRES.includes(n), `« ${n} » est effacé mais n'est pas un filtre connu`);
+  }
+});

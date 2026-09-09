@@ -14,7 +14,7 @@ import SettingsView from "./components/SettingsView.jsx";
 
 import { hdr, card, bdr, txt, mut, accent, accentDoux, accentFond, warnDoux, dangerDoux, ok, warn, warnFond, danger } from "./lib/theme.js";
 import { GAMES_INIT } from "./lib/seed.js";
-import { migrateGames, compterFiltres, validerJeuxImportes, pretEnRetard, jeuxSansScore, normaliserGenres,
+import { migrateGames, compterFiltres, FILTRES, validerJeuxImportes, pretEnRetard, jeuxSansScore, normaliserGenres,
   jeuALeMode, jeuSurPlateforme, compterRetro, genresPresents, dureeEntreeHistorique, supprimerEntreeHistorique,
   joursDePret, jeuPasseSeuil, jeuACompleter, completudeManquante, dateDeSortie, serieDuJeu,
   empreinteMelange, compterFichesIncompletes, PLATFORM_COLORS } from "./lib/model.js";
@@ -336,15 +336,34 @@ export default function App() {
 
   const edit = useCallback((id, field, val) => setGames(gs => gs.map(g => g.id === id ? { ...g, [field]: val } : g)), []);
   const enrichGame = useCallback((id, data) => setGames(gs => gs.map(g => g.id === id ? { ...g, ...data } : g)), []);
+  // Chaque filtre et le moyen de l'effacer, au même endroit. La table est
+  // vérifiée contre `FILTRES` par un test : un filtre ajouté sans son
+  // effacement fait échouer la CI au lieu de faire disparaître un jeu.
+  const SETTEURS_FILTRE = {
+    plat: setPlat, pretFil: setPretFil, fmtFil: setFmtFil, genreFil: setGenreFil,
+    modeFil: setModeFil, noteFil: setNoteFil, completFil: setCompletFil, serieFil: setSerieFil,
+  };
+
+  // La rétrocompatibilité n'est pas un filtre mais une façon de lire le filtre
+  // de plateforme : elle revient à son état ouvert avec lui.
+  const reinitialiserFiltres = () => {
+    for (const f of FILTRES) SETTEURS_FILTRE[f]("tous");
+    setAvecRetro(true);
+  };
+
   // Ajoute le jeu puis l'ouvre directement en fiche complète (parité fiche/ajout).
+  //
+  // Tous les filtres tombent, pas seulement ceux qui existaient quand cette
+  // fonction a été écrite : un jeu ajouté depuis une liste filtrée par série
+  // entrait bien dans la bibliothèque, mais sans série il n'y figurait pas, et
+  // l'ajout ressemblait trait pour trait à une suppression.
   const addGame = (g) => {
     setGames(gs => [g, ...gs]);
     setShowAdd(false);
     setLastAddedId(g.id);
     setTab("library");
     setView("liste");
-    setPlat("tous");
-    setPretFil("tous");
+    reinitialiserFiltres();
     applySearch("");
   };
 
@@ -356,8 +375,7 @@ export default function App() {
     setImportedIds(created.map(g => g.id));
     setTab("library");
     setView("liste");
-    setPlat("tous");
-    setPretFil("tous");
+    reinitialiserFiltres();
     applySearch("");
   };
 
@@ -1009,6 +1027,7 @@ export default function App() {
           groupePar={groupePar} setGroupePar={setGroupePar}
           view={view} setView={setView}
           resultats={filtered.length}
+          onReinitialiser={reinitialiserFiltres}
           onClose={() => setShowFilters(false)}
         />
       )}

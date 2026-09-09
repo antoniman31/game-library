@@ -726,6 +726,32 @@ restait 347 de libres. Invisible tant que les textes étaient courts, mais
 « 🗑 « Grand Theft Auto: San Andreas – The Definitive Edition » supprimé »
 l'aurait montré depuis longtemps.
 
+### Phase 24 — Un jeu ajouté qui avait l'air supprimé
+
+Signalé ainsi : « j'ai plusieurs Zelda et quand je les ajoute il se supprime
+tout seul, c'est pas ton truc de déduplication qui merde ». Ce n'était pas la
+déduplication — il n'y en a aucune sur le chemin d'ajout, pas une ligne.
+
+Le scénario se reproduit en trois gestes. On touche le nom d'une série sur une
+fiche, ce qui pose le filtre « série » ; on ajoute un autre jeu de cette série ;
+il n'apparaît pas. Il est pourtant bien là : l'en-tête dit « 4 jeux · 3
+affichés » et le badge des filtres affiche 1. Mais le jeu neuf n'a pas encore de
+fiche Wikidata, donc pas de série, donc il ne passe pas le filtre qui l'a amené
+là. Ajouter ressemblait trait pour trait à supprimer.
+
+La cause tient en une ligne d'histoire. `addGame` remettait à zéro la
+plateforme, le filtre de prêt et la recherche — les trois filtres qui existaient
+le jour où il a été écrit. Les six ajoutés depuis, dont la série, ne l'étaient
+pas. L'import Xbox avait exactement le même trou, et le bouton
+« Réinitialiser » du panneau, lui, énumérait bien les neuf. Trois copies d'une
+même liste, dont deux avaient cessé de suivre.
+
+D'où `FILTRES` dans le modèle, une seule liste, et `SETTEURS_FILTRE` dans
+App.jsx, qui dit comment on éteint chacun. Rien dans le langage n'oblige les
+deux à s'accorder : un test de cohérence lit la table dans le source et échoue
+si un filtre n'a pas son effacement, ou si un effacement ne correspond à aucun
+filtre connu. Vérifié en retirant un filtre à la main — la CI le nomme.
+
 ---
 
 ## 3. Architecture finale
