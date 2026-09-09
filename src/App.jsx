@@ -22,7 +22,7 @@ import { lire, ecrire, surEchecStockage } from "./lib/storage.js";
 import { chargerSync, enregistrerSync, genererCode, envoyer, recuperer } from "./lib/sync.js";
 import { preferencesASauvegarder, preferencesRecues, resumePreferences } from "./lib/preferences.js";
 import { surMiseAJour } from "./lib/maj.js";
-import { libelleTri } from "./lib/tri.js";
+import { libelleTri, TRI_DEFAUT } from "./lib/tri.js";
 import { resoudreTheme, modeSuivant, modeValide, ICONES, LIBELLES, COULEUR_BARRE } from "./lib/apparence.js";
 import {
   loadKeys, setApiKeys, normTitle, hasRawgKey, rawgFirstResult,
@@ -87,7 +87,7 @@ export default function App() {
   const [graine, setGraine] = useState(() => Date.now() % 100000);
   const [groupePar, setGroupePar] = useState("aucun");
   const [modeFil, setModeFil] = useState("tous");
-  const [sort, setSort] = useState("titre");
+  const [sort, setSort] = useState(TRI_DEFAUT);
   const [view, setView] = useState("liste");
   const [tab, setTab] = useState("library");
   const [showAdd, setShowAdd] = useState(false);
@@ -708,7 +708,12 @@ export default function App() {
             {/* La ligne répond aux deux questions que l'application sert à poser :
                 combien de jeux, et combien sont dehors. */}
             <div style={{ fontSize: "var(--t-legende)", color: mut, marginTop: 3 }}>
-              {stats.total} jeu{stats.total > 1 ? "x" : ""}{stats.pretes > 0 ? ` · ${stats.pretes} prêté${stats.pretes > 1 ? "s" : ""}` : ""}
+              {stats.total} jeu{stats.total > 1 ? "x" : ""}
+              {/* Le nombre affiché ne se dit que s'il diffère du total : il
+                  vivait sur une rangée à lui sous l'en-tête, que le tri a
+                  libérée en remontant à côté de la recherche. */}
+              {tab === "library" && filtered.length < games.length ? ` · ${filtered.length} affiché${filtered.length > 1 ? "s" : ""}` : ""}
+              {stats.pretes > 0 ? ` · ${stats.pretes} prêté${stats.pretes > 1 ? "s" : ""}` : ""}
               {stats.enRetard > 0 ? <span style={{ color: warn }}> · {stats.enRetard} en retard</span> : null}
             </div>
           </div>
@@ -798,16 +803,38 @@ export default function App() {
           ))}
         </div>
 
-        {/* Recherche + accès aux filtres. Les quatre rangées de puces qui
-            occupaient cette place sont dans le panneau « Filtres » ; le badge
-            dit combien sont appliquées sans avoir à l'ouvrir. */}
+        {/* Recherche, tri et accès aux filtres sur une seule ligne. Les quatre
+            rangées de puces qui occupaient cette place sont dans le panneau
+            « Filtres » ; le badge dit combien sont appliquées sans avoir à
+            l'ouvrir.
+
+            Quatre commandes tiennent sur 360 px à deux conditions : le champ
+            abrège son invite — « Rechercher… » plutôt que la liste de ce qu'on
+            peut y chercher, que la recherche elle-même montre dès la première
+            lettre — et le bouton de tri ne porte son libellé que lorsqu'il
+            n'est plus celui par défaut. */}
         {tab === "library" && (
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
             <input value={searchInput} onChange={e => setSearchInput(e.target.value)} type="search"
-              placeholder="Rechercher titre, genre, tag…"
-              style={{ flex: 1, minWidth: 0, minHeight: "var(--tap)", background: card, border: `1px solid ${bdr}`, borderRadius: "var(--r-md)", color: txt, padding: "0 12px", fontSize: "var(--t-titre)" }} />
+              placeholder="Rechercher…"
+              style={{ flex: 1, minWidth: 0, minHeight: "var(--tap)", background: card, border: `1px solid ${bdr}`, borderRadius: "var(--r-md)", color: txt, padding: "0 12px", fontSize: "var(--t-corps)" }} />
+            <button onClick={() => setShowSort(true)}
+              aria-label={`Trier : ${libelleTri(sort)}`} title={`Trier : ${libelleTri(sort)}`}
+              style={{ ...btnHdr, padding: sort === TRI_DEFAUT ? 0 : "0 10px", borderColor: sort === TRI_DEFAUT ? bdr : ACCENT, color: sort === TRI_DEFAUT ? txt : ACCENT, fontSize: "var(--t-corps)" }}>
+              ⇅{sort === TRI_DEFAUT ? "" : ` ${libelleTri(sort)}`}
+            </button>
+            {/* Le sens n'a pas de sens pour un tirage au hasard : le bouton
+                disparaît plutôt que de rester là sans rien faire. */}
+            {sort !== "aleatoire" && (
+              <button onClick={() => setSortDir(d => -d)}
+                aria-label={sortDir === 1 ? "Inverser l'ordre" : "Rétablir l'ordre"}
+                title={sortDir === 1 ? "Inverser l'ordre" : "Rétablir l'ordre"}
+                style={{ ...btnHdr, padding: 0, background: sortDir === -1 ? accentDoux : "transparent", borderColor: sortDir === -1 ? ACCENT : bdr, color: sortDir === -1 ? ACCENT : txt, fontSize: "var(--t-corps)" }}>
+                {sortDir === 1 ? "↓" : "↑"}
+              </button>
+            )}
             <button onClick={() => setShowFilters(true)}
-              style={{ ...btnHdr, borderColor: filtresActifs ? ACCENT : bdr, color: filtresActifs ? ACCENT : txt, fontSize: "var(--t-corps)" }}>
+              style={{ ...btnHdr, padding: "0 10px", borderColor: filtresActifs ? ACCENT : bdr, color: filtresActifs ? ACCENT : txt, fontSize: "var(--t-corps)" }}>
               Filtres{filtresActifs > 0 && <span style={{ background: accentFond, color: "#fff", borderRadius: "var(--r-sm)", padding: "1px 6px", fontSize: "var(--t-legende)", fontWeight: 700 }}>{filtresActifs}</span>}
             </button>
           </div>
@@ -816,43 +843,6 @@ export default function App() {
 
       {/* Body */}
       <div style={{ padding:"14px calc(14px + var(--safe-right)) calc(60px + var(--safe-bottom)) calc(14px + var(--safe-left))" }}>
-        {/* Le tri était enterré dans le panneau des filtres, alors que ce n'en
-            est pas un : le badge ne le comptait pas, et le panneau devait
-            s'appeler « Filtres & affichage » pour l'accueillir. Ici, il est
-            visible sans rien ouvrir, et la ligne dit enfin combien de jeux
-            l'écran montre — un chiffre qu'il fallait sinon aller chercher. */}
-        {tab === "library" && filtered.length > 0 && (
-          <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:8, marginBottom:10 }}>
-            {/* Seulement quand il diffère du total : sans filtre, l'en-tête
-                dit déjà « 154 jeux » et le répéter deux lignes plus bas
-                n'apprend rien. Filtré, il dit ce que l'écran montre. */}
-            <span style={{ color:mut, fontSize:"var(--t-petit)", flexShrink:0 }}>
-              {filtered.length < games.length ? `${filtered.length} jeu${filtered.length > 1 ? "x" : ""}` : ""}
-            </span>
-            <div style={{ display:"flex", gap:6 }}>
-              <button onClick={() => setShowSort(true)}
-                style={{
-                  minHeight:"var(--tap-min)", padding:"0 12px", borderRadius:"var(--r-sm)",
-                  background:"transparent", border:`1px solid ${bdr}`, color:txt,
-                  fontSize:"var(--t-petit)", cursor:"pointer", fontFamily:"inherit",
-                }}>⇅ {libelleTri(sort)}</button>
-              {/* Le sens n'a pas de sens pour un tirage au hasard : le bouton
-                  disparaît plutôt que de rester là sans rien faire. */}
-              {sort !== "aleatoire" && (
-                <button onClick={() => setSortDir(d => -d)}
-                  aria-label={sortDir === 1 ? "Inverser l'ordre" : "Rétablir l'ordre"}
-                  title={sortDir === 1 ? "Inverser l'ordre" : "Rétablir l'ordre"}
-                  style={{
-                    minWidth:"var(--tap-min)", minHeight:"var(--tap-min)", borderRadius:"var(--r-sm)",
-                    background: sortDir === -1 ? accentDoux : "transparent",
-                    border:`1px solid ${sortDir === -1 ? accent : bdr}`,
-                    color: sortDir === -1 ? accent : mut,
-                    fontSize:"var(--t-petit)", cursor:"pointer", fontFamily:"inherit",
-                  }}>{sortDir === 1 ? "↓" : "↑"}</button>
-              )}
-            </div>
-          </div>
-        )}
         {tab === "library" && (filtered.length === 0 ? emptyState : (
           <>
           {sections.map(({ titre, jeux }) => (
