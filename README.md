@@ -125,7 +125,6 @@ erreur CORS.
 ### Bibliothèque — onglet « Jeux »
 
 - **94 jeux** pré-remplis en données de départ ; ajout, édition et suppression libres.
-- **Vues liste et grille**, jaquettes au **format boîte vertical 2:3**.
 - **Recherche** sur titre + genre + tag, **insensible à la casse et aux accents**
   (« creatif » trouve le genre « Créatif »). La description est volontairement
   exclue : un mot du résumé faisait remonter des jeux sans rapport.
@@ -167,9 +166,17 @@ erreur CORS.
   en tête. Le tirage au hasard tient tant qu'on ne redemande pas à mélanger — une
   empreinte calculée depuis l'identifiant et une graine, plutôt qu'un `Math.random()`
   dans le comparateur qui ferait danser la liste à chaque frappe.
-- **Le tri est au-dessus de la liste**, plus dans le panneau : ce n'est pas un filtre,
-  le badge ne le compte pas. Le bouton porte le tri courant. La ligne indique aussi
-  combien de jeux l'écran montre, quand ce nombre diffère du total.
+- **Le tri est sur la ligne de recherche**, plus dans le panneau : ce n'est pas un
+  filtre, le badge ne le compte pas. Il y a d'abord occupé une rangée à lui, ce qui
+  faisait deux rangées de commandes avant la première jaquette ; il tient désormais à
+  côté du champ, avec la flèche de sens et « Filtres ». Quatre commandes sur 360 px
+  ne rentrent qu'à deux conditions : le champ abrège son invite — « Rechercher… »,
+  réduite à une loupe quand le bouton de tri porte son libellé, une invite ne
+  s'abrégeant pas comme un texte mais se coupant net — et le bouton de tri ne dit son
+  libellé que lorsqu'il ne trie plus par défaut. Le contour accentué reste au seul
+  bouton « Filtres » : deux boutons au même traitement, côte à côte et sans la même
+  importance, se confondent. Le nombre de jeux affichés remonte dans l'en-tête, à côté
+  du total — « 155 jeux · 23 affichés ».
 - **Trois vues et un regroupement** : liste, compacte (une ligne par jeu, pour
   parcourir cent cinquante titres au pouce) et grille ; regroupement facultatif par
   plateforme, série ou genre, avec des en-têtes de section. Le regroupement ne change
@@ -193,7 +200,6 @@ erreur CORS.
   une bibliothèque réelle il y a vingt-huit genres, et vingt-huit boutons ne sont plus
   un choix. Le genre sélectionné reste visible même s'il vient de la traîne, sinon le
   filtre actif disparaît de l'écran.
-- **Tri** : A-Z, date, Metacritic.
 - **Tout est modifiable** : « Modifier la fiche » ouvre un panneau qui laisse
   corriger ce que les sources automatiques ont écrit — titre, plateforme,
   format, rétrocompatibilité, genres, note, date, description, jaquette et
@@ -249,11 +255,29 @@ Trois sources, activables jeu par jeu depuis la fiche :
 | **🧹 Vider** | Efface au choix infos, description, jaquette, note ou genres — pour repartir d'une base propre |
 | **📦 Jaquette SteamGridDB** | Jaquette verticale 600×900 choisie parmi une grille de vignettes |
 
-**Infobox Wikidata** : développeur, éditeur, dates de sortie par plateforme, mode
-de jeu (solo / multi / coop), série et jeux précédent/suivant. Le moteur de jeu
-est volontairement exclu. Les libellés sont résolus en `fr` → `en` → `mul`
-(Wikidata range les noms propres sous `mul`, ce qui explique que certains
-éditeurs ne remontent pas si on ne demande que `fr`/`en`).
+**La fiche détaillée** — développeur, éditeur, dates de sortie, mode de jeu
+(solo / multi / coop), série et jeux précédent/suivant — vient de deux sources
+qui ne décrivent pas tout à fait la même chose. Wikipédia range un remaster sous
+la page du jeu d'origine : « Sonic The Hedgehog » y sort en 1991, quelle que soit
+la compilation qu'on possède. RAWG a une entrée par édition, avec la date de
+celle qu'on a achetée, mais ses studios viennent d'une base communautaire, moins
+sûre sur les vieux titres. Aucune ne gagne partout.
+
+**Une source ne remplit donc que les champs vides et n'écrase jamais.** Passer
+RAWG puis Wikipédia sur un remaster garde la date de la version possédée et
+complète le reste. Une source qui n'a rien rempli ne signe pas la provenance :
+annoncer « et RAWG » sur une fiche où RAWG n'a rien apporté serait une fausse
+piste au moment de démêler une date. Car la fiche dit d'où elle vient —
+« Source : RAWG et Wikidata » sous les lignes. Et puisque plus rien ne s'écrase,
+« 🧹 Vider » existe pour repartir propre : sans lui une fiche fausse le
+resterait, chaque nouvelle source la respectant poliment.
+
+Côté Wikidata, le moteur de jeu est volontairement exclu, et les libellés sont
+résolus en `fr` → `en` → `mul` (Wikidata range les noms propres sous `mul`, ce
+qui explique que certains éditeurs ne remontent pas si on ne demande que
+`fr`/`en`). Côté RAWG, les modes viennent des étiquettes `Singleplayer`,
+`Multiplayer` et `Co-op`, traduites dans le vocabulaire que le filtre par mode
+sait déjà lire.
 
 **Bouton « Partager la liste »** (panneau ⋯ Actions) : produit la liste **affichée** en
 texte lisible — groupée par plateforme, un jeu par ligne avec son format et, le cas
@@ -418,9 +442,27 @@ Quelques règles qui ne se voient qu'à l'usage :
   du navigateur : Échap, qui ferme sur Annuler, importait le fichier. Trois
   boutons nommés, et annuler n'importe rien.
 
-Ces règles ne se relisent pas, elles se mesurent : `npm run verif:ui` ouvre
-l'application construite et échoue si une cible passe sous le plancher, si un
-texte descend sous 12 px, si un libellé se tronque ou si la page déborde.
+Ces règles ne se relisent pas, elles se mesurent : `npm run verif:ui` construit
+l'application, la sert lui-même et échoue si une cible passe sous le plancher,
+si un texte descend sous 12 px, si un libellé se tronque ou si la page déborde.
+
+Un audit complet, mené en mesurant dans le navigateur sur quatorze écrans et
+deux thèmes, a montré la limite de ce garde-fou : il ne visitait ni la fenêtre
+d'ajout, ni l'édition à la main, ni une fiche assez longue pour afficher « Lire
+la suite ». Trois défauts y ont vécu des mois derrière un « Rien à signaler » —
+non pas parce qu'il n'y avait rien, mais parce qu'il ne regardait pas là. Ils
+sont corrigés et ces écrans sont maintenant dans la promenade. Le même audit a
+trouvé un jeton de couleur qui passait sur les cartes (4,91:1) et échouait sur
+l'en-tête (4,31:1) : un jeton mesuré sur un seul de ses fonds n'est mesuré nulle
+part.
+
+Trois écarts restent assumés, et sont écrits ici plutôt que tus : les commandes
+secondaires font 44 px et non 48 ; les listes contiguës — accordéon des filtres,
+cases à cocher, segments — n'ont pas 8 px entre elles, la règle visant des
+boutons distincts et non le motif de liste ; et tout se trouve en haut de
+l'écran, dans la zone que la cartographie du pouce désigne comme la plus
+difficile à atteindre à une main. Ce dernier point demanderait une barre de
+navigation basse, c'est-à-dire une refonte de l'ossature.
 
 ---
 
@@ -615,10 +657,12 @@ fournit directement un texte français rédigé, sans quota ni découpage.
   panneaux glissants. La liste a longtemps été paginée par 30, jusqu'à ce que la
   mesure montre que tout monter d'un coup ne coûte qu'une seconde de plus au
   démarrage sur un vieux téléphone : le bouton « Charger 30 de plus » a disparu
-  et la bibliothèque s'affiche entière. Les cibles tactiles, longtemps à 44 px « pour ne pas faire
+  et la bibliothèque s'affiche entière. Les cibles principales, longtemps à 44 px « pour ne pas faire
   exploser la densité », sont passées à 48 — le chiffre de Material — après
   qu'un audit a montré que le compromis avait été fait avec nous-mêmes et non
-  avec l'utilisateur.
+  avec l'utilisateur. Les commandes secondaires restent à 44 : c'est le plancher
+  d'Apple et de WCAG 2.5.8, et les passer à 48 reflowerait tous les panneaux
+  pour quatre pixels.
 - **Rien n'échoue plus en silence.** Une exception de rendu vidait `#root` sans
   un mot ; un `ErrorBoundary` affiche désormais l'erreur et propose d'exporter
   la bibliothèque avant toute chose. Les écritures dans `localStorage` étaient
@@ -824,7 +868,11 @@ ensuite. `npx wrangler deploy` ne sert plus qu'à déployer sa propre copie.
 - **La synchronisation est manuelle.** ⚙️ → Sauvegarde dépose la bibliothèque
   sur le Worker et la récupère, avec le même code sur chaque appareil ; rien ne
   part ni n'arrive tout seul, et une récupération remplace la bibliothèque
-  locale après confirmation. Sans relais déployé, il reste la copie hors ligne.
+  locale après confirmation. C'est un choix — personne ne veut qu'une
+  application pousse ses données sans qu'on le lui demande — mais une sauvegarde
+  qu'on oublie de faire n'existe pas : passé sept jours sans envoi, une pastille
+  apparaît sur l'onglet ⚙️ et la ligne des réglages donne l'âge en clair.
+  Cela signale le retard, cela ne le rattrape pas. Sans relais déployé, il reste la copie hors ligne.
   Le **code de synchronisation** est à saisir sur chaque appareil — il ne
   figure ni dans l'export ni dans la sauvegarde qu'il protège. Les clés des
   services peuvent voyager, mais seulement si on le demande explicitement.
@@ -843,8 +891,17 @@ ensuite. `npx wrangler deploy` ne sert plus qu'à déployer sa propre copie.
 - **La navigation est en haut de l'écran.** Les quatre onglets et le bouton
   « + Ajouter » occupent la zone que la cartographie du pouce désigne comme la
   plus difficile à atteindre à une main. Une barre basse et un bouton flottant
-  y répondraient : c'est la seule règle du cahier des charges qui reste sans
-  application, parce qu'elle déplace l'ossature et non trois valeurs.
+  y répondraient : c'est le seul écart structurel au cahier des charges, parce
+  qu'il déplace l'ossature et non trois valeurs.
+- **Toute la bibliothèque est montée d'un coup.** Mesuré sur 155 jeux et la
+  version construite, cela coûte 0,2 s de plus au démarrage sur une machine de
+  bureau, 0,7 sur un téléphone récent et 1,1 sur un ancien. À bibliothèque
+  doublée, la question se repose : les chiffres sont en commentaire dans
+  `App.jsx` pour qu'on n'ait pas à les redécouvrir.
+- **Les filtres ne survivent pas au lancement, délibérément.** La vue, le tri,
+  son sens et le regroupement, si. Un réglage d'affichage change comment on
+  regarde ; un filtre change ce qu'on voit, et un filtre qui survit au
+  redémarrage donne une bibliothèque amputée sans qu'on sache pourquoi.
 - **`localStorage` n'est pas un coffre-fort** : les clés y sont lisibles par tout
   script s'exécutant sur la page. Acceptable pour une application personnelle
   sans contenu tiers.
