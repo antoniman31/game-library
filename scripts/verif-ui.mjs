@@ -91,6 +91,22 @@ for (const [largeur, theme] of ECRANS) {
   const etapes = [
     ["Jeux", async () => {}],
     ["Filtres", async () => { await page.getByRole("button", { name: /^Filtres/ }).click(); }],
+    // Les groupes sont repliés : sans les ouvrir, leurs puces ne sont pas
+    // rendues et ne seraient donc jamais mesurées.
+    ["Filtres · plateforme ouverte", async () => { await page.getByRole("button", { name: /^Plateforme/ }).click(); }],
+    ["Filtres · tous les genres", async () => {
+      await page.getByRole("button", { name: /^Plateforme/ }).click();
+      await page.getByRole("button", { name: /^Genre/ }).click();
+      const bouton = page.getByRole("button", { name: /^Tous les genres/ });
+      if (await bouton.count()) await bouton.click();
+    }],
+    // Les groupes sont repliés : sans les ouvrir, leurs puces ne sont pas
+    // rendues et ne seraient donc jamais mesurées.
+    ["Filtres · genre ouvert", async () => { await page.getByRole("button", { name: /^Genre/ }).click(); }],
+    ["Filtres · tous les genres", async () => {
+      const bouton = page.getByRole("button", { name: /^Tous les genres/ });
+      if (await bouton.count()) await bouton.click();
+    }],
     ["fiche dépliée", async () => { await page.keyboard.press("Escape"); await page.locator(".gl-card").first().click(); }],
     ["Prêts", async () => { await page.getByRole("button", { name: /^Prêts/ }).click(); }],
     ["Stats", async () => { await page.getByRole("button", { name: "Stats" }).click(); }],

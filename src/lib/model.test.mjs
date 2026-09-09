@@ -19,7 +19,7 @@ import {
   rendreJeu, preterJeu, annulerPret, supprimerEntreeHistorique, dureeEntreeHistorique, MAX_HISTORIQUE_PRET, aujourdhuiISO,
   BACK_COMPAT, XBOX_SERIES_CUTOFF, PRET_LONG_JOURS, PLATFORMES_JEU,
   estDatePlausible, estLienSur, ANNEE_MIN, ANNEES_A_VENIR, normaliserGenres,
-  modesDuJeu, jeuALeMode, genresPresents, MODES_JEU,
+  modesDuJeu, jeuALeMode, genresPresents, MODES_JEU, jeuSurPlateforme, compterRetro,
 } from "./model.js";
 import { ecouterMiseAJour } from "./maj.js";
 
@@ -721,4 +721,57 @@ test("le badge compte les cinq filtres, pas le tri ni l'affichage", () => {
   // Les anciens appelants ne passaient que trois clés : elles ne doivent pas
   // compter comme des filtres actifs sous prétexte qu'elles sont absentes.
   assert.equal(compterFiltres({ plat: "tous", pretFil: "tous", fmtFil: "tous" }), 0);
+});
+
+
+// ── Rétrocompatibilité : la voir ou non ────────────────────────────────────
+//
+// Une plateforme récente montrait toujours ses jeux natifs ET ceux de la
+// précédente marqués rétrocompatibles, sans qu'on puisse s'y opposer. Sur une
+// bibliothèque réelle, demander « Xbox Series X » rendait 101 jeux dont 19
+// seulement sont des jeux Series X : les 19 étaient devenus introuvables.
+
+test("une plateforme récente hérite de la précédente, sauf si on le refuse", () => {
+  const natif = jeu({ platform: "Xbox Series X" });
+  const retro = jeu({ platform: "Xbox One", backCompat: true });
+  const pasRetro = jeu({ platform: "Xbox One", backCompat: false });
+
+  // Par défaut : le comportement d'avant, celui qu'on veut pour jouer ce soir.
+  assert.equal(jeuSurPlateforme(natif, "Xbox Series X"), true);
+  assert.equal(jeuSurPlateforme(retro, "Xbox Series X"), true);
+  assert.equal(jeuSurPlateforme(pasRetro, "Xbox Series X"), false);
+
+  // Refusé : la question du collectionneur — qu'ai-je VRAIMENT sur cette console.
+  assert.equal(jeuSurPlateforme(natif, "Xbox Series X", false), true);
+  assert.equal(jeuSurPlateforme(retro, "Xbox Series X", false), false);
+});
+
+test("l'héritage ne va que dans un sens, et « Toutes » ne filtre rien", () => {
+  const series = jeu({ platform: "Xbox Series X", backCompat: true });
+  // Une console ancienne n'accueille pas les jeux de la récente.
+  assert.equal(jeuSurPlateforme(series, "Xbox One"), false);
+  assert.equal(jeuSurPlateforme(series, "Xbox One", false), false);
+  // Et une plateforme n'hérite pas d'une autre famille.
+  assert.equal(jeuSurPlateforme(jeu({ platform: "Switch 1", backCompat: true }), "Xbox Series X"), false);
+  for (const avecRetro of [true, false]) {
+    assert.equal(jeuSurPlateforme(series, "tous", avecRetro), true);
+  }
+});
+
+test("le nombre de jeux hérités est annoncé, pas laissé à deviner", () => {
+  // « Inclure les jeux rétrocompatibles » ne dit pas s'il y en a deux ou
+  // quatre-vingts : la case porte le compte.
+  const bibliotheque = [
+    jeu({ platform: "Xbox Series X" }),
+    jeu({ platform: "Xbox One", backCompat: true }),
+    jeu({ platform: "Xbox One", backCompat: true }),
+    jeu({ platform: "Xbox One", backCompat: false }),
+    jeu({ platform: "Switch 1", backCompat: true }),
+  ];
+  assert.equal(compterRetro(bibliotheque, "Xbox Series X"), 2);
+  assert.equal(compterRetro(bibliotheque, "Switch 2"), 1);
+  // Une plateforme qui n'hérite de rien n'a pas de case à cocher.
+  assert.equal(compterRetro(bibliotheque, "Xbox One"), 0);
+  assert.equal(compterRetro(bibliotheque, "tous"), 0);
+  assert.equal(compterRetro(null, "Xbox Series X"), 0);
 });

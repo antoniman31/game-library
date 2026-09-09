@@ -485,6 +485,37 @@ bouton — sauf le genre sélectionné, qui reste visible même s'il vient de la
 traîne, sans quoi le filtre actif disparaît de l'écran et on ne sait plus
 comment l'enlever.
 
+### Phase 18 — Un panneau qu'on n'ouvre plus en apnée
+
+Le panneau des filtres montrait ses sept groupes dépliés : quarante boutons
+d'un coup, cinquante quand la liste des genres s'ouvrait. La loi de Hick dit ce
+qui se passe alors — on ne filtre plus, on renonce — et il fallait faire défiler
+pour découvrir qu'un filtre par mode de jeu existait.
+
+Chaque groupe tient désormais sur une ligne qui porte sa valeur courante et
+s'ouvre au toucher, un seul à la fois. Cinq lignes au lieu de quarante boutons,
+et surtout on voit d'un coup d'œil toutes les dimensions disponibles et
+lesquelles sont déjà posées — ce que la version dépliée rendait impossible.
+Les lignes sont séparées par un filet et non par du vide : elles forment une
+liste, pas des blocs.
+
+Le tri est sorti du panneau. Ce n'était pas un filtre — le badge ne le comptait
+pas, et le panneau devait s'appeler « Filtres & affichage » pour l'accueillir.
+Il vit au-dessus de la liste, visible sans rien ouvrir, sur une ligne qui dit
+aussi combien de jeux l'écran montre quand ce nombre diffère du total.
+
+**Et une chose qu'on ne cherchait pas.** En posant la case à cocher demandée
+pour la rétrocompatibilité, les chiffres ont montré que le problème était plus
+grave que le confort : « Xbox Series X » rendait 101 jeux dont 19 seulement sont
+des jeux Series X, et « Switch 2 » 53 pour 6 natifs. Le mélange était imposé
+depuis toujours, si bien que la question « qu'est-ce que j'ai vraiment sur cette
+console » n'avait aucune réponse dans l'application. La case répond aux deux
+questions au lieu d'une : cochée par défaut pour « quoi jouer ce soir »,
+décochée pour l'inventaire. Elle ne s'affiche que pour une console qui en
+accueille une autre, elle annonce combien de jeux elle ajoute, et la ligne
+repliée dit « Xbox Series X seul » quand elle est décochée — un filtre plus
+étroit que la normale doit se voir sans être ouvert.
+
 ---
 
 ## 3. Architecture finale

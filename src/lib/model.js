@@ -242,6 +242,35 @@ export function normaliserGenres(liste) {
   return sortie;
 }
 
+// Un jeu appartient-il à la plateforme demandée ?
+//
+// Une plateforme récente montre ses jeux natifs ET ceux de la précédente
+// marqués rétrocompatibles — c'est ce qu'on veut presque toujours, puisque ce
+// sont des jeux qu'on peut lancer sur la console qu'on a sous la main. Mais
+// « presque toujours » n'est pas « toujours », et le mélange était imposé :
+// sur une bibliothèque réelle, demander « Xbox Series X » rendait 101 jeux
+// dont 19 seulement sont des jeux Series X. Les 19 étaient devenus
+// introuvables.
+//
+// `avecRetro` reste vrai par défaut : c'est le comportement d'avant, et celui
+// qu'on veut quand on cherche quoi jouer ce soir. Le décocher répond à l'autre
+// question, celle du collectionneur — qu'est-ce que j'ai VRAIMENT sur cette
+// console.
+export function jeuSurPlateforme(g, plat, avecRetro = true) {
+  if (plat === "tous") return true;
+  if (g.platform === plat) return true;
+  return avecRetro && BACK_COMPAT[plat] === g.platform && !!g.backCompat;
+}
+
+// Combien de jeux la case à cocher ajoute, pour le dire plutôt que le faire
+// deviner : « inclure les jeux rétrocompatibles » n'annonce pas s'il y en a
+// deux ou quatre-vingts.
+export function compterRetro(games, plat) {
+  const enfant = BACK_COMPAT[plat];
+  if (!enfant) return 0;
+  return (games || []).filter(g => g.platform === enfant && g.backCompat).length;
+}
+
 // ── Modes de jeu ───────────────────────────────────────────────────────────
 // « On est deux ce soir, on lance quoi ? » est la question qu'une ludothèque
 // de cent cinquante jeux rend difficile, et l'application avait la réponse sans

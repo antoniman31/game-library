@@ -130,7 +130,20 @@ erreur CORS.
   (« creatif » trouve le genre « Créatif »). La description est volontairement
   exclue : un mot du résumé faisait remonter des jeux sans rapport.
 - **Filtres combinables** : plateforme, prêt (chez moi / prêtés), format (physique /
-  démat), **mode de jeu** (solo / à plusieurs / coopératif) et **genre**.
+  démat), **mode de jeu** (solo / à plusieurs / coopératif) et **genre**. Chaque groupe
+  tient sur une ligne portant sa valeur courante et s'ouvre au toucher, un seul à la
+  fois : dépliés, les sept groupes faisaient quarante boutons d'un coup, et il fallait
+  défiler pour découvrir qu'un filtre par mode existait.
+- **La rétrocompatibilité se décide.** Une plateforme récente montre ses jeux natifs et
+  ceux de la précédente marqués rétrocompatibles — mais le mélange était imposé : sur
+  une bibliothèque réelle, « Xbox Series X » rendait 101 jeux dont 19 seulement sont
+  des jeux Series X, et ces 19 étaient introuvables. Une case à cocher, présente
+  uniquement pour une console qui en accueille une autre et cochée par défaut, dit
+  combien de jeux elle ajoute ; décochée, la ligne repliée annonce « Xbox Series X
+  seul ».
+- **Le tri est au-dessus de la liste**, plus dans le panneau : ce n'est pas un filtre,
+  le badge ne le compte pas. La ligne indique aussi combien de jeux l'écran montre,
+  quand ce nombre diffère du total.
 - **Le mode de jeu** répond à la question qu'une ludothèque de cent cinquante jeux
   rend difficile — « on est deux ce soir, on lance quoi ». Il vient de la fiche
   Wikidata, dont les étiquettes ne forment pas un vocabulaire (« solo », « Solo »,
@@ -573,7 +586,7 @@ npm run dev      # http://localhost:5173/game-library/
 npm run build
 npm run preview
 npm run lint     # oxlint
-npm test         # 114 tests (modèle, import, genres, filtres, prêts, stats,
+npm test         # 117 tests (modèle, import, genres, filtres, prêts, stats,
                  #             thème, préférences, cohérence, audit, Worker)
 npm run test:worker                   # 32 vérifications du relais, sans déploiement
 npm run verif:ui                      # mesure les écrans rendus (voir plus bas)

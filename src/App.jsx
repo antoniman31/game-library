@@ -13,8 +13,9 @@ import SettingsView from "./components/SettingsView.jsx";
 
 import { hdr, card, bdr, txt, mut, accent, accentDoux, accentFond, warnDoux, dangerDoux, ok, warn, warnFond, danger } from "./lib/theme.js";
 import { GAMES_INIT } from "./lib/seed.js";
-import { BACK_COMPAT, migrateGames, compterFiltres, validerJeuxImportes, pretEnRetard, jeuxSansScore, normaliserGenres,
-  jeuALeMode, genresPresents, dureeEntreeHistorique, supprimerEntreeHistorique, joursDePret } from "./lib/model.js";
+import { migrateGames, compterFiltres, validerJeuxImportes, pretEnRetard, jeuxSansScore, normaliserGenres,
+  jeuALeMode, jeuSurPlateforme, compterRetro, genresPresents, dureeEntreeHistorique, supprimerEntreeHistorique,
+  joursDePret } from "./lib/model.js";
 import { lire, ecrire, surEchecStockage } from "./lib/storage.js";
 import { chargerSync, enregistrerSync, genererCode, envoyer, recuperer } from "./lib/sync.js";
 import { preferencesASauvegarder, preferencesRecues, resumePreferences } from "./lib/preferences.js";
@@ -67,6 +68,9 @@ export default function App() {
   const [pretFil, setPretFil] = useState("tous");
   const [fmtFil, setFmtFil] = useState("tous");
   const [genreFil, setGenreFil] = useState("tous");
+  // Vrai par défaut : c'est le comportement d'avant, et celui qu'on veut quand
+  // on cherche quoi lancer ce soir plutôt qu'à faire l'inventaire.
+  const [avecRetro, setAvecRetro] = useState(true);
   const [modeFil, setModeFil] = useState("tous");
   const [sort, setSort] = useState("titre");
   const [view, setView] = useState("liste");
@@ -169,7 +173,7 @@ export default function App() {
 
   // Toute pagination repart du début quand le contenu de la liste change :
   // sinon « Charger 30 de plus » resterait déplié sur un résultat de 3 jeux.
-  useEffect(() => { setVisibleCount(PAGE_SIZE); }, [search, plat, pretFil, fmtFil, genreFil, modeFil, sort, tab, view]);
+  useEffect(() => { setVisibleCount(PAGE_SIZE); }, [search, plat, avecRetro, pretFil, fmtFil, genreFil, modeFil, sort, tab, view]);
 
   // Recherche posée par le code (clic sur une vignette, retour d'un ajout) :
   // les deux états doivent bouger ensemble, sans attendre le délai de frappe.
@@ -515,12 +519,7 @@ export default function App() {
         || normTitle(g.title).includes(q)
         || g.genre.some(x => normTitle(x).includes(q))
         || normTitle(g.tag).includes(q);
-      // Une plateforme récente affiche ses jeux natifs + ceux de la plateforme
-      // précédente marqués backCompat (voir BACK_COMPAT) : "Xbox Series X" inclut les
-      // Xbox One rétrocompatibles, "Switch 2" les Switch 1. Les plateformes
-      // "anciennes" ("Xbox One", "Switch 1") restent strictes.
-      const platMatch = plat === "tous" || g.platform === plat
-        || (BACK_COMPAT[plat] === g.platform && !!g.backCompat);
+      const platMatch = jeuSurPlateforme(g, plat, avecRetro);
       const pretMatch = pretFil === "tous" ? true
         : pretFil === "prêtés" ? !!g.lentA
         : !g.lentA;
@@ -537,7 +536,7 @@ export default function App() {
       if (sort === "metacritic") return (b.metacritic||0) - (a.metacritic||0);
       return a.title.localeCompare(b.title);
     });
-  }, [games, search, plat, pretFil, fmtFil, genreFil, modeFil, sort]);
+  }, [games, search, plat, avecRetro, pretFil, fmtFil, genreFil, modeFil, sort]);
 
   const stats = useMemo(() => {
     const total = games.length;
@@ -558,6 +557,7 @@ export default function App() {
   // options disparaîtraient au fur et à mesure qu'on s'en sert.
   const genres = useMemo(() => genresPresents(games), [games]);
   const sansMode = useMemo(() => games.filter(g => !g.infobox?.modes?.length).length, [games]);
+  const nbRetro = useMemo(() => compterRetro(games, plat), [games, plat]);
 
   // Ce qui est réellement monté. Le reste attend « Charger 30 de plus ».
   const visible = filtered.slice(0, visibleCount);
@@ -701,6 +701,33 @@ export default function App() {
 
       {/* Body */}
       <div style={{ padding:"14px calc(14px + var(--safe-right)) calc(60px + var(--safe-bottom)) calc(14px + var(--safe-left))" }}>
+        {/* Le tri était enterré dans le panneau des filtres, alors que ce n'en
+            est pas un : le badge ne le comptait pas, et le panneau devait
+            s'appeler « Filtres & affichage » pour l'accueillir. Ici, il est
+            visible sans rien ouvrir, et la ligne dit enfin combien de jeux
+            l'écran montre — un chiffre qu'il fallait sinon aller chercher. */}
+        {tab === "library" && filtered.length > 0 && (
+          <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:8, marginBottom:10 }}>
+            {/* Seulement quand il diffère du total : sans filtre, l'en-tête
+                dit déjà « 154 jeux » et le répéter deux lignes plus bas
+                n'apprend rien. Filtré, il dit ce que l'écran montre. */}
+            <span style={{ color:mut, fontSize:"var(--t-petit)", flexShrink:0 }}>
+              {filtered.length < games.length ? `${filtered.length} jeu${filtered.length > 1 ? "x" : ""}` : ""}
+            </span>
+            <div style={{ display:"flex", gap:6 }}>
+              {[["titre","A → Z"],["date","Date"],["metacritic","Note"]].map(([k,l]) => (
+                <button key={k} onClick={() => setSort(k)} aria-pressed={sort === k}
+                  style={{
+                    minHeight:"var(--tap-min)", padding:"0 12px", borderRadius:"var(--r-sm)",
+                    background: sort === k ? accentDoux : "transparent",
+                    border:`1px solid ${sort === k ? accent : bdr}`,
+                    color: sort === k ? accent : mut, fontWeight: sort === k ? 600 : 400,
+                    fontSize:"var(--t-petit)", cursor:"pointer", fontFamily:"inherit",
+                  }}>{l}</button>
+              ))}
+            </div>
+          </div>
+        )}
         {tab === "library" && (filtered.length === 0 ? emptyState : view === "grille" ? (
           <>
           <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(120px,1fr))", gap:10 }}>
@@ -835,12 +862,12 @@ export default function App() {
       {showFilters && (
         <FiltersSheet
           plat={plat} setPlat={setPlat}
+          avecRetro={avecRetro} setAvecRetro={setAvecRetro} nbRetro={nbRetro}
           pretFil={pretFil} setPretFil={setPretFil}
           fmtFil={fmtFil} setFmtFil={setFmtFil}
           genreFil={genreFil} setGenreFil={setGenreFil}
           modeFil={modeFil} setModeFil={setModeFil}
           genres={genres} sansMode={sansMode}
-          sort={sort} setSort={setSort}
           view={view} setView={setView}
           resultats={filtered.length}
           onClose={() => setShowFilters(false)}
