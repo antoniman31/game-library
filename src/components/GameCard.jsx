@@ -265,10 +265,24 @@ function GameCard({ g, onEdit, onDelete, onEnrich, onSerie, autoOpen, onOuverte 
             </div>
           )}
 
-          {/* Infos Wikidata : des filets, plus un cadre (voir InfoboxView). */}
-          {g.infobox && (
+          {/* Infos Wikidata : des filets, plus un cadre (voir InfoboxView).
+
+              Sans infobox, la section disparaissait sans un mot : la fiche
+              paraissait complète, et le seul chemin pour en ajouter une était
+              enterré sous « Modifier la fiche » derrière une étiquette qui ne
+              la nommait pas. Le manque se dit maintenant à sa place, et le
+              bouton ouvre directement la recherche. */}
+          {g.infobox ? (
             <div style={{ marginBottom: 16 }}>
               <InfoboxView info={g.infobox} onSerie={onSerie} />
+            </div>
+          ) : (
+            <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 16 }}>
+              <span style={{ color: mut, fontSize: "var(--t-legende)" }}>Aucune fiche Wikidata</span>
+              <button onClick={() => { setWikiOpen(true); setWikiQ(g.title); setWikiDone(false); wikiQuery(g.title); }}
+                style={{ minHeight: "var(--tap-min)", padding: "0 10px", background: "transparent", border: `1px solid ${bdr}`, color: accent, borderRadius: "var(--r-sm)", fontSize: "var(--t-legende)", cursor: "pointer", fontFamily: "inherit" }}>
+                📚 Chercher sur Wikipédia
+              </button>
             </div>
           )}
 
@@ -404,9 +418,13 @@ function GameCard({ g, onEdit, onDelete, onEnrich, onSerie, autoOpen, onOuverte 
               )}
             </Sheet>
           )}
-          {/* Titre français via Wikipédia FR */}
+          {/* Wikipédia FR : le titre, et tout ce que la page rapporte avec lui.
+              La feuille s'appelait « Titre français », le bouton aussi : ils
+              n'annonçaient qu'un quart de ce qu'ils rapportent — le résumé, la
+              jaquette et les infos Wikidata arrivent par le même chemin, et
+              rien ailleurs dans l'application ne mène à ces dernières. */}
           {wikiOpen && (
-            <Sheet title="Titre français (Wikipédia)" onClose={() => setWikiOpen(false)}>
+            <Sheet title="Compléter depuis Wikipédia" onClose={() => setWikiOpen(false)}>
               <input value={wikiQ} onChange={e => wikiQuery(e.target.value)} placeholder="Titre du jeu…" autoFocus style={{ width: "100%", boxSizing: "border-box", background: "transparent", border: `1px solid ${bdr}`, borderRadius: "var(--r-sm)", color: txt, padding: "6px 8px", fontSize: "var(--t-petit)" }} />
               {wikiBusy && <div style={{ color: accent, fontSize: "var(--t-legende)", marginTop: 4 }}>Recherche…</div>}
               {!wikiBusy && wikiSugg.length > 0 && (
@@ -501,7 +519,7 @@ function GameCard({ g, onEdit, onDelete, onEnrich, onSerie, autoOpen, onOuverte 
               <button onClick={() => { setSourcesOuvertes(false); ouvrirEdition(); }}
                 style={{ ...boutonSource, background: accentDoux, fontWeight: 600 }}>✏️ À la main</button>
               <button onClick={() => { setSourcesOuvertes(false); setRawgOpen(true); setRawgQ(g.title); rawgQuery(g.title); }} style={boutonSource}>🔄 RAWG</button>
-              <button onClick={() => { setSourcesOuvertes(false); setWikiOpen(true); setWikiQ(g.title); setWikiDone(false); wikiQuery(g.title); }} style={boutonSource}>🇫🇷 Titre français</button>
+              <button onClick={() => { setSourcesOuvertes(false); setWikiOpen(true); setWikiQ(g.title); setWikiDone(false); wikiQuery(g.title); }} style={boutonSource}>📚 Wikipédia</button>
               <button onClick={() => { setSourcesOuvertes(false); setSgdbOpen(true); setSgdbQ(g.title); setSgdbDone(false); sgdbQuery(g.title); }} style={boutonSource}>📦 Jaquette</button>
             </div>
           )}

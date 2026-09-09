@@ -616,6 +616,28 @@ Restorff. Le contour accentué est désormais réservé à « Filtres », seul b
 qui porte un compteur et ouvre un panneau ; le tri se signale par la couleur de
 son texte, le sens par un fond légèrement teinté.
 
+### Phase 21 — Le chemin vers Wikidata
+
+Vingt-cinq fiches sur cent cinquante-quatre n'ont pas d'infobox, et rien dans
+l'application ne disait comment leur en donner une. Le chemin existait pourtant
+depuis le début : « Modifier la fiche », puis « 🇫🇷 Titre français », dont la
+recherche rapporte quatre choses — le titre français, le résumé, la jaquette et
+les infos Wikidata. L'étiquette n'en annonçait qu'une sur quatre, et la seule
+qui mène à Wikidata n'était nommée nulle part.
+
+Le bouton s'appelle donc « 📚 Wikipédia », et la feuille « Compléter depuis
+Wikipédia ». Surtout, le manque se dit maintenant là où il se voit : une fiche
+sans infobox affichait un blanc à l'endroit de la section, ce qui la faisait
+paraître complète. Elle affiche « Aucune fiche Wikidata » et un bouton qui ouvre
+la recherche directement, sans repasser par « Modifier la fiche ».
+
+Reste écartée pour l'instant l'action groupée qui remplirait les vingt-cinq d'un
+coup. Leurs titres sont « Sleeping Dogs™ Definitive Edition », « GTA: Vice City
+– The Definitive Edition », les Sonic d'une compilation : précisément ceux qu'une
+correspondance exacte rate, parce que Wikipédia les range sous le nom du jeu
+d'origine. Et le rapprochement approximatif, la règle des séries de l'audit a
+montré ce qu'il vaut.
+
 ---
 
 ## 3. Architecture finale
