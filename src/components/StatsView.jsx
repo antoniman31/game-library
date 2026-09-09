@@ -217,9 +217,15 @@ function Collection({ games, jour }) {
             {Math.round((s.physique / s.total) * 100)} % de la collection est prêtable.
           </div>
         )}
-        {s.retrocompatibles.map(([parent, n]) => (
-          <div key={parent} style={{ color: mut, fontSize: "var(--t-legende)", marginTop: 4 }}>
-            {n} jeu{n > 1 ? "x" : ""} jouable{n > 1 ? "s" : ""} sur {parent}.
+        {/* Les barres ci-dessus comptent chaque jeu une fois, sur la console
+            pour laquelle il a été acheté. Ces lignes-ci disent l'autre vérité,
+            celle du soir où l'on choisit quoi jouer : ce qui démarre sur la
+            console qu'on a sous la main. */}
+        {s.retrocompatibles.map(r => (
+          <div key={r.parent} style={{ color: mut, fontSize: "var(--t-legende)", marginTop: 6, lineHeight: 1.5 }}>
+            Sur <span style={{ color: txt }}>{r.parent}</span> : {r.natifs} natif{r.natifs > 1 ? "s" : ""}
+            {" "}et {r.herites} hérité{r.herites > 1 ? "s" : ""} de {r.enfant},
+            soit <span style={{ color: txt, fontWeight: 600 }}>{r.jouables} jouables</span>.
           </div>
         ))}
       </Bloc>

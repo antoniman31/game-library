@@ -451,6 +451,139 @@ comptes s'additionnent exactement — Aventure passe de 20 à 41, Plateforme de 
 à 33. La fonction est idempotente, donc la migration la rejoue à chaque
 chargement sans numéro de version, contrairement à `bcV`.
 
+### Phase 17 — Deux questions que la bibliothèque savait déjà
+
+Deux filtres, choisis parmi neuf candidats en mesurant ce que chacun donnerait
+sur une bibliothèque réelle plutôt qu'en imaginant.
+
+**Le mode de jeu** répond à « on est deux ce soir, on lance quoi » — la question
+que cent cinquante jeux rendent difficile. L'application avait la réponse depuis
+le début sans savoir la donner : Wikidata renseigne le mode, il n'était affiché
+que fiche par fiche. Sur la bibliothèque réelle : 121 jeux solo, 85 à plusieurs,
+31 en coopératif.
+
+Les étiquettes de Wikidata ne forment pas un vocabulaire — « solo », « Solo »,
+« mode coopératif », « joueur contre joueur », « multijoueur en écran divisé /
+partagé », « two-player video game ». Contrairement aux genres, elles ne sont
+PAS réécrites dans les fiches : « écran divisé » n'est pas « en ligne », et
+perdre cette nuance pour trois boutons serait un mauvais change. Le classement
+se fait à la lecture. Le coopératif compte comme un multijoueur, jamais
+l'inverse : qui demande « à plusieurs » veut aussi les jeux qu'on ne peut faire
+qu'ensemble.
+
+Trente-deux jeux n'ont pas de fiche Wikidata et ne sortent donc d'aucun de ces
+choix. C'est écrit dans le panneau, avec le nombre : sans cette phrase, un
+filtre « Solo » a l'air d'affirmer que les jeux absents ne sont pas solo, alors
+qu'il dit seulement qu'on ne sait pas.
+
+**Le genre** n'était possible que depuis la normalisation de la phase 16. Il
+est dérivé de la bibliothèque et non d'une liste fermée, et classé par nombre de
+jeux : « Action » à 83 et un genre porté par un seul titre n'ont pas à se
+présenter comme deux choix équivalents. Vingt-huit genres, ce n'est plus un
+choix mais un mur, alors huit sont affichés et le reste attend derrière un
+bouton — sauf le genre sélectionné, qui reste visible même s'il vient de la
+traîne, sans quoi le filtre actif disparaît de l'écran et on ne sait plus
+comment l'enlever.
+
+### Phase 18 — Un panneau qu'on n'ouvre plus en apnée
+
+Le panneau des filtres montrait ses sept groupes dépliés : quarante boutons
+d'un coup, cinquante quand la liste des genres s'ouvrait. La loi de Hick dit ce
+qui se passe alors — on ne filtre plus, on renonce — et il fallait faire défiler
+pour découvrir qu'un filtre par mode de jeu existait.
+
+Chaque groupe tient désormais sur une ligne qui porte sa valeur courante et
+s'ouvre au toucher, un seul à la fois. Cinq lignes au lieu de quarante boutons,
+et surtout on voit d'un coup d'œil toutes les dimensions disponibles et
+lesquelles sont déjà posées — ce que la version dépliée rendait impossible.
+Les lignes sont séparées par un filet et non par du vide : elles forment une
+liste, pas des blocs.
+
+Le tri est sorti du panneau. Ce n'était pas un filtre — le badge ne le comptait
+pas, et le panneau devait s'appeler « Filtres & affichage » pour l'accueillir.
+Il vit au-dessus de la liste, visible sans rien ouvrir, sur une ligne qui dit
+aussi combien de jeux l'écran montre quand ce nombre diffère du total.
+
+**Et une chose qu'on ne cherchait pas.** En posant la case à cocher demandée
+pour la rétrocompatibilité, les chiffres ont montré que le problème était plus
+grave que le confort : « Xbox Series X » rendait 101 jeux dont 19 seulement sont
+des jeux Series X, et « Switch 2 » 53 pour 6 natifs. Le mélange était imposé
+depuis toujours, si bien que la question « qu'est-ce que j'ai vraiment sur cette
+console » n'avait aucune réponse dans l'application. La case répond aux deux
+questions au lieu d'une : cochée par défaut pour « quoi jouer ce soir »,
+décochée pour l'inventaire. Elle ne s'affiche que pour une console qui en
+accueille une autre, elle annonce combien de jeux elle ajoute, et la ligne
+repliée dit « Xbox Series X seul » quand elle est décochée — un filtre plus
+étroit que la normale doit se voir sans être ouvert.
+
+Les statistiques disaient alors autre chose que les filtres. Le bloc « Par
+plateforme » annonçait « 82 jeux jouables sur Xbox Series X » juste sous une
+barre marquée 19 : deux chiffres justes que rien ne reliait, et c'est leur somme
+— 101, exactement ce que montre le filtre — qui répond à la question posée à une
+ludothèque. Chaque console qui en accueille une autre porte désormais la phrase
+entière. Les barres continuent de compter chaque jeu une fois, sur la console
+pour laquelle il a été acheté ; ces lignes disent l'autre vérité, celle du soir
+où l'on choisit quoi jouer.
+
+### Phase 19 — Ce qu'on demande à cent cinquante jeux
+
+Le reste de la liste de filtres, d'un coup. Trois d'entre eux méritent d'être
+racontés parce qu'ils ont demandé une décision, pas seulement du code.
+
+**« À compléter » est le seul filtre qui fasse travailler.** L'onglet Stats
+savait compter les manques depuis longtemps — « 21 jeux sans note » — mais on
+ne pouvait pas y aller : un constat sans porte de sortie. Le filtre les sort, et
+il n'annonce que ce qui manque réellement : une option disparaît dès que son
+champ est rempli partout, le bloc entier disparaît quand la bibliothèque est
+complète. Une case « Jaquette 0 » promettrait du travail qui n'existe pas. Les
+prédicats sont partagés avec le bloc des Stats, si bien que le chiffre affiché
+et la liste obtenue ne peuvent plus diverger.
+
+Il a d'abord été rangé dans l'accordéon avec les autres, ce qui était une
+erreur de rang : les autres filtres répondent à « montre-moi », celui-ci répond
+à « qu'est-ce qu'il me reste à faire ». Il est remonté en tête du panneau, hors
+de l'accordéon, en bloc plein cerné d'accent — le seul du panneau, et il n'y en
+aura jamais deux, sans quoi l'effet von Restorff ne joue plus. Il porte le
+nombre de fiches concernées, 42 sur une bibliothèque réelle : pas la somme des
+colonnes, puisqu'un même jeu peut manquer de trois choses.
+
+La question « il disparaît quand il n'y a plus rien à compléter ? » a trouvé le
+défaut que la réponse « oui » cachait. Oui, sauf qu'il disparaissait AUSSI quand
+le filtre était posé au moment où le dernier manque était comblé — et il
+emportait alors le seul moyen de retirer un filtre qui venait de vider la liste :
+zéro jeu à l'écran, un badge annonçant un filtre actif, et plus rien pour
+l'enlever sauf « Réinitialiser », qui efface aussi tout le reste. Le bloc reste
+donc affiché tant que le filtre est posé, et dit alors autre chose : « Plus rien
+à compléter : toutes les fiches sont remplies. » C'est exactement le piège déjà
+évité pour le genre, où la valeur choisie reste visible même quand elle sort de
+la traîne — et il a fallu qu'on repose la question pour le voir ici.
+
+**Le hasard devait tenir.** « Je joue à quoi ce soir » est la vraie question
+d'une ludothèque de cette taille, et un tirage y répond mieux qu'un classement.
+Mais `Math.random()` dans un comparateur rebat les cartes à chaque rendu : la
+liste danserait sous le doigt à chaque frappe dans la recherche, et le
+comparateur lui-même serait incohérent. D'où une empreinte calculée depuis
+l'identifiant du jeu et une graine, changée seulement quand on redemande à
+mélanger.
+
+**Ce qui n'a pas de valeur va toujours à la fin.** Inverser le tri par note
+aurait remonté en tête les vingt-et-un jeux sans note, c'est-à-dire exactement
+ce qu'on ne cherche pas. La clé de tri vaut donc `null` quand elle est inconnue,
+et ce cas est traité avant le sens : l'inversion ne porte que sur ce qui a une
+valeur.
+
+La série, elle, n'a pas de place dans le panneau — cinquante-huit valeurs ne
+tiennent pas dans une grille de boutons. Elle se pose en touchant son nom sur
+une fiche, et le groupe n'apparaît alors que pour montrer le filtre posé et
+permettre de l'enlever : sans lui, on ne saurait plus comment revenir.
+
+Deux défauts trouvés en vérifiant, tous deux invisibles à la lecture. Le bouton
+« Réinitialiser » du panneau calculait le nombre de filtres actifs sans les
+nouveaux, et restait donc grisé alors qu'il y avait bien quelque chose à
+réinitialiser. Et le nombre d'une puce était collé à son libellé dans l'arbre
+d'accessibilité — un lecteur d'écran annonçait « Note21 » — parce que l'espace
+était dessinée par une marge au lieu d'être écrite.
+
 ---
 
 ## 3. Architecture finale

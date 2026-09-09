@@ -30,7 +30,7 @@ const Segment = ({ options, valeur, onChange }) => (
 
 const boutonSource = { minHeight: "var(--tap-min)", padding: "0 12px", background: "transparent", border: `1px solid ${accent}`, color: accent, borderRadius: "var(--r-sm)", fontSize: "var(--t-legende)", cursor: "pointer" };
 
-function GameCard({ g, onEdit, onDelete, onEnrich, autoOpen, onOuverte }) {
+function GameCard({ g, onEdit, onDelete, onEnrich, onSerie, autoOpen, onOuverte }) {
   const [open, setOpen] = useState(!!autoOpen);
   const rootRef = useRef(null);
   // L'ouverture automatique n'a lieu qu'une fois : le marqueur est consommé
@@ -266,7 +266,11 @@ function GameCard({ g, onEdit, onDelete, onEnrich, autoOpen, onOuverte }) {
           )}
 
           {/* Infos Wikidata : des filets, plus un cadre (voir InfoboxView). */}
-          {g.infobox && <div style={{ marginBottom: 16 }}><InfoboxView info={g.infobox} /></div>}
+          {g.infobox && (
+            <div style={{ marginBottom: 16 }}>
+              <InfoboxView info={g.infobox} onSerie={onSerie} />
+            </div>
+          )}
 
           {/* Le prêt, et lui seul. Le format et la rétrocompatibilité tenaient
               ici la même place, alors qu'on les règle une fois dans la vie d'un

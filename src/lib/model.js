@@ -156,8 +156,9 @@ export function preterJeu(g, nom, retourPrevu) {
 
 // Compte les filtres réellement appliqués. Le tri et le mode d'affichage n'en
 // sont pas : ils changent l'ordre ou la densité, jamais ce qui est montré.
-export function compterFiltres({ plat, pretFil, fmtFil }) {
-  return [plat, pretFil, fmtFil].filter(v => v !== "tous").length;
+export function compterFiltres({ plat, pretFil, fmtFil, genreFil, modeFil, noteFil, completFil, serieFil }) {
+  return [plat, pretFil, fmtFil, genreFil, modeFil, noteFil, completFil, serieFil]
+    .filter(v => v && v !== "tous").length;
 }
 
 // ── Genres ─────────────────────────────────────────────────────────────────
@@ -240,6 +241,162 @@ export function normaliserGenres(liste) {
     sortie.push(valeur);
   }
   return sortie;
+}
+
+// ── Note, complétude, sortie ───────────────────────────────────────────────
+
+// Un seuil plutôt que des tranches : la question n'est pas « lesquels sont
+// entre 80 et 89 » mais « qu'est-ce que j'ai de vraiment bien ».
+export const SEUILS_NOTE = [90, 80, 70];
+export const jeuPasseSeuil = (g, seuil) =>
+  seuil === "tous" || (typeof g.metacritic === "number" && g.metacritic >= Number(seuil));
+
+// Ce qui manque à une fiche, et qu'on peut aller remplir.
+//
+// L'onglet Stats savait déjà compter les manques — « 21 jeux sans note » — mais
+// on ne pouvait pas y aller : un constat sans porte de sortie. Ces prédicats
+// servent aux deux, si bien que le chiffre affiché et la liste obtenue ne
+// peuvent pas diverger.
+export const CHAMPS_A_COMPLETER = [
+  ["cover", "Jaquette", g => !g.cover],
+  ["genre", "Genre", g => !g.genre?.length],
+  ["style", "Description", g => !g.style],
+  ["metacritic", "Note", g => !g.metacritic],
+  ["infobox", "Fiche Wikidata", g => !g.infobox],
+];
+
+// Combien de fiches il manque, champ par champ, en n'annonçant que ce qui
+// manque réellement. Une option « Jaquette 0 » promettrait du travail qui
+// n'existe pas — et le jour où tout est complet, il n'y a plus rien à proposer.
+export function completudeManquante(games) {
+  const jeux = games || [];
+  return CHAMPS_A_COMPLETER
+    .map(([cle, label, manque]) => [cle, label, jeux.filter(manque).length])
+    .filter(([, , n]) => n > 0);
+}
+
+// Combien de fiches ont au moins un manque. Ce n'est pas la somme des colonnes
+// — un même jeu peut manquer de trois choses — et c'est pourtant ce nombre-là
+// qui dit l'ampleur du travail restant.
+export function compterFichesIncompletes(games) {
+  return (games || []).filter(g => CHAMPS_A_COMPLETER.some(([, , manque]) => manque(g))).length;
+}
+
+export function jeuACompleter(g, champ) {
+  if (champ === "tous") return true;
+  const trouve = CHAMPS_A_COMPLETER.find(([cle]) => cle === champ);
+  return trouve ? trouve[2](g) : true;
+}
+
+// Date de sortie la plus ancienne connue pour un jeu : Wikidata en liste une
+// par plateforme, et c'est la première qui date le jeu. Elle sert à l'onglet
+// Stats comme au tri de la liste — un seul endroit, sinon les deux finiraient
+// par ne plus dater le même jour.
+export const dateDeSortie = (g) => {
+  const dates = (g?.infobox?.releases || []).map(r => r?.date).filter(d => /^\d{4}/.test(d || ""));
+  return dates.length ? dates.sort()[0] : null;
+};
+
+// Un ordre aléatoire, mais stable.
+//
+// « Je joue à quoi ce soir » est la question qu'une ludothèque de cent
+// cinquante jeux rend difficile, et un tri au hasard y répond mieux qu'un
+// classement. Encore faut-il qu'il tienne : `Math.random()` dans un
+// comparateur rebat les cartes à chaque rendu — la liste danserait sous le
+// doigt à chaque frappe dans la recherche. D'où une empreinte calculée à
+// partir de l'identifiant du jeu et d'une graine : le même mélange tant qu'on
+// ne redemande pas à mélanger.
+export function empreinteMelange(id, graine) {
+  let x = (Number(id) ^ Number(graine)) >>> 0;
+  x = Math.imul(x ^ (x >>> 16), 2246822507);
+  x = Math.imul(x ^ (x >>> 13), 3266489909);
+  return ((x ^ (x >>> 16)) >>> 0) / 4294967296;
+}
+
+// La série d'un jeu, telle que Wikidata la nomme.
+export const serieDuJeu = (g) => String(g?.infobox?.series || "").trim();
+
+// Un jeu appartient-il à la plateforme demandée ?
+//
+// Une plateforme récente montre ses jeux natifs ET ceux de la précédente
+// marqués rétrocompatibles — c'est ce qu'on veut presque toujours, puisque ce
+// sont des jeux qu'on peut lancer sur la console qu'on a sous la main. Mais
+// « presque toujours » n'est pas « toujours », et le mélange était imposé :
+// sur une bibliothèque réelle, demander « Xbox Series X » rendait 101 jeux
+// dont 19 seulement sont des jeux Series X. Les 19 étaient devenus
+// introuvables.
+//
+// `avecRetro` reste vrai par défaut : c'est le comportement d'avant, et celui
+// qu'on veut quand on cherche quoi jouer ce soir. Le décocher répond à l'autre
+// question, celle du collectionneur — qu'est-ce que j'ai VRAIMENT sur cette
+// console.
+export function jeuSurPlateforme(g, plat, avecRetro = true) {
+  if (plat === "tous") return true;
+  if (g.platform === plat) return true;
+  return avecRetro && BACK_COMPAT[plat] === g.platform && !!g.backCompat;
+}
+
+// Combien de jeux la case à cocher ajoute, pour le dire plutôt que le faire
+// deviner : « inclure les jeux rétrocompatibles » n'annonce pas s'il y en a
+// deux ou quatre-vingts.
+export function compterRetro(games, plat) {
+  const enfant = BACK_COMPAT[plat];
+  if (!enfant) return 0;
+  return (games || []).filter(g => g.platform === enfant && g.backCompat).length;
+}
+
+// ── Modes de jeu ───────────────────────────────────────────────────────────
+// « On est deux ce soir, on lance quoi ? » est la question qu'une ludothèque
+// de cent cinquante jeux rend difficile, et l'application avait la réponse sans
+// savoir la donner : Wikidata renseigne le mode de jeu, il n'était affiché que
+// fiche par fiche.
+//
+// Les étiquettes viennent telles quelles de Wikidata et ne forment pas un
+// vocabulaire : « solo », « Solo », « mode coopératif », « joueur contre
+// joueur », « multijoueur en écran divisé / partagé », « two-player video
+// game ». Trois questions suffisent pourtant à les couvrir toutes.
+//
+// Contrairement aux genres, ces étiquettes ne sont PAS réécrites dans les
+// fiches : la formulation de Wikidata est une information — « écran divisé »
+// n'est pas « en ligne » — et la perdre pour trois boutons serait un mauvais
+// change. Le classement se fait donc à la lecture, à chaque filtrage.
+export const MODES_JEU = ["solo", "multi", "coop"];
+
+const REGLES_MODE = [
+  ["solo", /solo|un joueur|single/],
+  // Le coopératif est un multijoueur : qui demande « à plusieurs » veut aussi
+  // les jeux qu'on ne peut faire qu'ensemble.
+  ["coop", /coop/],
+  ["multi", /coop|multi|joueur contre joueur|two-player|versus|pvp/],
+];
+
+export function modesDuJeu(g) {
+  const trouves = new Set();
+  for (const brut of g?.infobox?.modes || []) {
+    const t = String(brut || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    for (const [mode, regle] of REGLES_MODE) if (regle.test(t)) trouves.add(mode);
+  }
+  return trouves;
+}
+
+// Un jeu sans fiche Wikidata n'a aucun mode connu : il ne répond ni oui ni non,
+// et disparaît donc de tout filtre par mode. C'est dit à l'écran plutôt que
+// laissé deviner — sinon un filtre « Solo » a l'air d'affirmer que les jeux
+// absents ne sont pas solo.
+export const jeuALeMode = (g, mode) => mode === "tous" || modesDuJeu(g).has(mode);
+
+// ── Genres présents ────────────────────────────────────────────────────────
+// Les plateformes et les formats sont une liste fermée, écrite ici ; les genres
+// dépendent de la bibliothèque et changent avec elle. Ils sont donc dérivés,
+// et classés par nombre de jeux : sur cent cinquante jeux, « Action » et un
+// genre porté par un seul titre n'ont pas à se présenter côte à côte comme
+// deux choix équivalents.
+export function genresPresents(games) {
+  const compte = new Map();
+  for (const g of games || []) {
+    for (const genre of g.genre || []) compte.set(genre, (compte.get(genre) || 0) + 1);
+  }
+  return [...compte.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
 }
 
 // Normalisation d'un titre pour comparaison : minuscules, sans accents ni

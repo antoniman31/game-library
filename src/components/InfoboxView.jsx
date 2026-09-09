@@ -1,4 +1,4 @@
-import { txt, mut, bdr } from "../lib/theme.js";
+import { txt, mut, bdr, accent } from "../lib/theme.js";
 
 // Infos structurées venues de Wikidata : développeur, éditeur, sorties, mode,
 // série.
@@ -8,7 +8,7 @@ import { txt, mut, bdr } from "../lib/theme.js";
 // référence qu'on lit une fois criait plus fort que le texte qu'on veut lire.
 // Elle est désormais rendue en lignes séparées par des filets, sans cadre :
 // elle informe sans peser.
-export default function InfoboxView({ info }) {
+export default function InfoboxView({ info, onSerie }) {
   if (!info) return null;
 
   const rel = info.releases?.length
@@ -18,12 +18,32 @@ export default function InfoboxView({ info }) {
     .filter(Boolean).join(", ");
   const serie = info.series ? info.series + (serieExtra ? ` (${serieExtra})` : "") : null;
 
+  // La série est le seul champ de ce bloc qui désigne d'autres jeux de la
+  // bibliothèque : la rendre touchable évite de retaper « Halo » dans la
+  // recherche pour retrouver les cinq autres. C'est aussi la seule façon
+  // raisonnable d'offrir un filtre par série — cinquante-huit valeurs ne
+  // tiennent pas dans un panneau.
+  const valeurSerie = onSerie && info.series
+    ? (
+      <>
+        <button onClick={() => onSerie(info.series)}
+          title={`Voir les jeux de la série ${info.series}`}
+          style={{
+            background: "transparent", border: "none", padding: 0, minHeight: "var(--tap-min)",
+            color: accent, fontSize: "var(--t-petit)", fontFamily: "inherit",
+            cursor: "pointer", textAlign: "left", textDecoration: "underline",
+          }}>{info.series}</button>
+        {serieExtra ? ` (${serieExtra})` : ""}
+      </>
+    )
+    : serie;
+
   const lignes = [
     ["Développeur", info.developers?.join(", ")],
     ["Éditeur", info.publishers?.join(", ")],
     ["Sortie", rel],
     ["Mode", info.modes?.join(", ")],
-    ["Série", serie],
+    ["Série", info.series ? valeurSerie : null],
   ].filter(([, v]) => v);
 
   if (!lignes.length) return null;

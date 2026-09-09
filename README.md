@@ -129,7 +129,70 @@ erreur CORS.
 - **Recherche** sur titre + genre + tag, **insensible à la casse et aux accents**
   (« creatif » trouve le genre « Créatif »). La description est volontairement
   exclue : un mot du résumé faisait remonter des jeux sans rapport.
-- **Filtres combinables** : plateforme, prêt (chez moi / prêtés), format (physique / démat).
+- **Filtres combinables** : plateforme, prêt (chez moi / prêtés), format (physique /
+  démat), **mode de jeu** (solo / à plusieurs / coopératif) et **genre**. Chaque groupe
+  tient sur une ligne portant sa valeur courante et s'ouvre au toucher, un seul à la
+  fois : dépliés, les sept groupes faisaient quarante boutons d'un coup, et il fallait
+  défiler pour découvrir qu'un filtre par mode existait.
+- **La rétrocompatibilité se décide.** Une plateforme récente montre ses jeux natifs et
+  ceux de la précédente marqués rétrocompatibles — mais le mélange était imposé : sur
+  une bibliothèque réelle, « Xbox Series X » rendait 101 jeux dont 19 seulement sont
+  des jeux Series X, et ces 19 étaient introuvables. Une case à cocher, présente
+  uniquement pour une console qui en accueille une autre et cochée par défaut, porte
+  le même libellé pour la Xbox et pour la Switch — « Inclure les jeux
+  rétrocompatibles » — et laisse les noms et les nombres à la ligne de détail :
+  « 82 jeux Xbox One démarrent sur Xbox Series X. Décoche pour ne voir que les 19 jeux
+  vraiment Xbox Series X. » Décochée, la ligne repliée annonce « Xbox Series X seul ».
+- **« À compléter » est en tête du panneau, et c'est le seul bloc plein.** Tous les
+  autres filtres répondent à « montre-moi » ; celui-ci répond à « qu'est-ce qu'il me
+  reste à faire », et l'onglet Stats savait le compter depuis longtemps sans qu'on
+  puisse y aller. Il annonce le nombre de fiches concernées — pas la somme des colonnes,
+  un même jeu pouvant manquer de trois choses — et n'affiche que ce qui manque
+  réellement : une option s'efface dès que son champ est rempli partout, et le bloc
+  entier disparaît quand la bibliothèque est complète. Un appel à l'action sans action
+  à faire est pire qu'une absence. Une exception, et c'est la seule : si le filtre est
+  posé au moment où le dernier manque est comblé, le bloc reste — sinon il emporterait
+  avec lui le seul moyen d'enlever un filtre qui vide désormais la liste. Les mêmes prédicats servent au bloc « Ce qui
+  manque » des Stats : le chiffre affiché et la liste obtenue ne peuvent pas diverger.
+- **Filtre par note** : au-dessus d'un seuil (90, 80 ou 70). Un seuil répond à
+  « qu'est-ce que j'ai de vraiment bien » ; une tranche obligerait à toutes les cocher.
+- **Le filtre par série se pose depuis une fiche**, en touchant le nom de la série :
+  cinquante-huit séries ne tiennent pas dans une grille de boutons. Le groupe
+  correspondant n'apparaît dans le panneau que pour montrer celui qui est posé et
+  permettre de l'enlever.
+- **Cinq tris** : titre, date d'ajout, date de sortie, note, et au hasard — pour quand
+  la question est « je joue à quoi ce soir ». Le sens s'inverse d'un bouton, sauf pour
+  le hasard où il n'aurait pas de sens. Ce qui n'a pas de valeur va toujours à la fin,
+  dans un sens comme dans l'autre : inverser un tri ne remonte pas les jeux sans note
+  en tête. Le tirage au hasard tient tant qu'on ne redemande pas à mélanger — une
+  empreinte calculée depuis l'identifiant et une graine, plutôt qu'un `Math.random()`
+  dans le comparateur qui ferait danser la liste à chaque frappe.
+- **Le tri est au-dessus de la liste**, plus dans le panneau : ce n'est pas un filtre,
+  le badge ne le compte pas. Le bouton porte le tri courant. La ligne indique aussi
+  combien de jeux l'écran montre, quand ce nombre diffère du total.
+- **Trois vues et un regroupement** : liste, compacte (une ligne par jeu, pour
+  parcourir cent cinquante titres au pouce) et grille ; regroupement facultatif par
+  plateforme, série ou genre, avec des en-têtes de section. Le regroupement ne change
+  pas l'ordre : les sections apparaissent dans celui que le tri leur donne.
+- **Les statistiques disent la même chose que les filtres.** Le bloc « Par plateforme »
+  annonçait « 82 jeux jouables sur Xbox Series X » juste sous une barre marquée 19 :
+  deux chiffres justes que rien ne reliait, alors que le filtre, lui, en montrait 101.
+  Chaque console qui en accueille une autre porte désormais une ligne complète —
+  « Sur Xbox Series X : 19 natifs et 82 hérités de Xbox One, soit 101 jouables ».
+- **Le mode de jeu** répond à la question qu'une ludothèque de cent cinquante jeux
+  rend difficile — « on est deux ce soir, on lance quoi ». Il vient de la fiche
+  Wikidata, dont les étiquettes ne forment pas un vocabulaire (« solo », « Solo »,
+  « mode coopératif », « joueur contre joueur », « multijoueur en écran divisé /
+  partagé ») : elles sont classées à la lecture plutôt que réécrites, parce que leur
+  formulation est une information. Le coopératif compte comme un multijoueur, jamais
+  l'inverse. Un jeu sans fiche Wikidata n'a aucun mode connu et ne sort d'aucun de ces
+  choix — le panneau le dit et donne le nombre, plutôt que de laisser croire que ces
+  jeux ne sont pas solo.
+- **Le genre** est dérivé de la bibliothèque, pas d'une liste fermée, et classé par
+  nombre de jeux. Les huit premiers sont affichés, le reste derrière un bouton : sur
+  une bibliothèque réelle il y a vingt-huit genres, et vingt-huit boutons ne sont plus
+  un choix. Le genre sélectionné reste visible même s'il vient de la traîne, sinon le
+  filtre actif disparaît de l'écran.
 - **Tri** : A-Z, date, Metacritic.
 - **Tout est modifiable** : « Modifier la fiche » ouvre un panneau qui laisse
   corriger ce que les sources automatiques ont écrit — titre, plateforme,
@@ -558,8 +621,8 @@ npm run dev      # http://localhost:5173/game-library/
 npm run build
 npm run preview
 npm run lint     # oxlint
-npm test         # 109 tests (modèle, import, genres, prêts, stats, thème,
-                 #             préférences, cohérence, audit, Worker)
+npm test         # 122 tests (modèle, import, genres, filtres, tris, prêts,
+                 #             stats, thème, préférences, cohérence, audit, Worker)
 npm run test:worker                   # 32 vérifications du relais, sans déploiement
 npm run verif:ui                      # mesure les écrans rendus (voir plus bas)
 npm run audit -- ma-sauvegarde.json   # symptômes dans les données (voir plus bas)
@@ -669,12 +732,13 @@ import, beaucoup moins.
 │   │   ├── storage.js             localStorage instrumenté (alerte de quota)
 │   │   ├── sync.js                Sauvegarde sur le Worker
 │   │   ├── theme.js               Alias vers les jetons CSS
+│   │   ├── tri.js                 Les tris de la liste et ce qu'ils veulent dire
 │   │   ├── coherence.test.mjs     Ce qui est écrit deux fois doit concorder
 │   │   └── *.test.mjs             Tests des modules ci-dessus (node --test)
 │   └── components/
 │       ├── GameCard.jsx  AddModal.jsx  ImportModal.jsx
 │       ├── StatsView.jsx  SettingsView.jsx  ScoresSheet.jsx
-│       ├── Sheet.jsx  FiltersSheet.jsx  ActionsSheet.jsx  SousOnglets.jsx
+│       ├── Sheet.jsx  FiltersSheet.jsx  SortSheet.jsx  ActionsSheet.jsx  SousOnglets.jsx
 │       └── Cover.jsx  InfoboxView.jsx  ChampProtege.jsx  ErrorBoundary.jsx
 ├── index.html
 ├── vite.config.js                 base, PWA, proxys de dev

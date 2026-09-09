@@ -99,8 +99,15 @@ test("formats, plateformes et rétrocompatibilité s'additionnent", () => {
   assert.equal(s.physique, 3);
   assert.equal(s.demat, 1);
   assert.deepEqual(s.parPlateforme, [["Xbox One", 2], ["Switch 1", 1], ["Xbox Series X", 1]]);
-  // Un seul Xbox One est marqué compatible, et Series X n'a pas de parent.
-  assert.deepEqual(s.retrocompatibles.sort(), [["Switch 2", 1], ["Xbox Series X", 1]].sort());
+  // Un seul Xbox One est marqué compatible, et Series X n'hérite de rien.
+  // La statistique donne les trois nombres : natifs, hérités, et leur somme —
+  // c'est cette somme qui répond à « qu'est-ce que je peux lancer sur cette
+  // console », et c'est elle que montre le filtre par plateforme.
+  const parConsole = Object.fromEntries(s.retrocompatibles.map(r => [r.parent, r]));
+  assert.deepEqual(parConsole["Xbox Series X"],
+    { parent: "Xbox Series X", enfant: "Xbox One", natifs: 1, herites: 1, jouables: 2 });
+  assert.deepEqual(parConsole["Switch 2"],
+    { parent: "Switch 2", enfant: "Switch 1", natifs: 0, herites: 1, jouables: 1 });
 });
 
 test("les notes se rangent par tranche, sans compter les jeux sans note", () => {
