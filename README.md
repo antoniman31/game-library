@@ -150,7 +150,9 @@ erreur CORS.
   un même jeu pouvant manquer de trois choses — et n'affiche que ce qui manque
   réellement : une option s'efface dès que son champ est rempli partout, et le bloc
   entier disparaît quand la bibliothèque est complète. Un appel à l'action sans action
-  à faire est pire qu'une absence. Les mêmes prédicats servent au bloc « Ce qui
+  à faire est pire qu'une absence. Une exception, et c'est la seule : si le filtre est
+  posé au moment où le dernier manque est comblé, le bloc reste — sinon il emporterait
+  avec lui le seul moyen d'enlever un filtre qui vide désormais la liste. Les mêmes prédicats servent au bloc « Ce qui
   manque » des Stats : le chiffre affiché et la liste obtenue ne peuvent pas diverger.
 - **Filtre par note** : au-dessus d'un seuil (90, 80 ou 70). Un seuil répond à
   « qu'est-ce que j'ai de vraiment bien » ; une tranche obligerait à toutes les cocher.

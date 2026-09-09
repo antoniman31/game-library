@@ -1,7 +1,7 @@
 import { useState } from "react";
 import Sheet from "./Sheet.jsx";
 import { card, bdr, txt, mut, accent, accentDoux, warn } from "../lib/theme.js";
-import { PLATFORMS, BACK_COMPAT, SEUILS_NOTE, compterFiltres } from "../lib/model.js";
+import { PLATFORMS, BACK_COMPAT, SEUILS_NOTE, CHAMPS_A_COMPLETER, compterFiltres } from "../lib/model.js";
 
 const ACCENT = accent;
 
@@ -122,7 +122,20 @@ export default function FiltersSheet({
   // Un seuil, pas des tranches : la question n'est pas « lesquels sont entre 80
   // et 89 » mais « qu'est-ce que j'ai de vraiment bien ».
   const NOTES = [["tous", "Toutes"], ...SEUILS_NOTE.map(n => [String(n), `${n} et +`])];
-  const COMPLETUDE = [["tous", "Tous"], ...aCompleter.map(([cle, label, n]) => [cle, label, n])];
+  // Le manque choisi reste proposé même une fois comblé.
+  //
+  // Sans ça : on filtre sur « Note », on remplit la dernière note, et le bloc
+  // disparaît — en emportant le seul moyen de retirer un filtre qui vide
+  // désormais la liste. On se retrouve devant zéro jeu, un badge qui dit qu'un
+  // filtre est actif, et rien à l'écran pour l'enlever. C'est exactement le
+  // piège évité pour le genre, où la valeur choisie reste affichée même quand
+  // elle sort de la traîne.
+  const choisiComble = completFil !== "tous" && !aCompleter.some(([cle]) => cle === completFil);
+  const COMPLETUDE = [
+    ["tous", "Tous"],
+    ...aCompleter,
+    ...(choisiComble ? [[completFil, CHAMPS_A_COMPLETER.find(([c]) => c === completFil)?.[1] || completFil, 0]] : []),
+  ];
   const GROUPES = [["aucun", "Aucun"], ["plateforme", "Plateforme"], ["serie", "Série"], ["genre", "Genre"]];
   const PRETS = [["tous", "Tous"], ["chez moi", "🏠 Chez moi"], ["prêtés", "📤 Prêtés"]];
   const FORMATS = [["tous", "Tous"], ["physique", "Physique"], ["démat", "Démat"]];
@@ -144,7 +157,7 @@ export default function FiltersSheet({
           et il n'y en aura jamais deux.
           Il disparaît entièrement quand il n'y a plus rien à compléter : un
           appel à l'action sans action à faire est pire qu'une absence. */}
-      {aCompleter.length > 0 && (
+      {(aCompleter.length > 0 || completFil !== "tous") && (
         <div style={{
           background: accentDoux, border: `2px solid ${ACCENT}`, borderRadius: "var(--r-md)",
           padding: 14, marginBottom: "var(--ecart-bloc)",
@@ -152,12 +165,13 @@ export default function FiltersSheet({
           <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 10, marginBottom: 4 }}>
             <span style={{ color: ACCENT, fontSize: "var(--t-corps)", fontWeight: 700 }}>À compléter</span>
             <span style={{ color: ACCENT, fontSize: "var(--t-petit)", flexShrink: 0 }}>
-              {fichesIncompletes} fiche{fichesIncompletes > 1 ? "s" : ""}
+              {fichesIncompletes > 0 ? `${fichesIncompletes} fiche${fichesIncompletes > 1 ? "s" : ""}` : "à jour"}
             </span>
           </div>
           <div style={{ color: mut, fontSize: "var(--t-legende)", lineHeight: 1.5, marginBottom: 10 }}>
-            Les fiches auxquelles il manque quelque chose. Choisis un manque, la liste
-            ne montre plus qu'elles — et l'option s'efface dès qu'il n'en reste aucune.
+            {fichesIncompletes > 0
+              ? "Les fiches auxquelles il manque quelque chose. Choisis un manque, la liste ne montre plus qu'elles — et l'option s'efface dès qu'il n'en reste aucune."
+              : "Plus rien à compléter : toutes les fiches sont remplies. Reviens à « Tous » pour revoir la bibliothèque."}
           </div>
           <Puces compact options={COMPLETUDE} value={completFil} onChange={setCompletFil} />
         </div>

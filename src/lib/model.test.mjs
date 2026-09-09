@@ -20,7 +20,8 @@ import {
   BACK_COMPAT, XBOX_SERIES_CUTOFF, PRET_LONG_JOURS, PLATFORMES_JEU,
   estDatePlausible, estLienSur, ANNEE_MIN, ANNEES_A_VENIR, normaliserGenres,
   modesDuJeu, jeuALeMode, genresPresents, MODES_JEU, jeuSurPlateforme, compterRetro,
-  jeuPasseSeuil, jeuACompleter, completudeManquante, dateDeSortie, serieDuJeu, empreinteMelange,
+  jeuPasseSeuil, jeuACompleter, completudeManquante, compterFichesIncompletes,
+  dateDeSortie, serieDuJeu, empreinteMelange,
 } from "./model.js";
 import { ecouterMiseAJour } from "./maj.js";
 
@@ -842,4 +843,20 @@ test("le tri au hasard tient tant qu'on ne redemande pas à mélanger", () => {
   assert.deepEqual([...ordre(7)].sort((a, b) => a - b), ids, "personne ne disparaît au mélange");
   const v = empreinteMelange(3, 7);
   assert.ok(v >= 0 && v < 1, `empreinte hors bornes : ${v}`);
+});
+
+
+test("un manque comblé ne doit pas emporter le moyen d'enlever son filtre", () => {
+  // Le scénario : on filtre sur « Note », on remplit la dernière note, et il
+  // n'y a plus rien à compléter. Si le bloc disparaissait alors, on resterait
+  // devant zéro jeu, avec un badge annonçant un filtre actif et rien à l'écran
+  // pour l'enlever. C'est le composant qui garde le bloc affiché ; ce test
+  // vérifie la donnée sur laquelle il s'appuie.
+  const complete = [jeu({ cover: "https://a", genre: ["Action"], style: "t", metacritic: 80, infobox: { series: "S" } })];
+  assert.deepEqual(completudeManquante(complete), [], "plus aucun manque à proposer");
+  assert.equal(compterFichesIncompletes(complete), 0);
+  // Et le filtre, lui, ne retient plus rien — d'où la liste vide qu'il faut
+  // pouvoir expliquer et défaire.
+  assert.equal(jeuACompleter(complete[0], "metacritic"), false);
+  assert.equal(jeuACompleter(complete[0], "tous"), true);
 });

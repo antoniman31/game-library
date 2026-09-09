@@ -547,6 +547,17 @@ aura jamais deux, sans quoi l'effet von Restorff ne joue plus. Il porte le
 nombre de fiches concernées, 42 sur une bibliothèque réelle : pas la somme des
 colonnes, puisqu'un même jeu peut manquer de trois choses.
 
+La question « il disparaît quand il n'y a plus rien à compléter ? » a trouvé le
+défaut que la réponse « oui » cachait. Oui, sauf qu'il disparaissait AUSSI quand
+le filtre était posé au moment où le dernier manque était comblé — et il
+emportait alors le seul moyen de retirer un filtre qui venait de vider la liste :
+zéro jeu à l'écran, un badge annonçant un filtre actif, et plus rien pour
+l'enlever sauf « Réinitialiser », qui efface aussi tout le reste. Le bloc reste
+donc affiché tant que le filtre est posé, et dit alors autre chose : « Plus rien
+à compléter : toutes les fiches sont remplies. » C'est exactement le piège déjà
+évité pour le genre, où la valeur choisie reste visible même quand elle sort de
+la traîne — et il a fallu qu'on repose la question pour le voir ici.
+
 **Le hasard devait tenir.** « Je joue à quoi ce soir » est la vraie question
 d'une ludothèque de cette taille, et un tirage y répond mieux qu'un classement.
 Mais `Math.random()` dans un comparateur rebat les cartes à chaque rendu : la
