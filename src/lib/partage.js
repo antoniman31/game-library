@@ -24,9 +24,11 @@ const dateFr = (iso) => {
 // Les jeux prêtés y restent avec la date de retour convenue : les cacher
 // donnerait à croire qu'on ne les possède pas, et dire « prêté » sans dire
 // jusqu'à quand n'apprend pas si l'on peut espérer son tour.
+// La note Metacritic n'y figure pas : elle sert à trier sa propre bibliothèque,
+// pas à conseiller quelqu'un d'autre. Affichée, elle range les jeux qu'on prête
+// en bons et en mauvais avant même qu'on les ait proposés.
 export function ligneJeu(g) {
   const bouts = [String(g?.title || "").trim() || "Sans titre"];
-  if (typeof g?.metacritic === "number") bouts.push(`${g.metacritic}`);
   if (g?.format) bouts.push(String(g.format));
   if (g?.lentA) {
     const retour = g.lentRetourPrevu ? dateFr(g.lentRetourPrevu) : null;
