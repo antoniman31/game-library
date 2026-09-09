@@ -812,11 +812,17 @@ export default function App() {
             abrège son invite — « Rechercher… » plutôt que la liste de ce qu'on
             peut y chercher, que la recherche elle-même montre dès la première
             lettre — et le bouton de tri ne porte son libellé que lorsqu'il
-            n'est plus celui par défaut. */}
+            n'est plus celui par défaut.
+
+            Ce libellé coûte trente-quatre pixels, tous pris au champ, qui
+            tombe alors à 88 px et affiche « Reche » : l'invite d'un champ ne
+            s'abrège pas, elle se coupe net. Il ne reste alors qu'une loupe,
+            qui se lit entière. Le nom accessible, lui, ne dépend plus de
+            l'invite — sinon un lecteur d'écran annoncerait l'émoji. */}
         {tab === "library" && (
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
             <input value={searchInput} onChange={e => setSearchInput(e.target.value)} type="search"
-              placeholder="Rechercher…"
+              aria-label="Rechercher" placeholder={sort === TRI_DEFAUT ? "Rechercher…" : "🔍"}
               style={{ flex: 1, minWidth: 0, minHeight: "var(--tap)", background: card, border: `1px solid ${bdr}`, borderRadius: "var(--r-md)", color: txt, padding: "0 12px", fontSize: "var(--t-corps)" }} />
             <button onClick={() => setShowSort(true)}
               aria-label={`Trier : ${libelleTri(sort)}`} title={`Trier : ${libelleTri(sort)}`}

@@ -602,8 +602,11 @@ total, où il se lit « 154 jeux · 23 affichés ».
 
 Mesuré à 360 px : quatre cibles de 48 px, la ligne finit à 346 px sur les 346
 disponibles. Au pire cas — un tri choisi et un filtre posé — le champ tombe à
-88 px et son invite se coupe en « Recherc… ». Le champ reste touchable et le
-texte tapé s'y lit ; c'est le prix de la ligne unique.
+88 px, et ce qu'il affichait alors ne ressemblait à rien : « Reche ». L'invite
+d'un champ ne s'abrège pas comme un texte, elle se coupe net. Elle se réduit
+donc à une loupe dès que le bouton de tri porte son libellé — un signe entier
+plutôt qu'un mot amputé. Le nom accessible du champ est écrit à part, sinon un
+lecteur d'écran annoncerait l'émoji.
 
 ---
 
