@@ -752,6 +752,42 @@ deux à s'accorder : un test de cohérence lit la table dans le source et échou
 si un filtre n'a pas son effacement, ou si un effacement ne correspond à aucun
 filtre connu. Vérifié en retirant un filtre à la main — la CI le nomme.
 
+### Phase 25 — Le bouton qui cachait cent vingt-cinq jeux
+
+« On pourrait pas enlever le truc chargé en bas et vraiment afficher tous les
+jeux ? » La réponse spontanée fut non, chiffres à l'appui : monter trente fiches
+coûte environ 170 ms ici et 800 sur un processeur quatre fois plus lent, donc
+tout monter d'un coup approcherait les quatre secondes d'écran figé.
+
+Cette estimation était fausse d'un facteur quatre, et elle l'était pour une
+raison instructive : elle extrapolait le coût d'un clic sur « Charger 30 de
+plus », qui remonte la liste déjà en place en même temps que les nouvelles
+fiches. Monter les cent cinquante-cinq d'un seul tenant coûte bien moins que la
+somme des paliers.
+
+La vraie mesure, sur la bibliothèque réelle et la version construite, trois
+essais par ligne, médiane retenue :
+
+| Processeur | Avec le bouton | Tout affiché |
+| --- | --- | --- |
+| Machine de bureau | 330 ms | 522 ms |
+| Ralenti ×4 | 1,0 s | 1,7 s |
+| Ralenti ×6 | 1,4 s | 2,5 s |
+
+Et une fois tout monté, filtrer prend vingt millisecondes ; le pire cas —
+effacer la recherche pour faire revenir les cent cinquante-cinq — quatre cent
+quatre-vingts sur le plus lent des trois, soit à peine au-dessus du seuil de
+Doherty. Une seconde au démarrage contre un bouton en moins et la bibliothèque
+entière visible : le change est bon, et les trente-cinq états par fiche qu'on
+s'apprêtait à refondre peuvent attendre.
+
+Deux leçons de mesure, notées pour la prochaine fois. Le serveur de
+développement fausse tout : son optimiseur de dépendances ajoutait treize
+secondes identiques à chaque essai, et il fallait mesurer sur `dist/`. Et
+`page.goto` attend par défaut le chargement complet, donc les polices Google et
+les jaquettes distantes que le proxy de cet environnement refuse — treize
+secondes de plus, constantes, qui n'avaient rien à voir avec l'application.
+
 ---
 
 ## 3. Architecture finale

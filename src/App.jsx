@@ -31,11 +31,6 @@ import {
   sgdbSearch, xblTitleHistory,
 } from "./lib/api.js";
 
-// Nombre de jeux rendus d'un coup. La liste entière était montée à chaque
-// rendu : à 94 jeux, autant de GameCard portant chacun ~25 useState, soit
-// plusieurs milliers de hooks et autant d'objets de style recréés.
-const PAGE_SIZE = 30;
-
 // Jaquettes rattrapées au démarrage, par ouverture de l'application.
 const RATTRAPAGE_MAX = 12;
 
@@ -97,7 +92,6 @@ export default function App() {
   const [showSort, setShowSort] = useState(false);
   const [showActions, setShowActions] = useState(false);
   const [partageEtat, setPartageEtat] = useState(null);
-  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const [keys, setKeys] = useState(() => loadKeys());   // clés API saisies par l'utilisateur
   const [keyTest, setKeyTest] = useState({});           // résultat du bouton « Tester »
   const [importedIds, setImportedIds] = useState([]); // pour l'enrichissement post-import (E)
@@ -188,11 +182,6 @@ export default function App() {
     const t = setTimeout(() => setSearch(searchInput), 180);
     return () => clearTimeout(t);
   }, [searchInput]);
-
-  // Toute pagination repart du début quand le contenu de la liste change :
-  // sinon « Charger 30 de plus » resterait déplié sur un résultat de 3 jeux.
-  useEffect(() => { setVisibleCount(PAGE_SIZE); },
-    [search, plat, avecRetro, pretFil, fmtFil, genreFil, modeFil, noteFil, completFil, serieFil, sort, sortDir, tab, view]);
 
   // Recherche posée par le code (clic sur une vignette, retour d'un ajout) :
   // les deux états doivent bouger ensemble, sans attendre le délai de frappe.
@@ -641,38 +630,34 @@ export default function App() {
   // Pas la somme des colonnes : un même jeu peut manquer de trois choses.
   const fichesIncompletes = useMemo(() => compterFichesIncompletes(games), [games]);
 
-  // Ce qui est réellement monté. Le reste attend « Charger 30 de plus ».
-  const visible = filtered.slice(0, visibleCount);
-  const restants = filtered.length - visible.length;
   // Regrouper ne change pas l'ordre : les sections apparaissent dans l'ordre
   // où le tri les fait apparaître, et un jeu ne bouge pas de place à
-  // l'intérieur. Le regroupement porte sur ce qui est monté, pas sur toute la
-  // bibliothèque — sinon la pagination découperait les sections au hasard.
+  // l'intérieur.
+  //
+  // La liste était paginée par trente, avec un bouton « Charger 30 de plus »
+  // en pied de page. Mesure faite sur cent cinquante-cinq jeux, version
+  // construite : tout monter d'un coup coûte deux dixièmes de seconde de plus
+  // au démarrage sur une machine de bureau, sept sur un téléphone récent, une
+  // seconde sur un ancien. Filtrer ensuite prend vingt millisecondes, et le
+  // pire cas — effacer la recherche pour faire revenir les cent cinquante-cinq
+  // — quatre cent quatre-vingts sur ce même vieux téléphone.
+  //
+  // Une seconde au démarrage contre un bouton en moins et la bibliothèque
+  // entière visible : c'est le change qu'on a fait. Ce commentaire garde les
+  // chiffres pour le jour où la bibliothèque aura doublé.
   const sections = useMemo(() => {
-    if (groupePar === "aucun") return [{ titre: null, jeux: visible }];
+    if (groupePar === "aucun") return [{ titre: null, jeux: filtered }];
     const cle = (g) => (groupePar === "plateforme" ? g.platform
       : groupePar === "serie" ? (serieDuJeu(g) || "Sans série")
       : (g.genre?.[0] || "Sans genre"));
     const par = new Map();
-    for (const g of visible) {
+    for (const g of filtered) {
       const k = cle(g) || "Sans réponse";
       if (!par.has(k)) par.set(k, []);
       par.get(k).push(g);
     }
     return [...par.entries()].map(([titre, jeux]) => ({ titre, jeux }));
-  }, [visible, groupePar]);
-
-  const chargerPlus = restants > 0 && (
-    <button
-      onClick={() => setVisibleCount(c => c + PAGE_SIZE)}
-      style={{
-        width: "100%", minHeight: "var(--tap)", marginTop: 12, background: "transparent",
-        border: `1px solid ${bdr}`, color: txt, borderRadius: "var(--r-md)", fontSize: "var(--t-corps)", cursor: "pointer",
-      }}
-    >
-      Charger {Math.min(PAGE_SIZE, restants)} de plus ({restants} restant{restants > 1 ? "s" : ""})
-    </button>
-  );
+  }, [filtered, groupePar]);
 
   // Les jeux d'une section, dans la vue demandée.
   //
@@ -903,7 +888,6 @@ export default function App() {
               {rendreJeux(jeux)}
             </div>
           ))}
-          {chargerPlus}
           </>
         ))}
 
