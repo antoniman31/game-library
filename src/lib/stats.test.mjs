@@ -149,7 +149,7 @@ test("la complétude compte ce qui est rempli, pas ce qui manque", () => {
     jeu({ id: 2 }),
   ]);
   assert.deepEqual(s.completude, [
-    ["Jaquette", 1], ["Genre", 1], ["Description", 1], ["Note", 1], ["Fiche Wikidata", 1],
+    ["Jaquette", 1], ["Genre", 1], ["Description", 1], ["Note", 1], ["Fiche détaillée", 1],
   ]);
 });
 

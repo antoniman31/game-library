@@ -109,7 +109,14 @@ for (const [largeur, theme] of ECRANS) {
       await page.getByRole("button", { name: /^Trier/ }).click();
     }],
     ["fiche dépliée", async () => { await page.keyboard.press("Escape"); await page.locator(".gl-card").first().click(); }],
+    ["feuille de vidage", async () => {
+      await page.getByRole("button", { name: /Modifier la fiche/ }).first().click();
+      await page.getByRole("button", { name: /^🧹 Vider/ }).first().click();
+    }],
     ["vue compacte", async () => {
+      // La feuille de vidage couvre l'écran : sans cette fermeture, « Filtres »
+      // resterait parfaitement visible et parfaitement inatteignable.
+      await page.keyboard.press("Escape");
       await page.getByRole("button", { name: /^Filtres/ }).click();
       await page.getByRole("button", { name: "≡ Compacte" }).click();
       await page.getByRole("button", { name: /^Voir \d+ jeu/ }).click();

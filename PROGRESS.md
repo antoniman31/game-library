@@ -61,12 +61,19 @@ en lecture seule, avec « Modifier » et « Supprimer » séparés et confirmés
 
 ### Sources d'enrichissement par jeu
 
-- **🔄 RAWG** : ré-associe un jeu mal matché → remplace jaquette, Metacritic, genres.
+- **🔄 RAWG** : ré-associe un jeu mal matché → remplace jaquette, Metacritic, genres, et
+  complète l'infobox avec les développeurs, éditeurs, la date de l'édition possédée et les
+  modes déduits des tags.
 - **📚 Wikipédia** : recherche full-text FR → le **titre commercial** officiel, puis au
   choix le **résumé**, la **jaquette** d'infobox et les **infos Wikidata**, chacun
   applicable indépendamment. Une fiche sans infobox le dit à la place de celle-ci et
   ouvre cette recherche d'un bouton.
 - **📦 Jaquette SteamGridDB** : vignettes verticales 600×900, 3 par ligne.
+- **🧹 Vider** : cinq cases (infos, description, jaquette, note, genres) ; ce qui est déjà
+  vide reste inerte, et l'effacement demande une confirmation nommant les champs.
+
+Les deux sources d'infobox ne s'écrasent jamais : chacune ne remplit que les champs vides,
+et la fiche affiche d'où viennent ses infos (« Source : RAWG et Wikidata »).
 
 ### Actions de masse (panneau ⋯)
 

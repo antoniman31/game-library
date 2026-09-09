@@ -638,6 +638,55 @@ correspondance exacte rate, parce que Wikipédia les range sous le nom du jeu
 d'origine. Et le rapprochement approximatif, la règle des séries de l'audit a
 montré ce qu'il vaut.
 
+### Phase 22 — Deux sources qui ne se marchent plus dessus
+
+Les vingt-cinq fiches sans infobox ont un point commun : ce sont des remasters
+et des compilations. Wikipédia les range sous la page du jeu d'origine, si bien
+que « Sonic The Hedgehog » y sort en 1991 quelle que soit la compilation qu'on
+possède. RAWG, lui, a une entrée par édition, avec la date de celle qu'on a
+achetée — mais ses éditeurs et développeurs viennent d'une base communautaire,
+moins sûre sur les vieux titres.
+
+Aucune des deux ne gagne partout, d'où le mélange. Et le détail RAWG que la
+fiche demandait déjà pour la jaquette et la note contenait depuis toujours les
+développeurs, les éditeurs, la date et les tags : on les jetait. Les lire ne
+coûte pas un appel réseau de plus.
+
+La règle qui rend le mélange sûr : une source ne remplit que les champs vides et
+n'écrase jamais. Passer RAWG puis Wikipédia sur un remaster garde la date de la
+version possédée et complète le reste. Une source qui n'a rien rempli ne signe
+pas la provenance — dire « et RAWG » sur une fiche où RAWG n'a rien apporté
+serait une fausse piste au moment de démêler une date. Car la fiche dit
+maintenant d'où elle vient : « Source : RAWG et Wikidata ». Sans cette ligne,
+dans six mois, une date ne dit plus si elle décrit le jeu de 1991 ou la
+compilation de 2022.
+
+Deux conséquences. Les infobox d'avant, qui ne portent aucune provenance, sont
+réputées venir de Wikidata — c'était la seule source de l'époque, et les faire
+ressortir sans origine serait mentir par omission. Et surtout, puisque plus rien
+ne s'écrase, il fallait de quoi repartir propre : sans cela, une infobox fausse
+le resterait, chaque nouvelle source la respectant poliment. D'où « 🧹 Vider »,
+cinq cases plutôt qu'un bouton unique — « repartir propre » ne veut pas dire la
+même chose selon qu'une infobox est fausse ou qu'une jaquette l'est, et tout
+effacer d'un geste ferait perdre ce qui était bon. Ce qui est déjà vide reste
+décoché et inerte : le proposer laisserait croire qu'il y a là quelque chose à
+enlever.
+
+Le manque, enfin, ne s'appelle plus « Fiche Wikidata » mais « Fiche détaillée » :
+deux sources la remplissent désormais, et la nommer d'après une seule était
+devenu faux.
+
+Deux défauts trouvés en relisant ce travail contre les règles d'interface, l'un
+et l'autre dans du code écrit une heure plus tôt. La ligne de provenance portait
+une opacité de 0,8 pour rester discrète : à 12 px, sur le fond clair, cela la
+faisait tomber à 3,34:1 contre les 4,5:1 exigés — la discrétion se paie en
+taille et en couleur, jamais en transparence. Et dans la feuille de vidage, le
+bouton « Vider » occupait deux tiers de la barre contre un tiers pour
+« Annuler » : la place d'un bouton dit son importance, et inviter le pouce vers
+l'action irréversible est un mauvais conseil. Il était de surcroît grisé et muet
+tant qu'aucune case n'était cochée — exactement ce qu'on venait de reprocher
+ailleurs. Il reste actif et dit ce qui manque.
+
 ---
 
 ## 3. Architecture finale
