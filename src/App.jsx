@@ -558,6 +558,7 @@ export default function App() {
   const genres = useMemo(() => genresPresents(games), [games]);
   const sansMode = useMemo(() => games.filter(g => !g.infobox?.modes?.length).length, [games]);
   const nbRetro = useMemo(() => compterRetro(games, plat), [games, plat]);
+  const nbNatifs = useMemo(() => games.filter(g => g.platform === plat).length, [games, plat]);
 
   // Ce qui est réellement monté. Le reste attend « Charger 30 de plus ».
   const visible = filtered.slice(0, visibleCount);
@@ -862,7 +863,7 @@ export default function App() {
       {showFilters && (
         <FiltersSheet
           plat={plat} setPlat={setPlat}
-          avecRetro={avecRetro} setAvecRetro={setAvecRetro} nbRetro={nbRetro}
+          avecRetro={avecRetro} setAvecRetro={setAvecRetro} nbRetro={nbRetro} nbNatifs={nbNatifs}
           pretFil={pretFil} setPretFil={setPretFil}
           fmtFil={fmtFil} setFmtFil={setFmtFil}
           genreFil={genreFil} setGenreFil={setGenreFil}

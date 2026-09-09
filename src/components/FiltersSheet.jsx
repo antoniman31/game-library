@@ -96,7 +96,7 @@ const Aide = ({ children }) => (
 const GENRES_VISIBLES = 6;
 
 export default function FiltersSheet({
-  plat, setPlat, avecRetro, setAvecRetro, nbRetro,
+  plat, setPlat, avecRetro, setAvecRetro, nbRetro, nbNatifs,
   pretFil, setPretFil, fmtFil, setFmtFil,
   genreFil, setGenreFil, modeFil, setModeFil, genres, sansMode,
   view, setView, onClose, resultats,
@@ -139,13 +139,17 @@ export default function FiltersSheet({
           }}>
             <input type="checkbox" checked={avecRetro} onChange={e => setAvecRetro(e.target.checked)}
               style={{ marginTop: 3, width: 18, height: 18, accentColor: ACCENT, flexShrink: 0 }} />
+            {/* Le libellé ne nomme plus la console héritée : il est le même
+                pour la Xbox et pour la Switch, donc il se reconnaît d'une
+                console à l'autre au lieu de se relire. Les noms et les nombres
+                descendent d'une ligne, là où va le détail. */}
             <span>
               <span style={{ color: txt, fontSize: "var(--t-petit)", fontWeight: 600 }}>
-                Inclure les jeux {enfant} rétrocompatibles
+                Inclure les jeux rétrocompatibles
               </span>
               <span style={{ display: "block", color: mut, fontSize: "var(--t-legende)", lineHeight: 1.5, marginTop: 2 }}>
                 {nbRetro > 0
-                  ? `${nbRetro} jeu${nbRetro > 1 ? "x" : ""} de plus, jouable${nbRetro > 1 ? "s" : ""} sur ${plat}. Décoche pour ne voir que ce qui est vraiment ${plat}.`
+                  ? `${nbRetro} jeu${nbRetro > 1 ? "x" : ""} ${enfant} démarre${nbRetro > 1 ? "nt" : ""} sur ${plat}. Décoche pour ne voir que ${nbNatifs > 1 ? `les ${nbNatifs} jeux` : nbNatifs === 1 ? "le seul jeu" : "les jeux"} vraiment ${plat}.`
                   : `Aucun jeu ${enfant} n'est marqué rétrocompatible pour l'instant.`}
               </span>
             </span>

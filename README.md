@@ -138,9 +138,11 @@ erreur CORS.
   ceux de la précédente marqués rétrocompatibles — mais le mélange était imposé : sur
   une bibliothèque réelle, « Xbox Series X » rendait 101 jeux dont 19 seulement sont
   des jeux Series X, et ces 19 étaient introuvables. Une case à cocher, présente
-  uniquement pour une console qui en accueille une autre et cochée par défaut, dit
-  combien de jeux elle ajoute ; décochée, la ligne repliée annonce « Xbox Series X
-  seul ».
+  uniquement pour une console qui en accueille une autre et cochée par défaut, porte
+  le même libellé pour la Xbox et pour la Switch — « Inclure les jeux
+  rétrocompatibles » — et laisse les noms et les nombres à la ligne de détail :
+  « 82 jeux Xbox One démarrent sur Xbox Series X. Décoche pour ne voir que les 19 jeux
+  vraiment Xbox Series X. » Décochée, la ligne repliée annonce « Xbox Series X seul ».
 - **Le tri est au-dessus de la liste**, plus dans le panneau : ce n'est pas un filtre,
   le badge ne le compte pas. La ligne indique aussi combien de jeux l'écran montre,
   quand ce nombre diffère du total.
