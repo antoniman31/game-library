@@ -584,6 +584,30 @@ réinitialiser. Et le nombre d'une puce était collé à son libellé dans l'arb
 d'accessibilité — un lecteur d'écran annonçait « Note21 » — parce que l'espace
 était dessinée par une marge au lieu d'être écrite.
 
+### Phase 20 — Une ligne au lieu de deux
+
+Le tri sorti du panneau avait pris une rangée à lui, sous la recherche, avec le
+nombre de jeux affichés à sa gauche. Deux rangées de commandes empilées avant la
+première jaquette : sur un écran de 780 px de haut, c'est un huitième de la
+liste dépensé en boutons. Tout tient maintenant sur la ligne de recherche.
+
+Quatre commandes sur 360 px ne rentrent qu'à deux conditions. Le champ abrège
+son invite — « Rechercher… » au lieu d'énumérer titre, genre et tag, ce que la
+recherche montre d'elle-même dès la première lettre — et passe de 20 à 16 px,
+la plus petite taille qui n'appelle pas le zoom automatique d'iOS. Le bouton de
+tri, lui, ne porte son libellé que lorsqu'il ne trie plus par défaut : afficher
+« A → Z » quand rien n'a été choisi prend la place d'un autre bouton pour ne
+rien apprendre. Le compteur de jeux filtrés remonte dans l'en-tête, à côté du
+total, où il se lit « 154 jeux · 23 affichés ».
+
+Mesuré à 360 px : quatre cibles de 48 px, la ligne finit à 346 px sur les 346
+disponibles. Au pire cas — un tri choisi et un filtre posé — le champ tombe à
+88 px, et ce qu'il affichait alors ne ressemblait à rien : « Reche ». L'invite
+d'un champ ne s'abrège pas comme un texte, elle se coupe net. Elle se réduit
+donc à une loupe dès que le bouton de tri porte son libellé — un signe entier
+plutôt qu'un mot amputé. Le nom accessible du champ est écrit à part, sinon un
+lecteur d'écran annoncerait l'émoji.
+
 ---
 
 ## 3. Architecture finale

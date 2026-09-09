@@ -106,7 +106,7 @@ for (const [largeur, theme] of ECRANS) {
     }],
     ["panneau de tri", async () => {
       await page.keyboard.press("Escape");
-      await page.getByRole("button", { name: /^⇅/ }).click();
+      await page.getByRole("button", { name: /^Trier/ }).click();
     }],
     ["fiche dépliée", async () => { await page.keyboard.press("Escape"); await page.locator(".gl-card").first().click(); }],
     ["vue compacte", async () => {

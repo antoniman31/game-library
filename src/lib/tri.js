@@ -17,3 +17,8 @@ export const TRIS = [
 ];
 
 export const libelleTri = (cle) => TRIS.find(([k]) => k === cle)?.[1] || TRIS[0][1];
+
+// Le tri d'origine. Le bouton de la ligne de recherche s'en sert pour savoir
+// s'il doit dire son libellé : montrer « A → Z » quand rien n'a été choisi
+// prend la place d'un autre bouton pour ne rien apprendre.
+export const TRI_DEFAUT = TRIS[0][0];
