@@ -20,6 +20,7 @@ import {
   BACK_COMPAT, XBOX_SERIES_CUTOFF, PRET_LONG_JOURS, PLATFORMES_JEU,
   estDatePlausible, estLienSur, ANNEE_MIN, ANNEES_A_VENIR, normaliserGenres,
   modesDuJeu, jeuALeMode, genresPresents, MODES_JEU, jeuSurPlateforme, compterRetro,
+  jeuPasseSeuil, jeuACompleter, completudeManquante, dateDeSortie, serieDuJeu, empreinteMelange,
 } from "./model.js";
 import { ecouterMiseAJour } from "./maj.js";
 
@@ -774,4 +775,71 @@ test("le nombre de jeux hérités est annoncé, pas laissé à deviner", () => {
   assert.equal(compterRetro(bibliotheque, "Xbox One"), 0);
   assert.equal(compterRetro(bibliotheque, "tous"), 0);
   assert.equal(compterRetro(null, "Xbox Series X"), 0);
+});
+
+
+// ── Seuil de note, complétude, sortie, hasard ──────────────────────────────
+
+test("le seuil de note prend au-dessus, pas entre deux bornes", () => {
+  // La question n'est pas « lesquels sont entre 80 et 89 » mais « qu'est-ce que
+  // j'ai de vraiment bien » : un seuil répond, une tranche oblige à les cocher
+  // toutes.
+  assert.equal(jeuPasseSeuil(jeu({ metacritic: 95 }), "90"), true);
+  assert.equal(jeuPasseSeuil(jeu({ metacritic: 90 }), "90"), true, "le seuil est inclusif");
+  assert.equal(jeuPasseSeuil(jeu({ metacritic: 89 }), "90"), false);
+  assert.equal(jeuPasseSeuil(jeu({ metacritic: 95 }), "tous"), true);
+  // Un jeu sans note ne passe aucun seuil : il n'est pas « mal noté », il
+  // n'est pas noté — et c'est le filtre « À compléter » qui le retrouve.
+  assert.equal(jeuPasseSeuil(jeu({ metacritic: null }), "70"), false);
+  assert.equal(jeuPasseSeuil(jeu({ metacritic: null }), "tous"), true);
+});
+
+test("on ne propose de compléter que ce qui manque vraiment", () => {
+  // Une option « Jaquette 0 » promettrait du travail inexistant, et une
+  // bibliothèque complète ne doit plus rien proposer du tout.
+  const bibliotheque = [
+    jeu({ cover: "https://a", genre: ["Action"], style: "Un texte", metacritic: 80, infobox: { series: "S" } }),
+    jeu({ cover: "https://b", genre: [], style: "", metacritic: null, infobox: null }),
+  ];
+  assert.deepEqual(completudeManquante(bibliotheque),
+    [["genre", "Genre", 1], ["style", "Description", 1], ["metacritic", "Note", 1], ["infobox", "Fiche Wikidata", 1]]);
+  assert.equal(completudeManquante(bibliotheque).some(([cle]) => cle === "cover"), false,
+    "aucune fiche sans jaquette : l'option n'existe pas");
+
+  const complete = [bibliotheque[0]];
+  assert.deepEqual(completudeManquante(complete), [], "rien à compléter, plus rien à proposer");
+  assert.deepEqual(completudeManquante([]), []);
+});
+
+test("le filtre à compléter retient les fiches auxquelles il manque le champ", () => {
+  const avec = jeu({ metacritic: 80 });
+  const sans = jeu({ metacritic: null });
+  assert.equal(jeuACompleter(sans, "metacritic"), true);
+  assert.equal(jeuACompleter(avec, "metacritic"), false);
+  assert.equal(jeuACompleter(avec, "tous"), true);
+  assert.equal(jeuACompleter(jeu({ genre: [] }), "genre"), true);
+  assert.equal(jeuACompleter(jeu({ genre: ["Action"] }), "genre"), false);
+});
+
+test("la date de sortie est la plus ancienne connue, ou rien", () => {
+  // Wikidata en liste une par plateforme : c'est la première qui date le jeu.
+  const g = jeu({ infobox: { releases: [{ date: "2017-03-03" }, { date: "2016-11-18" }] } });
+  assert.equal(dateDeSortie(g), "2016-11-18");
+  assert.equal(dateDeSortie(jeu({ infobox: { releases: [{ date: "pas une date" }] } })), null);
+  assert.equal(dateDeSortie(jeu()), null, "sans fiche Wikidata, on ne sait pas");
+  assert.equal(dateDeSortie(undefined), null);
+  assert.equal(serieDuJeu(jeu({ infobox: { series: "  Halo  " } })), "Halo");
+  assert.equal(serieDuJeu(jeu()), "");
+});
+
+test("le tri au hasard tient tant qu'on ne redemande pas à mélanger", () => {
+  // `Math.random()` dans un comparateur rebattrait les cartes à chaque rendu :
+  // la liste danserait sous le doigt à chaque frappe dans la recherche.
+  const ids = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+  const ordre = (graine) => [...ids].sort((a, b) => empreinteMelange(a, graine) - empreinteMelange(b, graine));
+  assert.deepEqual(ordre(7), ordre(7), "même graine, même ordre");
+  assert.notDeepEqual(ordre(7), ordre(8), "graine différente, autre tirage");
+  assert.deepEqual([...ordre(7)].sort((a, b) => a - b), ids, "personne ne disparaît au mélange");
+  const v = empreinteMelange(3, 7);
+  assert.ok(v >= 0 && v < 1, `empreinte hors bornes : ${v}`);
 });

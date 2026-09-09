@@ -8,7 +8,8 @@
 //
 // Deux familles, deux sous-onglets : ce qui circule, et ce qu'on possède.
 
-import { dureeEntreeHistorique, aujourdhuiISO, pretEnRetard, BACK_COMPAT_PARENT, normTitle } from "./model.js";
+import { dureeEntreeHistorique, aujourdhuiISO, pretEnRetard, BACK_COMPAT_PARENT, normTitle,
+  dateDeSortie, CHAMPS_A_COMPLETER } from "./model.js";
 
 const compter = (paires) => {
   const m = new Map();
@@ -194,13 +195,6 @@ function anneesCompletes(annees) {
   return sortie;
 }
 
-// Date de sortie la plus ancienne connue pour un jeu : Wikidata en liste une
-// par plateforme, et c'est la première qui date le jeu.
-const sortieLaPlusAncienne = (g) => {
-  const dates = (g.infobox?.releases || []).map(r => r?.date).filter(d => /^\d{4}/.test(d || ""));
-  return dates.length ? dates.sort()[0] : null;
-};
-
 // Un titre référencé par un jeu de la collection mais absent d'elle : le tome
 // manquant. Comparaison sur le titre normalisé, seul lien dont on dispose —
 // Wikidata donne des noms, pas des identifiants, dans ces deux champs.
@@ -301,13 +295,10 @@ export function statsCollection(games, aujourdhui = aujourdhuiISO()) {
     },
     // Ce qui manque, et donc ce qu'il reste à faire — la seule statistique
     // sur laquelle on puisse agir.
-    completude: [
-      ["Jaquette", jeux.filter(g => g.cover).length],
-      ["Genre", jeux.filter(g => g.genre?.length).length],
-      ["Description", jeux.filter(g => g.style).length],
-      ["Note", notes.length],
-      ["Fiche Wikidata", jeux.filter(g => g.infobox).length],
-    ],
+    // Les mêmes prédicats que le filtre « À compléter » : le chiffre affiché ici
+    // et la liste qu'on obtient là-bas ne peuvent pas diverger.
+    completude: CHAMPS_A_COMPLETER.map(([, label, manque]) =>
+      [label, total - jeux.filter(manque).length]),
     // Les années sans aucun ajout doivent apparaître à zéro : sans elles,
     // l'histogramme resserre le temps et suggère un rythme régulier qui n'a
     // pas eu lieu.
@@ -318,7 +309,7 @@ export function statsCollection(games, aujourdhui = aujourdhuiISO()) {
     noteParGenre: moyenneParCle(jeux, g => g.genre || [], 3).slice(0, 8),
     // L'âge des jeux, à ne pas confondre avec la date d'entrée chez toi.
     parDecennie: (() => {
-      const d = jeux.map(sortieLaPlusAncienne).filter(Boolean)
+      const d = jeux.map(dateDeSortie).filter(Boolean)
         .map(date => `${date.slice(0, 3)}0`);
       return compter(d).sort((a, b) => (a[0] < b[0] ? -1 : 1));
     })(),
@@ -326,7 +317,7 @@ export function statsCollection(games, aujourdhui = aujourdhuiISO()) {
     // jeu et son entrée dans la bibliothèque, pour les jeux qui savent les deux.
     delaiAchat: (() => {
       const ecarts = jeux.map(g => {
-        const sortie = sortieLaPlusAncienne(g);
+        const sortie = dateDeSortie(g);
         if (!sortie || !/^\d{4}-\d{2}-\d{2}$/.test(g.addedDate || "")) return null;
         const j = joursEntre(sortie, g.addedDate);
         return j >= 0 ? j : null; // une entrée antérieure à la sortie est une date fausse

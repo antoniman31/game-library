@@ -1,7 +1,7 @@
 import { useState } from "react";
 import Sheet from "./Sheet.jsx";
 import { card, bdr, txt, mut, accent, accentDoux, warn } from "../lib/theme.js";
-import { PLATFORMS, BACK_COMPAT, compterFiltres } from "../lib/model.js";
+import { PLATFORMS, BACK_COMPAT, SEUILS_NOTE, compterFiltres } from "../lib/model.js";
 
 const ACCENT = accent;
 
@@ -74,9 +74,11 @@ function Puces({ options, value, onChange, colorOf, compact }) {
           >
             {l}
             {/* Le nombre disait « Plateforme 33 », qui se lit comme un nom.
-                Atténué et détaché, il redevient ce qu'il est : un poids. */}
+                Atténué et détaché, il redevient ce qu'il est : un poids.
+                L'espace est écrite et non seulement dessinée par la marge :
+                sans elle, un lecteur d'écran annonce « Note21 ». */}
             {compte != null && (
-              <span style={{ color: mut, fontWeight: 400, marginLeft: 6 }}>{compte}</span>
+              <>{" "}<span style={{ color: mut, fontWeight: 400, marginLeft: 4 }}>{compte}</span></>
             )}
           </button>
         );
@@ -99,9 +101,13 @@ export default function FiltersSheet({
   plat, setPlat, avecRetro, setAvecRetro, nbRetro, nbNatifs,
   pretFil, setPretFil, fmtFil, setFmtFil,
   genreFil, setGenreFil, modeFil, setModeFil, genres, sansMode,
+  noteFil, setNoteFil, completFil, setCompletFil, aCompleter,
+  serieFil, setSerieFil, groupePar, setGroupePar,
   view, setView, onClose, resultats,
 }) {
-  const actifs = compterFiltres({ plat, pretFil, fmtFil, genreFil, modeFil });
+  // Tous les filtres, sans exception : oublier les nouveaux ici laisserait
+  // « Réinitialiser » grisé alors qu'il y a bien quelque chose à réinitialiser.
+  const actifs = compterFiltres({ plat, pretFil, fmtFil, genreFil, modeFil, noteFil, completFil, serieFil });
   const [ouvert, setOuvert] = useState(null);
   const [tousLesGenres, setTousLesGenres] = useState(false);
 
@@ -113,6 +119,11 @@ export default function FiltersSheet({
   const caches = genres.length - visibles.length;
 
   const MODES = [["tous", "Tous"], ["solo", "Solo"], ["multi", "À plusieurs"], ["coop", "Coopératif"]];
+  // Un seuil, pas des tranches : la question n'est pas « lesquels sont entre 80
+  // et 89 » mais « qu'est-ce que j'ai de vraiment bien ».
+  const NOTES = [["tous", "Toutes"], ...SEUILS_NOTE.map(n => [String(n), `${n} et +`])];
+  const COMPLETUDE = [["tous", "Tous"], ...aCompleter.map(([cle, label, n]) => [cle, label, n])];
+  const GROUPES = [["aucun", "Aucun"], ["plateforme", "Plateforme"], ["serie", "Série"], ["genre", "Genre"]];
   const PRETS = [["tous", "Tous"], ["chez moi", "🏠 Chez moi"], ["prêtés", "📤 Prêtés"]];
   const FORMATS = [["tous", "Tous"], ["physique", "Physique"], ["démat", "Démat"]];
   const PLATEFORMES = PLATFORMS.map(p => [p, p === "tous" ? "Toutes" : p]);
@@ -205,6 +216,36 @@ export default function FiltersSheet({
         </Groupe>
       )}
 
+      <Groupe label="Note" resume={libelle(NOTES, noteFil)} actif={noteFil !== "tous"}
+        ouvert={ouvert === "note"} onBascule={bascule("note")}>
+        <Puces options={NOTES} value={noteFil} onChange={setNoteFil} />
+      </Groupe>
+
+      {/* Le groupe entier disparaît quand il n'y a plus rien à compléter, et
+          chaque option disparaît dès que son champ est rempli partout : une
+          case « Jaquette 0 » promettrait du travail qui n'existe pas. C'est le
+          seul filtre qui serve à faire quelque chose plutôt qu'à regarder. */}
+      {aCompleter.length > 0 && (
+        <Groupe label="À compléter" resume={libelle(COMPLETUDE, completFil)} actif={completFil !== "tous"}
+          ouvert={ouvert === "complet"} onBascule={bascule("complet")}>
+          <Aide>Les fiches auxquelles il manque quelque chose, pour aller le remplir.</Aide>
+          <Puces compact options={COMPLETUDE} value={completFil} onChange={setCompletFil} />
+        </Groupe>
+      )}
+
+      {/* Cinquante-huit séries ne tiennent pas dans une grille de boutons : ce
+          filtre se pose depuis une fiche, en touchant le nom de la série. Le
+          groupe n'existe donc que pour montrer celui qui est posé et permettre
+          de l'enlever — sans quoi on ne saurait plus comment revenir. */}
+      {serieFil !== "tous" && (
+        <Groupe label="Série" resume={serieFil} actif
+          ouvert={ouvert === "serie"} onBascule={bascule("serie")}>
+          <Aide>Posée depuis une fiche de jeu, en touchant le nom de la série.</Aide>
+          <Puces compact value={serieFil} onChange={setSerieFil}
+            options={[["tous", "Toutes les séries"], [serieFil, serieFil]]} />
+        </Groupe>
+      )}
+
       {/* L'affichage n'est pas un filtre, mais il ne coûte qu'une ligne : le
           replier pour économiser deux boutons ferait payer un toucher de plus
           ce qui tient déjà sur une rangée. Il reste donc déplié, séparé de
@@ -213,7 +254,13 @@ export default function FiltersSheet({
         <div style={{ color: mut, fontSize: "var(--t-legende)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 7 }}>
           Affichage
         </div>
-        <Puces options={[["liste", "☰ Liste"], ["grille", "⊞ Grille"]]} value={view} onChange={setView} />
+        <Puces options={[["liste", "☰ Liste"], ["compact", "≡ Compacte"], ["grille", "⊞ Grille"]]}
+          value={view} onChange={setView} />
+
+        <div style={{ color: mut, fontSize: "var(--t-legende)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em", margin: "16px 0 7px" }}>
+          Regrouper par
+        </div>
+        <Puces options={GROUPES} value={groupePar} onChange={setGroupePar} />
       </div>
 
       {/* Collée au bas de la feuille : dépliés, les genres repoussaient « Voir
@@ -226,7 +273,11 @@ export default function FiltersSheet({
         paddingTop: 12, marginTop: 16, borderTop: `1px solid ${bdr}`,
       }}>
         <button
-          onClick={() => { setPlat("tous"); setAvecRetro(true); setPretFil("tous"); setFmtFil("tous"); setGenreFil("tous"); setModeFil("tous"); }}
+          onClick={() => {
+            setPlat("tous"); setAvecRetro(true); setPretFil("tous"); setFmtFil("tous");
+            setGenreFil("tous"); setModeFil("tous"); setNoteFil("tous");
+            setCompletFil("tous"); setSerieFil("tous");
+          }}
           disabled={actifs === 0}
           style={{
             flex: 1, minHeight: "var(--tap)", background: "transparent",

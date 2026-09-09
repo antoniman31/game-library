@@ -93,21 +93,42 @@ for (const [largeur, theme] of ECRANS) {
     ["Filtres", async () => { await page.getByRole("button", { name: /^Filtres/ }).click(); }],
     // Les groupes sont repliés : sans les ouvrir, leurs puces ne sont pas
     // rendues et ne seraient donc jamais mesurées.
-    ["Filtres · plateforme ouverte", async () => { await page.getByRole("button", { name: /^Plateforme/ }).click(); }],
+    // Les en-têtes de groupe portent leur valeur courante (« Plateforme
+    // Toutes »), ce qui les distingue des puces de même nom ailleurs dans le
+    // panneau — sans quoi « Plateforme » désignerait aussi le regroupement.
+    ["Filtres · plateforme ouverte", async () => { await page.getByRole("button", { name: /^Plateforme Toutes/ }).click(); }],
+    // L'accordéon referme le groupe précédent tout seul : il n'y a rien à
+    // refermer avant d'ouvrir le suivant.
     ["Filtres · tous les genres", async () => {
-      await page.getByRole("button", { name: /^Plateforme/ }).click();
-      await page.getByRole("button", { name: /^Genre/ }).click();
+      await page.getByRole("button", { name: /^Genre Tous/ }).click();
       const bouton = page.getByRole("button", { name: /^Tous les genres/ });
       if (await bouton.count()) await bouton.click();
     }],
-    // Les groupes sont repliés : sans les ouvrir, leurs puces ne sont pas
-    // rendues et ne seraient donc jamais mesurées.
-    ["Filtres · genre ouvert", async () => { await page.getByRole("button", { name: /^Genre/ }).click(); }],
-    ["Filtres · tous les genres", async () => {
-      const bouton = page.getByRole("button", { name: /^Tous les genres/ });
-      if (await bouton.count()) await bouton.click();
+    ["Filtres · à compléter", async () => {
+      const groupe = page.getByRole("button", { name: /^À compléter/ });
+      if (await groupe.count()) await groupe.click();
+    }],
+    ["panneau de tri", async () => {
+      await page.keyboard.press("Escape");
+      await page.getByRole("button", { name: /^⇅/ }).click();
     }],
     ["fiche dépliée", async () => { await page.keyboard.press("Escape"); await page.locator(".gl-card").first().click(); }],
+    ["vue compacte", async () => {
+      await page.getByRole("button", { name: /^Filtres/ }).click();
+      await page.getByRole("button", { name: "≡ Compacte" }).click();
+      await page.getByRole("button", { name: /^Voir \d+ jeu/ }).click();
+    }],
+    ["liste groupée par plateforme", async () => {
+      await page.getByRole("button", { name: /^Filtres/ }).click();
+      await page.getByRole("button", { name: "☰ Liste" }).click();
+      await page.getByRole("button", { name: "Plateforme", exact: true }).click();
+      await page.getByRole("button", { name: /^Voir \d+ jeu/ }).click();
+    }],
+    ["retour à la liste simple", async () => {
+      await page.getByRole("button", { name: /^Filtres/ }).click();
+      await page.getByRole("button", { name: "Aucun", exact: true }).click();
+      await page.getByRole("button", { name: /^Voir \d+ jeu/ }).click();
+    }],
     ["Prêts", async () => { await page.getByRole("button", { name: /^Prêts/ }).click(); }],
     ["Stats", async () => { await page.getByRole("button", { name: "Stats" }).click(); }],
     ["Réglages", async () => { await page.getByRole("button", { name: "Réglages" }).click(); }],

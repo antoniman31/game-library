@@ -143,9 +143,32 @@ erreur CORS.
   rétrocompatibles » — et laisse les noms et les nombres à la ligne de détail :
   « 82 jeux Xbox One démarrent sur Xbox Series X. Décoche pour ne voir que les 19 jeux
   vraiment Xbox Series X. » Décochée, la ligne repliée annonce « Xbox Series X seul ».
+- **Filtres supplémentaires** : **note** au-dessus d'un seuil (90, 80 ou 70 — un seuil
+  répond à « qu'est-ce que j'ai de vraiment bien », une tranche oblige à tout cocher),
+  et **à compléter**, qui sort les fiches auxquelles il manque quelque chose pour aller
+  le remplir. Ce dernier n'affiche que ce qui manque réellement : une option disparaît
+  dès que son champ est rempli partout, et le groupe entier disparaît quand la
+  bibliothèque est complète — pas de case morte promettant du travail inexistant. Les
+  mêmes prédicats servent au bloc « Ce qui manque » des Stats, si bien que le chiffre
+  affiché et la liste obtenue ne peuvent pas diverger.
+- **Le filtre par série se pose depuis une fiche**, en touchant le nom de la série :
+  cinquante-huit séries ne tiennent pas dans une grille de boutons. Le groupe
+  correspondant n'apparaît dans le panneau que pour montrer celui qui est posé et
+  permettre de l'enlever.
+- **Cinq tris** : titre, date d'ajout, date de sortie, note, et au hasard — pour quand
+  la question est « je joue à quoi ce soir ». Le sens s'inverse d'un bouton, sauf pour
+  le hasard où il n'aurait pas de sens. Ce qui n'a pas de valeur va toujours à la fin,
+  dans un sens comme dans l'autre : inverser un tri ne remonte pas les jeux sans note
+  en tête. Le tirage au hasard tient tant qu'on ne redemande pas à mélanger — une
+  empreinte calculée depuis l'identifiant et une graine, plutôt qu'un `Math.random()`
+  dans le comparateur qui ferait danser la liste à chaque frappe.
 - **Le tri est au-dessus de la liste**, plus dans le panneau : ce n'est pas un filtre,
-  le badge ne le compte pas. La ligne indique aussi combien de jeux l'écran montre,
-  quand ce nombre diffère du total.
+  le badge ne le compte pas. Le bouton porte le tri courant. La ligne indique aussi
+  combien de jeux l'écran montre, quand ce nombre diffère du total.
+- **Trois vues et un regroupement** : liste, compacte (une ligne par jeu, pour
+  parcourir cent cinquante titres au pouce) et grille ; regroupement facultatif par
+  plateforme, série ou genre, avec des en-têtes de section. Le regroupement ne change
+  pas l'ordre : les sections apparaissent dans celui que le tri leur donne.
 - **Les statistiques disent la même chose que les filtres.** Le bloc « Par plateforme »
   annonçait « 82 jeux jouables sur Xbox Series X » juste sous une barre marquée 19 :
   deux chiffres justes que rien ne reliait, alors que le filtre, lui, en montrait 101.
@@ -593,8 +616,8 @@ npm run dev      # http://localhost:5173/game-library/
 npm run build
 npm run preview
 npm run lint     # oxlint
-npm test         # 117 tests (modèle, import, genres, filtres, prêts, stats,
-                 #             thème, préférences, cohérence, audit, Worker)
+npm test         # 122 tests (modèle, import, genres, filtres, tris, prêts,
+                 #             stats, thème, préférences, cohérence, audit, Worker)
 npm run test:worker                   # 32 vérifications du relais, sans déploiement
 npm run verif:ui                      # mesure les écrans rendus (voir plus bas)
 npm run audit -- ma-sauvegarde.json   # symptômes dans les données (voir plus bas)
@@ -704,12 +727,13 @@ import, beaucoup moins.
 │   │   ├── storage.js             localStorage instrumenté (alerte de quota)
 │   │   ├── sync.js                Sauvegarde sur le Worker
 │   │   ├── theme.js               Alias vers les jetons CSS
+│   │   ├── tri.js                 Les tris de la liste et ce qu'ils veulent dire
 │   │   ├── coherence.test.mjs     Ce qui est écrit deux fois doit concorder
 │   │   └── *.test.mjs             Tests des modules ci-dessus (node --test)
 │   └── components/
 │       ├── GameCard.jsx  AddModal.jsx  ImportModal.jsx
 │       ├── StatsView.jsx  SettingsView.jsx  ScoresSheet.jsx
-│       ├── Sheet.jsx  FiltersSheet.jsx  ActionsSheet.jsx  SousOnglets.jsx
+│       ├── Sheet.jsx  FiltersSheet.jsx  SortSheet.jsx  ActionsSheet.jsx  SousOnglets.jsx
 │       └── Cover.jsx  InfoboxView.jsx  ChampProtege.jsx  ErrorBoundary.jsx
 ├── index.html
 ├── vite.config.js                 base, PWA, proxys de dev

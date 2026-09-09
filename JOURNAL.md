@@ -525,6 +525,46 @@ entière. Les barres continuent de compter chaque jeu une fois, sur la console
 pour laquelle il a été acheté ; ces lignes disent l'autre vérité, celle du soir
 où l'on choisit quoi jouer.
 
+### Phase 19 — Ce qu'on demande à cent cinquante jeux
+
+Le reste de la liste de filtres, d'un coup. Trois d'entre eux méritent d'être
+racontés parce qu'ils ont demandé une décision, pas seulement du code.
+
+**« À compléter » est le seul filtre qui fasse travailler.** L'onglet Stats
+savait compter les manques depuis longtemps — « 21 jeux sans note » — mais on
+ne pouvait pas y aller : un constat sans porte de sortie. Le filtre les sort, et
+il n'annonce que ce qui manque réellement : une option disparaît dès que son
+champ est rempli partout, le groupe entier disparaît quand la bibliothèque est
+complète. Une case « Jaquette 0 » promettrait du travail qui n'existe pas. Les
+prédicats sont partagés avec le bloc des Stats, si bien que le chiffre affiché
+et la liste obtenue ne peuvent plus diverger.
+
+**Le hasard devait tenir.** « Je joue à quoi ce soir » est la vraie question
+d'une ludothèque de cette taille, et un tirage y répond mieux qu'un classement.
+Mais `Math.random()` dans un comparateur rebat les cartes à chaque rendu : la
+liste danserait sous le doigt à chaque frappe dans la recherche, et le
+comparateur lui-même serait incohérent. D'où une empreinte calculée depuis
+l'identifiant du jeu et une graine, changée seulement quand on redemande à
+mélanger.
+
+**Ce qui n'a pas de valeur va toujours à la fin.** Inverser le tri par note
+aurait remonté en tête les vingt-et-un jeux sans note, c'est-à-dire exactement
+ce qu'on ne cherche pas. La clé de tri vaut donc `null` quand elle est inconnue,
+et ce cas est traité avant le sens : l'inversion ne porte que sur ce qui a une
+valeur.
+
+La série, elle, n'a pas de place dans le panneau — cinquante-huit valeurs ne
+tiennent pas dans une grille de boutons. Elle se pose en touchant son nom sur
+une fiche, et le groupe n'apparaît alors que pour montrer le filtre posé et
+permettre de l'enlever : sans lui, on ne saurait plus comment revenir.
+
+Deux défauts trouvés en vérifiant, tous deux invisibles à la lecture. Le bouton
+« Réinitialiser » du panneau calculait le nombre de filtres actifs sans les
+nouveaux, et restait donc grisé alors qu'il y avait bien quelque chose à
+réinitialiser. Et le nombre d'une puce était collé à son libellé dans l'arbre
+d'accessibilité — un lecteur d'écran annonçait « Note21 » — parce que l'espace
+était dessinée par une marge au lieu d'être écrite.
+
 ---
 
 ## 3. Architecture finale

@@ -9,17 +9,20 @@ import ActionsSheet from "./components/ActionsSheet.jsx";
 import ScoresSheet from "./components/ScoresSheet.jsx";
 import Sheet from "./components/Sheet.jsx";
 import StatsView from "./components/StatsView.jsx";
+import SortSheet from "./components/SortSheet.jsx";
 import SettingsView from "./components/SettingsView.jsx";
 
 import { hdr, card, bdr, txt, mut, accent, accentDoux, accentFond, warnDoux, dangerDoux, ok, warn, warnFond, danger } from "./lib/theme.js";
 import { GAMES_INIT } from "./lib/seed.js";
 import { migrateGames, compterFiltres, validerJeuxImportes, pretEnRetard, jeuxSansScore, normaliserGenres,
   jeuALeMode, jeuSurPlateforme, compterRetro, genresPresents, dureeEntreeHistorique, supprimerEntreeHistorique,
-  joursDePret } from "./lib/model.js";
+  joursDePret, jeuPasseSeuil, jeuACompleter, completudeManquante, dateDeSortie, serieDuJeu,
+  empreinteMelange, PLATFORM_COLORS } from "./lib/model.js";
 import { lire, ecrire, surEchecStockage } from "./lib/storage.js";
 import { chargerSync, enregistrerSync, genererCode, envoyer, recuperer } from "./lib/sync.js";
 import { preferencesASauvegarder, preferencesRecues, resumePreferences } from "./lib/preferences.js";
 import { surMiseAJour } from "./lib/maj.js";
+import { libelleTri } from "./lib/tri.js";
 import { resoudreTheme, modeSuivant, modeValide, ICONES, LIBELLES, COULEUR_BARRE } from "./lib/apparence.js";
 import {
   loadKeys, setApiKeys, normTitle, hasRawgKey, rawgFirstResult,
@@ -71,6 +74,18 @@ export default function App() {
   // Vrai par défaut : c'est le comportement d'avant, et celui qu'on veut quand
   // on cherche quoi lancer ce soir plutôt qu'à faire l'inventaire.
   const [avecRetro, setAvecRetro] = useState(true);
+  const [noteFil, setNoteFil] = useState("tous");
+  // Ce qu'il reste à remplir. L'onglet Stats savait le compter sans qu'on
+  // puisse y aller : un constat sans porte de sortie.
+  const [completFil, setCompletFil] = useState("tous");
+  // Posée depuis une fiche, jamais depuis le panneau : cinquante-huit séries
+  // ne tiennent pas dans une grille de boutons.
+  const [serieFil, setSerieFil] = useState("tous");
+  const [sortDir, setSortDir] = useState(1);
+  // La graine du tri aléatoire. Elle ne change qu'à la demande, sinon la liste
+  // se rebattrait sous le doigt à chaque frappe dans la recherche.
+  const [graine, setGraine] = useState(() => Date.now() % 100000);
+  const [groupePar, setGroupePar] = useState("aucun");
   const [modeFil, setModeFil] = useState("tous");
   const [sort, setSort] = useState("titre");
   const [view, setView] = useState("liste");
@@ -78,6 +93,7 @@ export default function App() {
   const [showAdd, setShowAdd] = useState(false);
   const [showImport, setShowImport] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
+  const [showSort, setShowSort] = useState(false);
   const [showActions, setShowActions] = useState(false);
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const [keys, setKeys] = useState(() => loadKeys());   // clés API saisies par l'utilisateur
@@ -173,7 +189,8 @@ export default function App() {
 
   // Toute pagination repart du début quand le contenu de la liste change :
   // sinon « Charger 30 de plus » resterait déplié sur un résultat de 3 jeux.
-  useEffect(() => { setVisibleCount(PAGE_SIZE); }, [search, plat, avecRetro, pretFil, fmtFil, genreFil, modeFil, sort, tab, view]);
+  useEffect(() => { setVisibleCount(PAGE_SIZE); },
+    [search, plat, avecRetro, pretFil, fmtFil, genreFil, modeFil, noteFil, completFil, serieFil, sort, sortDir, tab, view]);
 
   // Recherche posée par le code (clic sur une vignette, retour d'un ajout) :
   // les deux états doivent bouger ensemble, sans attendre le délai de frappe.
@@ -529,14 +546,40 @@ export default function App() {
         // Le genre est une liste : un jeu retenu en porte au moins un.
         && (genreFil === "tous" || (g.genre || []).includes(genreFil))
         && jeuALeMode(g, modeFil)
+        && jeuPasseSeuil(g, noteFil)
+        && jeuACompleter(g, completFil)
+        && (serieFil === "tous" || serieDuJeu(g) === serieFil)
         && pretMatch;
     });
+
+    // Une clé triable par jeu, et `null` quand elle est inconnue. Ce qui n'a
+    // pas de valeur va toujours à la fin, dans un sens comme dans l'autre :
+    // inverser un tri ne doit pas remonter les jeux sans note en tête.
+    const cle = (g) => {
+      if (sort === "date") return g.addedDate || null;
+      if (sort === "metacritic") return typeof g.metacritic === "number" ? g.metacritic : null;
+      if (sort === "sortie") return dateDeSortie(g);
+      return g.title || "";
+    };
+    // Le sens naturel de chaque tri : alphabétique pour les titres, du plus
+    // récent et du mieux noté pour les autres — c'est ce qu'on veut voir en
+    // premier sans avoir rien à régler.
+    const compare = (a, b) => (sort === "titre"
+      ? String(a).localeCompare(String(b))
+      : (typeof a === "number" ? b - a : String(b).localeCompare(String(a))));
+
+    if (sort === "aleatoire") {
+      return list.sort((a, b) => empreinteMelange(a.id, graine) - empreinteMelange(b.id, graine));
+    }
     return list.sort((a, b) => {
-      if (sort === "date") return new Date(b.addedDate) - new Date(a.addedDate);
-      if (sort === "metacritic") return (b.metacritic||0) - (a.metacritic||0);
-      return a.title.localeCompare(b.title);
+      const ka = cle(a), kb = cle(b);
+      if (ka == null && kb == null) return 0;
+      if (ka == null) return 1;
+      if (kb == null) return -1;
+      return compare(ka, kb) * sortDir;
     });
-  }, [games, search, plat, avecRetro, pretFil, fmtFil, genreFil, modeFil, sort]);
+  }, [games, search, plat, avecRetro, pretFil, fmtFil, genreFil, modeFil, noteFil, completFil, serieFil,
+    sort, sortDir, graine]);
 
   const stats = useMemo(() => {
     const total = games.length;
@@ -552,17 +595,38 @@ export default function App() {
     .flatMap(g => (g.pretsPasses || []).map((e, i) => ({ ...e, titre: g.title, jeuId: g.id, index: i })))
     .sort((a, b) => (a.au < b.au ? 1 : a.au > b.au ? -1 : 0))
     .slice(0, 50), [games]);
-  const filtresActifs = compterFiltres({ plat, pretFil, fmtFil, genreFil, modeFil });
+  const filtresActifs = compterFiltres({ plat, pretFil, fmtFil, genreFil, modeFil, noteFil, completFil, serieFil });
   // Dérivés de TOUTE la bibliothèque, pas de la liste filtrée : sinon les
   // options disparaîtraient au fur et à mesure qu'on s'en sert.
   const genres = useMemo(() => genresPresents(games), [games]);
   const sansMode = useMemo(() => games.filter(g => !g.infobox?.modes?.length).length, [games]);
   const nbRetro = useMemo(() => compterRetro(games, plat), [games, plat]);
   const nbNatifs = useMemo(() => games.filter(g => g.platform === plat).length, [games, plat]);
+  // Ce qui manque réellement : une option « Jaquette 0 » promettrait du travail
+  // qui n'existe pas, et si tout est complet le groupe entier disparaît.
+  const aCompleter = useMemo(() => completudeManquante(games), [games]);
 
   // Ce qui est réellement monté. Le reste attend « Charger 30 de plus ».
   const visible = filtered.slice(0, visibleCount);
   const restants = filtered.length - visible.length;
+  // Regrouper ne change pas l'ordre : les sections apparaissent dans l'ordre
+  // où le tri les fait apparaître, et un jeu ne bouge pas de place à
+  // l'intérieur. Le regroupement porte sur ce qui est monté, pas sur toute la
+  // bibliothèque — sinon la pagination découperait les sections au hasard.
+  const sections = useMemo(() => {
+    if (groupePar === "aucun") return [{ titre: null, jeux: visible }];
+    const cle = (g) => (groupePar === "plateforme" ? g.platform
+      : groupePar === "serie" ? (serieDuJeu(g) || "Sans série")
+      : (g.genre?.[0] || "Sans genre"));
+    const par = new Map();
+    for (const g of visible) {
+      const k = cle(g) || "Sans réponse";
+      if (!par.has(k)) par.set(k, []);
+      par.get(k).push(g);
+    }
+    return [...par.entries()].map(([titre, jeux]) => ({ titre, jeux }));
+  }, [visible, groupePar]);
+
   const chargerPlus = restants > 0 && (
     <button
       onClick={() => setVisibleCount(c => c + PAGE_SIZE)}
@@ -574,6 +638,54 @@ export default function App() {
       Charger {Math.min(PAGE_SIZE, restants)} de plus ({restants} restant{restants > 1 ? "s" : ""})
     </button>
   );
+
+  // Les jeux d'une section, dans la vue demandée.
+  //
+  // La vue compacte n'ouvre pas les fiches : elle sert à parcourir vite, et
+  // toucher une ligne bascule en liste sur ce jeu — exactement ce que fait déjà
+  // une vignette de la grille. Deux façons de survoler, un seul endroit où lire.
+  const rendreJeux = (liste) => {
+    if (view === "grille") return (
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(120px,1fr))", gap:10 }}>
+        {liste.map(g => (
+          <div key={g.id} className="gl-tile" style={{ background:card, border:`1px solid ${bdr}`, borderRadius: "var(--r-md)", overflow:"hidden", cursor:"pointer" }}
+            onClick={() => { setView("liste"); setFocusId(g.id); }}>
+            <Cover src={g.cover} title={g.title} size="100%" />
+            <div style={{ height:3, background:g.lentA ? warnFond : "transparent" }} />
+            <div style={{ padding:"6px 7px" }}>
+              <div style={{ color:txt, fontSize: "var(--t-legende)", fontWeight:600, lineHeight:1.3, overflow:"hidden", display:"-webkit-box", WebkitLineClamp:2, WebkitBoxOrient:"vertical" }}>{g.title}</div>
+              {g.metacritic && <div style={{ color:g.metacritic>=80?ok:warn, fontSize: "var(--t-legende)", marginTop:2 }}>MC {g.metacritic}</div>}
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+    if (view === "compact") return (
+      <div style={{ background:card, border:`1px solid ${bdr}`, borderRadius:"var(--r-md)", overflow:"hidden" }}>
+        {liste.map((g, i) => (
+          <button key={g.id} className="gl-row" onClick={() => { setView("liste"); setFocusId(g.id); }}
+            style={{
+              display:"flex", alignItems:"center", gap:10, width:"100%", boxSizing:"border-box",
+              minHeight:"var(--tap)", padding:"8px 12px", textAlign:"left", cursor:"pointer",
+              background:"transparent", border:"none", borderTop: i ? `1px solid ${bdr}` : "none",
+              fontFamily:"inherit",
+            }}>
+            <span style={{ width:8, height:8, borderRadius:"var(--r-xs)", flexShrink:0, background:PLATFORM_COLORS[g.platform] || accentFond }} />
+            <span style={{ flex:1, minWidth:0, color:txt, fontSize:"var(--t-petit)", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{g.title}</span>
+            {g.lentA && <span style={{ color:warn, fontSize:"var(--t-legende)", flexShrink:0 }}>📤</span>}
+            {g.metacritic && <span style={{ color:mut, fontSize:"var(--t-legende)", flexShrink:0 }}>{g.metacritic}</span>}
+          </button>
+        ))}
+      </div>
+    );
+    return (
+      <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
+        {liste.map(g => <GameCard key={g.id} g={g} onEdit={edit} onDelete={deleteGame} onEnrich={enrichGame}
+          onSerie={setSerieFil}
+          autoOpen={g.id === lastAddedId || g.id === focusId} onOuverte={consommerOuverture} />)}
+      </div>
+    );
+  };
 
   const emptyState = (
     <div style={{ textAlign: "center", padding: "70px 20px", color: mut }}>
@@ -716,42 +828,45 @@ export default function App() {
               {filtered.length < games.length ? `${filtered.length} jeu${filtered.length > 1 ? "x" : ""}` : ""}
             </span>
             <div style={{ display:"flex", gap:6 }}>
-              {[["titre","A → Z"],["date","Date"],["metacritic","Note"]].map(([k,l]) => (
-                <button key={k} onClick={() => setSort(k)} aria-pressed={sort === k}
+              <button onClick={() => setShowSort(true)}
+                style={{
+                  minHeight:"var(--tap-min)", padding:"0 12px", borderRadius:"var(--r-sm)",
+                  background:"transparent", border:`1px solid ${bdr}`, color:txt,
+                  fontSize:"var(--t-petit)", cursor:"pointer", fontFamily:"inherit",
+                }}>⇅ {libelleTri(sort)}</button>
+              {/* Le sens n'a pas de sens pour un tirage au hasard : le bouton
+                  disparaît plutôt que de rester là sans rien faire. */}
+              {sort !== "aleatoire" && (
+                <button onClick={() => setSortDir(d => -d)}
+                  aria-label={sortDir === 1 ? "Inverser l'ordre" : "Rétablir l'ordre"}
+                  title={sortDir === 1 ? "Inverser l'ordre" : "Rétablir l'ordre"}
                   style={{
-                    minHeight:"var(--tap-min)", padding:"0 12px", borderRadius:"var(--r-sm)",
-                    background: sort === k ? accentDoux : "transparent",
-                    border:`1px solid ${sort === k ? accent : bdr}`,
-                    color: sort === k ? accent : mut, fontWeight: sort === k ? 600 : 400,
+                    minWidth:"var(--tap-min)", minHeight:"var(--tap-min)", borderRadius:"var(--r-sm)",
+                    background: sortDir === -1 ? accentDoux : "transparent",
+                    border:`1px solid ${sortDir === -1 ? accent : bdr}`,
+                    color: sortDir === -1 ? accent : mut,
                     fontSize:"var(--t-petit)", cursor:"pointer", fontFamily:"inherit",
-                  }}>{l}</button>
-              ))}
+                  }}>{sortDir === 1 ? "↓" : "↑"}</button>
+              )}
             </div>
           </div>
         )}
-        {tab === "library" && (filtered.length === 0 ? emptyState : view === "grille" ? (
+        {tab === "library" && (filtered.length === 0 ? emptyState : (
           <>
-          <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(120px,1fr))", gap:10 }}>
-            {visible.map(g => (
-              <div key={g.id} className="gl-tile" style={{ background:card, border:`1px solid ${bdr}`, borderRadius: "var(--r-md)", overflow:"hidden", cursor:"pointer" }}
-                onClick={() => { setView("liste"); setFocusId(g.id); }}>
-                <Cover src={g.cover} title={g.title} size="100%" />
-                <div style={{ height:3, background:g.lentA ? warnFond : "transparent" }} />
-                <div style={{ padding:"6px 7px" }}>
-                  <div style={{ color:txt, fontSize: "var(--t-legende)", fontWeight:600, lineHeight:1.3, overflow:"hidden", display:"-webkit-box", WebkitLineClamp:2, WebkitBoxOrient:"vertical" }}>{g.title}</div>
-                  {g.metacritic && <div style={{ color:g.metacritic>=80?ok:warn, fontSize: "var(--t-legende)", marginTop:2 }}>MC {g.metacritic}</div>}
+          {sections.map(({ titre, jeux }) => (
+            <div key={titre || "tout"}>
+              {/* L'en-tête ne s'affiche que si l'on regroupe : sans lui, une
+                  seule section n'a pas de nom à porter. */}
+              {titre && (
+                <div style={{ display:"flex", alignItems:"baseline", gap:8, margin:"18px 0 8px" }}>
+                  <span style={{ color:txt, fontSize:"var(--t-petit)", fontWeight:600 }}>{titre}</span>
+                  <span style={{ color:mut, fontSize:"var(--t-legende)" }}>{jeux.length}</span>
+                  <span style={{ flex:1, height:1, background:bdr }} />
                 </div>
-              </div>
-            ))}
-          </div>
-          {chargerPlus}
-          </>
-        ) : (
-          <>
-          <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
-            {visible.map(g => <GameCard key={g.id} g={g} onEdit={edit} onDelete={deleteGame} onEnrich={enrichGame}
-              autoOpen={g.id === lastAddedId || g.id === focusId} onOuverte={consommerOuverture} />)}
-          </div>
+              )}
+              {rendreJeux(jeux)}
+            </div>
+          ))}
           {chargerPlus}
           </>
         ))}
@@ -869,11 +984,21 @@ export default function App() {
           genreFil={genreFil} setGenreFil={setGenreFil}
           modeFil={modeFil} setModeFil={setModeFil}
           genres={genres} sansMode={sansMode}
+          noteFil={noteFil} setNoteFil={setNoteFil}
+          completFil={completFil} setCompletFil={setCompletFil} aCompleter={aCompleter}
+          serieFil={serieFil} setSerieFil={setSerieFil}
+          groupePar={groupePar} setGroupePar={setGroupePar}
           view={view} setView={setView}
           resultats={filtered.length}
           onClose={() => setShowFilters(false)}
         />
       )}
+      {showSort && (
+        <SortSheet sort={sort} setSort={setSort}
+          onMelanger={() => setGraine(g => (g + 1 + Math.floor(Math.random() * 9999)) % 100000)}
+          onClose={() => setShowSort(false)} />
+      )}
+
       {showActions && (
         <ActionsSheet
           onClose={() => setShowActions(false)}

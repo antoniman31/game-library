@@ -156,8 +156,9 @@ export function preterJeu(g, nom, retourPrevu) {
 
 // Compte les filtres réellement appliqués. Le tri et le mode d'affichage n'en
 // sont pas : ils changent l'ordre ou la densité, jamais ce qui est montré.
-export function compterFiltres({ plat, pretFil, fmtFil, genreFil, modeFil }) {
-  return [plat, pretFil, fmtFil, genreFil, modeFil].filter(v => v && v !== "tous").length;
+export function compterFiltres({ plat, pretFil, fmtFil, genreFil, modeFil, noteFil, completFil, serieFil }) {
+  return [plat, pretFil, fmtFil, genreFil, modeFil, noteFil, completFil, serieFil]
+    .filter(v => v && v !== "tous").length;
 }
 
 // ── Genres ─────────────────────────────────────────────────────────────────
@@ -241,6 +242,72 @@ export function normaliserGenres(liste) {
   }
   return sortie;
 }
+
+// ── Note, complétude, sortie ───────────────────────────────────────────────
+
+// Un seuil plutôt que des tranches : la question n'est pas « lesquels sont
+// entre 80 et 89 » mais « qu'est-ce que j'ai de vraiment bien ».
+export const SEUILS_NOTE = [90, 80, 70];
+export const jeuPasseSeuil = (g, seuil) =>
+  seuil === "tous" || (typeof g.metacritic === "number" && g.metacritic >= Number(seuil));
+
+// Ce qui manque à une fiche, et qu'on peut aller remplir.
+//
+// L'onglet Stats savait déjà compter les manques — « 21 jeux sans note » — mais
+// on ne pouvait pas y aller : un constat sans porte de sortie. Ces prédicats
+// servent aux deux, si bien que le chiffre affiché et la liste obtenue ne
+// peuvent pas diverger.
+export const CHAMPS_A_COMPLETER = [
+  ["cover", "Jaquette", g => !g.cover],
+  ["genre", "Genre", g => !g.genre?.length],
+  ["style", "Description", g => !g.style],
+  ["metacritic", "Note", g => !g.metacritic],
+  ["infobox", "Fiche Wikidata", g => !g.infobox],
+];
+
+// Combien de fiches il manque, champ par champ, en n'annonçant que ce qui
+// manque réellement. Une option « Jaquette 0 » promettrait du travail qui
+// n'existe pas — et le jour où tout est complet, il n'y a plus rien à proposer.
+export function completudeManquante(games) {
+  const jeux = games || [];
+  return CHAMPS_A_COMPLETER
+    .map(([cle, label, manque]) => [cle, label, jeux.filter(manque).length])
+    .filter(([, , n]) => n > 0);
+}
+
+export function jeuACompleter(g, champ) {
+  if (champ === "tous") return true;
+  const trouve = CHAMPS_A_COMPLETER.find(([cle]) => cle === champ);
+  return trouve ? trouve[2](g) : true;
+}
+
+// Date de sortie la plus ancienne connue pour un jeu : Wikidata en liste une
+// par plateforme, et c'est la première qui date le jeu. Elle sert à l'onglet
+// Stats comme au tri de la liste — un seul endroit, sinon les deux finiraient
+// par ne plus dater le même jour.
+export const dateDeSortie = (g) => {
+  const dates = (g?.infobox?.releases || []).map(r => r?.date).filter(d => /^\d{4}/.test(d || ""));
+  return dates.length ? dates.sort()[0] : null;
+};
+
+// Un ordre aléatoire, mais stable.
+//
+// « Je joue à quoi ce soir » est la question qu'une ludothèque de cent
+// cinquante jeux rend difficile, et un tri au hasard y répond mieux qu'un
+// classement. Encore faut-il qu'il tienne : `Math.random()` dans un
+// comparateur rebat les cartes à chaque rendu — la liste danserait sous le
+// doigt à chaque frappe dans la recherche. D'où une empreinte calculée à
+// partir de l'identifiant du jeu et d'une graine : le même mélange tant qu'on
+// ne redemande pas à mélanger.
+export function empreinteMelange(id, graine) {
+  let x = (Number(id) ^ Number(graine)) >>> 0;
+  x = Math.imul(x ^ (x >>> 16), 2246822507);
+  x = Math.imul(x ^ (x >>> 13), 3266489909);
+  return ((x ^ (x >>> 16)) >>> 0) / 4294967296;
+}
+
+// La série d'un jeu, telle que Wikidata la nomme.
+export const serieDuJeu = (g) => String(g?.infobox?.series || "").trim();
 
 // Un jeu appartient-il à la plateforme demandée ?
 //
