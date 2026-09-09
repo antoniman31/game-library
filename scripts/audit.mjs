@@ -24,7 +24,7 @@
 // fait pas échouer. `--strict` inverse ce choix.
 
 import { readFileSync } from "node:fs";
-import { migrateGames, normTitle, rapprochementDouteux, dureeEntreeHistorique, PRET_LONG_JOURS,
+import { migrateGames, normTitle, dureeEntreeHistorique, PRET_LONG_JOURS,
   estDateISO, estDatePlausible, estLienSur, ANNEE_MIN, PLATFORMES_JEU } from "../src/lib/model.js";
 
 const args = process.argv.slice(2);
@@ -182,12 +182,45 @@ for (const g of jeux) {
 
 // ── Rapprochements douteux ─────────────────────────────────────────────────
 // Un titre local qui ne recouvre pas son entrée Wikidata : le signe qu'une
-// source a répondu pour un autre jeu et que tout ce qu'elle a écrit est faux.
+// source a répondu pour un autre jeu. Ce n'est pas seulement la série qui est
+// alors fausse — le développeur, l'éditeur et les dates de sortie viennent du
+// même appel, et rien d'autre ne les vérifie.
+//
+// La règle exigeait auparavant que le titre et la série se préfixent l'un
+// l'autre. C'est un test d'égalité déguisé, appliqué à deux chaînes qui n'ont
+// aucune raison d'être égales : un titre nomme un jeu, une série nomme une
+// famille. Sur une bibliothèque réelle de 154 jeux elle s'est trompée vingt
+// fois sur vingt — « Sonic Generations → Sonic the Hedgehog » signalé, le mot
+// « Sonic » sous les yeux. Une catégorie qui a toujours tort n'est pas neutre :
+// elle apprend à sauter la ligne, et le jour où elle aura raison personne ne la
+// lira.
+//
+// Deux conditions la remplacent, mesurées sur cette même bibliothèque :
+//   1. aucun mot significatif commun au titre et à la série  (20 → 4) ;
+//   2. et aucun autre jeu ne porte cette série               (4 → 2).
+//
+// La seconde est une corroboration : si quatre fiches annoncent « The Legend
+// of Zelda », la série existe et aucune source n'a déliré. Les deux cas qui
+// restent — une franchise dont le nom ne figure pas dans le titre, comme
+// « 007 First Light → James Bond » — sont irréductibles sans un dictionnaire
+// des franchises, qu'on n'écrira pas pour ça.
+const LONGUEUR_MOT_SIGNIFICATIF = 3;
+const motsSignificatifs = (s) =>
+  new Set(normTitle(s).split(" ").filter(m => m.length > LONGUEUR_MOT_SIGNIFICATIF));
+
+const jeuxParSerie = new Map();
 for (const g of jeux) {
   const serie = g.infobox?.series;
-  if (serie && rapprochementDouteux(g.title, serie) && !normTitle(g.title).includes(normTitle(serie))) {
-    signaler("série éloignée du titre", `« ${g.title} » → série « ${serie} »`, "info");
-  }
+  if (serie) jeuxParSerie.set(serie, (jeuxParSerie.get(serie) || 0) + 1);
+}
+for (const g of jeux) {
+  const serie = g.infobox?.series;
+  if (!serie) continue;
+  const motsDuTitre = motsSignificatifs(g.title);
+  if ([...motsSignificatifs(serie)].some(m => motsDuTitre.has(m))) continue;
+  if (jeuxParSerie.get(serie) > 1) continue;
+  signaler("série éloignée du titre",
+    `« ${g.title} » → série « ${serie} », qu'aucun autre jeu ne porte`, "info");
 }
 
 // ── Jaquettes injoignables (réseau, donc sur demande) ──────────────────────
