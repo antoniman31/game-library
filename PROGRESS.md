@@ -170,8 +170,9 @@ Deux sous-onglets. Chaque bloc disparaît quand il n'a rien à dire.
 
 - **SteamGridDB et xbl.io nécessitent le relais** : sans Worker déployé (et son URL
   renseignée dans ⚙️), ces deux sources restent indisponibles en ligne.
-- **Le Worker ne se déploie pas avec le site.** GitHub Pages ne publie que `dist/` ;
-  toute modification de `worker/index.js` demande un `npx wrangler deploy` séparé.
+- **Le Worker se déploie par un workflow séparé** (`worker.yml`), déclenché quand
+  `worker/**` change sur `main` : GitHub Pages ne publie que `dist/`, donc le site et
+  le relais ne partent pas ensemble — mais les deux partent tout seuls.
 - **xbl.io** : historique joué ≠ bibliothèque achetée ; pas de temps de jeu exposé.
 - **Jaquettes xbl.io réécrites en HTTPS** (`httpsImage`) : l'API les sert en `http://`
   et une partie via `images-eds.xboxlive.com`, hôte sans TLS. Invisible en dev.
