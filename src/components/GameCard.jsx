@@ -46,6 +46,7 @@ function GameCard({ g, onEdit, onDelete, onEnrich, onSerie, autoOpen, onOuverte 
   const [loanRetour, setLoanRetour] = useState("");
   const [videOpen, setVideOpen] = useState(false);
   const [videChoix, setVideChoix] = useState([]);
+  const [videRien, setVideRien] = useState(false);
   const [rawgOpen, setRawgOpen] = useState(false);
   const [rawgQ, setRawgQ] = useState(g.title);
   const [rawgSugg, setRawgSugg] = useState([]);
@@ -287,7 +288,10 @@ function GameCard({ g, onEdit, onDelete, onEnrich, onSerie, autoOpen, onOuverte 
                   même chose : la date que RAWG donne est celle de l'édition
                   possédée, celle de Wikidata celle du jeu d'origine. Sans cette
                   ligne, dans six mois, rien ne dit laquelle on lit. */}
-              <div style={{ color: mut, fontSize: "var(--t-legende)", marginTop: 6, opacity: 0.8 }}>
+              {/* Sans opacité : à 12 px, `mut` atténué de 20 % tombait à 3,34:1
+                  sur le fond clair, sous les 4,5:1 exigés. La discrétion se
+                  paie en taille et en couleur, pas en transparence. */}
+              <div style={{ color: mut, fontSize: "var(--t-legende)", marginTop: 6 }}>
                 Source : {libelleSources(g.infobox)}
               </div>
             </div>
@@ -516,7 +520,7 @@ function GameCard({ g, onEdit, onDelete, onEnrich, onSerie, autoOpen, onOuverte 
                     cursor: vide ? "default" : "pointer", opacity: vide ? 0.45 : 1,
                   }}>
                     <input type="checkbox" checked={coche} disabled={vide}
-                      onChange={() => setVideChoix(c => (coche ? c.filter(x => x !== cle) : [...c, cle]))}
+                      onChange={() => { setVideRien(false); setVideChoix(c => (coche ? c.filter(x => x !== cle) : [...c, cle])); }}
                       style={{ width: 20, height: 20, accentColor: accentFond, flexShrink: 0 }} />
                     <span style={{ color: txt, fontSize: "var(--t-corps)", flex: 1 }}>{libelle}</span>
                     {vide && <span style={{ color: mut, fontSize: "var(--t-legende)" }}>déjà vide</span>}
@@ -528,18 +532,29 @@ function GameCard({ g, onEdit, onDelete, onEnrich, onSerie, autoOpen, onOuverte 
                   style={{ flex: 1, minHeight: "var(--tap)", background: "transparent", border: `1px solid ${bdr}`, color: txt, borderRadius: "var(--r-sm)", fontSize: "var(--t-corps)", cursor: "pointer", fontFamily: "inherit" }}>
                   Annuler
                 </button>
+                {/* À parts égales, et pas deux tiers pour l'effacement : la
+                    place d'un bouton dit son importance, et inviter le pouce
+                    vers l'action irréversible est un mauvais conseil.
+
+                    Actif même sans case cochée. Un bouton grisé et muet
+                    laisse chercher ce qui manque ; celui-ci le dit. */}
                 <button
-                  disabled={videChoix.length === 0}
                   onClick={() => {
+                    if (!videChoix.length) { setVideRien(true); return; }
                     const noms = CHAMPS_VIDABLES.filter(([c]) => videChoix.includes(c)).map(([, l]) => l).join(", ");
                     if (!window.confirm(`Effacer de « ${g.title} » : ${noms} ?`)) return;
                     onEnrich(g.id, viderChamps(g, videChoix));
                     setVideOpen(false);
                   }}
-                  style={{ flex: 2, minHeight: "var(--tap)", background: videChoix.length ? dangerDoux : "transparent", border: `1px solid ${danger}`, color: danger, borderRadius: "var(--r-sm)", fontSize: "var(--t-corps)", fontWeight: 600, cursor: videChoix.length ? "pointer" : "default", opacity: videChoix.length ? 1 : 0.5, fontFamily: "inherit" }}>
+                  style={{ flex: 1, minHeight: "var(--tap)", background: videChoix.length ? dangerDoux : "transparent", border: `1px solid ${danger}`, color: danger, borderRadius: "var(--r-sm)", fontSize: "var(--t-corps)", fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
                   Vider
                 </button>
               </div>
+              {videRien && (
+                <div role="alert" style={{ color: danger, fontSize: "var(--t-legende)", marginTop: 8 }}>
+                  ⚠️ Coche au moins un champ à effacer.
+                </div>
+              )}
             </Sheet>
           )}
 
@@ -589,7 +604,7 @@ function GameCard({ g, onEdit, onDelete, onEnrich, onSerie, autoOpen, onOuverte 
               {/* Puisque les sources ne s'écrasent plus, il faut de quoi
                   repartir propre : sans ce bouton, une infobox fausse le
                   resterait, chaque nouvelle source la respectant poliment. */}
-              <button onClick={() => { setSourcesOuvertes(false); setVideChoix([]); setVideOpen(true); }}
+              <button onClick={() => { setSourcesOuvertes(false); setVideChoix([]); setVideRien(false); setVideOpen(true); }}
                 style={{ ...boutonSource, borderColor: bdr, color: mut }}>🧹 Vider</button>
             </div>
           )}

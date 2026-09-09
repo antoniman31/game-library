@@ -676,6 +676,17 @@ Le manque, enfin, ne s'appelle plus « Fiche Wikidata » mais « Fiche détaill�
 deux sources la remplissent désormais, et la nommer d'après une seule était
 devenu faux.
 
+Deux défauts trouvés en relisant ce travail contre les règles d'interface, l'un
+et l'autre dans du code écrit une heure plus tôt. La ligne de provenance portait
+une opacité de 0,8 pour rester discrète : à 12 px, sur le fond clair, cela la
+faisait tomber à 3,34:1 contre les 4,5:1 exigés — la discrétion se paie en
+taille et en couleur, jamais en transparence. Et dans la feuille de vidage, le
+bouton « Vider » occupait deux tiers de la barre contre un tiers pour
+« Annuler » : la place d'un bouton dit son importance, et inviter le pouce vers
+l'action irréversible est un mauvais conseil. Il était de surcroît grisé et muet
+tant qu'aucune case n'était cochée — exactement ce qu'on venait de reprocher
+ailleurs. Il reste actif et dit ce qui manque.
+
 ---
 
 ## 3. Architecture finale
