@@ -122,7 +122,7 @@ erreur CORS.
 
 ## Fonctionnalités
 
-### Bibliothèque
+### Bibliothèque — onglet « Jeux »
 
 - **94 jeux** pré-remplis en données de départ ; ajout, édition et suppression libres.
 - **Vues liste et grille**, jaquettes au **format boîte vertical 2:3**.
@@ -543,6 +543,7 @@ npm run preview
 npm run lint     # oxlint
 npm test         # 96 tests (modèle, import, prêts, stats, thème, préférences,
                  #            cohérence des duplications, Worker)
+npm run test:worker                   # 32 vérifications du relais, sans déploiement
 npm run verif:ui                      # mesure les écrans rendus (voir plus bas)
 npm run audit -- ma-sauvegarde.json   # symptômes dans les données (voir plus bas)
 ```
@@ -651,14 +652,19 @@ import, beaucoup moins.
 
 ## Déploiement
 
-Automatique à chaque push sur `main`
+Deux workflows, deux cibles : le site et le Worker ne vivent pas au même
+endroit et ne se publient pas ensemble.
+
+Le site, à chaque push sur `main`
 ([`.github/workflows/deploy.yml`](.github/workflows/deploy.yml)) : `npm ci`,
 `npm run lint`, `npm test`, `npm run build`, puis publication de
 `dist/` sur GitHub Pages via les actions
 officielles `configure-pages` / `upload-pages-artifact` / `deploy-pages`.
 
-**Aucun secret n'est nécessaire** dans le dépôt — c'est toute la raison d'être du
-choix « clés saisies par l'utilisateur ».
+**Aucun secret n'est nécessaire pour publier le site** — c'est toute la raison
+d'être du choix « clés saisies par l'utilisateur ». Le déploiement du Worker en
+demande un seul, `CLOUDFLARE_API_TOKEN`, qui n'autorise que la mise à jour des
+Workers du compte et ne donne accès à aucune donnée de l'application.
 
 Le service worker est en `autoUpdate` : une nouvelle version est récupérée
 automatiquement au chargement suivant. L'onglet déjà ouvert, lui, continue
@@ -667,9 +673,13 @@ bouton Recharger, déclenchée par l'événement `controllerchange`. Sans elle, 
 fallait fermer l'application et la rouvrir sans jamais savoir s'il y avait
 quelque chose à voir.
 
-⚠️ **Le Worker ne se déploie pas avec le site.** GitHub Pages ne publie que
-`dist/` ; toute modification de `worker/index.js` demande un `npx wrangler
-deploy` séparé, sinon le relais en ligne reste sur son ancienne version.
+**Le Worker se déploie tout seul, par un workflow à part.** GitHub Pages ne
+publie que `dist/`, si bien que le Worker se déployait à la main : le code de
+`/sync` a passé plusieurs heures dans le dépôt sans jamais atteindre la
+production, et l'oubli n'était visible nulle part.
+[`.github/workflows/worker.yml`](.github/workflows/worker.yml) s'en charge
+désormais dès que `worker/**` change sur `main` — tests d'abord, déploiement
+ensuite. `npx wrangler deploy` ne sert plus qu'à déployer sa propre copie.
 
 ---
 
@@ -682,6 +692,12 @@ deploy` séparé, sinon le relais en ligne reste sur son ancienne version.
   Le **code de synchronisation** est à saisir sur chaque appareil — il ne
   figure ni dans l'export ni dans la sauvegarde qu'il protège. Les clés des
   services peuvent voyager, mais seulement si on le demande explicitement.
+- **Deux envois vraiment simultanés peuvent encore se marcher dessus.** Le
+  Worker lit la sauvegarde, compare l'horodatage annoncé, puis écrit : entre la
+  lecture et l'écriture, rien ne verrouille l'espace KV. Deux appareils qui
+  envoient dans la même seconde passeraient donc tous deux le contrôle. Pour
+  deux appareils pilotés par la même personne, le cas ne se présente pas ; il
+  est écrit ici parce qu'il n'est pas couvert, pas parce qu'il est probable.
 - **SteamGridDB et l'import Xbox exigent le relais** déployé et renseigné dans ⚙️.
 - **xbl.io** expose l'historique joué, pas les achats, et aucun temps de jeu.
 - **Wikidata est incomplet** sur certains jeux (souvent les titres Nintendo ou

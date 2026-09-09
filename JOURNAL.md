@@ -628,10 +628,13 @@ mesure avec le simple en-tête `X-Authorization` de xbl.io.
 
 **Points de vigilance :**
 
-- **Le Worker ne se déploie pas avec le site.** GitHub Pages ne publie que `dist/` ;
-  toute modification de `worker/index.js` demande un `npx wrangler deploy` séparé. Un
-  déploiement automatique demanderait un secret `CLOUDFLARE_API_TOKEN` dans le dépôt,
-  ce qui n'a jamais été mis en place.
+- **Le Worker se déploie par un workflow à part**, `worker.yml`, déclenché quand
+  `worker/**` change sur `main`. GitHub Pages ne publie que `dist/` : le site et le
+  relais ne partent donc pas ensemble, mais les deux partent tout seuls. Ce point de
+  vigilance décrivait encore l'état d'avant — le déploiement à la main — alors que le
+  secret `CLOUDFLARE_API_TOKEN` est en place et que le workflow a déployé cinq fois
+  sans échec. Une note périmée sur un sujet pareil coûte plus qu'une note absente :
+  elle fait croire à un travail restant qui n'existe pas.
 - Après un déploiement, le service worker sert l'ancienne version : **la nouvelle
   s'applique au chargement suivant**. Une bannière « ✨ Nouvelle version » le signale
   désormais, déclenchée par `controllerchange` — auparavant il fallait fermer et
