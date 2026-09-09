@@ -4,7 +4,8 @@ import InfoboxView from "./InfoboxView.jsx";
 import Sheet from "./Sheet.jsx";
 import { bg, card, bdr, txt, mut, demat, accent, accentDoux, accentFond, okDoux, warnDoux, dangerDoux, ok, warn, warnFond, danger } from "../lib/theme.js";
 import { PLATFORM_COLORS, BACK_COMPAT_PARENT, PLATFORMES_JEU, estUrlImage, estLienSur, normaliserGenres, joursDePret, pretEnRetard, brouillonDepuisJeu, validerEdition,
-  rendreJeu, preterJeu, annulerPret, dureeEntreeHistorique } from "../lib/model.js";
+  rendreJeu, preterJeu, annulerPret, dureeEntreeHistorique,
+  fusionnerInfobox, infoboxDepuisRawg, libelleSources, CHAMPS_VIDABLES, viderChamps, jeuACompleter } from "../lib/model.js";
 import {
   rawgSearch, rawgDetail, wikiFrenchTitles, wikiArticleData, wikidataInfobox,
   sgdbSearch, sgdbGrids,
@@ -43,6 +44,8 @@ function GameCard({ g, onEdit, onDelete, onEnrich, onSerie, autoOpen, onOuverte 
   }, []); // eslint-disable-line
   const [loanName, setLoanName] = useState(g.lentA || "");
   const [loanRetour, setLoanRetour] = useState("");
+  const [videOpen, setVideOpen] = useState(false);
+  const [videChoix, setVideChoix] = useState([]);
   const [rawgOpen, setRawgOpen] = useState(false);
   const [rawgQ, setRawgQ] = useState(g.title);
   const [rawgSugg, setRawgSugg] = useState([]);
@@ -89,11 +92,16 @@ function GameCard({ g, onEdit, onDelete, onEnrich, onSerie, autoOpen, onOuverte 
     setRawgBusy(true);
     const d = await rawgDetail(s.id);
     if (d) {
-      // RAWG fournit cover/metacritic/genre ; la description vient de Wikipédia.
+      // Le même détail rapportait déjà développeurs, éditeurs, date et tags :
+      // on n'en gardait que la jaquette, la note et les genres, et on jetait le
+      // reste. Il remplit maintenant l'infobox — sans écraser ce qui s'y
+      // trouve, car RAWG connaît la date de l'édition possédée quand Wikidata
+      // connaît mieux les studios.
       onEnrich(g.id, {
         cover: d.background_image || g.cover,
         metacritic: d.metacritic ?? g.metacritic,
         genre: d.genres ? normaliserGenres(d.genres.map(x => x.name)) : g.genre,
+        infobox: fusionnerInfobox(g.infobox, infoboxDepuisRawg(d), "rawg"),
       });
     }
     setRawgBusy(false);
@@ -275,10 +283,17 @@ function GameCard({ g, onEdit, onDelete, onEnrich, onSerie, autoOpen, onOuverte 
           {g.infobox ? (
             <div style={{ marginBottom: 16 }}>
               <InfoboxView info={g.infobox} onSerie={onSerie} />
+              {/* Deux sources remplissent ces lignes et ne décrivent pas la
+                  même chose : la date que RAWG donne est celle de l'édition
+                  possédée, celle de Wikidata celle du jeu d'origine. Sans cette
+                  ligne, dans six mois, rien ne dit laquelle on lit. */}
+              <div style={{ color: mut, fontSize: "var(--t-legende)", marginTop: 6, opacity: 0.8 }}>
+                Source : {libelleSources(g.infobox)}
+              </div>
             </div>
           ) : (
             <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 16 }}>
-              <span style={{ color: mut, fontSize: "var(--t-legende)" }}>Aucune fiche Wikidata</span>
+              <span style={{ color: mut, fontSize: "var(--t-legende)" }}>Aucune fiche détaillée</span>
               <button onClick={() => { setWikiOpen(true); setWikiQ(g.title); setWikiDone(false); wikiQuery(g.title); }}
                 style={{ minHeight: "var(--tap-min)", padding: "0 10px", background: "transparent", border: `1px solid ${bdr}`, color: accent, borderRadius: "var(--r-sm)", fontSize: "var(--t-legende)", cursor: "pointer", fontFamily: "inherit" }}>
                 📚 Chercher sur Wikipédia
@@ -471,13 +486,63 @@ function GameCard({ g, onEdit, onDelete, onEnrich, onSerie, autoOpen, onOuverte 
                   <div style={{ color: txt, fontSize: "var(--t-legende)", fontWeight: 600, marginBottom: 4 }}>ℹ️ Infos (Wikidata)</div>
                   <div style={{ marginBottom: 6 }}><InfoboxView info={wikiInfo} /></div>
                   <div style={{ display: "flex", gap: "var(--ecart-tap)", flexWrap: "wrap" }}>
-                    <button onClick={() => { onEdit(g.id, "infobox", wikiInfo); setWikiInfo(null); }} style={{ background: okDoux, border: `1px solid ${ok}`, color: ok, borderRadius: "var(--r-sm)", padding: "0 10px", minHeight: "var(--tap-min)", fontSize: "var(--t-legende)", cursor: "pointer" }}>Utiliser ces infos</button>
+                    <button onClick={() => { onEdit(g.id, "infobox", fusionnerInfobox(g.infobox, wikiInfo, "wikidata")); setWikiInfo(null); }} style={{ background: okDoux, border: `1px solid ${ok}`, color: ok, borderRadius: "var(--r-sm)", padding: "0 10px", minHeight: "var(--tap-min)", fontSize: "var(--t-legende)", cursor: "pointer" }}>Compléter avec ces infos</button>
                     <button onClick={() => setWikiInfo(null)} style={{ background: "transparent", border: `1px solid ${bdr}`, color: mut, borderRadius: "var(--r-sm)", padding: "0 10px", minHeight: "var(--tap-min)", fontSize: "var(--t-legende)", cursor: "pointer" }}>Ignorer</button>
                   </div>
                 </div>
               )}
             </Sheet>
           )}
+          {/* Vider la fiche.
+              Cinq cases plutôt qu'un bouton unique : « repartir propre » ne veut
+              pas dire la même chose selon qu'une infobox est fausse ou qu'une
+              jaquette l'est, et tout effacer d'un geste ferait perdre ce qui
+              était bon. Ce qui est déjà vide reste décoché et inerte — le
+              proposer laisserait croire qu'il y a là quelque chose à enlever. */}
+          {videOpen && (
+            <Sheet title="Vider la fiche" onClose={() => setVideOpen(false)}>
+              <div style={{ color: mut, fontSize: "var(--t-legende)", lineHeight: 1.5, marginBottom: 10 }}>
+                Ce qui est effacé peut être retrouvé en repassant les sources, mais rien ne le
+                remettra à l'identique. Les prêts, les notes personnelles et les liens ne sont pas
+                touchés.
+              </div>
+              {CHAMPS_VIDABLES.map(([cle, libelle]) => {
+                const vide = jeuACompleter(g, cle);
+                const coche = videChoix.includes(cle);
+                return (
+                  <label key={cle} style={{
+                    display: "flex", alignItems: "center", gap: 10, minHeight: "var(--tap)",
+                    padding: "0 4px", borderBottom: `1px solid ${bdr}`,
+                    cursor: vide ? "default" : "pointer", opacity: vide ? 0.45 : 1,
+                  }}>
+                    <input type="checkbox" checked={coche} disabled={vide}
+                      onChange={() => setVideChoix(c => (coche ? c.filter(x => x !== cle) : [...c, cle]))}
+                      style={{ width: 20, height: 20, accentColor: accentFond, flexShrink: 0 }} />
+                    <span style={{ color: txt, fontSize: "var(--t-corps)", flex: 1 }}>{libelle}</span>
+                    {vide && <span style={{ color: mut, fontSize: "var(--t-legende)" }}>déjà vide</span>}
+                  </label>
+                );
+              })}
+              <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
+                <button onClick={() => setVideOpen(false)}
+                  style={{ flex: 1, minHeight: "var(--tap)", background: "transparent", border: `1px solid ${bdr}`, color: txt, borderRadius: "var(--r-sm)", fontSize: "var(--t-corps)", cursor: "pointer", fontFamily: "inherit" }}>
+                  Annuler
+                </button>
+                <button
+                  disabled={videChoix.length === 0}
+                  onClick={() => {
+                    const noms = CHAMPS_VIDABLES.filter(([c]) => videChoix.includes(c)).map(([, l]) => l).join(", ");
+                    if (!window.confirm(`Effacer de « ${g.title} » : ${noms} ?`)) return;
+                    onEnrich(g.id, viderChamps(g, videChoix));
+                    setVideOpen(false);
+                  }}
+                  style={{ flex: 2, minHeight: "var(--tap)", background: videChoix.length ? dangerDoux : "transparent", border: `1px solid ${danger}`, color: danger, borderRadius: "var(--r-sm)", fontSize: "var(--t-corps)", fontWeight: 600, cursor: videChoix.length ? "pointer" : "default", opacity: videChoix.length ? 1 : 0.5, fontFamily: "inherit" }}>
+                  Vider
+                </button>
+              </div>
+            </Sheet>
+          )}
+
           {/* Jaquettes SteamGridDB */}
           {sgdbOpen && (
             <Sheet title="Choisir une jaquette" onClose={() => setSgdbOpen(false)}>
@@ -521,6 +586,11 @@ function GameCard({ g, onEdit, onDelete, onEnrich, onSerie, autoOpen, onOuverte 
               <button onClick={() => { setSourcesOuvertes(false); setRawgOpen(true); setRawgQ(g.title); rawgQuery(g.title); }} style={boutonSource}>🔄 RAWG</button>
               <button onClick={() => { setSourcesOuvertes(false); setWikiOpen(true); setWikiQ(g.title); setWikiDone(false); wikiQuery(g.title); }} style={boutonSource}>📚 Wikipédia</button>
               <button onClick={() => { setSourcesOuvertes(false); setSgdbOpen(true); setSgdbQ(g.title); setSgdbDone(false); sgdbQuery(g.title); }} style={boutonSource}>📦 Jaquette</button>
+              {/* Puisque les sources ne s'écrasent plus, il faut de quoi
+                  repartir propre : sans ce bouton, une infobox fausse le
+                  resterait, chaque nouvelle source la respectant poliment. */}
+              <button onClick={() => { setSourcesOuvertes(false); setVideChoix([]); setVideOpen(true); }}
+                style={{ ...boutonSource, borderColor: bdr, color: mut }}>🧹 Vider</button>
             </div>
           )}
 
@@ -565,7 +635,7 @@ function GameCard({ g, onEdit, onDelete, onEnrich, onSerie, autoOpen, onOuverte 
                 </div>
               ))}
 
-              <div style={{ color: mut, fontSize: "var(--t-legende)", fontWeight: 600, margin: "14px 0 8px", paddingTop: 10, borderTop: `1px solid ${bdr}` }}>Fiche Wikidata</div>
+              <div style={{ color: mut, fontSize: "var(--t-legende)", fontWeight: 600, margin: "14px 0 8px", paddingTop: 10, borderTop: `1px solid ${bdr}` }}>Fiche détaillée</div>
               {ligneEdition("Développeur", "developers", <input value={brouillon.developers} onChange={e => champ("developers", e.target.value)} style={champStyle("developers")} />, "séparés par des virgules")}
               {ligneEdition("Éditeur", "publishers", <input value={brouillon.publishers} onChange={e => champ("publishers", e.target.value)} style={champStyle("publishers")} />, "séparés par des virgules")}
               {ligneEdition("Sorties", "releases", <textarea value={brouillon.releases} onChange={e => champ("releases", e.target.value)} rows={3} placeholder={"2020-11-10 (Xbox Series X)"} style={{ ...champStyle("releases"), resize: "vertical" }} />, "une par ligne")}

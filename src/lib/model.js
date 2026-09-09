@@ -251,6 +251,119 @@ export const SEUILS_NOTE = [90, 80, 70];
 export const jeuPasseSeuil = (g, seuil) =>
   seuil === "tous" || (typeof g.metacritic === "number" && g.metacritic >= Number(seuil));
 
+// ── Provenance et fusion des infobox ───────────────────────────────────────
+//
+// Deux sources décrivent désormais une fiche, et elles ne décrivent pas tout à
+// fait la même chose. Wikipédia range un remaster sous la page du jeu
+// d'origine : « Sonic The Hedgehog » y sort en 1991, quelle que soit la
+// compilation qu'on possède. RAWG, lui, a une entrée par édition, avec la date
+// de celle qu'on a achetée, mais ses éditeurs et développeurs sont d'une base
+// communautaire, moins sûre sur les vieux titres.
+//
+// D'où la règle : une source ne remplit que les champs vides et n'écrase
+// jamais. Passer RAWG puis Wikipédia sur un remaster garde la date de la
+// version possédée et complète le reste. Et pour repartir d'une base propre
+// quand le mélange a mal tourné, il y a le vidage.
+export const SOURCES_INFO = { wikidata: "Wikidata", rawg: "RAWG" };
+
+// Une infobox sans provenance vient de Wikidata : c'était la seule source
+// jusqu'ici, et les cent trente fiches déjà remplies n'ont pas à mentir.
+export function sourcesInfobox(info) {
+  if (!info) return [];
+  const connues = (Array.isArray(info.sources) ? info.sources : []).filter(x => SOURCES_INFO[x]);
+  return connues.length ? [...new Set(connues)] : ["wikidata"];
+}
+
+export const libelleSources = (info) =>
+  sourcesInfobox(info).map(s => SOURCES_INFO[s]).join(" et ");
+
+const LISTES_INFO = ["developers", "publishers", "releases", "modes"];
+const TEXTES_INFO = ["series", "follows", "followedBy"];
+
+const listeInfo = (v) => (Array.isArray(v) ? v.filter(Boolean) : []);
+const texteInfo = (v) => String(v || "").trim();
+
+export const infoboxVide = (info) =>
+  !info || (LISTES_INFO.every(c => !listeInfo(info[c]).length) && TEXTES_INFO.every(c => !texteInfo(info[c])));
+
+// Complète sans écraser. La source n'est inscrite dans la provenance que si
+// elle a effectivement rempli quelque chose : dire « et RAWG » sur une fiche où
+// RAWG n'a rien apporté serait une fausse piste au moment de démêler une date.
+export function fusionnerInfobox(existante, apport, source) {
+  if (infoboxVide(apport)) return existante || null;
+  const base = existante || {};
+  const fusion = {};
+  let aRempli = false;
+  for (const c of LISTES_INFO) {
+    const deja = listeInfo(base[c]);
+    const neuf = listeInfo(apport[c]);
+    if (!deja.length && neuf.length) aRempli = true;
+    fusion[c] = deja.length ? deja : neuf;
+  }
+  for (const c of TEXTES_INFO) {
+    const deja = texteInfo(base[c]);
+    const neuf = texteInfo(apport[c]);
+    if (!deja && neuf) aRempli = true;
+    fusion[c] = deja || neuf;
+  }
+  if (infoboxVide(fusion)) return null;
+  const sources = existante ? sourcesInfobox(existante) : [];
+  fusion.sources = aRempli && SOURCES_INFO[source] ? [...new Set([...sources, source])] : sources;
+  if (!fusion.sources.length) fusion.sources = ["wikidata"];
+  return fusion;
+}
+
+// Le détail RAWG que la fiche demandait déjà pour la jaquette et la note
+// contient aussi de quoi bâtir une infobox : on cessait simplement de le lire.
+// Une seule date de sortie, celle de l'édition — c'est moins riche que les
+// dates par plateforme de Wikidata, et c'est justement ce qu'on venait
+// chercher pour un remaster.
+const MODES_RAWG = [
+  [/^single[- ]?player$/i, "solo"],
+  [/^multi[- ]?player$/i, "multijoueur"],
+  [/co[- ]?op/i, "coopératif"],
+];
+
+export function infoboxDepuisRawg(detail) {
+  if (!detail || typeof detail !== "object") return null;
+  const noms = (liste) => (Array.isArray(liste) ? liste : []).map(x => String(x?.name || "").trim()).filter(Boolean);
+  const modes = [];
+  for (const tag of noms(detail.tags)) {
+    for (const [regle, libelle] of MODES_RAWG) {
+      if (regle.test(tag) && !modes.includes(libelle)) modes.push(libelle);
+    }
+  }
+  const info = {
+    developers: noms(detail.developers), publishers: noms(detail.publishers),
+    releases: estDateISO(detail.released) ? [{ date: detail.released }] : [],
+    modes, series: "", follows: "", followedBy: "",
+  };
+  return infoboxVide(info) ? null : { ...info, sources: ["rawg"] };
+}
+
+// ── Vider une fiche ────────────────────────────────────────────────────────
+// Puisque les sources ne s'écrasent plus, il faut un moyen de repartir propre :
+// sans lui, une infobox fausse resterait fausse, chaque nouvelle source la
+// respectant poliment.
+export const CHAMPS_VIDABLES = [
+  ["infobox", "Infos Wikidata / RAWG", null],
+  ["style", "Description", ""],
+  ["cover", "Jaquette", null],
+  ["metacritic", "Note", null],
+  ["genre", "Genres", []],
+];
+
+// Retourne les champs à écrire, et seulement ceux que la fiche a vraiment.
+// Cocher « Note » sur un jeu sans note ne doit pas compter comme un vidage.
+export function viderChamps(g, choisis) {
+  const vides = {};
+  for (const [cle, , valeur] of CHAMPS_VIDABLES) {
+    if (!choisis?.includes(cle)) continue;
+    if (!jeuACompleter(g, cle)) vides[cle] = Array.isArray(valeur) ? [] : valeur;
+  }
+  return vides;
+}
+
 // Ce qui manque à une fiche, et qu'on peut aller remplir.
 //
 // L'onglet Stats savait déjà compter les manques — « 21 jeux sans note » — mais
@@ -262,7 +375,7 @@ export const CHAMPS_A_COMPLETER = [
   ["genre", "Genre", g => !g.genre?.length],
   ["style", "Description", g => !g.style],
   ["metacritic", "Note", g => !g.metacritic],
-  ["infobox", "Fiche Wikidata", g => !g.infobox],
+  ["infobox", "Fiche détaillée", g => !g.infobox],
 ];
 
 // Combien de fiches il manque, champ par champ, en n'annonçant que ce qui
@@ -454,6 +567,9 @@ export function brouillonDepuisJeu(g) {
     developers: listeVersTexte(i.developers), publishers: listeVersTexte(i.publishers),
     releases: sortiesVersTexte(i.releases), modes: listeVersTexte(i.modes),
     series: i.series || "", follows: i.follows || "", followedBy: i.followedBy || "",
+    // Pas un champ de saisie : la provenance traverse le brouillon pour ne pas
+    // être perdue à la première correction manuelle.
+    sources: sourcesInfobox(g.infobox),
   };
 }
 
@@ -498,9 +614,10 @@ export function validerEdition(b) {
     releases: sortiesDepuisTexte(b.releases), modes: listeDepuisTexte(b.modes),
     series: String(b.series || "").trim(), follows: String(b.follows || "").trim(),
     followedBy: String(b.followedBy || "").trim(),
+    sources: (Array.isArray(b.sources) ? b.sources : []).filter(x => SOURCES_INFO[x]),
   };
-  const infoVide = !info.developers.length && !info.publishers.length && !info.releases.length
-    && !info.modes.length && !info.series && !info.follows && !info.followedBy;
+  const infoVide = infoboxVide(info);
+  if (!info.sources.length) info.sources = ["wikidata"];
 
   return {
     erreurs,

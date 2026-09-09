@@ -22,6 +22,8 @@ import {
   modesDuJeu, jeuALeMode, genresPresents, MODES_JEU, jeuSurPlateforme, compterRetro,
   jeuPasseSeuil, jeuACompleter, completudeManquante, compterFichesIncompletes,
   dateDeSortie, serieDuJeu, empreinteMelange,
+  fusionnerInfobox, infoboxDepuisRawg, sourcesInfobox, libelleSources, infoboxVide,
+  viderChamps, CHAMPS_VIDABLES,
 } from "./model.js";
 import { ecouterMiseAJour } from "./maj.js";
 
@@ -257,7 +259,10 @@ test("un aller-retour brouillon → valeurs ne perd rien", () => {
   for (const k of ["title", "platform", "format", "backCompat", "genre", "metacritic", "addedDate", "style", "cover"]) {
     assert.deepEqual(valeurs[k], g[k], `${k} a changé en passant par le brouillon`);
   }
-  assert.deepEqual(valeurs.infobox, g.infobox);
+  // La provenance traverse le brouillon. Une infobox d'avant les deux sources
+  // n'en portait pas : elle est réputée venir de Wikidata, seule source de
+  // l'époque, plutôt que de ressortir sans origine.
+  assert.deepEqual(valeurs.infobox, { ...g.infobox, sources: ["wikidata"] });
 });
 
 test("le format et la rétrocompatibilité passent par le brouillon", () => {
@@ -803,7 +808,7 @@ test("on ne propose de compléter que ce qui manque vraiment", () => {
     jeu({ cover: "https://b", genre: [], style: "", metacritic: null, infobox: null }),
   ];
   assert.deepEqual(completudeManquante(bibliotheque),
-    [["genre", "Genre", 1], ["style", "Description", 1], ["metacritic", "Note", 1], ["infobox", "Fiche Wikidata", 1]]);
+    [["genre", "Genre", 1], ["style", "Description", 1], ["metacritic", "Note", 1], ["infobox", "Fiche détaillée", 1]]);
   assert.equal(completudeManquante(bibliotheque).some(([cle]) => cle === "cover"), false,
     "aucune fiche sans jaquette : l'option n'existe pas");
 
@@ -859,4 +864,79 @@ test("un manque comblé ne doit pas emporter le moyen d'enlever son filtre", () 
   // pouvoir expliquer et défaire.
   assert.equal(jeuACompleter(complete[0], "metacritic"), false);
   assert.equal(jeuACompleter(complete[0], "tous"), true);
+});
+
+
+// ── Deux sources pour une fiche ────────────────────────────────────────────
+
+test("une source ne remplit que le vide et n'écrase jamais", () => {
+  const existante = { developers: ["United Front"], publishers: [], releases: [{ date: "2014-10-10" }], modes: [], series: "", follows: "", followedBy: "", sources: ["rawg"] };
+  const apport = { developers: ["Square Enix"], publishers: ["Square Enix"], releases: [{ date: "2012-08-14" }], modes: ["Solo"], series: "Sleeping Dogs", follows: "", followedBy: "" };
+  const f = fusionnerInfobox(existante, apport, "wikidata");
+  // Ce qui était là reste : la date de l'édition possédée survit à Wikipédia,
+  // qui ne connaît que celle du jeu d'origine.
+  assert.deepEqual(f.developers, ["United Front"]);
+  assert.deepEqual(f.releases, [{ date: "2014-10-10" }]);
+  // Et ce qui manquait est comblé.
+  assert.deepEqual(f.publishers, ["Square Enix"]);
+  assert.equal(f.series, "Sleeping Dogs");
+  assert.deepEqual(f.sources, ["rawg", "wikidata"]);
+});
+
+test("une source qui n'apporte rien n'entre pas dans la provenance", () => {
+  const existante = { developers: ["A"], publishers: ["B"], releases: [{ date: "2014-10-10" }], modes: ["Solo"], series: "S", follows: "F", followedBy: "G", sources: ["wikidata"] };
+  const f = fusionnerInfobox(existante, { developers: ["Z"], publishers: [], releases: [], modes: [], series: "", follows: "", followedBy: "" }, "rawg");
+  assert.deepEqual(f.sources, ["wikidata"], "RAWG n'a rien rempli, il ne se signe pas");
+  assert.deepEqual(f.developers, ["A"]);
+});
+
+test("une fiche sans infobox en reçoit une, et un apport vide n'en crée pas", () => {
+  const f = fusionnerInfobox(null, { developers: ["Sega"], publishers: [], releases: [], modes: [], series: "", follows: "", followedBy: "" }, "rawg");
+  assert.deepEqual(f.developers, ["Sega"]);
+  assert.deepEqual(f.sources, ["rawg"]);
+  assert.equal(fusionnerInfobox(null, null, "rawg"), null);
+  assert.equal(fusionnerInfobox(null, { developers: [], publishers: [], releases: [], modes: [], series: "" }, "rawg"), null);
+});
+
+test("une infobox d'avant les deux sources est réputée venir de Wikidata", () => {
+  assert.deepEqual(sourcesInfobox({ series: "Halo" }), ["wikidata"]);
+  assert.deepEqual(sourcesInfobox(null), []);
+  assert.deepEqual(sourcesInfobox({ series: "H", sources: ["rawg", "inconnue", "rawg"] }), ["rawg"]);
+  assert.equal(libelleSources({ series: "H", sources: ["wikidata", "rawg"] }), "Wikidata et RAWG");
+  assert.equal(libelleSources({ series: "H" }), "Wikidata");
+});
+
+test("le détail RAWG donne une infobox, avec la date de l'édition possédée", () => {
+  const info = infoboxDepuisRawg({
+    developers: [{ name: "United Front Games" }], publishers: [{ name: "Square Enix" }],
+    released: "2014-10-10",
+    tags: [{ name: "Singleplayer" }, { name: "Co-op" }, { name: "Atmospheric" }],
+  });
+  assert.deepEqual(info.developers, ["United Front Games"]);
+  assert.deepEqual(info.releases, [{ date: "2014-10-10" }]);
+  // Les tags sont traduits dans le vocabulaire que le filtre par mode sait lire.
+  assert.deepEqual(info.modes, ["solo", "coopératif"]);
+  assert.deepEqual(info.sources, ["rawg"]);
+  // « Atmospheric » n'est pas un mode de jeu.
+  assert.ok(!info.modes.includes("Atmospheric"));
+});
+
+test("un détail RAWG sans rien d'exploitable ne fabrique pas d'infobox vide", () => {
+  assert.equal(infoboxDepuisRawg(null), null);
+  assert.equal(infoboxDepuisRawg({ tags: [{ name: "Indie" }], released: "" }), null);
+  // Une date que RAWG donne mal ne doit pas entrer telle quelle dans le stock.
+  assert.equal(infoboxDepuisRawg({ released: "bientôt" }), null);
+  assert.ok(infoboxVide({ developers: [], publishers: [], releases: [], modes: [], series: "" }));
+});
+
+test("le vidage ne touche que ce qui est coché et présent", () => {
+  const g = jeu({ cover: "https://a", genre: ["Action"], style: "Un texte.", metacritic: 80, infobox: { series: "S" } });
+  assert.deepEqual(viderChamps(g, ["infobox", "metacritic"]), { infobox: null, metacritic: null });
+  assert.deepEqual(viderChamps(g, ["genre", "style", "cover"]), { genre: [], style: "", cover: null });
+  assert.deepEqual(viderChamps(g, []), {});
+  // Un champ déjà vide n'est pas réécrit : cocher « Note » sur un jeu sans note
+  // ne compte pas comme un vidage.
+  assert.deepEqual(viderChamps(jeu({ infobox: { series: "S" } }), ["metacritic", "infobox"]), { infobox: null });
+  // Les cinq champs vidables sont ceux que « À compléter » sait retrouver.
+  assert.deepEqual(CHAMPS_VIDABLES.map(([c]) => c).sort(), ["cover", "genre", "infobox", "metacritic", "style"]);
 });

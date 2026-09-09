@@ -244,8 +244,9 @@ Trois sources, activables jeu par jeu depuis la fiche :
 
 | Bouton | Ce qu'il remplace |
 |---|---|
-| **🔄 Rechercher sur RAWG** | Jaquette, Metacritic, genres — utile quand un jeu a été mal associé |
+| **🔄 Rechercher sur RAWG** | Jaquette, Metacritic, genres, et les infos de l'édition possédée — utile quand un jeu a été mal associé |
 | **📚 Wikipédia** | Titre commercial officiel FR, puis au choix : résumé, jaquette d'infobox, infos Wikidata |
+| **🧹 Vider** | Efface au choix infos, description, jaquette, note ou genres — pour repartir d'une base propre |
 | **📦 Jaquette SteamGridDB** | Jaquette verticale 600×900 choisie parmi une grille de vignettes |
 
 **Infobox Wikidata** : développeur, éditeur, dates de sortie par plateforme, mode
