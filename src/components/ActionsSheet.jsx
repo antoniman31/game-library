@@ -38,9 +38,19 @@ export default function ActionsSheet({
   onRefreshDescriptions, refreshing, refreshProg, refreshTotal, onCancelRefresh,
   onImportXbox,
   onCompleterScores, scoresEnCours, scoresProg, scoresTotal, onAnnulerScores, scoresManquants,
+  onPartager, partageTotal, partageFiltre,
 }) {
   return (
     <Sheet title="Actions" onClose={onClose}>
+      {/* En tête : c'est la seule action qui s'adresse à quelqu'un d'autre, et
+          la seule qu'on lance plusieurs fois par mois. Les autres rechargent
+          des données et durent des minutes. */}
+      <Action
+        icone="📤"
+        titre="Partager la liste"
+        detail={`${partageTotal} jeu${partageTotal > 1 ? "x" : ""}${partageFiltre ? " — ceux que les filtres montrent" : ""} · texte à envoyer`}
+        onClick={() => { onClose(); onPartager(); }}
+      />
       {refreshing ? (
         <Action
           icone="⏳"

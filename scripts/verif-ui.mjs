@@ -134,7 +134,10 @@ for (const [largeur, theme] of ECRANS) {
     }],
     ["Prêts", async () => { await page.getByRole("button", { name: /^Prêts/ }).click(); }],
     ["Stats", async () => { await page.getByRole("button", { name: "Stats" }).click(); }],
-    ["Réglages", async () => { await page.getByRole("button", { name: "Réglages" }).click(); }],
+    ["panneau Actions", async () => {
+      await page.getByRole("button", { name: "Actions" }).click();
+    }],
+    ["Réglages", async () => { await page.keyboard.press("Escape"); await page.getByRole("button", { name: "Réglages" }).click(); }],
     ["Services", async () => { await page.getByRole("button", { name: "Services" }).click(); }],
   ];
 

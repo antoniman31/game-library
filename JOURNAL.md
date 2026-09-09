@@ -687,6 +687,37 @@ l'action irréversible est un mauvais conseil. Il était de surcroît grisé et 
 tant qu'aucune case n'était cochée — exactement ce qu'on venait de reprocher
 ailleurs. Il reste actif et dit ce qui manque.
 
+### Phase 23 — Une liste qu'on peut envoyer
+
+L'export JSON existait depuis le début, mais il sert à déménager une
+bibliothèque, pas à la montrer : personne ne choisit un jeu dans un objet à
+accolades. Le besoin était autre — envoyer à quelqu'un de quoi choisir ce qu'il
+veut emprunter.
+
+Du texte, donc, et pas un document : dans une conversation, un texte reste
+cherchable et citable, on peut répondre « je prends celui-là » en collant la
+ligne. Un PDF oblige à ouvrir un lecteur, ne se cite pas, et coûterait une
+bibliothèque de deux cents kilo-octets dans le pré-cache d'une application qui
+n'en a aucune.
+
+Le partage n'a pas de sélecteur de plateforme, alors que c'est ainsi qu'il avait
+été demandé. Il exporte la liste affichée, celle que les filtres ont déjà
+composée : choisir Switch puis partager donne les jeux Switch, et la même
+mécanique donne aussi les jeux notés plus de 80, ceux d'un genre ou d'une série.
+Un second sélecteur aurait redit ce que le panneau des filtres dit mieux, et
+deux endroits pour dire la même chose finissent toujours par se contredire.
+
+Les jeux prêtés restent dans la liste avec leur mention. Les cacher donnerait à
+croire qu'on ne les possède pas, alors qu'ils reviendront.
+
+Un défaut trouvé en vérifiant, et vieux de plusieurs phases : les trois bandeaux
+de bas d'écran sont posés à `left: 50%`, ce qui ne leur laisse pour largeur
+disponible que la moitié droite de l'écran. « Liste copiée — colle-la où tu
+veux » s'y repliait sur trois lignes dans une boîte de 175 px alors qu'il en
+restait 347 de libres. Invisible tant que les textes étaient courts, mais
+« 🗑 « Grand Theft Auto: San Andreas – The Definitive Edition » supprimé »
+l'aurait montré depuis longtemps.
+
 ---
 
 ## 3. Architecture finale

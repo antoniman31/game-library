@@ -23,6 +23,7 @@ import { chargerSync, enregistrerSync, genererCode, envoyer, recuperer } from ".
 import { preferencesASauvegarder, preferencesRecues, resumePreferences } from "./lib/preferences.js";
 import { surMiseAJour } from "./lib/maj.js";
 import { libelleTri, TRI_DEFAUT } from "./lib/tri.js";
+import { texteListe, partagerTexte } from "./lib/partage.js";
 import { resoudreTheme, modeSuivant, modeValide, ICONES, LIBELLES, COULEUR_BARRE } from "./lib/apparence.js";
 import {
   loadKeys, setApiKeys, normTitle, hasRawgKey, rawgFirstResult,
@@ -95,6 +96,7 @@ export default function App() {
   const [showFilters, setShowFilters] = useState(false);
   const [showSort, setShowSort] = useState(false);
   const [showActions, setShowActions] = useState(false);
+  const [partageEtat, setPartageEtat] = useState(null);
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const [keys, setKeys] = useState(() => loadKeys());   // clés API saisies par l'utilisateur
   const [keyTest, setKeyTest] = useState({});           // résultat du bouton « Tester »
@@ -319,6 +321,19 @@ export default function App() {
 
   // Références stables : sans ça, chaque rendu d'App fabriquerait de nouvelles
   // fonctions et le memo() des fiches ne servirait à rien.
+  // Partage de la liste affichée. Pas de sélecteur de plateforme : les filtres
+  // ont déjà composé la liste, et en redemander une seconde fois ferait deux
+  // endroits où dire la même chose — qui finiraient par se contredire.
+  const partagerListe = async () => {
+    const filtree = filtered.length < games.length;
+    const titre = filtree ? "Ma ludothèque (sélection)" : "Ma ludothèque";
+    const quoi = await partagerTexte(texteListe(filtered, titre), titre);
+    if (quoi === "annule") return;
+    setPartageEtat(quoi === "copie" ? "Liste copiée — colle-la où tu veux."
+      : quoi === "echec" ? "Impossible de copier la liste."
+      : "Liste envoyée.");
+  };
+
   const edit = useCallback((id, field, val) => setGames(gs => gs.map(g => g.id === id ? { ...g, [field]: val } : g)), []);
   const enrichGame = useCallback((id, data) => setGames(gs => gs.map(g => g.id === id ? { ...g, ...data } : g)), []);
   // Ajoute le jeu puis l'ouvre directement en fiche complète (parité fiche/ajout).
@@ -1018,6 +1033,9 @@ export default function App() {
           scoresTotal={scoresTotal}
           onAnnulerScores={annulerScores}
           scoresManquants={jeuxSansScore(games).length}
+          onPartager={partagerListe}
+          partageTotal={filtered.length}
+          partageFiltre={filtered.length < games.length}
         />
       )}
 
@@ -1026,7 +1044,7 @@ export default function App() {
         : <ScoresSheet bilan={scoresBilan} onAnnulerScore={retirerScore} onClose={() => setScoresBilan(null)} />)}
 
       {majDispo && (
-        <div role="status" style={{ position:"fixed", bottom:20, left:"50%", transform:"translateX(-50%)", zIndex:401, display:"flex", alignItems:"center", gap:10, maxWidth:"calc(100vw - 24px)", background:card, border:`1px solid ${accent}`, borderRadius: "var(--r-md)", padding:"10px 14px", boxShadow:"0 8px 24px rgba(0,0,0,0.4)", animation:"toastIn 200ms ease" }}>
+        <div role="status" style={{ position:"fixed", bottom:20, left:"50%", transform:"translateX(-50%)", width:"max-content", zIndex:401, display:"flex", alignItems:"center", gap:10, maxWidth:"calc(100vw - 24px)", background:card, border:`1px solid ${accent}`, borderRadius: "var(--r-md)", padding:"10px 14px", boxShadow:"0 8px 24px rgba(0,0,0,0.4)", animation:"toastIn 200ms ease" }}>
           {/* Sur 412 px, les trois éléments ne tiennent que si le libellé ne
               se casse pas : « installée » partait à la ligne, seul. */}
           <span style={{ color:txt, fontSize: "var(--t-corps)", whiteSpace:"nowrap" }}>✨ Nouvelle version</span>
@@ -1035,8 +1053,21 @@ export default function App() {
         </div>
       )}
 
+      {/* `width: max-content` sur les trois bandeaux : posés à `left: 50%`, ils
+          n'avaient pour largeur disponible que la moitié droite de l'écran, et
+          repliaient leur texte sur trois lignes bien avant d'atteindre le bord.
+          Invisible tant que le texte était court — « supprimé » précédé d'un
+          titre à rallonge le montrait déjà. */}
+      {partageEtat && (
+        <div role="status" style={{ position:"fixed", bottom:20, left:"50%", transform:"translateX(-50%)", width:"max-content", zIndex:400, display:"flex", alignItems:"center", gap:14, maxWidth:"calc(100vw - 24px)", background:card, border:`1px solid ${bdr}`, borderRadius: "var(--r-md)", padding:"10px 14px", boxShadow:"0 8px 24px rgba(0,0,0,0.4)", animation:"toastIn 200ms ease" }}>
+          <span style={{ color:txt, fontSize: "var(--t-corps)" }}>{partageEtat}</span>
+          <button onClick={() => setPartageEtat(null)} aria-label="Masquer"
+            style={{ background:"transparent", border:`1px solid ${bdr}`, color:mut, borderRadius: "var(--r-sm)", padding:"4px 12px", fontSize: "var(--t-petit)", cursor:"pointer" }}>OK</button>
+        </div>
+      )}
+
       {deleted && (
-        <div role="status" style={{ position:"fixed", bottom:20, left:"50%", transform:"translateX(-50%)", zIndex:400, display:"flex", alignItems:"center", gap:14, background:card, border:`1px solid ${bdr}`, borderRadius: "var(--r-md)", padding:"10px 14px", boxShadow:"0 8px 24px rgba(0,0,0,0.4)", animation:"toastIn 200ms ease" }}>
+        <div role="status" style={{ position:"fixed", bottom:20, left:"50%", transform:"translateX(-50%)", width:"max-content", zIndex:400, display:"flex", alignItems:"center", gap:14, background:card, border:`1px solid ${bdr}`, borderRadius: "var(--r-md)", padding:"10px 14px", boxShadow:"0 8px 24px rgba(0,0,0,0.4)", animation:"toastIn 200ms ease" }}>
           <span style={{ color:txt, fontSize: "var(--t-corps)" }}>🗑 « {deleted.game.title} » supprimé</span>
           <button onClick={undoDelete} style={{ background:"transparent", border:`1px solid ${accent}`, color:accent, borderRadius: "var(--r-sm)", padding:"4px 12px", fontSize: "var(--t-petit)", fontWeight:600, cursor:"pointer" }}>Annuler</button>
         </div>

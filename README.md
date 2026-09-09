@@ -255,6 +255,13 @@ est volontairement exclu. Les libellés sont résolus en `fr` → `en` → `mul`
 (Wikidata range les noms propres sous `mul`, ce qui explique que certains
 éditeurs ne remontent pas si on ne demande que `fr`/`en`).
 
+**Bouton « Partager la liste »** (panneau ⋯ Actions) : produit la liste **affichée** en
+texte lisible — groupée par plateforme, un jeu par ligne avec sa note et, le cas échéant,
+la mention du prêt en cours — et l'envoie au menu de partage du téléphone, ou la copie
+dans le presse-papier ailleurs. Pas de sélecteur de plateforme : le panneau des filtres a
+déjà composé la liste, et deux endroits pour dire la même chose finiraient par se
+contredire.
+
 **Bouton « Actualiser les descriptions »** (panneau ⋯ Actions) : régénère la description de
 toute la bibliothèque depuis Wikipédia. Il est **annulable en cours de route**,
 respecte un délai anti-rate-limit (~150 ms) et affiche en fin de course la
