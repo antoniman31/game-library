@@ -14,7 +14,7 @@ import SettingsView from "./components/SettingsView.jsx";
 import { hdr, card, bdr, txt, mut, accent, accentDoux, accentFond, warnDoux, dangerDoux, ok, warn, warnFond, danger } from "./lib/theme.js";
 import { GAMES_INIT } from "./lib/seed.js";
 import { BACK_COMPAT, migrateGames, compterFiltres, validerJeuxImportes, pretEnRetard, jeuxSansScore, normaliserGenres,
-  dureeEntreeHistorique, supprimerEntreeHistorique, joursDePret } from "./lib/model.js";
+  jeuALeMode, genresPresents, dureeEntreeHistorique, supprimerEntreeHistorique, joursDePret } from "./lib/model.js";
 import { lire, ecrire, surEchecStockage } from "./lib/storage.js";
 import { chargerSync, enregistrerSync, genererCode, envoyer, recuperer } from "./lib/sync.js";
 import { preferencesASauvegarder, preferencesRecues, resumePreferences } from "./lib/preferences.js";
@@ -66,6 +66,8 @@ export default function App() {
   const [plat, setPlat] = useState("tous");
   const [pretFil, setPretFil] = useState("tous");
   const [fmtFil, setFmtFil] = useState("tous");
+  const [genreFil, setGenreFil] = useState("tous");
+  const [modeFil, setModeFil] = useState("tous");
   const [sort, setSort] = useState("titre");
   const [view, setView] = useState("liste");
   const [tab, setTab] = useState("library");
@@ -167,7 +169,7 @@ export default function App() {
 
   // Toute pagination repart du début quand le contenu de la liste change :
   // sinon « Charger 30 de plus » resterait déplié sur un résultat de 3 jeux.
-  useEffect(() => { setVisibleCount(PAGE_SIZE); }, [search, plat, pretFil, fmtFil, sort, tab, view]);
+  useEffect(() => { setVisibleCount(PAGE_SIZE); }, [search, plat, pretFil, fmtFil, genreFil, modeFil, sort, tab, view]);
 
   // Recherche posée par le code (clic sur une vignette, retour d'un ajout) :
   // les deux états doivent bouger ensemble, sans attendre le délai de frappe.
@@ -525,6 +527,9 @@ export default function App() {
       return searchMatch
         && platMatch
         && (fmtFil === "tous" || g.format === fmtFil)
+        // Le genre est une liste : un jeu retenu en porte au moins un.
+        && (genreFil === "tous" || (g.genre || []).includes(genreFil))
+        && jeuALeMode(g, modeFil)
         && pretMatch;
     });
     return list.sort((a, b) => {
@@ -532,7 +537,7 @@ export default function App() {
       if (sort === "metacritic") return (b.metacritic||0) - (a.metacritic||0);
       return a.title.localeCompare(b.title);
     });
-  }, [games, search, plat, pretFil, fmtFil, sort]);
+  }, [games, search, plat, pretFil, fmtFil, genreFil, modeFil, sort]);
 
   const stats = useMemo(() => {
     const total = games.length;
@@ -548,7 +553,11 @@ export default function App() {
     .flatMap(g => (g.pretsPasses || []).map((e, i) => ({ ...e, titre: g.title, jeuId: g.id, index: i })))
     .sort((a, b) => (a.au < b.au ? 1 : a.au > b.au ? -1 : 0))
     .slice(0, 50), [games]);
-  const filtresActifs = compterFiltres({ plat, pretFil, fmtFil });
+  const filtresActifs = compterFiltres({ plat, pretFil, fmtFil, genreFil, modeFil });
+  // Dérivés de TOUTE la bibliothèque, pas de la liste filtrée : sinon les
+  // options disparaîtraient au fur et à mesure qu'on s'en sert.
+  const genres = useMemo(() => genresPresents(games), [games]);
+  const sansMode = useMemo(() => games.filter(g => !g.infobox?.modes?.length).length, [games]);
 
   // Ce qui est réellement monté. Le reste attend « Charger 30 de plus ».
   const visible = filtered.slice(0, visibleCount);
@@ -828,6 +837,9 @@ export default function App() {
           plat={plat} setPlat={setPlat}
           pretFil={pretFil} setPretFil={setPretFil}
           fmtFil={fmtFil} setFmtFil={setFmtFil}
+          genreFil={genreFil} setGenreFil={setGenreFil}
+          modeFil={modeFil} setModeFil={setModeFil}
+          genres={genres} sansMode={sansMode}
           sort={sort} setSort={setSort}
           view={view} setView={setView}
           resultats={filtered.length}

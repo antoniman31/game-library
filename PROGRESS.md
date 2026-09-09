@@ -158,7 +158,9 @@ Deux sous-onglets. Chaque bloc disparaît quand il n'a rien à dire.
 - **Genres normalisés** : RAWG répond en anglais, le projet parle français. Une table
   de correspondance ramène chaque genre à une forme unique — sur 154 jeux réels,
   33 valeurs deviennent 28 sans qu'aucun jeu perde de genre.
-- **Filtres** combinables : plateforme, prêt, format. **Tri** : A-Z, date, Metacritic.
+- **Filtres** combinables : plateforme, prêt, format, mode de jeu (solo / à plusieurs /
+  coopératif, d'après Wikidata) et genre (dérivé de la bibliothèque, huit visibles puis
+  le reste sur demande). **Tri** : A-Z, date, Metacritic.
 - **Vues** liste et grille (jaquettes 2:3), liste paginée par 30.
 - **Trois modes de thème** : automatique (suit le téléphone, y compris quand il
   bascule le soir), clair, noir profond. Bouton dans l'en-tête, choix dans ⚙️.

@@ -451,6 +451,40 @@ comptes s'additionnent exactement — Aventure passe de 20 à 41, Plateforme de 
 à 33. La fonction est idempotente, donc la migration la rejoue à chaque
 chargement sans numéro de version, contrairement à `bcV`.
 
+### Phase 17 — Deux questions que la bibliothèque savait déjà
+
+Deux filtres, choisis parmi neuf candidats en mesurant ce que chacun donnerait
+sur une bibliothèque réelle plutôt qu'en imaginant.
+
+**Le mode de jeu** répond à « on est deux ce soir, on lance quoi » — la question
+que cent cinquante jeux rendent difficile. L'application avait la réponse depuis
+le début sans savoir la donner : Wikidata renseigne le mode, il n'était affiché
+que fiche par fiche. Sur la bibliothèque réelle : 121 jeux solo, 85 à plusieurs,
+31 en coopératif.
+
+Les étiquettes de Wikidata ne forment pas un vocabulaire — « solo », « Solo »,
+« mode coopératif », « joueur contre joueur », « multijoueur en écran divisé /
+partagé », « two-player video game ». Contrairement aux genres, elles ne sont
+PAS réécrites dans les fiches : « écran divisé » n'est pas « en ligne », et
+perdre cette nuance pour trois boutons serait un mauvais change. Le classement
+se fait à la lecture. Le coopératif compte comme un multijoueur, jamais
+l'inverse : qui demande « à plusieurs » veut aussi les jeux qu'on ne peut faire
+qu'ensemble.
+
+Trente-deux jeux n'ont pas de fiche Wikidata et ne sortent donc d'aucun de ces
+choix. C'est écrit dans le panneau, avec le nombre : sans cette phrase, un
+filtre « Solo » a l'air d'affirmer que les jeux absents ne sont pas solo, alors
+qu'il dit seulement qu'on ne sait pas.
+
+**Le genre** n'était possible que depuis la normalisation de la phase 16. Il
+est dérivé de la bibliothèque et non d'une liste fermée, et classé par nombre de
+jeux : « Action » à 83 et un genre porté par un seul titre n'ont pas à se
+présenter comme deux choix équivalents. Vingt-huit genres, ce n'est plus un
+choix mais un mur, alors huit sont affichés et le reste attend derrière un
+bouton — sauf le genre sélectionné, qui reste visible même s'il vient de la
+traîne, sans quoi le filtre actif disparaît de l'écran et on ne sait plus
+comment l'enlever.
+
 ---
 
 ## 3. Architecture finale

@@ -129,7 +129,22 @@ erreur CORS.
 - **Recherche** sur titre + genre + tag, **insensible à la casse et aux accents**
   (« creatif » trouve le genre « Créatif »). La description est volontairement
   exclue : un mot du résumé faisait remonter des jeux sans rapport.
-- **Filtres combinables** : plateforme, prêt (chez moi / prêtés), format (physique / démat).
+- **Filtres combinables** : plateforme, prêt (chez moi / prêtés), format (physique /
+  démat), **mode de jeu** (solo / à plusieurs / coopératif) et **genre**.
+- **Le mode de jeu** répond à la question qu'une ludothèque de cent cinquante jeux
+  rend difficile — « on est deux ce soir, on lance quoi ». Il vient de la fiche
+  Wikidata, dont les étiquettes ne forment pas un vocabulaire (« solo », « Solo »,
+  « mode coopératif », « joueur contre joueur », « multijoueur en écran divisé /
+  partagé ») : elles sont classées à la lecture plutôt que réécrites, parce que leur
+  formulation est une information. Le coopératif compte comme un multijoueur, jamais
+  l'inverse. Un jeu sans fiche Wikidata n'a aucun mode connu et ne sort d'aucun de ces
+  choix — le panneau le dit et donne le nombre, plutôt que de laisser croire que ces
+  jeux ne sont pas solo.
+- **Le genre** est dérivé de la bibliothèque, pas d'une liste fermée, et classé par
+  nombre de jeux. Les huit premiers sont affichés, le reste derrière un bouton : sur
+  une bibliothèque réelle il y a vingt-huit genres, et vingt-huit boutons ne sont plus
+  un choix. Le genre sélectionné reste visible même s'il vient de la traîne, sinon le
+  filtre actif disparaît de l'écran.
 - **Tri** : A-Z, date, Metacritic.
 - **Tout est modifiable** : « Modifier la fiche » ouvre un panneau qui laisse
   corriger ce que les sources automatiques ont écrit — titre, plateforme,
@@ -558,8 +573,8 @@ npm run dev      # http://localhost:5173/game-library/
 npm run build
 npm run preview
 npm run lint     # oxlint
-npm test         # 109 tests (modèle, import, genres, prêts, stats, thème,
-                 #             préférences, cohérence, audit, Worker)
+npm test         # 114 tests (modèle, import, genres, filtres, prêts, stats,
+                 #             thème, préférences, cohérence, audit, Worker)
 npm run test:worker                   # 32 vérifications du relais, sans déploiement
 npm run verif:ui                      # mesure les écrans rendus (voir plus bas)
 npm run audit -- ma-sauvegarde.json   # symptômes dans les données (voir plus bas)

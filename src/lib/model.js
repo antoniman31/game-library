@@ -156,8 +156,8 @@ export function preterJeu(g, nom, retourPrevu) {
 
 // Compte les filtres réellement appliqués. Le tri et le mode d'affichage n'en
 // sont pas : ils changent l'ordre ou la densité, jamais ce qui est montré.
-export function compterFiltres({ plat, pretFil, fmtFil }) {
-  return [plat, pretFil, fmtFil].filter(v => v !== "tous").length;
+export function compterFiltres({ plat, pretFil, fmtFil, genreFil, modeFil }) {
+  return [plat, pretFil, fmtFil, genreFil, modeFil].filter(v => v && v !== "tous").length;
 }
 
 // ── Genres ─────────────────────────────────────────────────────────────────
@@ -240,6 +240,60 @@ export function normaliserGenres(liste) {
     sortie.push(valeur);
   }
   return sortie;
+}
+
+// ── Modes de jeu ───────────────────────────────────────────────────────────
+// « On est deux ce soir, on lance quoi ? » est la question qu'une ludothèque
+// de cent cinquante jeux rend difficile, et l'application avait la réponse sans
+// savoir la donner : Wikidata renseigne le mode de jeu, il n'était affiché que
+// fiche par fiche.
+//
+// Les étiquettes viennent telles quelles de Wikidata et ne forment pas un
+// vocabulaire : « solo », « Solo », « mode coopératif », « joueur contre
+// joueur », « multijoueur en écran divisé / partagé », « two-player video
+// game ». Trois questions suffisent pourtant à les couvrir toutes.
+//
+// Contrairement aux genres, ces étiquettes ne sont PAS réécrites dans les
+// fiches : la formulation de Wikidata est une information — « écran divisé »
+// n'est pas « en ligne » — et la perdre pour trois boutons serait un mauvais
+// change. Le classement se fait donc à la lecture, à chaque filtrage.
+export const MODES_JEU = ["solo", "multi", "coop"];
+
+const REGLES_MODE = [
+  ["solo", /solo|un joueur|single/],
+  // Le coopératif est un multijoueur : qui demande « à plusieurs » veut aussi
+  // les jeux qu'on ne peut faire qu'ensemble.
+  ["coop", /coop/],
+  ["multi", /coop|multi|joueur contre joueur|two-player|versus|pvp/],
+];
+
+export function modesDuJeu(g) {
+  const trouves = new Set();
+  for (const brut of g?.infobox?.modes || []) {
+    const t = String(brut || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    for (const [mode, regle] of REGLES_MODE) if (regle.test(t)) trouves.add(mode);
+  }
+  return trouves;
+}
+
+// Un jeu sans fiche Wikidata n'a aucun mode connu : il ne répond ni oui ni non,
+// et disparaît donc de tout filtre par mode. C'est dit à l'écran plutôt que
+// laissé deviner — sinon un filtre « Solo » a l'air d'affirmer que les jeux
+// absents ne sont pas solo.
+export const jeuALeMode = (g, mode) => mode === "tous" || modesDuJeu(g).has(mode);
+
+// ── Genres présents ────────────────────────────────────────────────────────
+// Les plateformes et les formats sont une liste fermée, écrite ici ; les genres
+// dépendent de la bibliothèque et changent avec elle. Ils sont donc dérivés,
+// et classés par nombre de jeux : sur cent cinquante jeux, « Action » et un
+// genre porté par un seul titre n'ont pas à se présenter côte à côte comme
+// deux choix équivalents.
+export function genresPresents(games) {
+  const compte = new Map();
+  for (const g of games || []) {
+    for (const genre of g.genre || []) compte.set(genre, (compte.get(genre) || 0) + 1);
+  }
+  return [...compte.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
 }
 
 // Normalisation d'un titre pour comparaison : minuscules, sans accents ni

@@ -19,6 +19,7 @@ import {
   rendreJeu, preterJeu, annulerPret, supprimerEntreeHistorique, dureeEntreeHistorique, MAX_HISTORIQUE_PRET, aujourdhuiISO,
   BACK_COMPAT, XBOX_SERIES_CUTOFF, PRET_LONG_JOURS, PLATFORMES_JEU,
   estDatePlausible, estLienSur, ANNEE_MIN, ANNEES_A_VENIR, normaliserGenres,
+  modesDuJeu, jeuALeMode, genresPresents, MODES_JEU,
 } from "./model.js";
 import { ecouterMiseAJour } from "./maj.js";
 
@@ -656,4 +657,68 @@ test("les trois portes d'entrée d'un genre appliquent la table", () => {
     ...brouillonDepuisJeu(jeu()), genre: "Adventure, Racing, action",
   });
   assert.deepEqual(valeurs.genre, ["Aventure", "Course", "Action"]);
+});
+
+
+// ── Filtrer par mode de jeu et par genre ───────────────────────────────────
+
+const avecModes = (...modes) => jeu({ infobox: { modes } });
+
+test("les étiquettes de Wikidata se rangent en trois questions", () => {
+  // Elles arrivent telles quelles et ne forment pas un vocabulaire : « solo »,
+  // « Solo », « mode coopératif », « joueur contre joueur », « multijoueur en
+  // écran divisé / partagé », « two-player video game ».
+  assert.deepEqual([...modesDuJeu(avecModes("solo"))], ["solo"]);
+  assert.deepEqual([...modesDuJeu(avecModes("Solo"))], ["solo"], "la casse ne compte pas");
+  assert.deepEqual([...modesDuJeu(avecModes("multijoueur"))], ["multi"]);
+  assert.deepEqual([...modesDuJeu(avecModes("multijoueur en écran divisé / partagé"))], ["multi"]);
+  assert.deepEqual([...modesDuJeu(avecModes("two-player video game"))], ["multi"]);
+  assert.deepEqual([...modesDuJeu(avecModes("joueur contre joueur"))], ["multi"]);
+});
+
+test("le coopératif est aussi un multijoueur", () => {
+  // Qui demande « à plusieurs » veut aussi les jeux qu'on ne peut faire
+  // qu'ensemble : les exclure serait le contraire de ce qu'il a demandé.
+  const coop = modesDuJeu(avecModes("mode coopératif"));
+  assert.ok(coop.has("coop"));
+  assert.ok(coop.has("multi"));
+  // L'inverse est faux : un multijoueur compétitif n'est pas coopératif.
+  const versus = modesDuJeu(avecModes("multijoueur", "joueur contre joueur"));
+  assert.ok(versus.has("multi"));
+  assert.ok(!versus.has("coop"));
+});
+
+test("un jeu sans fiche Wikidata ne sort d'aucun filtre par mode", () => {
+  // Il ne répond ni oui ni non : le prétendre solo serait inventer.
+  const inconnu = jeu();
+  assert.equal(modesDuJeu(inconnu).size, 0);
+  for (const m of MODES_JEU) assert.equal(jeuALeMode(inconnu, m), false);
+  assert.equal(jeuALeMode(inconnu, "tous"), true, "« Tous » ne filtre rien");
+  assert.equal(jeuALeMode(undefined, "solo"), false, "une fiche absente ne casse rien");
+});
+
+test("les genres présents sont classés par nombre de jeux", () => {
+  // Sur cent cinquante jeux, « Action » et un genre porté par un seul titre
+  // n'ont pas à se présenter comme deux choix équivalents.
+  const bibliotheque = [
+    jeu({ genre: ["Action", "Aventure"] }),
+    jeu({ genre: ["Action"] }),
+    jeu({ genre: ["Action", "RPG"] }),
+    jeu({ genre: ["Aventure"] }),
+    jeu({ genre: [] }),
+  ];
+  assert.deepEqual(genresPresents(bibliotheque), [["Action", 3], ["Aventure", 2], ["RPG", 1]]);
+  assert.deepEqual(genresPresents([]), []);
+  assert.deepEqual(genresPresents(null), []);
+});
+
+test("le badge compte les cinq filtres, pas le tri ni l'affichage", () => {
+  const aucun = { plat: "tous", pretFil: "tous", fmtFil: "tous", genreFil: "tous", modeFil: "tous" };
+  assert.equal(compterFiltres(aucun), 0);
+  assert.equal(compterFiltres({ ...aucun, genreFil: "RPG" }), 1);
+  assert.equal(compterFiltres({ ...aucun, genreFil: "RPG", modeFil: "coop" }), 2);
+  assert.equal(compterFiltres({ plat: "Switch 2", pretFil: "prêtés", fmtFil: "démat", genreFil: "RPG", modeFil: "solo" }), 5);
+  // Les anciens appelants ne passaient que trois clés : elles ne doivent pas
+  // compter comme des filtres actifs sous prétexte qu'elles sont absentes.
+  assert.equal(compterFiltres({ plat: "tous", pretFil: "tous", fmtFil: "tous" }), 0);
 });
