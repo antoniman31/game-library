@@ -534,10 +534,18 @@ racontés parce qu'ils ont demandé une décision, pas seulement du code.
 savait compter les manques depuis longtemps — « 21 jeux sans note » — mais on
 ne pouvait pas y aller : un constat sans porte de sortie. Le filtre les sort, et
 il n'annonce que ce qui manque réellement : une option disparaît dès que son
-champ est rempli partout, le groupe entier disparaît quand la bibliothèque est
+champ est rempli partout, le bloc entier disparaît quand la bibliothèque est
 complète. Une case « Jaquette 0 » promettrait du travail qui n'existe pas. Les
 prédicats sont partagés avec le bloc des Stats, si bien que le chiffre affiché
 et la liste obtenue ne peuvent plus diverger.
+
+Il a d'abord été rangé dans l'accordéon avec les autres, ce qui était une
+erreur de rang : les autres filtres répondent à « montre-moi », celui-ci répond
+à « qu'est-ce qu'il me reste à faire ». Il est remonté en tête du panneau, hors
+de l'accordéon, en bloc plein cerné d'accent — le seul du panneau, et il n'y en
+aura jamais deux, sans quoi l'effet von Restorff ne joue plus. Il porte le
+nombre de fiches concernées, 42 sur une bibliothèque réelle : pas la somme des
+colonnes, puisqu'un même jeu peut manquer de trois choses.
 
 **Le hasard devait tenir.** « Je joue à quoi ce soir » est la vraie question
 d'une ludothèque de cette taille, et un tirage y répond mieux qu'un classement.

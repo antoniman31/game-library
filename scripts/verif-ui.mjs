@@ -104,10 +104,6 @@ for (const [largeur, theme] of ECRANS) {
       const bouton = page.getByRole("button", { name: /^Tous les genres/ });
       if (await bouton.count()) await bouton.click();
     }],
-    ["Filtres · à compléter", async () => {
-      const groupe = page.getByRole("button", { name: /^À compléter/ });
-      if (await groupe.count()) await groupe.click();
-    }],
     ["panneau de tri", async () => {
       await page.keyboard.press("Escape");
       await page.getByRole("button", { name: /^⇅/ }).click();

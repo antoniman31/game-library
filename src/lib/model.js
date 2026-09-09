@@ -275,6 +275,13 @@ export function completudeManquante(games) {
     .filter(([, , n]) => n > 0);
 }
 
+// Combien de fiches ont au moins un manque. Ce n'est pas la somme des colonnes
+// — un même jeu peut manquer de trois choses — et c'est pourtant ce nombre-là
+// qui dit l'ampleur du travail restant.
+export function compterFichesIncompletes(games) {
+  return (games || []).filter(g => CHAMPS_A_COMPLETER.some(([, , manque]) => manque(g))).length;
+}
+
 export function jeuACompleter(g, champ) {
   if (champ === "tous") return true;
   const trouve = CHAMPS_A_COMPLETER.find(([cle]) => cle === champ);

@@ -143,14 +143,17 @@ erreur CORS.
   rétrocompatibles » — et laisse les noms et les nombres à la ligne de détail :
   « 82 jeux Xbox One démarrent sur Xbox Series X. Décoche pour ne voir que les 19 jeux
   vraiment Xbox Series X. » Décochée, la ligne repliée annonce « Xbox Series X seul ».
-- **Filtres supplémentaires** : **note** au-dessus d'un seuil (90, 80 ou 70 — un seuil
-  répond à « qu'est-ce que j'ai de vraiment bien », une tranche oblige à tout cocher),
-  et **à compléter**, qui sort les fiches auxquelles il manque quelque chose pour aller
-  le remplir. Ce dernier n'affiche que ce qui manque réellement : une option disparaît
-  dès que son champ est rempli partout, et le groupe entier disparaît quand la
-  bibliothèque est complète — pas de case morte promettant du travail inexistant. Les
-  mêmes prédicats servent au bloc « Ce qui manque » des Stats, si bien que le chiffre
-  affiché et la liste obtenue ne peuvent pas diverger.
+- **« À compléter » est en tête du panneau, et c'est le seul bloc plein.** Tous les
+  autres filtres répondent à « montre-moi » ; celui-ci répond à « qu'est-ce qu'il me
+  reste à faire », et l'onglet Stats savait le compter depuis longtemps sans qu'on
+  puisse y aller. Il annonce le nombre de fiches concernées — pas la somme des colonnes,
+  un même jeu pouvant manquer de trois choses — et n'affiche que ce qui manque
+  réellement : une option s'efface dès que son champ est rempli partout, et le bloc
+  entier disparaît quand la bibliothèque est complète. Un appel à l'action sans action
+  à faire est pire qu'une absence. Les mêmes prédicats servent au bloc « Ce qui
+  manque » des Stats : le chiffre affiché et la liste obtenue ne peuvent pas diverger.
+- **Filtre par note** : au-dessus d'un seuil (90, 80 ou 70). Un seuil répond à
+  « qu'est-ce que j'ai de vraiment bien » ; une tranche obligerait à toutes les cocher.
 - **Le filtre par série se pose depuis une fiche**, en touchant le nom de la série :
   cinquante-huit séries ne tiennent pas dans une grille de boutons. Le groupe
   correspondant n'apparaît dans le panneau que pour montrer celui qui est posé et

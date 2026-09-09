@@ -101,7 +101,7 @@ export default function FiltersSheet({
   plat, setPlat, avecRetro, setAvecRetro, nbRetro, nbNatifs,
   pretFil, setPretFil, fmtFil, setFmtFil,
   genreFil, setGenreFil, modeFil, setModeFil, genres, sansMode,
-  noteFil, setNoteFil, completFil, setCompletFil, aCompleter,
+  noteFil, setNoteFil, completFil, setCompletFil, aCompleter, fichesIncompletes,
   serieFil, setSerieFil, groupePar, setGroupePar,
   view, setView, onClose, resultats,
 }) {
@@ -134,6 +134,35 @@ export default function FiltersSheet({
 
   return (
     <Sheet title="Filtres & affichage" onClose={onClose}>
+      {/* Le seul filtre qui serve à FAIRE quelque chose plutôt qu'à regarder.
+          Les autres répondent à « montre-moi » ; celui-ci répond à « qu'est-ce
+          qu'il me reste à faire », et l'onglet Stats savait le compter depuis
+          longtemps sans qu'on puisse y aller.
+          Il est donc sorti de l'accordéon : un bouton qui doit dominer ne peut
+          pas attendre derrière une ligne repliée. L'effet von Restorff ne joue
+          que si un seul élément diffère — c'est le seul bloc plein du panneau,
+          et il n'y en aura jamais deux.
+          Il disparaît entièrement quand il n'y a plus rien à compléter : un
+          appel à l'action sans action à faire est pire qu'une absence. */}
+      {aCompleter.length > 0 && (
+        <div style={{
+          background: accentDoux, border: `2px solid ${ACCENT}`, borderRadius: "var(--r-md)",
+          padding: 14, marginBottom: "var(--ecart-bloc)",
+        }}>
+          <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 10, marginBottom: 4 }}>
+            <span style={{ color: ACCENT, fontSize: "var(--t-corps)", fontWeight: 700 }}>À compléter</span>
+            <span style={{ color: ACCENT, fontSize: "var(--t-petit)", flexShrink: 0 }}>
+              {fichesIncompletes} fiche{fichesIncompletes > 1 ? "s" : ""}
+            </span>
+          </div>
+          <div style={{ color: mut, fontSize: "var(--t-legende)", lineHeight: 1.5, marginBottom: 10 }}>
+            Les fiches auxquelles il manque quelque chose. Choisis un manque, la liste
+            ne montre plus qu'elles — et l'option s'efface dès qu'il n'en reste aucune.
+          </div>
+          <Puces compact options={COMPLETUDE} value={completFil} onChange={setCompletFil} />
+        </div>
+      )}
+
       {/* Le résumé dit « seul » quand la case est décochée : c'est tout
           l'intérêt d'une ligne repliée que d'annoncer ce qu'elle fait, et un
           filtre plus étroit que la normale doit se voir sans être ouvert. */}
@@ -220,18 +249,6 @@ export default function FiltersSheet({
         ouvert={ouvert === "note"} onBascule={bascule("note")}>
         <Puces options={NOTES} value={noteFil} onChange={setNoteFil} />
       </Groupe>
-
-      {/* Le groupe entier disparaît quand il n'y a plus rien à compléter, et
-          chaque option disparaît dès que son champ est rempli partout : une
-          case « Jaquette 0 » promettrait du travail qui n'existe pas. C'est le
-          seul filtre qui serve à faire quelque chose plutôt qu'à regarder. */}
-      {aCompleter.length > 0 && (
-        <Groupe label="À compléter" resume={libelle(COMPLETUDE, completFil)} actif={completFil !== "tous"}
-          ouvert={ouvert === "complet"} onBascule={bascule("complet")}>
-          <Aide>Les fiches auxquelles il manque quelque chose, pour aller le remplir.</Aide>
-          <Puces compact options={COMPLETUDE} value={completFil} onChange={setCompletFil} />
-        </Groupe>
-      )}
 
       {/* Cinquante-huit séries ne tiennent pas dans une grille de boutons : ce
           filtre se pose depuis une fiche, en touchant le nom de la série. Le

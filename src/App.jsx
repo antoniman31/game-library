@@ -17,7 +17,7 @@ import { GAMES_INIT } from "./lib/seed.js";
 import { migrateGames, compterFiltres, validerJeuxImportes, pretEnRetard, jeuxSansScore, normaliserGenres,
   jeuALeMode, jeuSurPlateforme, compterRetro, genresPresents, dureeEntreeHistorique, supprimerEntreeHistorique,
   joursDePret, jeuPasseSeuil, jeuACompleter, completudeManquante, dateDeSortie, serieDuJeu,
-  empreinteMelange, PLATFORM_COLORS } from "./lib/model.js";
+  empreinteMelange, compterFichesIncompletes, PLATFORM_COLORS } from "./lib/model.js";
 import { lire, ecrire, surEchecStockage } from "./lib/storage.js";
 import { chargerSync, enregistrerSync, genererCode, envoyer, recuperer } from "./lib/sync.js";
 import { preferencesASauvegarder, preferencesRecues, resumePreferences } from "./lib/preferences.js";
@@ -605,6 +605,8 @@ export default function App() {
   // Ce qui manque réellement : une option « Jaquette 0 » promettrait du travail
   // qui n'existe pas, et si tout est complet le groupe entier disparaît.
   const aCompleter = useMemo(() => completudeManquante(games), [games]);
+  // Pas la somme des colonnes : un même jeu peut manquer de trois choses.
+  const fichesIncompletes = useMemo(() => compterFichesIncompletes(games), [games]);
 
   // Ce qui est réellement monté. Le reste attend « Charger 30 de plus ».
   const visible = filtered.slice(0, visibleCount);
@@ -986,6 +988,7 @@ export default function App() {
           genres={genres} sansMode={sansMode}
           noteFil={noteFil} setNoteFil={setNoteFil}
           completFil={completFil} setCompletFil={setCompletFil} aCompleter={aCompleter}
+          fichesIncompletes={fichesIncompletes}
           serieFil={serieFil} setSerieFil={setSerieFil}
           groupePar={groupePar} setGroupePar={setGroupePar}
           view={view} setView={setView}
