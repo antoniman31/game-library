@@ -824,9 +824,14 @@ export default function App() {
             <input value={searchInput} onChange={e => setSearchInput(e.target.value)} type="search"
               aria-label="Rechercher" placeholder={sort === TRI_DEFAUT ? "Rechercher…" : "🔍"}
               style={{ flex: 1, minWidth: 0, minHeight: "var(--tap)", background: card, border: `1px solid ${bdr}`, borderRadius: "var(--r-md)", color: txt, padding: "0 12px", fontSize: "var(--t-corps)" }} />
+            {/* Le contour accentué est réservé à « Filtres ». Un tri choisi se
+                dit par son libellé et par la couleur du texte, pas par une
+                bordure : deux boutons au même traitement, côte à côte et sans
+                la même importance, se confondent — et le bouton qui doit
+                ressortir ne ressort plus. */}
             <button onClick={() => setShowSort(true)}
               aria-label={`Trier : ${libelleTri(sort)}`} title={`Trier : ${libelleTri(sort)}`}
-              style={{ ...btnHdr, padding: sort === TRI_DEFAUT ? 0 : "0 10px", borderColor: sort === TRI_DEFAUT ? bdr : ACCENT, color: sort === TRI_DEFAUT ? txt : ACCENT, fontSize: "var(--t-corps)" }}>
+              style={{ ...btnHdr, padding: sort === TRI_DEFAUT ? 0 : "0 10px", color: sort === TRI_DEFAUT ? txt : ACCENT, fontSize: "var(--t-corps)" }}>
               ⇅{sort === TRI_DEFAUT ? "" : ` ${libelleTri(sort)}`}
             </button>
             {/* Le sens n'a pas de sens pour un tirage au hasard : le bouton
@@ -835,7 +840,7 @@ export default function App() {
               <button onClick={() => setSortDir(d => -d)}
                 aria-label={sortDir === 1 ? "Inverser l'ordre" : "Rétablir l'ordre"}
                 title={sortDir === 1 ? "Inverser l'ordre" : "Rétablir l'ordre"}
-                style={{ ...btnHdr, padding: 0, background: sortDir === -1 ? accentDoux : "transparent", borderColor: sortDir === -1 ? ACCENT : bdr, color: sortDir === -1 ? ACCENT : txt, fontSize: "var(--t-corps)" }}>
+                style={{ ...btnHdr, padding: 0, background: sortDir === -1 ? accentDoux : "transparent", color: sortDir === -1 ? ACCENT : txt, fontSize: "var(--t-corps)" }}>
                 {sortDir === 1 ? "↓" : "↑"}
               </button>
             )}
