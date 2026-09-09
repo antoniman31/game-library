@@ -825,6 +825,45 @@ Deux cas limites traités par les tests plutôt que découverts en usage : une d
 de sauvegarde illisible ne produit pas un âge de `NaN` jours, et une date dans le
 futur — deux appareils dont les horloges divergent — ne donne pas un âge négatif.
 
+### Phase 27 — Un audit, et le garde-fou qui l'avait manqué
+
+Audit complet contre le document d'ergonomie, mesuré dans le navigateur sur
+quatorze écrans et deux thèmes. Quatre défauts réels, et une cause commune plus
+intéressante qu'eux trois.
+
+Le contraste d'abord. Le jeton du texte secondaire donnait 4,91:1 sur les
+cartes et 4,63:1 dans le corps, mais 4,31:1 sur le fond de l'en-tête, plus
+sombre — or c'est là que vivent la ligne « 155 jeux » et les libellés des
+onglets inactifs. Un jeton mesuré sur un seul de ses fonds n'est mesuré nulle
+part : il passe à 4,92:1 partout.
+
+Puis la fenêtre « Ajouter un jeu », seule pièce jamais reprise depuis l'audit
+d'ergonomie : deux boutons de source à 26 px, « Annuler » et « Ajouter » à 40,
+et aucun libellé visible — le titre n'avait que son invite, le menu déroulant de
+plateforme, celui de format et le champ de date n'avaient rien du tout, pas même
+un nom pour un lecteur d'écran. Et le bouton « Lire la suite » d'une fiche, à
+20 px de haut, le seul de la carte à n'avoir jamais reçu de hauteur de cible.
+
+**La cause commune, et le vrai sujet de cette phase :** `verif-ui` ne visitait
+ni la fenêtre d'ajout, ni l'édition à la main, ni une fiche assez longue pour
+afficher « Lire la suite ». Trois défauts ont vécu des mois derrière un garde-fou
+qui affichait « Rien à signaler » — non pas parce qu'il n'y avait rien, mais
+parce qu'il ne regardait pas là. La promenade couvre maintenant ces trois
+écrans, et la description longue est écrite par l'édition plutôt qu'injectée
+dans `localStorage` : au rechargement, la sauvegarde `pagehide` de
+l'application aurait réécrit la clé avec ce qu'elle avait en mémoire.
+
+Un second angle mort, découvert en corrigeant : le script mesurait un serveur
+lancé à part, servant le dernier `dist/` construit. Oublier de reconstruire, et
+il mesurait la version d'avant les corrections en répondant « Rien à signaler ».
+`npm run verif:ui` construit désormais avant de mesurer, et le script sert
+`dist/` lui-même — ce qui se lance à côté finit par ne plus être lancé.
+
+Restent trois écarts assumés, inchangés : 44 px et non 48 sur les commandes
+secondaires (conforme Apple et WCAG, pas au chiffre de Material), les listes
+contiguës sans les 8 px de séparation (c'est le motif de liste standard, la
+règle vise des boutons distincts), et tout en haut de l'écran.
+
 ---
 
 ## 3. Architecture finale

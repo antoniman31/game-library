@@ -15,19 +15,50 @@
 //   - un débordement horizontal de la page ;
 //   - une erreur JavaScript.
 //
-// Il n'est pas dans `npm test` : il demande un navigateur et un serveur, là où
-// les autres tests tournent sur des modules purs. Il se lance à la main avant
-// une modification d'interface un peu large :
+// Il n'est pas dans `npm test` : il demande un navigateur, là où les autres
+// tests tournent sur des modules purs. `npm run verif:ui` construit puis
+// mesure, dans cet ordre et sans qu'on ait à y penser.
 //
-//   npm run build && npx vite preview --port 4173 &
-//   node scripts/verif-ui.mjs
+// Cet ordre n'est pas un détail. Le script mesurait un serveur déjà lancé sur
+// le port 4173, servant le dernier `dist/` construit — c'est-à-dire, si on
+// oubliait de reconstruire, une version antérieure aux corrections qu'on
+// venait d'écrire. Un garde-fou qui mesure autre chose que ce qu'on lui
+// présente ne dit rien, il rassure. Il sert donc `dist/` lui-même.
 //
 // CHROMIUM= permet de désigner un binaire précis quand celui de Playwright
-// n'est pas celui installé sur la machine.
+// n'est pas celui installé sur la machine. URL= permet de viser un serveur
+// déjà lancé, par exemple celui de développement.
 
 import { chromium } from "playwright";
+import { readFileSync } from "node:fs";
+import { createServer } from "node:http";
+import { extname, join, normalize } from "node:path";
+import { fileURLToPath } from "node:url";
 
-const URL = process.env.URL || "http://localhost:4173/game-library/";
+const RACINE = fileURLToPath(new URL("../dist/", import.meta.url));
+const TYPES = {
+  ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".json": "application/json",
+  ".svg": "image/svg+xml", ".png": "image/png", ".ico": "image/x-icon", ".webmanifest": "application/manifest+json",
+};
+
+// Un serveur statique de quinze lignes plutôt qu'une dépendance et un port à
+// lancer à côté : ce qui se lance à côté finit par ne plus être lancé.
+function servirDist(port) {
+  const s = createServer((req, rep) => {
+    let chemin = decodeURIComponent(req.url.split("?")[0]).replace(/^\/game-library/, "");
+    if (chemin.endsWith("/")) chemin += "index.html";
+    try {
+      const corps = readFileSync(join(RACINE, normalize(chemin)));
+      rep.writeHead(200, { "content-type": TYPES[extname(chemin)] || "application/octet-stream" });
+      rep.end(corps);
+    } catch { rep.writeHead(404); rep.end("absent"); }
+  });
+  return new Promise(res => s.listen(port, () => res(s)));
+}
+
+const PORT = 4179;
+const serveurLocal = process.env.URL ? null : await servirDist(PORT);
+const URL_APP = process.env.URL || `http://localhost:${PORT}/game-library/`;
 const PLANCHER_HAUTEUR = 44;   // HIG, WCAG 2.5.5
 const PLANCHER_LARGEUR = 24;   // WCAG 2.5.8, pour les commandes en ligne
 const PLANCHER_TEXTE = 12;   // plancher d'une pastille ou d'un horodatage
@@ -82,7 +113,7 @@ for (const [largeur, theme] of ECRANS) {
   const page = await ctx.newPage();
   const erreurs = [];
   page.on("pageerror", e => erreurs.push(String(e)));
-  await page.goto(URL, { waitUntil: "networkidle" });
+  await page.goto(URL_APP, { waitUntil: "networkidle" });
   await page.evaluate(t => localStorage.setItem("gl_theme", t), theme);
   await page.reload({ waitUntil: "networkidle" });
 
@@ -139,6 +170,32 @@ for (const [largeur, theme] of ECRANS) {
     }],
     ["Réglages", async () => { await page.keyboard.press("Escape"); await page.getByRole("button", { name: "Réglages" }).click(); }],
     ["Services", async () => { await page.getByRole("button", { name: "Services" }).click(); }],
+    // Trois écrans que la promenade ne visitait pas, et où trois défauts ont
+    // vécu des mois : des boutons de 26 et 40 px dans la fenêtre d'ajout, et
+    // un « Lire la suite » de 20 px sur une fiche assez longue pour l'afficher.
+    // Un garde-fou ne protège que ce qu'il regarde.
+    ["Ajouter un jeu", async () => {
+      await page.getByRole("button", { name: /^Jeux$/ }).click();
+      await page.getByRole("button", { name: "+ Ajouter" }).click();
+    }],
+    ["édition à la main", async () => {
+      await page.keyboard.press("Escape");
+      await page.locator(".gl-card").first().click();
+      await page.getByRole("button", { name: /Modifier la fiche/ }).first().click();
+      await page.getByRole("button", { name: /À la main/ }).first().click();
+    }],
+    // Le bouton « Lire la suite » n'apparaît qu'au-delà de cent soixante
+    // caractères de description : on en écrit une par l'édition plutôt que
+    // d'espérer en croiser une. Écrire dans `localStorage` ne marcherait pas —
+    // au rechargement, la sauvegarde `pagehide` de l'application réécrit la
+    // clé avec ce qu'elle a en mémoire.
+    ["fiche à longue description", async () => {
+      await page.locator("textarea").first().fill(
+        "Description délibérément longue pour faire apparaître le bouton de repli, "
+        + "qui ne se montre qu'au-delà de cent soixante caractères et n'avait donc "
+        + "jamais été mesuré par ce script.");
+      await page.getByRole("button", { name: "Enregistrer" }).click();
+    }],
   ];
 
   for (const [nom, aller] of etapes) {
@@ -158,5 +215,6 @@ for (const [largeur, theme] of ECRANS) {
 }
 
 await nav.close();
+serveurLocal?.close();
 console.log(echecs ? `\n${echecs} constat(s).` : "\nRien à signaler.");
 process.exit(echecs ? 1 : 0);

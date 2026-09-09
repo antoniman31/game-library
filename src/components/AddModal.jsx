@@ -34,7 +34,22 @@ function AddModal({ onAdd, onClose }) {
   const sgDebRef = useRef(null);
 
   const inp = { background: bg, border: `1px solid ${bdr}`, borderRadius: "var(--r-sm)", color: txt, minHeight: "var(--tap-min)", padding: "8px 12px", fontSize: "var(--t-corps)", width: "100%", boxSizing: "border-box", fontFamily: "inherit" };
-  const srcBtn = { background: "transparent", border: `1px solid ${accent}`, color: accent, borderRadius: "var(--r-sm)", padding: "5px 8px", fontSize: "var(--t-legende)", cursor: "pointer" };
+  // Les boutons de source faisaient 26 px de haut, sous le plancher de 44 :
+  // ils sont plus anciens que les règles d'ergonomie du projet, et cette
+  // fenêtre est le seul endroit qui ne les avait jamais reçues.
+  const srcBtn = { background: "transparent", border: `1px solid ${accent}`, color: accent, borderRadius: "var(--r-sm)", minHeight: "var(--tap-min)", padding: "0 12px", fontSize: "var(--t-legende)", cursor: "pointer", fontFamily: "inherit" };
+
+  // Un libellé au-dessus de chaque champ, et pas seulement une invite : une
+  // invite disparaît dès la première lettre tapée, et sur un menu déroulant ou
+  // un champ de date il n'y en a même pas — rien ne disait ce qu'on choisissait.
+  const Ligne = ({ label, aide, children }) => (
+    <label style={{ display: "block", marginBottom: 10 }}>
+      <span style={{ display: "block", color: mut, fontSize: "var(--t-legende)", marginBottom: 4 }}>
+        {label}{aide ? <span style={{ opacity: 0.75 }}> · {aide}</span> : null}
+      </span>
+      {children}
+    </label>
+  );
 
   const search = async (q) => setSugg(await rawgSearch(q));
 
@@ -111,7 +126,9 @@ function AddModal({ onAdd, onClose }) {
     <Sheet title="Ajouter un jeu" onClose={onClose}>
 
         <div style={{ position: "relative", marginBottom: 10 }}>
-          <input value={title} onChange={e => { setTitle(e.target.value); clearTimeout(debRef.current); debRef.current = setTimeout(() => search(e.target.value), 350); }} placeholder="Titre du jeu *" style={inp} />
+          <Ligne label="Titre" aide="obligatoire">
+          <input value={title} onChange={e => { setTitle(e.target.value); clearTimeout(debRef.current); debRef.current = setTimeout(() => search(e.target.value), 350); }} placeholder="Titre du jeu" style={inp} />
+          </Ligne>
           {loading && <div style={{ color: accent, fontSize: "var(--t-legende)", marginTop: 3 }}>Recherche RAWG…</div>}
           {sugg.length > 0 && (
             <div style={{ position: "absolute", top: "100%", left: 0, right: 0, background: card, border: `1px solid ${bdr}`, borderRadius: "var(--r-sm)", zIndex: 10, overflow: "hidden", boxShadow: "0 8px 24px #0008" }}>
@@ -182,15 +199,24 @@ function AddModal({ onAdd, onClose }) {
           </div>
         )}
 
-        <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
-          <select value={platform} onChange={e => setPlatform(e.target.value)} style={{ ...inp, flex: 1 }}>{PLATFORMS.filter(p => p !== "tous").map(p => <option key={p}>{p}</option>)}</select>
-          <select value={fmt} onChange={e => setFmt(e.target.value)} style={{ ...inp, flex: 1 }}><option>physique</option><option>démat</option></select>
-        </div>
-        <input type="date" value={date} onChange={e => setDate(e.target.value)} style={{ ...inp, marginBottom: 14 }} />
-
         <div style={{ display: "flex", gap: 8 }}>
-          <button onClick={onClose} style={{ flex: 1, background: "transparent", border: `1px solid ${bdr}`, color: mut, borderRadius: "var(--r-sm)", padding: 10, cursor: "pointer", fontSize: "var(--t-corps)" }}>Annuler</button>
-          <button onClick={handleAdd} style={{ flex: 2, background: accentFond, border: "none", color: "#fff", borderRadius: "var(--r-sm)", padding: 10, cursor: "pointer", fontSize: "var(--t-corps)", fontWeight: 600 }}>Ajouter</button>
+          <Ligne label="Plateforme">
+            <select value={platform} onChange={e => setPlatform(e.target.value)} style={inp}>{PLATFORMS.filter(p => p !== "tous").map(p => <option key={p}>{p}</option>)}</select>
+          </Ligne>
+          <Ligne label="Format">
+            <select value={fmt} onChange={e => setFmt(e.target.value)} style={inp}><option>physique</option><option>démat</option></select>
+          </Ligne>
+        </div>
+        <Ligne label="Ajouté le">
+          <input type="date" value={date} onChange={e => setDate(e.target.value)} style={inp} />
+        </Ligne>
+
+        {/* 40 px de haut : sous le plancher de 44, et pour les deux boutons qui
+            terminent le geste. `padding: 10` fixait la hauteur à la taille du
+            texte au lieu de la poser. */}
+        <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
+          <button onClick={onClose} style={{ flex: 1, minHeight: "var(--tap)", background: "transparent", border: `1px solid ${bdr}`, color: mut, borderRadius: "var(--r-sm)", padding: "0 12px", cursor: "pointer", fontSize: "var(--t-corps)", fontFamily: "inherit" }}>Annuler</button>
+          <button onClick={handleAdd} style={{ flex: 2, minHeight: "var(--tap)", background: accentFond, border: "none", color: "#fff", borderRadius: "var(--r-sm)", padding: "0 12px", cursor: "pointer", fontSize: "var(--t-corps)", fontWeight: 600, fontFamily: "inherit" }}>Ajouter</button>
         </div>
     </Sheet>
   );

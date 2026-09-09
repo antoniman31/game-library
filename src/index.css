@@ -125,8 +125,12 @@ html[data-theme="light"] {
   --bdr: #d0d8f0;
   --txt: #1e2a4a;
   /* Assombri depuis #8090b0, qui ne donnait que 2,76:1 — nettement sous la
-     limite, et c'est la couleur de la majorité du petit texte. */
-  --mut: #5a6b87;
+     limite, et c'est la couleur de la majorité du petit texte. Puis de
+     #5a6b87, qui passait sur les cartes (4,91:1) et dans le corps (4,63:1)
+     mais retombait à 4,31:1 sur le fond de l'en-tête, plus sombre : or c'est
+     là que vivent la ligne « 155 jeux » et les libellés des onglets inactifs.
+     Un jeton mesuré sur un seul de ses fonds n'est mesuré nulle part. */
+  --mut: #53627c;
   --demat: #ddeeff;
 
   /* Assombri depuis #5493ff, qui ne donnait que 2,58:1 sur ce fond alors que

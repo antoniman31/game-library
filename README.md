@@ -673,16 +673,22 @@ la police appliquée et la ligne calculée. Trois défauts ont été trouvés ai
 et par aucun autre moyen.
 
 ```bash
-npm run build
-npx vite preview --port 4173 &
 npm run verif:ui
 ```
 
-Le script ouvre sept écrans, à 360 et 412 px, dans les deux thèmes, et échoue
-s'il trouve une cible sous 44 × 24 px, un texte sous 12 px, un champ de saisie
-sous 16 px, un libellé tronqué, un débordement horizontal ou une erreur
-JavaScript. Il demande Playwright et un navigateur, d'où son absence de
-`npm test`, qui tourne sur des modules purs.
+Le script construit, sert `dist/` lui-même et ouvre dix-sept écrans, à 360 et
+412 px, dans les deux thèmes. Il échoue s'il trouve une cible sous 44 × 24 px,
+un texte sous 12 px, un champ de saisie sous 16 px, un libellé tronqué, un
+débordement horizontal ou une erreur JavaScript. Il demande Playwright et un
+navigateur, d'où son absence de `npm test`, qui tourne sur des modules purs.
+
+Deux angles morts ont été refermés en même temps, et ils valent d'être dits :
+la promenade ne visitait ni la fenêtre d'ajout, ni l'édition à la main, ni une
+fiche assez longue pour afficher « Lire la suite » — trois défauts y ont vécu
+des mois derrière un « Rien à signaler ». Et le script mesurait un serveur
+lancé à part, donc le dernier `dist/` construit : oublier de reconstruire, et
+il validait la version d'avant les corrections. Un garde-fou qui mesure autre
+chose que ce qu'on lui présente ne dit rien, il rassure.
 
 ### Auditer ses données
 
