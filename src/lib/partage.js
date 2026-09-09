@@ -12,12 +12,26 @@
 
 const PLATEFORME_INCONNUE = "Autres";
 
-// Les jeux prêtés restent dans la liste, avec leur mention : les cacher
-// donnerait à croire qu'on ne les possède pas, alors qu'ils reviendront.
+const dateFr = (iso) => {
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime()) ? null : d.toLocaleDateString("fr-FR");
+};
+
+// Le format est dit sur chaque ligne, et pas seulement pour faire joli : un jeu
+// démat est attaché à un compte, personne ne peut l'emprunter. Sans la mention,
+// la liste promet des jeux qu'on ne peut pas prêter.
+//
+// Les jeux prêtés y restent avec la date de retour convenue : les cacher
+// donnerait à croire qu'on ne les possède pas, et dire « prêté » sans dire
+// jusqu'à quand n'apprend pas si l'on peut espérer son tour.
 export function ligneJeu(g) {
   const bouts = [String(g?.title || "").trim() || "Sans titre"];
   if (typeof g?.metacritic === "number") bouts.push(`${g.metacritic}`);
-  if (g?.lentA) bouts.push(`prêté à ${g.lentA}`);
+  if (g?.format) bouts.push(String(g.format));
+  if (g?.lentA) {
+    const retour = g.lentRetourPrevu ? dateFr(g.lentRetourPrevu) : null;
+    bouts.push(retour ? `prêté à ${g.lentA}, retour le ${retour}` : `prêté à ${g.lentA}`);
+  }
   return `- ${bouts.join(" · ")}`;
 }
 

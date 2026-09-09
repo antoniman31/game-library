@@ -78,8 +78,9 @@ et la fiche affiche d'où viennent ses infos (« Source : RAWG et Wikidata »).
 ### Actions de masse (panneau ⋯)
 
 - **Partager la liste** : la liste affichée, en texte groupé par plateforme, envoyée au
-  menu de partage du téléphone ou copiée dans le presse-papier. Les jeux prêtés y
-  figurent avec leur mention : les cacher ferait croire qu'on ne les possède pas.
+  menu de partage du téléphone ou copiée dans le presse-papier. Chaque ligne porte le
+  format — un démat ne s'emprunte pas — et les jeux prêtés y figurent avec la date de
+  retour convenue : les cacher ferait croire qu'on ne les possède pas.
 - **Actualiser les descriptions** : régénère toutes les descriptions depuis
   Wikipédia FR. Annulable, délai anti-rate-limit (~150 ms), bilan de fin avec la
   liste des jeux sans page trouvée, meilleure correspondance de titre

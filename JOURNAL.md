@@ -707,8 +707,12 @@ mécanique donne aussi les jeux notés plus de 80, ceux d'un genre ou d'une sér
 Un second sélecteur aurait redit ce que le panneau des filtres dit mieux, et
 deux endroits pour dire la même chose finissent toujours par se contredire.
 
-Les jeux prêtés restent dans la liste avec leur mention. Les cacher donnerait à
-croire qu'on ne les possède pas, alors qu'ils reviendront.
+Chaque ligne porte le format, et pas pour faire joli : un jeu démat est attaché à
+un compte, personne ne peut l'emprunter, et sans la mention la liste promet des
+jeux qu'on ne peut pas prêter. Les jeux prêtés y restent avec la date de retour
+convenue quand il y en a une — les cacher donnerait à croire qu'on ne les possède
+pas, et dire « prêté » sans dire jusqu'à quand n'apprend pas si l'on peut espérer
+son tour.
 
 Un défaut trouvé en vérifiant, et vieux de plusieurs phases : les trois bandeaux
 de bas d'écran sont posés à `left: 50%`, ce qui ne leur laisse pour largeur
