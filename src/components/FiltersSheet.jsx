@@ -1,6 +1,6 @@
 import { useState } from "react";
 import Sheet from "./Sheet.jsx";
-import { bdr, txt, mut, accent, accentDoux, accentFond, warn } from "../lib/theme.js";
+import { card, bdr, txt, mut, accent, accentDoux, accentFond, warn } from "../lib/theme.js";
 import { PLATFORMS, compterFiltres } from "../lib/model.js";
 
 const ACCENT = accent;
@@ -9,13 +9,16 @@ const ACCENT = accent;
 // par ligne selon leur libellé, sans grille figée qui laisserait des trous.
 function Groupe({ label, options, value, onChange, colorOf, compact, aide, apres }) {
   return (
-    <div style={{ marginBottom: 18 }}>
+    // 28 px entre deux groupes contre 8 px entre deux boutons : sans ce
+    // rapport, « Genre » et « Tri » se lisent comme une seule liste. Les
+    // Réglages et les Stats l'appliquent déjà, ce panneau était le dernier.
+    <div style={{ marginBottom: "var(--ecart-bloc)" }}>
       <div style={{ color: mut, fontSize: "var(--t-legende)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 7 }}>
         {label}
       </div>
       {aide && <div style={{ color: mut, fontSize: "var(--t-legende)", lineHeight: 1.4, margin: "-3px 0 7px" }}>{aide}</div>}
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-        {options.map(([k, l]) => {
+        {options.map(([k, l, compte]) => {
           const actif = value === k;
           const c = (colorOf && colorOf(k)) || ACCENT;
           return (
@@ -33,6 +36,11 @@ function Groupe({ label, options, value, onChange, colorOf, compact, aide, apres
               }}
             >
               {l}
+              {/* Le nombre disait « Plateforme 33 », qui se lit comme un nom.
+                  Atténué et détaché, il redevient ce qu'il est : un poids. */}
+              {compte != null && (
+                <span style={{ color: mut, fontWeight: 400, marginLeft: 6 }}>{compte}</span>
+              )}
             </button>
           );
         })}
@@ -42,10 +50,11 @@ function Groupe({ label, options, value, onChange, colorOf, compact, aide, apres
   );
 }
 
-// Au-delà, la liste des genres cesse d'être un choix et devient un mur : sur
-// une bibliothèque réelle, les huit premiers couvrent déjà les cinq sixièmes
-// des jeux, et la longue traîne se rejoint mieux par la recherche.
-const GENRES_VISIBLES = 8;
+// Au-delà, la liste des genres cesse d'être un choix et devient un mur. Six,
+// parce que la loi de Hick parle de cinq à sept options : les six premiers
+// couvrent déjà les quatre cinquièmes d'une bibliothèque réelle, et la longue
+// traîne se rejoint mieux par la recherche.
+const GENRES_VISIBLES = 6;
 
 export default function FiltersSheet({
   plat, setPlat, pretFil, setPretFil, fmtFil, setFmtFil,
@@ -101,7 +110,7 @@ export default function FiltersSheet({
         <Groupe
           label="Genre"
           compact
-          options={[["tous", "Tous"], ...visibles.map(([g, n]) => [g, `${g} ${n}`])]}
+          options={[["tous", "Tous"], ...visibles.map(([g, n]) => [g, g, n])]}
           value={genreFil}
           onChange={setGenreFil}
           apres={caches > 0 && (
@@ -114,7 +123,7 @@ export default function FiltersSheet({
                 cursor: "pointer", fontFamily: "inherit",
               }}
             >
-              {caches} genre{caches > 1 ? "s" : ""} de plus
+              Tous les genres ({genres.length})
             </button>
           )}
         />
@@ -132,7 +141,15 @@ export default function FiltersSheet({
         onChange={setView}
       />
 
-      <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 4 }}>
+      {/* Collée au bas de la feuille : dépliés, les genres repoussaient « Voir
+          N jeux » sous plusieurs écrans de défilement, alors que c'est le
+          bouton qui dit en direct combien de jeux il reste. Le fond reprend
+          celui du panneau, donc la liste passe dessous sans transparence. */}
+      <div style={{
+        display: "flex", gap: 8, alignItems: "center",
+        position: "sticky", bottom: 0, background: card,
+        paddingTop: 12, marginTop: -8, borderTop: `1px solid ${bdr}`,
+      }}>
         <button
           onClick={() => { setPlat("tous"); setPretFil("tous"); setFmtFil("tous"); setGenreFil("tous"); setModeFil("tous"); }}
           disabled={actifs === 0}
