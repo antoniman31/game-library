@@ -181,6 +181,10 @@ Deux sous-onglets. Chaque bloc disparaît quand il n'a rien à dire.
 - **Tri** au-dessus de la liste, plus dans le panneau : titre, ajout, sortie, note, au
   hasard, avec inverseur de sens. **Vues** : liste, compacte, grille, et regroupement
   facultatif par plateforme, série ou genre.
+- **Réglages d'affichage persistants** : vue, tri, sens et regroupement sont retrouvés
+  au lancement suivant. Les filtres, non — délibérément.
+- **Âge de la sauvegarde** : pastille sur ⚙️ et ligne en orange passé sept jours sans
+  envoi, la synchronisation restant manuelle.
 - **Trois modes de thème** : automatique (suit le téléphone, y compris quand il
   bascule le soir), clair, noir profond. Bouton dans l'en-tête, choix dans ⚙️.
 - **Panneaux glissants** pour les filtres, les actions et les sources : Échap ferme,
