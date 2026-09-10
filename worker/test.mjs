@@ -191,5 +191,26 @@ for (const [nom, methode, chemin] of [
     `${rep.status}, Access-Control-Allow-Origin = ${rep.headers.get("Access-Control-Allow-Origin")}`);
 }
 
+// La cible Steam : le relais doit composer l'URL du magasin, et lui seul.
+//
+// L'appel réel n'a pas sa place dans un test — il dépendrait du réseau et de
+// l'humeur de Steam. On intercepte donc le `fetch` du Worker pour lire l'URL
+// qu'il allait demander : c'est la seule chose dont ce test répond.
+{
+  const vraiFetch = globalThis.fetch;
+  let demandee = null;
+  globalThis.fetch = async (url) => { demandee = String(url); return new Response("{}", { headers: { "Content-Type": "application/json" } }); };
+
+  const rep = await appel("GET", "/steam/appdetails?appids=730");
+  test("la cible Steam est relayée", demandee === "https://store.steampowered.com/api/appdetails?appids=730", `demandée : ${demandee}`);
+  test("et sa réponse est lisible par le navigateur", rep.headers.get("Access-Control-Allow-Origin") === ORIG);
+
+  demandee = null;
+  const inconnu = await appel("GET", "/steamworks/x");
+  test("un chemin voisin mais absent de la liste n'est pas relayé", inconnu.status === 404 && demandee === null, `statut ${inconnu.status}, demandée : ${demandee}`);
+
+  globalThis.fetch = vraiFetch;
+}
+
 console.log(echecs ? `\n${echecs} échec(s)` : "\nTout passe.");
 process.exit(echecs ? 1 : 0);
