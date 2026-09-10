@@ -3,7 +3,7 @@ import Cover from "./Cover.jsx";
 import InfoboxView from "./InfoboxView.jsx";
 import Sheet from "./Sheet.jsx";
 import { bg, card, bdr, txt, mut, demat, accent, accentDoux, accentFond, okDoux, warnDoux, dangerDoux, ok, warn, warnFond, danger } from "../lib/theme.js";
-import { PLATFORM_COLORS, BACK_COMPAT_PARENT, PLATFORMES_JEU, estUrlImage, estLienSur, normaliserGenres, joursDePret, pretEnRetard, brouillonDepuisJeu, validerEdition,
+import { PC, PLATFORM_COLORS, BACK_COMPAT_PARENT, PLATFORMES_JEU, estUrlImage, estLienSur, normaliserGenres, joursDePret, pretEnRetard, brouillonDepuisJeu, validerEdition,
   rendreJeu, preterJeu, annulerPret, dureeEntreeHistorique,
   fusionnerInfobox, infoboxDepuisRawg, libelleSources, CHAMPS_VIDABLES, viderChamps, jeuACompleter } from "../lib/model.js";
 import {
@@ -173,6 +173,10 @@ function GameCard({ g, onEdit, onDelete, onEnrich, onSerie, autoOpen, onOuverte 
     // Une plateforme sans console parente ne peut pas être rétrocompatible :
     // la ligne disparaît de l'écran, la valeur doit disparaître avec elle.
     if (k === "platform" && !BACK_COMPAT_PARENT[v]) suivant.backCompat = false;
+    // Passer un jeu en PC le rend démat ; l'en sortir lui rend un format, et
+    // lui retire une boutique qui n'aurait plus de sens.
+    if (k === "platform" && v === PC) suivant.format = "démat";
+    if (k === "platform" && v !== PC) suivant.boutique = "";
     return suivant;
   });
   const enregistrer = () => {
@@ -223,7 +227,12 @@ function GameCard({ g, onEdit, onDelete, onEnrich, onSerie, autoOpen, onOuverte 
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginBottom: 4 }}>
             <span style={{ background: PLATFORM_COLORS[g.platform] || accentFond, color: "#fff", fontSize: "var(--t-legende)", fontWeight: 700, borderRadius: "var(--r-xs)", padding: "1px 5px" }}>{g.platform}</span>
-            {g.format === "démat" && <span style={{ background: demat, color: accent, fontSize: "var(--t-legende)", borderRadius: "var(--r-xs)", padding: "1px 5px" }}>démat</span>}
+            {/* Sur PC, « démat » ne dit rien : ils le sont tous. La pastille
+                porte donc la boutique, qui est ce qui distingue un jeu d'un
+                autre — et reste muette tant qu'aucune n'est renseignée. */}
+            {g.platform === PC
+              ? (g.boutique ? <span style={{ background: demat, color: accent, fontSize: "var(--t-legende)", borderRadius: "var(--r-xs)", padding: "1px 5px" }}>{g.boutique}</span> : null)
+              : g.format === "démat" && <span style={{ background: demat, color: accent, fontSize: "var(--t-legende)", borderRadius: "var(--r-xs)", padding: "1px 5px" }}>démat</span>}
             {BACK_COMPAT_PARENT[g.platform] && g.backCompat && <span title={`Rétrocompatible ${BACK_COMPAT_PARENT[g.platform]}`} style={{ background: "#107C1022", color: ok, fontSize: "var(--t-legende)", borderRadius: "var(--r-xs)", padding: "1px 5px" }}>🔄 Compatible {BACK_COMPAT_PARENT[g.platform].replace("Xbox ", "")}</span>}
             {g.lentA && <span key={g.lentA} style={{ background: "#7c320044", color: warn, fontSize: "var(--t-legende)", borderRadius: "var(--r-xs)", padding: "1px 5px", animation: "statusPop 200ms ease" }}>📤 {g.lentA}{jours !== null ? ` · ${jours}j` : ""}</span>}
             {/* Rien d'autre ici : les badges disent l'exemplaire, pas le contenu. */}
@@ -627,10 +636,18 @@ function GameCard({ g, onEdit, onDelete, onEnrich, onSerie, autoOpen, onOuverte 
                 </select>
               ))}
 
-              {ligneEdition("Format", "format", (
-                <Segment valeur={brouillon.format} onChange={v => champ("format", v)}
-                  options={[["physique", "physique"], ["démat", "démat"]]} />
-              ), null, "div")}
+              {/* Un jeu PC est toujours démat : le choix disparaît plutôt que
+                  de proposer une réponse que le modèle refusera. Ce qui le
+                  distingue, c'est la boutique, et elle prend sa place. */}
+              {brouillon.platform === PC
+                ? ligneEdition("Boutique", "boutique", (
+                    <input value={brouillon.boutique} onChange={e => champ("boutique", e.target.value)}
+                      placeholder="Steam, Epic, GOG…" style={champStyle("boutique")} />
+                  ), "démat, forcément")
+                : ligneEdition("Format", "format", (
+                    <Segment valeur={brouillon.format} onChange={v => champ("format", v)}
+                      options={[["physique", "physique"], ["démat", "démat"]]} />
+                  ), null, "div")}
 
               {BACK_COMPAT_PARENT[brouillon.platform] && ligneEdition(
                 `Jouable sur ${BACK_COMPAT_PARENT[brouillon.platform].replace("Xbox ", "")}`, "backCompat", (

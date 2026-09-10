@@ -4,9 +4,46 @@
 // La progression (terminé, en cours, platine…) était tenue en double avec la
 // console, qui la connaît mieux ; elle a été retirée.
 export const PRET_LONG_JOURS = 30;
+
+// ── Deux univers ───────────────────────────────────────────────────────────
+//
+// Une console dit sur quelle machine le jeu tourne, et le format dit s'il est
+// sur une galette ou dans un compte. Sur PC, la machine est toujours la même et
+// ce qui distingue un jeu d'un autre est la boutique où il vit : Steam, Epic,
+// GOG, et d'autres qu'on ne connaît pas encore.
+//
+// D'où « PC » comme plateforme et `boutique` comme champ à part, plutôt qu'une
+// liste de plateformes « PC (Steam) », « PC (Epic) » qui mélangerait deux axes
+// sans rapport — et qu'on paierait à chaque filtre, chaque statistique, chaque
+// tri.
+export const PC = "PC";
 export const PLATFORMS = ["tous", "Xbox Series X", "Xbox One", "Switch 2", "Switch 1"];
+export const PLATFORMS_PC = [PC];
+export const UNIVERS = ["console", "pc"];
+export const estPC = (g) => g?.platform === PC;
+export const universDuJeu = (g) => (estPC(g) ? "pc" : "console");
+export const jeuDansUnivers = (g, univers) => universDuJeu(g) === univers;
+
+// La boutique n'est pas une liste fermée, contrairement aux plateformes.
+// Personne ne sait aujourd'hui lesquelles seront là dans un an — Ubisoft
+// Connect, EA App, Battle.net, itch.io — et une liste écrite dans le code
+// demanderait une modification pour chaque nouvelle. Elle est donc dérivée de
+// la bibliothèque, comme les genres, et classée par nombre de jeux.
+export function boutiquesPresentes(games) {
+  const compte = new Map();
+  for (const g of games || []) {
+    if (!estPC(g)) continue;
+    const b = String(g.boutique || "").trim();
+    if (b) compte.set(b, (compte.get(b) || 0) + 1);
+  }
+  return [...compte.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "fr"));
+}
+
+export const jeuDeLaBoutique = (g, boutique) =>
+  boutique === "tous" || String(g?.boutique || "").trim() === boutique;
+
 // S4 : Series X vert vif (marque Xbox), One vert plus foncé, Switch rouge.
-export const PLATFORM_COLORS = { "Xbox Series X": "#107C10", "Xbox One": "#0a5c0a", "Switch 2": "#e4000f", "Switch 1": "#e4000f" };
+export const PLATFORM_COLORS = { "Xbox Series X": "#107C10", "Xbox One": "#0a5c0a", "Switch 2": "#e4000f", "Switch 1": "#e4000f", [PC]: "#4b5563" };
 
 // Rétrocompatibilité : plateforme récente -> plateforme précédente dont les jeux
 // marqués backCompat sont aussi jouables dessus. Sert au filtre (platMatch) et à la
@@ -41,6 +78,13 @@ export function migrateGames(list) {
     ng.bcV = BACK_COMPAT_VERSION;
     if (ng.infobox === undefined) ng.infobox = null;
     if (ng.lentRetourPrevu === undefined) ng.lentRetourPrevu = null;
+    // La boutique n'a de sens que sur PC, mais le champ existe partout : un
+    // champ absent est lu `undefined` par les composants, et une fiche console
+    // qui basculerait en PC n'aurait rien où écrire.
+    if (typeof ng.boutique !== "string") ng.boutique = "";
+    // Un jeu PC est toujours démat, et n'est jamais rétrocompatible : ces deux
+    // champs répondent à des questions de console.
+    if (ng.platform === PC) { ng.format = "démat"; ng.backCompat = false; }
     if (!Array.isArray(ng.pretsPasses)) ng.pretsPasses = [];
     // `genre` et `myLinks` sont lus sans précaution à chaque rendu de la liste
     // (`g.genre.some(...)`, `g.myLinks[i]`) : absents d'un enregistrement écrit
@@ -165,7 +209,8 @@ export function preterJeu(g, nom, retourPrevu) {
 //
 // Une seule liste, donc, et un test qui vérifie que la remise à zéro les couvre
 // tous : le prochain filtre ajouté ne pourra plus être oublié en silence.
-export const FILTRES = ["plat", "pretFil", "fmtFil", "genreFil", "modeFil", "noteFil", "completFil", "serieFil"];
+export const FILTRES = ["plat", "pretFil", "fmtFil", "genreFil", "modeFil", "noteFil", "completFil", "serieFil",
+  "boutiqueFil"];
 
 export const FILTRES_VIDES = Object.freeze(Object.fromEntries(FILTRES.map(f => [f, "tous"])));
 
@@ -552,7 +597,9 @@ export const jeuxSansScore = (games) => (games || []).filter(g => !g.metacritic)
 // supprimant le jeu pour le recréer. La saisie passe par un brouillon de
 // chaînes ; ces fonctions le traduisent en champs du modèle, et disent ce qui
 // ne va pas plutôt que d'écrire n'importe quoi.
-export const PLATFORMES_JEU = PLATFORMS.slice(1); // sans le "tous" du filtre
+// Les plateformes qu'un jeu peut porter, PC compris : c'est la liste que
+// valide l'édition et l'import.
+export const PLATFORMES_JEU = [...PLATFORMS.slice(1), PC]; // sans le "tous" du filtre
 
 export function listeDepuisTexte(t) {
   return String(t || "").split(",").map(x => x.trim()).filter(Boolean);
@@ -576,6 +623,7 @@ export function brouillonDepuisJeu(g) {
   return {
     title: g.title || "", platform: g.platform || PLATFORMES_JEU[0],
     format: g.format === "démat" ? "démat" : "physique", backCompat: !!g.backCompat,
+    boutique: g.boutique || "",
     genre: listeVersTexte(g.genre), metacritic: g.metacritic == null ? "" : String(g.metacritic),
     addedDate: g.addedDate || "", style: g.style || "", cover: g.cover || "",
     developers: listeVersTexte(i.developers), publishers: listeVersTexte(i.publishers),
@@ -602,8 +650,14 @@ export function validerEdition(b) {
   // Sans cette remise à zéro, faire passer un jeu de Xbox One à Xbox Series X
   // laisse un backCompat à true que plus rien n'affiche — et que les
   // statistiques continuent de compter parmi les jeux rétrocompatibles.
-  const format = b.format === "démat" ? "démat" : "physique";
-  const backCompat = !!b.backCompat && !!BACK_COMPAT_PARENT[b.platform];
+  // Un jeu PC est toujours démat et jamais rétrocompatible : ces deux champs
+  // répondent à des questions de console, et laisser passer « PC physique »
+  // ferait apparaître un jeu Steam dans un filtre « galettes ».
+  const estUnPC = b.platform === PC;
+  const format = estUnPC ? "démat" : b.format === "démat" ? "démat" : "physique";
+  const backCompat = !estUnPC && !!b.backCompat && !!BACK_COMPAT_PARENT[b.platform];
+  // Et la boutique ne se garde que sur PC : une console n'en a pas.
+  const boutique = estUnPC ? String(b.boutique || "").trim() : "";
 
   let mc = null;
   const mcBrut = String(b.metacritic || "").trim();
@@ -636,7 +690,7 @@ export function validerEdition(b) {
   return {
     erreurs,
     valeurs: {
-      title: titre, platform: b.platform, format, backCompat,
+      title: titre, platform: b.platform, format, backCompat, boutique,
       genre: normaliserGenres(listeDepuisTexte(b.genre)),
       metacritic: mc, addedDate: date, style: String(b.style || "").trim(),
       cover: cover || null, infobox: infoVide ? null : info,
@@ -656,7 +710,7 @@ export function validerEdition(b) {
 const JEU_VIDE = {
   platform: "Xbox Series X", format: "physique", genre: [], style: "",
   lentA: null, lentDate: null, lentRetourPrevu: null, pretsPasses: [],
-  cover: null, metacritic: null,
+  cover: null, metacritic: null, boutique: "",
   myLinks: ["", "", ""], tips: "", tag: "", infobox: null,
 };
 
@@ -741,6 +795,9 @@ function assainir(brut) {
     champs: {
       platform, format, metacritic, addedDate, lentA, lentDate, lentRetourPrevu, pretsPasses,
       backCompat: typeof brut.backCompat === "boolean" ? brut.backCompat : undefined,
+      // La boutique est libre : on n'en connaît pas la liste, et un import qui
+      // en refuserait une inconnue perdrait l'information au lieu de la garder.
+      boutique: estTexte(brut.boutique) ? brut.boutique.trim() : "",
       cover: estTexte(brut.cover) && brut.cover.trim() ? brut.cover : null,
       infobox: brut.infobox && typeof brut.infobox === "object" && !Array.isArray(brut.infobox) ? brut.infobox : null,
     },

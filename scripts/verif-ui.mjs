@@ -120,7 +120,7 @@ for (const [largeur, theme] of ECRANS) {
   // Chaque onglet, puis un panneau, puis une fiche dépliée : les défauts de
   // taille se cachent dans ce qui n'est pas affiché au premier écran.
   const etapes = [
-    ["Jeux", async () => {}],
+    ["Console", async () => {}],
     ["Filtres", async () => { await page.getByRole("button", { name: /^Filtres/ }).click(); }],
     // Les groupes sont repliés : sans les ouvrir, leurs puces ne sont pas
     // rendues et ne seraient donc jamais mesurées.
@@ -164,6 +164,14 @@ for (const [largeur, theme] of ECRANS) {
       await page.getByRole("button", { name: /^Voir \d+ jeu/ }).click();
     }],
     ["Prêts", async () => { await page.getByRole("button", { name: /^Prêts/ }).click(); }],
+    // L'univers PC : d'autres filtres, d'autres pastilles, un onglet en moins.
+    ["PC", async () => { await page.getByRole("button", { name: /^PC$/ }).click(); }],
+    ["PC · filtres", async () => { await page.getByRole("button", { name: /^Filtres/ }).click(); }],
+    ["PC · boutiques", async () => { await page.getByRole("button", { name: /^Boutique/ }).first().click(); }],
+    ["retour Console", async () => {
+      await page.keyboard.press("Escape");
+      await page.getByRole("button", { name: /^Console$/ }).click();
+    }],
     ["Stats", async () => { await page.getByRole("button", { name: "Stats" }).click(); }],
     ["panneau Actions", async () => {
       await page.getByRole("button", { name: "Actions" }).click();
@@ -175,7 +183,7 @@ for (const [largeur, theme] of ECRANS) {
     // un « Lire la suite » de 20 px sur une fiche assez longue pour l'afficher.
     // Un garde-fou ne protège que ce qu'il regarde.
     ["Ajouter un jeu", async () => {
-      await page.getByRole("button", { name: /^Jeux$/ }).click();
+      await page.getByRole("button", { name: /^Console$/ }).click();
       await page.getByRole("button", { name: "+ Ajouter" }).click();
     }],
     ["édition à la main", async () => {

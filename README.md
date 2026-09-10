@@ -122,7 +122,32 @@ erreur CORS.
 
 ## Fonctionnalités
 
-### Bibliothèque — onglet « Jeux »
+### Deux univers — onglets « Console » et « PC »
+
+Une ludothèque de console et une bibliothèque PC ne se décrivent pas avec les
+mêmes mots. Sur console, la plateforme dit sur quelle machine le jeu tourne et le
+format dit s'il est sur une galette ou dans un compte ; sur PC la machine est
+toujours la même, et ce qui distingue un jeu d'un autre est la **boutique**.
+D'où `platform: "PC"` et un champ `boutique` séparé, plutôt qu'une liste
+« PC (Steam) », « PC (Epic) » qui mélangerait deux axes sans rapport et qu'on
+paierait à chaque filtre.
+
+La boutique n'est **pas une liste fermée**, contrairement aux plateformes : elle
+est dérivée de la bibliothèque comme les genres. Une boutique nouvelle se saisit
+une fois dans une fiche et apparaît dans les filtres — Ubisoft Connect, EA App,
+itch.io entrent sans modification du code.
+
+Un jeu PC est toujours démat et jamais rétrocompatible : le modèle le force, et
+l'édition ne propose ni format ni case de rétrocompatibilité. Le panneau des
+filtres change avec l'univers — Boutique remplace Plateforme, Prêt et Format
+disparaissent — les statistiques suivent l'univers et le disent en titre, et
+« Prêts » quitte la barre d'onglets côté PC : un jeu Steam ne se prête pas.
+
+Changer d'univers remet les filtres à zéro : « Xbox One » et « Steam » ne
+veulent rien dire l'un pour l'autre, et un filtre survivant afficherait une
+bibliothèque vide sans qu'on comprenne pourquoi.
+
+### La bibliothèque
 
 - **94 jeux** pré-remplis en données de départ ; ajout, édition et suppression libres.
 - **Recherche** sur titre + genre + tag, **insensible à la casse et aux accents**

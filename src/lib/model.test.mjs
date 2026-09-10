@@ -24,6 +24,7 @@ import {
   dateDeSortie, serieDuJeu, empreinteMelange,
   fusionnerInfobox, infoboxDepuisRawg, sourcesInfobox, libelleSources, infoboxVide,
   viderChamps, CHAMPS_VIDABLES, FILTRES, FILTRES_VIDES,
+  PC, estPC, universDuJeu, jeuDansUnivers, boutiquesPresentes, jeuDeLaBoutique,
 } from "./model.js";
 import { ecouterMiseAJour } from "./maj.js";
 
@@ -951,4 +952,62 @@ test("la remise à zéro éteint tous les filtres, un par un", () => {
   }
   assert.equal(compterFiltres({}), 0, "un état vide n'invente pas de filtre actif");
   assert.equal(compterFiltres(null), 0);
+});
+
+
+// ── Console et PC ──────────────────────────────────────────────────────────
+
+test("un jeu appartient à un univers, et un seul", () => {
+  assert.equal(estPC(jeu({ platform: PC })), true);
+  assert.equal(estPC(jeu({ platform: "Switch 1" })), false);
+  assert.equal(universDuJeu(jeu({ platform: PC })), "pc");
+  assert.equal(universDuJeu(jeu({ platform: "Xbox One" })), "console");
+  // Une fiche sans plateforme n'est pas un jeu PC par défaut : le PC se déclare.
+  assert.equal(universDuJeu({}), "console");
+  assert.equal(jeuDansUnivers(jeu({ platform: PC }), "pc"), true);
+  assert.equal(jeuDansUnivers(jeu({ platform: PC }), "console"), false);
+  assert.ok(PLATFORMES_JEU.includes(PC), "PC doit être une plateforme acceptée à l'édition");
+});
+
+test("un jeu PC est toujours démat et jamais rétrocompatible", () => {
+  // Même en le demandant explicitement : ces deux champs répondent à des
+  // questions de console, et « PC physique » ferait apparaître un jeu Steam
+  // dans un filtre « galettes ».
+  const { valeurs } = validerEdition(brouillonValide({ platform: PC, format: "physique", backCompat: true, boutique: " Steam " }));
+  assert.equal(valeurs.format, "démat");
+  assert.equal(valeurs.backCompat, false);
+  assert.equal(valeurs.boutique, "Steam", "la boutique est nettoyée de ses espaces");
+  // Et une console n'a pas de boutique, même si le brouillon en porte une.
+  assert.equal(validerEdition(brouillonValide({ platform: "Switch 1", boutique: "Steam" })).valeurs.boutique, "");
+});
+
+test("la migration donne un champ boutique à tout le monde et redresse les PC", () => {
+  const [console_, pc] = migrateGames([
+    { id: 1, title: "Halo", platform: "Xbox One" },
+    { id: 2, title: "Hades", platform: PC, format: "physique", backCompat: true },
+  ]);
+  assert.equal(console_.boutique, "", "le champ existe même côté console");
+  assert.equal(pc.format, "démat");
+  assert.equal(pc.backCompat, false);
+});
+
+test("les boutiques sont dérivées de la bibliothèque, classées par nombre", () => {
+  const g = [
+    jeu({ id: 1, platform: PC, boutique: "Steam" }),
+    jeu({ id: 2, platform: PC, boutique: "Epic" }),
+    jeu({ id: 3, platform: PC, boutique: "Steam" }),
+    jeu({ id: 4, platform: PC, boutique: "  " }),
+    jeu({ id: 5, platform: "Switch 1", boutique: "Steam" }),
+  ];
+  // Une console ne compte pas, une boutique vide non plus.
+  assert.deepEqual(boutiquesPresentes(g), [["Steam", 2], ["Epic", 1]]);
+  assert.deepEqual(boutiquesPresentes([]), []);
+  assert.deepEqual(boutiquesPresentes(null), []);
+});
+
+test("le filtre par boutique laisse tout passer quand il vaut « tous »", () => {
+  const g = jeu({ platform: PC, boutique: "GOG" });
+  assert.equal(jeuDeLaBoutique(g, "tous"), true);
+  assert.equal(jeuDeLaBoutique(g, "GOG"), true);
+  assert.equal(jeuDeLaBoutique(g, "Steam"), false);
 });

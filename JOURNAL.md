@@ -864,6 +864,49 @@ secondaires (conforme Apple et WCAG, pas au chiffre de Material), les listes
 contiguës sans les 8 px de séparation (c'est le motif de liste standard, la
 règle vise des boutons distincts), et tout en haut de l'écran.
 
+### Phase 28 — Deux univers : console et PC
+
+Une ludothèque de console et une bibliothèque PC ne se décrivent pas avec les
+mêmes mots. Sur console, la plateforme dit sur quelle machine le jeu tourne et
+le format dit s'il est sur une galette ou dans un compte. Sur PC, la machine est
+toujours la même, et ce qui distingue un jeu d'un autre est la boutique où il
+vit. D'où « PC » comme plateforme et `boutique` comme champ séparé, plutôt
+qu'une liste « PC (Steam) », « PC (Epic) » qui aurait mélangé deux axes sans
+rapport — et qu'on aurait payée à chaque filtre, chaque statistique, chaque tri.
+
+**La boutique n'est pas une liste fermée**, contrairement aux plateformes. Elle
+est dérivée de la bibliothèque, comme les genres. La décision vient d'une phrase :
+« j'ai Steam, Epic, GOG, et d'autres je pense, faut que je check ». Une liste
+écrite dans le code aurait demandé une modification à chaque découverte ; là,
+taper le nom une fois suffit, et Ubisoft Connect ou itch.io entreront sans que
+personne touche au code.
+
+L'onglet « Jeux » se scinde en « Console » et « PC », ce qui en fait cinq avec
+Prêts, Stats et l'engrenage. « Prêts » disparaît côté PC : un jeu Steam ne se
+prête pas, et un onglet qui ne mène qu'à un écran vide est pire qu'un onglet
+absent. Le prix est que la barre change sous le doigt en basculant d'univers —
+c'est un choix, pris en connaissance de cause.
+
+Deux défauts trouvés en vérifiant, et tous deux de la même famille que celui des
+Zelda de la semaine dernière.
+
+Le premier : l'univers se déduisait de l'onglet actif, or « Stats » et
+« Réglages » n'en désignent aucun. Les statistiques annonçaient donc « ta
+bibliothèque console — 155 jeux » alors qu'on venait de l'onglet PC. L'univers
+se retient maintenant à part et ne change qu'en touchant « Console » ou « PC ».
+
+Le second, plus grave : les filtres ne tombaient qu'en passant directement d'un
+univers à l'autre. En passant par Stats, le filtre « boutique : Steam » repassait
+intact côté console — cent cinquante-cinq jeux, zéro affiché, un badge annonçant
+un filtre actif, et rien pour comprendre. Exactement le défaut du jeu ajouté sous
+un filtre de série, transposé au changement d'onglet. La remise à zéro compare
+désormais l'univers retenu, pas l'onglet courant.
+
+Enfin, la barre d'onglets : « Console » demandait 71 px et n'en recevait que 63,
+donc se tronquait. C'est `verif-ui` qui l'a dit, pas l'œil — et il l'a dit parce
+qu'on venait d'étendre sa promenade. Rembourrage ramené de 8 à 4 px et écart de
+8 à 6 : les cinq onglets tiennent à 360 comme à 412 px, sans troncature.
+
 ---
 
 ## 3. Architecture finale

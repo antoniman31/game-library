@@ -1,7 +1,7 @@
 import { useState, useRef } from "react";
 import Sheet from "./Sheet.jsx";
 import { bg, card, bdr, txt, mut, accent, accentFond } from "../lib/theme.js";
-import { PLATFORMS, isBackCompatPlatform, normaliserGenres } from "../lib/model.js";
+import { PC, PLATFORMES_JEU, isBackCompatPlatform, normaliserGenres } from "../lib/model.js";
 import {
   rawgSearch, rawgDetail, wikiFrenchTitles, wikiArticleData, wikidataInfobox,
   sgdbSearch, sgdbGrids,
@@ -11,6 +11,7 @@ function AddModal({ onAdd, onClose }) {
   const [title, setTitle] = useState("");
   const [platform, setPlatform] = useState("Xbox Series X");
   const [fmt, setFmt] = useState("physique");
+  const [boutique, setBoutique] = useState("");
   const [date, setDate] = useState("");
   const [loading, setLoading] = useState(false);
   const [sugg, setSugg] = useState([]);
@@ -107,7 +108,9 @@ function AddModal({ onAdd, onClose }) {
   const handleAdd = () => {
     if (!title.trim()) return;
     onAdd({
-      id: Date.now(), title: title.trim(), platform, format: fmt,
+      id: Date.now(), title: title.trim(), platform,
+      format: platform === PC ? "démat" : fmt,
+      boutique: platform === PC ? boutique.trim() : "",
       addedDate: date || new Date().toISOString().slice(0, 10),
       genre: normaliserGenres(rawg?.genres?.map(g => g.name)),
       style: wikiExtract || "",
@@ -201,11 +204,21 @@ function AddModal({ onAdd, onClose }) {
 
         <div style={{ display: "flex", gap: 8 }}>
           <Ligne label="Plateforme">
-            <select value={platform} onChange={e => setPlatform(e.target.value)} style={inp}>{PLATFORMS.filter(p => p !== "tous").map(p => <option key={p}>{p}</option>)}</select>
+            <select value={platform} onChange={e => setPlatform(e.target.value)} style={inp}>{PLATFORMES_JEU.map(p => <option key={p}>{p}</option>)}</select>
           </Ligne>
-          <Ligne label="Format">
-            <select value={fmt} onChange={e => setFmt(e.target.value)} style={inp}><option>physique</option><option>démat</option></select>
-          </Ligne>
+          {/* Un jeu PC est toujours démat : ce qui le distingue est la
+              boutique, et elle prend la place du format. */}
+          {platform === PC
+            ? (
+              <Ligne label="Boutique">
+                <input value={boutique} onChange={e => setBoutique(e.target.value)}
+                  placeholder="Steam, Epic, GOG…" style={inp} />
+              </Ligne>
+            ) : (
+              <Ligne label="Format">
+                <select value={fmt} onChange={e => setFmt(e.target.value)} style={inp}><option>physique</option><option>démat</option></select>
+              </Ligne>
+            )}
         </div>
         <Ligne label="Ajouté le">
           <input type="date" value={date} onChange={e => setDate(e.target.value)} style={inp} />
