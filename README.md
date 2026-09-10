@@ -212,6 +212,12 @@ bibliothèque vide sans qu'on comprenne pourquoi.
   bouton « Filtres » : deux boutons au même traitement, côte à côte et sans la même
   importance, se confondent. Le nombre de jeux affichés remonte dans l'en-tête, à côté
   du total — « 155 jeux · 23 affichés ».
+- **Le tri alphabétique met l'article initial de côté.** « The Legend of Zelda »,
+  « The Last of Us », « The Sims 4 » se rangeaient tous à la lettre T, en un bloc où
+  l'on ne trouve rien — et l'arrivée des jeux PC en a ajouté des dizaines. « The »,
+  « A », « An », « Le », « La », « Les », « L' » sont sautés au classement ; l'affichage
+  ne change pas, c'est un ordre, pas un titre. Un mot qui commence par un article n'en
+  est pas un : « Alone in the Dark » reste à A, « Anno 1800 » aussi.
 - **Trois vues et un regroupement** : liste, compacte (une ligne par jeu, pour
   parcourir cent cinquante titres au pouce) et grille ; regroupement facultatif par
   plateforme, série ou genre, avec des en-têtes de section. Le regroupement ne change
@@ -235,6 +241,11 @@ bibliothèque vide sans qu'on comprenne pourquoi.
   une bibliothèque réelle il y a vingt-huit genres, et vingt-huit boutons ne sont plus
   un choix. Le genre sélectionné reste visible même s'il vient de la traîne, sinon le
   filtre actif disparaît de l'écran.
+  Sept valeurs venues de Steam sont écartées à la lecture — Utilitaires, Retouche
+  photo, Production vidéo, Animation & Modélisation, Conception & Illustration, Accès
+  anticipé, Free-to-play : elles décrivent un logiciel, un modèle économique ou un
+  stade de développement, jamais une manière de jouer. Comme la migration rejoue la
+  normalisation à chaque chargement, les fiches déjà en place se nettoient seules.
 - **Tout est modifiable** : « Modifier la fiche » ouvre un panneau qui laisse
   corriger ce que les sources automatiques ont écrit — titre, plateforme,
   format, rétrocompatibilité, genres, note, date, description, jaquette et
@@ -314,13 +325,24 @@ qui explique que certains éditeurs ne remontent pas si on ne demande que
 `Multiplayer` et `Co-op`, traduites dans le vocabulaire que le filtre par mode
 sait déjà lire.
 
-**Bouton « Partager la liste »** (panneau ⋯ Actions) : produit la liste **affichée** en
+**Bouton « Partager la liste »** (panneau ⋯ Actions) : produit la liste **affichée** —
+donc celle de l'univers où l'on se trouve, console ou PC, et le titre le dit — en
 texte lisible — groupée par plateforme, un jeu par ligne avec son format et, le cas
 échéant, le prêt en cours avec sa date de retour convenue ; la note Metacritic n'y figure
 pas, elle sert à trier sa propre bibliothèque, pas à conseiller quelqu'un d'autre — et l'envoie au menu de partage du téléphone, ou la copie
 dans le presse-papier ailleurs. Pas de sélecteur de plateforme : le panneau des filtres a
 déjà composé la liste, et deux endroits pour dire la même chose finiraient par se
 contredire.
+
+**Bouton « Rattraper les jaquettes manquantes »** (panneau ⋯ Actions) : cherche sur
+SteamGridDB une jaquette pour chaque fiche qui n'en a pas, avec progression et arrêt
+possible. L'application en rattrape déjà douze à chaque ouverture, ce qui convenait à une
+bibliothèque qui grandit d'un jeu par semaine ; un import Playnite en laisse cent
+quarante d'un coup. SteamGridDB et lui seul : ses images sont des jaquettes verticales
+600×900, du même format que celles des fiches console — RAWG rendrait des paysages, et
+une grille où un jeu sur trois n'a pas la même forme se lit plus mal qu'une grille où il
+manque une image. Un titre trop éloigné de ce que la recherche renvoie est laissé sans
+image et compté à part : une jaquette fausse ne se remarque pas dans trois cents fiches.
 
 **Bouton « Actualiser les descriptions »** (panneau ⋯ Actions) : régénère la description de
 toute la bibliothèque depuis Wikipédia. Il est **annulable en cours de route**,

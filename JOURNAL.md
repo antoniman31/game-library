@@ -1047,6 +1047,48 @@ tombe à 6, puis à 0, et un test d'idempotence garde la porte.
 Un compteur qui ne descend pas est pire qu'un compteur absent : il fait douter
 de l'action au moment précis où elle vient de faire son travail.
 
+### Phase 32 — Quatre décisions, dont une qui en cachait un défaut
+
+Quatre questions posées d'un coup après l'import des cent quatre-vingts jeux PC,
+quatre réponses, quatre changements. Trois sont des choix de goût ; la
+quatrième a révélé un défaut vieux de deux phases.
+
+**Les jaquettes** manquaient sur cent quarante-deux fiches. Le rattrapage
+automatique en fait douze par ouverture — un rythme dimensionné pour une
+bibliothèque qui grandit d'un jeu par semaine, pas pour un import. L'action de
+masse reprend la mécanique de « Compléter les notes » : progression, arrêt,
+bilan. Et SteamGridDB seul, contre RAWG : ses images sont des jaquettes
+verticales 600×900, du même format que les fiches console. Une grille où un jeu
+sur trois n'a pas la même forme se lit plus mal qu'une grille où il manque une
+image. Le contrôle de rapprochement douteux s'applique : une jaquette fausse ne
+se remarque pas dans trois cents fiches, alors qu'une case vide, si.
+
+**Les genres.** L'export Playnite ramenait sept rubriques Steam qui n'en sont
+pas — Utilitaires, Retouche photo, Production vidéo, Animation & Modélisation,
+Conception & Illustration, Accès anticipé, Free-to-play. Elles décrivent un
+logiciel, un modèle économique ou un stade de développement. Écartées dans
+`normaliserGenres`, donc à la lecture : la migration la rejoue à chaque
+chargement, et les fiches déjà importées se sont nettoyées seules, sans action
+ni numéro de version.
+
+**Le tri.** « The Legend of Zelda » se rangeait à T, et le PC a ajouté des
+dizaines de titres en « The ». L'article initial est mis de côté au classement,
+l'affichage ne bouge pas. Le piège était de retirer un préfixe plutôt qu'un
+article : « Alone in the Dark » doit rester à A. D'où l'espace obligatoire après
+le mot — et un cas à part pour « L'Ombre », dont l'article n'a pas d'espace, que
+la première écriture listait sans jamais pouvoir le retirer.
+
+**Le partage**, enfin, devait suivre l'onglet. Il le suivait déjà : la liste
+partagée est la liste affichée, elle-même filtrée par univers. Mais ses libellés,
+eux, comparaient encore à la bibliothèque entière. Depuis Console, cent
+cinquante-cinq jeux sur trois cent trente-cinq passaient donc pour une
+« sélection », le panneau annonçait « ceux que les filtres montrent » alors
+qu'aucun filtre n'était posé, et le titre envoyé au copain annonçait « Ma
+ludothèque » sans dire laquelle. Un défaut introduit par la séparation console /
+PC, invisible tant qu'un seul univers existait, et qu'aucune question sur le
+partage n'aurait fait apparaître : il a fallu demander « c'est ce que tu veux ? »
+pour aller relire le code et voir que la réponse était déjà non.
+
 ---
 
 ## 3. Architecture finale

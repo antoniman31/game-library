@@ -19,7 +19,8 @@ import { jeuDansUnivers, boutiquesPresentes, jeuDeLaBoutique, autresEditions,
   migrateGames, compterFiltres, FILTRES, validerJeuxImportes, pretEnRetard, jeuxSansScore, normaliserGenres,
   jeuALeMode, jeuSurPlateforme, compterRetro, genresPresents, dureeEntreeHistorique, supprimerEntreeHistorique,
   joursDePret, jeuPasseSeuil, jeuACompleter, completudeManquante, dateDeSortie, serieDuJeu,
-  empreinteMelange, compterFichesIncompletes, completerDepuisEditions, PLATFORM_COLORS } from "./lib/model.js";
+  empreinteMelange, compterFichesIncompletes, completerDepuisEditions, titreDeTri, rapprochementDouteux,
+  PLATFORM_COLORS } from "./lib/model.js";
 import { lire, ecrire, surEchecStockage } from "./lib/storage.js";
 import { chargerSync, enregistrerSync, genererCode, envoyer, recuperer } from "./lib/sync.js";
 import { preferencesASauvegarder, preferencesRecues, resumePreferences,
@@ -32,7 +33,7 @@ import { resoudreTheme, modeSuivant, modeValide, ICONES, LIBELLES, COULEUR_BARRE
 import {
   loadKeys, setApiKeys, normTitle, hasRawgKey, rawgFirstResult,
   rawgSearch, rawgDetail, wikiFrenchTitles, wikiArticleData, pickBestWikiTitle,
-  sgdbSearch, xblTitleHistory,
+  sgdbSearch, sgdbGrids, xblTitleHistory,
 } from "./lib/api.js";
 
 // Jaquettes rattrapées au démarrage, par ouverture de l'application.
@@ -120,6 +121,10 @@ export default function App() {
   const [showFilters, setShowFilters] = useState(false);
   const [showSort, setShowSort] = useState(false);
   const [showActions, setShowActions] = useState(false);
+  const [jaquettesEnCours, setJaquettesEnCours] = useState(false);
+  const [jaquettesProg, setJaquettesProg] = useState(0);
+  const [jaquettesTotal, setJaquettesTotal] = useState(0);
+  const jaquettesCancelRef = useRef(false);
   // Compte rendu d'une action ponctuelle, en bas d'écran, jusqu'à ce qu'on le
   // referme. Il ne servait qu'au partage ; son nom disait donc le contraire de
   // ce qu'il devenait dès qu'une deuxième action a voulu s'y annoncer.
@@ -309,6 +314,56 @@ export default function App() {
     setScoresBilan({ trouves, sansScore, stopped: scoresCancelRef.current });
   };
   const annulerScores = () => { scoresCancelRef.current = true; };
+
+  // ── Jaquettes manquantes, en une fois ─────────────────────────────────
+  //
+  // L'application en rattrape douze à chaque ouverture, ce qui convenait à une
+  // bibliothèque qui grandit d'un jeu par semaine. Un import Playnite en laisse
+  // cent quarante d'un coup : douze ouvertures pour les voir toutes.
+  //
+  // SteamGridDB et lui seul, par choix : ses images sont des jaquettes
+  // verticales 600×900, du même format que celles des fiches console. RAWG
+  // rendrait des paysages, et une grille où un jeu sur trois n'a pas la même
+  // forme se lit plus mal qu'une grille où il manque une image.
+  const rattraperJaquettes = async () => {
+    if (jaquettesEnCours) return;
+    if (!keys.sgdb) { setAvis("Aucune clé SteamGridDB n'est configurée — voir Réglages."); return; }
+    const cibles = games.filter(g => !g.cover);
+    if (!cibles.length) { setAvis("Toutes les fiches ont déjà une jaquette."); return; }
+
+    jaquettesCancelRef.current = false;
+    setJaquettesEnCours(true);
+    setJaquettesProg(0);
+    setJaquettesTotal(cibles.length);
+    let trouvees = 0;
+    let douteux = 0;
+    for (let i = 0; i < cibles.length; i++) {
+      if (jaquettesCancelRef.current) break;
+      const g = cibles[i];
+      try {
+        const [resultat] = await sgdbSearch(g.title);
+        // Le premier résultat d'une recherche par titre est le bon la plupart
+        // du temps, et faux sans prévenir le reste du temps. Le même contrôle
+        // que pour les notes : deux titres qui ne se recouvrent pas ne
+        // désignent pas le même jeu, et une jaquette fausse est pire qu'absente
+        // — elle ne se remarque pas dans une liste de trois cents fiches.
+        if (resultat && !rapprochementDouteux(g.title, resultat.name)) {
+          const [image] = await sgdbGrids(resultat.id);
+          if (image?.url) {
+            setGames(gs => gs.map(x => x.id === g.id ? { ...x, cover: image.url } : x));
+            trouvees++;
+          }
+        } else if (resultat) douteux++;
+      } catch { /* une fiche qui échoue n'arrête pas les deux cents autres */ }
+      setJaquettesProg(i + 1);
+      await new Promise(res => setTimeout(res, 150));
+    }
+    setJaquettesEnCours(false);
+    setAvis(`${trouvees} jaquette(s) récupérée(s) sur ${cibles.length}`
+      + (douteux ? ` · ${douteux} titre(s) trop éloigné(s) pour être sûr` : "")
+      + (jaquettesCancelRef.current ? " · arrêté" : "") + ".");
+  };
+  const annulerJaquettes = () => { jaquettesCancelRef.current = true; };
   // Le bilan laisse retirer une note issue d'un mauvais rapprochement.
   const retirerScore = useCallback((id) => {
     setGames(gs => gs.map(g => g.id === id ? { ...g, metacritic: null } : g));
@@ -351,8 +406,13 @@ export default function App() {
   // ont déjà composé la liste, et en redemander une seconde fois ferait deux
   // endroits où dire la même chose — qui finiraient par se contredire.
   const partagerListe = async () => {
-    const filtree = filtered.length < games.length;
-    const titre = filtree ? "Ma ludothèque (sélection)" : "Ma ludothèque";
+    // La comparaison portait sur toute la bibliothèque, alors que la liste
+    // partagée est celle de l'univers courant : depuis Console, cent
+    // cinquante-cinq jeux sur trois cent trente-cinq passaient pour une
+    // sélection filtrée, et le titre annonçait une ludothèque entière.
+    const filtree = filtered.length < jeuxUnivers.length;
+    const ou = univers === "pc" ? "PC" : "console";
+    const titre = `Ma ludothèque ${ou}${filtree ? " (sélection)" : ""}`;
     const quoi = await partagerTexte(texteListe(filtered, titre), titre);
     if (quoi === "annule") return;
     setAvis(quoi === "copie" ? "Liste copiée — colle-la où tu veux."
@@ -701,7 +761,8 @@ export default function App() {
       if (sort === "date") return g.addedDate || null;
       if (sort === "metacritic") return typeof g.metacritic === "number" ? g.metacritic : null;
       if (sort === "sortie") return dateDeSortie(g);
-      return g.title || "";
+      // Le titre tel qu'il se classe : « The Legend of Zelda » va à Z, pas à T.
+      return titreDeTri(g.title);
     };
     // Le sens naturel de chaque tri : alphabétique pour les titres, du plus
     // récent et du mieux noté pour les autres — c'est ce qu'on veut voir en
@@ -1209,6 +1270,12 @@ export default function App() {
           onImportXbox={() => setShowImport(true)}
           onCompleterEditions={completerEditions}
           editionsCompletables={editionsCompletables}
+          onRattraperJaquettes={rattraperJaquettes}
+          jaquettesEnCours={jaquettesEnCours}
+          jaquettesProg={jaquettesProg}
+          jaquettesTotal={jaquettesTotal}
+          onAnnulerJaquettes={annulerJaquettes}
+          jaquettesManquantes={games.filter(g => !g.cover).length}
           onCompleterScores={completerScores}
           scoresEnCours={scoresEnCours}
           scoresProg={scoresProg}
@@ -1217,7 +1284,7 @@ export default function App() {
           scoresManquants={jeuxSansScore(games).length}
           onPartager={partagerListe}
           partageTotal={filtered.length}
-          partageFiltre={filtered.length < games.length}
+          partageFiltre={filtered.length < jeuxUnivers.length}
         />
       )}
 

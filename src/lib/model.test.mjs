@@ -25,7 +25,7 @@ import {
   fusionnerInfobox, infoboxDepuisRawg, sourcesInfobox, libelleSources, infoboxVide,
   viderChamps, CHAMPS_VIDABLES, FILTRES, FILTRES_VIDES,
   PC, estPC, universDuJeu, jeuDansUnivers, boutiquesPresentes, jeuDeLaBoutique,
-  completerDepuisEditions, editionsDuJeu,
+  completerDepuisEditions, editionsDuJeu, titreDeTri,
   autresEditions, libelleEdition,
 } from "./model.js";
 import { ecouterMiseAJour } from "./maj.js";
@@ -1152,4 +1152,31 @@ test("compléter deux fois ne complète pas deux fois", () => {
   assert.equal(premier.filter(Boolean).length, 1);
   games = games.map((g, i) => premier[i]?.jeu || g);
   assert.deepEqual(games.map(g => completerDepuisEditions(g, games)), [null, null]);
+});
+
+test("les catégories Steam qui ne sont pas des genres sont écartées", () => {
+  // Wallpaper Engine est un utilitaire, « Free-to-play » un modèle économique,
+  // « Accès anticipé » un stade de développement : aucun n'est une manière de
+  // jouer, et le filtre par genre les proposait quand même.
+  assert.deepEqual(
+    normaliserGenres(["Action", "Utilitaires", "Free-to-play", "Accès anticipé", "Retouche photo", "RPG"]),
+    ["Action", "RPG"]);
+  assert.deepEqual(normaliserGenres(["Early Access", "Design & Illustration", "Video Production"]), []);
+  // La migration rejoue la normalisation : les fiches déjà là se nettoient.
+  assert.deepEqual(migrateGames([{ id: 1, title: "X", genre: ["Utilitaires", "Aventure"] }])[0].genre, ["Aventure"]);
+});
+
+test("le tri met l'article initial de côté, et lui seul", () => {
+  assert.equal(titreDeTri("The Legend of Zelda"), "Legend of Zelda");
+  assert.equal(titreDeTri("A Plague Tale"), "Plague Tale");
+  assert.equal(titreDeTri("Les Sims"), "Sims");
+  assert.equal(titreDeTri("L'Ombre"), "Ombre");
+  assert.equal(titreDeTri("L’Aube"), "Aube", "l'apostrophe typographique compte aussi");
+  // Un mot qui commence par un article n'en est pas un.
+  assert.equal(titreDeTri("Alone in the Dark"), "Alone in the Dark");
+  assert.equal(titreDeTri("Lego City"), "Lego City");
+  assert.equal(titreDeTri("Anno 1800"), "Anno 1800");
+  // Un titre qui n'est QUE son article garde de quoi se trier.
+  assert.equal(titreDeTri("The"), "The");
+  assert.equal(titreDeTri(""), "");
 });
