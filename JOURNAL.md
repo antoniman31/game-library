@@ -1119,6 +1119,45 @@ Enfin l'en-tête a été raccourci en cours de route. « 180 jeux · 171 affich�
 9 doublons masqués » disait trois fois la même soustraction ; « affichés » ne
 parle plus que du filtrage, et la ligne tient en deux mentions.
 
+### Phase 34 — Trois sources pour une note, et le droit de ne pas en avoir
+
+« RAWG ça trouve pas les notes pour tous les jeux, il m'en manque 37. » La liste
+des trente-six titres, croisée avec l'export Playnite, a dit trois choses que
+l'intuition n'aurait pas données.
+
+Dix-neuf sont sur Steam avec leur appid. Et parmi les échecs, plusieurs ne sont
+pas des notes manquantes mais des titres manqués : « Hogwarts Legacy :
+L'Héritage de Poudlard » a bien un Metascore, seulement RAWG cherche par titre et
+celui-ci est en français. Même chose pour « Entropy : Zero 2 » et ses espaces
+autour du deux-points. La recherche par identifiant règle ces cas d'un coup — le
+magasin Steam rend `metacritic.score` sur un appid, sans clé, et l'import
+Playnite a posé l'appid sur la fiche.
+
+Deuxième constat : neuf viennent de GOG, et **sept sont antérieurs à
+Metacritic**. Fallout est de 1997, Alone in the Dark 2 de 1993, Al-Qadim de
+1994. Deux autres sont des remasters gratuits, un troisième un mod. Aucune
+source n'inventera un chiffre que personne n'a calculé — et c'est là qu'était le
+vrai défaut : l'application les reproposait indéfiniment dans « À compléter →
+Note ». Une action qui ne se termine jamais parce qu'elle n'a pas d'objet. D'où
+`noteAbsente`, posé quand les trois sources ont dit non, et la mention « Pas de
+note connue » sur la fiche — une ligne absente se lit comme un oubli, une ligne
+qui dit l'absence se lit comme une réponse.
+
+Troisième : l'appid ne vit pas forcément sur la fiche qu'on interroge. « Age of
+Mythology: Retold » est ici une fiche Xbox, sans numéro Steam — mais la même
+bibliothèque en tient une seconde, achetée sur Steam. Le jeu est le même, son
+numéro vaut pour les deux : `appidSteam` cherche donc sur la fiche puis sur ses
+autres éditions, comme la complétion de la phase 32.
+
+Wikidata ferme la marche, sans clé ni relais, par la propriété P444 qualifiée
+par P447 = Metacritic. Sa valeur est un texte, et seule la forme sur cent est
+acceptée : une note sur dix multipliée par dix serait une invention.
+
+Le relais gagne une troisième cible. Il ne détient toujours aucun secret — Steam
+n'en demande pas — et son test vérifie l'URL composée en interceptant le `fetch`
+plutôt qu'en appelant le magasin : un test qui dépend du réseau ne dit rien de
+ce qu'on a écrit.
+
 ---
 
 ## 3. Architecture finale

@@ -82,7 +82,7 @@ export default function ActionsSheet({
           icone="🎯"
           titre="Compléter les notes manquantes"
           detail={scoresManquants > 0
-            ? `${scoresManquants} jeu${scoresManquants > 1 ? "x" : ""} sans note · cherche sur RAWG`
+            ? `${scoresManquants} jeu${scoresManquants > 1 ? "x" : ""} sans note · RAWG, puis Steam, puis Wikidata`
             : "Tous les jeux ont déjà une note"}
           onClick={() => { onClose(); onCompleterScores(); }}
         />

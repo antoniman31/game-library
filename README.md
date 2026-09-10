@@ -334,6 +334,26 @@ dans le presse-papier ailleurs. Pas de sélecteur de plateforme : le panneau des
 déjà composé la liste, et deux endroits pour dire la même chose finiraient par se
 contredire.
 
+**Bouton « Compléter les notes manquantes »** (panneau ⋯ Actions) : trois sources dans
+l'ordre de leur sûreté, la première qui répond gagne.
+
+1. **RAWG**, qui cherche par titre — et qu'un titre suffit à faire échouer :
+   « Hogwarts Legacy : L'Héritage de Poudlard » ne lui disait rien.
+2. **Le magasin Steam**, qui répond sur l'**appid** posé par l'import Playnite, donc sans
+   aucune approximation. L'appid est cherché sur la fiche **puis sur ses autres éditions** :
+   une fiche Xbox n'en a pas, mais le même jeu acheté sur Steam, si.
+3. **Wikidata** (P444 « note de critique » qualifiée par P447 = Metacritic), sans clé et
+   sans relais, valable aussi côté console — mais peuplée par des contributeurs, donc
+   inégale.
+
+**Et quand les trois disent non, la fiche cesse de réclamer.** Elle porte « Pas de note
+connue » et sort de « À compléter → Note ». Sur une bibliothèque réelle, sept des jeux
+sans note sont antérieurs à Metacritic — Fallout est de 1997, Alone in the Dark 2 de
+1993 — et deux autres sont des remasters gratuits. Aucune source ne leur inventera un
+chiffre ; les redemander à chaque passage transformait une action qui se termine en
+corvée qui recommence. Une note saisie à la main efface la mention, un champ vidé rend
+la fiche aux sources.
+
 **Bouton « Rattraper les jaquettes manquantes »** (panneau ⋯ Actions) : cherche sur
 SteamGridDB une jaquette pour chaque fiche qui n'en a pas, avec progression et arrêt
 possible. L'application en rattrape déjà douze à chaque ouverture, ce qui convenait à une
@@ -702,10 +722,11 @@ navigation basse, c'est-à-dire une refonte de l'ossature.
 |---|---|---|---|
 | RAWG | oui | ✅ direct | Jaquettes, Metacritic, genres, dates de sortie |
 | Wikipédia FR | non | ✅ direct | Titre officiel français, résumé, image d'infobox |
-| Wikidata | non | ✅ direct | Développeur, éditeur, sorties, mode de jeu, série |
+| Wikidata | non | ✅ direct | Développeur, éditeur, sorties, mode de jeu, série, note Metacritic |
 | SteamGridDB | oui | ❌ via relais | Jaquettes verticales format boîte |
 | xbl.io | oui | ❌ via relais | Historique de la bibliothèque Xbox |
 | Playnite (fichier) | non | — | Jeux PC des boutiques, et leurs infos IGDB |
+| Magasin Steam | non | ❌ via relais | Note Metacritic, demandée par appid |
 
 ---
 
@@ -725,6 +746,7 @@ Un jeu est un objet simple, persisté dans `localStorage` sous la clé `gl_v2` :
   backCompat, bcV,                   // rétrocompatibilité + version de migration
   boutique,                          // PC uniquement : Steam, GOG, Epic…
   refBoutique,                       // identifiant chez la boutique (import Playnite)
+  noteAbsente,                       // aucune source ne note ce jeu : on cesse de chercher
   infobox                            // données Wikidata / RAWG / IGDB, ou null
 }
 ```

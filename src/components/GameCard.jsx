@@ -269,7 +269,12 @@ function GameCard({ g, onEdit, onDelete, onEnrich, onSerie, autresEditions: autr
               <div style={{ color: mut, fontSize: "var(--t-legende)", lineHeight: 1.7 }}>
                 <b style={{ color: txt, fontWeight: 600 }}>{g.platform}</b>{g.platform === PC ? (g.boutique ? ` · ${g.boutique}` : "") : ` · ${g.format}`}
                 {g.genre.length > 0 && <><br />{g.genre.join(" · ")}</>}
-                {g.metacritic ? <><br />Metacritic <b style={{ color: noteCouleur, fontWeight: 700 }}>{g.metacritic}</b></> : null}
+                {g.metacritic
+                  ? <><br />Metacritic <b style={{ color: noteCouleur, fontWeight: 700 }}>{g.metacritic}</b></>
+                  /* Un jeu de 1994 n'a pas de Metascore : Metacritic n'existait
+                     pas. Le dire vaut mieux qu'une ligne absente, qui se lit
+                     comme un oubli et fait relancer la recherche. */
+                  : g.noteAbsente ? <><br />Pas de note connue</> : null}
                 <br />Ajouté le {new Date(g.addedDate).toLocaleDateString("fr-FR")}
 
               </div>
