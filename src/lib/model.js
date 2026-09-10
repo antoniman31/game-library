@@ -533,6 +533,46 @@ export function autresEditions(jeu, games) {
 // « Aussi sur PC · Steam », « Aussi sur Xbox Series X ». La boutique n'est dite
 // que sur PC, où elle est ce qui distingue une édition d'une autre ; sur
 // console, le nom de la machine suffit.
+// ── Le même jeu chez deux boutiques ────────────────────────────────────────
+//
+// Sur PC, la boutique est ce qui distingue une édition d'une autre — mais
+// posséder Borderlands 2 sur Steam ET sur Epic ne donne pas deux jeux à jouer,
+// seulement deux façons de le lancer. Neuf titres sur cent quatre-vingts
+// occupaient ainsi deux cartes voisines, identiques jusqu'à la jaquette.
+//
+// Rien n'est supprimé ni fusionné : la fiche cachée garde sa référence de
+// boutique, donc la liste des écartés et les prochains imports continuent de
+// la reconnaître. C'est une règle d'affichage, et elle ne vaut que côté PC —
+// sur console, deux fiches du même titre sont deux machines différentes, donc
+// deux objets qu'on possède vraiment.
+//
+// La carte gardée est la plus complète : celle qui a la jaquette et la
+// description, pas celle qui est arrivée la première. À égalité, l'ordre de la
+// bibliothèque tranche, pour que deux affichages successifs montrent la même.
+// Un champ qui n'a rien à dire : la liste vide, la note absente, le texte
+// blanc. Sert à mesurer ce qu'une fiche porte, ici comme à la complétion.
+const champVide = (g, champ) => {
+  const v = g?.[champ];
+  if (champ === "genre") return !Array.isArray(v) || !v.length;
+  if (champ === "metacritic") return typeof v !== "number";
+  return !String(v || "").trim();
+};
+
+const REMPLIS = ["cover", "style", "metacritic", "genre", "infobox"];
+const completude = (g) => REMPLIS.filter(c => !champVide(g, c)).length;
+
+export function masquerDoublons(liste) {
+  const gardees = new Map();
+  for (const g of liste || []) {
+    const cle = normTitle(g.title);
+    if (!cle) { gardees.set(g.id, g); continue; }
+    const deja = gardees.get(cle);
+    if (!deja || completude(g) > completude(deja)) gardees.set(cle, g);
+  }
+  const retenus = new Set([...gardees.values()].map(g => g.id));
+  return (liste || []).filter(g => retenus.has(g.id));
+}
+
 // ── Ce qu'une édition peut donner à une autre ──────────────────────────────
 //
 // Posséder « Forza Horizon 5 » sur Xbox et sur PC, c'est avoir deux fiches pour
@@ -551,13 +591,6 @@ export const CHAMPS_PARTAGES = [
   ["metacritic", "note"],
   ["genre", "genres"],
 ];
-
-const champVide = (g, champ) => {
-  const v = g?.[champ];
-  if (champ === "genre") return !Array.isArray(v) || !v.length;
-  if (champ === "metacritic") return typeof v !== "number";
-  return !String(v || "").trim();
-};
 
 // Rend { jeu, champs } quand quelque chose a été repris, sinon null. Les champs
 // sont nommés pour pouvoir le dire à l'écran : « jaquette et description »

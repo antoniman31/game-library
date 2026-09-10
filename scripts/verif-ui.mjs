@@ -189,6 +189,11 @@ for (const [largeur, theme] of ECRANS) {
     ["PC", async () => { await page.getByRole("button", { name: /^PC$/ }).click(); }],
     ["PC · filtres", async () => { await page.getByRole("button", { name: /^Filtres/ }).click(); }],
     ["PC · boutiques", async () => { await page.getByRole("button", { name: /^Boutique/ }).first().click(); }],
+    // Le réglage des doublons ne vit que dans cet univers : il n'est mesuré
+    // qu'ici, et seulement si la promenade descend jusqu'à lui.
+    ["PC · doublons", async () => {
+      await page.getByRole("button", { name: "Toutes les boutiques" }).click();
+    }],
     ["retour Console", async () => {
       await page.keyboard.press("Escape");
       await page.getByRole("button", { name: /^Console$/ }).click();

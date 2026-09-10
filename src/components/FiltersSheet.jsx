@@ -104,7 +104,7 @@ export default function FiltersSheet({
   genreFil, setGenreFil, modeFil, setModeFil, genres, sansMode,
   noteFil, setNoteFil, completFil, setCompletFil, aCompleter, fichesIncompletes,
   serieFil, setSerieFil, groupePar, setGroupePar,
-  view, setView, onClose, resultats, onReinitialiser,
+  view, setView, doublons, setDoublons, nbDoublons, onClose, resultats, onReinitialiser,
 }) {
   // Tous les filtres, sans exception : oublier les nouveaux ici laisserait
   // « Réinitialiser » grisé alors qu'il y a bien quelque chose à réinitialiser.
@@ -326,6 +326,22 @@ export default function FiltersSheet({
           Regrouper par
         </div>
         <Puces options={GROUPES} value={groupePar} onChange={setGroupePar} />
+
+        {/* Le même jeu chez deux boutiques occupait deux cartes voisines,
+            identiques jusqu'à la jaquette. Le choix ne se pose que côté PC :
+            sur console, deux fiches d'un même titre sont deux machines. */}
+        {estPC && (
+          <>
+            <div style={{ color: mut, fontSize: "var(--t-legende)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em", margin: "16px 0 7px" }}>
+              Même jeu, deux boutiques
+            </div>
+            <Puces options={[["masques", "Une seule carte"], ["montres", "Toutes les boutiques"]]}
+              value={doublons} onChange={setDoublons} />
+            {nbDoublons > 0 && (
+              <Aide>{nbDoublons} carte{nbDoublons > 1 ? "s" : ""} masquée{nbDoublons > 1 ? "s" : ""} : la fiche gardée est la plus complète, et dit sur quelles autres boutiques tu as le jeu.</Aide>
+            )}
+          </>
+        )}
       </div>
 
       {/* Collée au bas de la feuille : dépliés, les genres repoussaient « Voir

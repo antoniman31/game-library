@@ -148,7 +148,10 @@ export function texteAgeSauvegarde(etat) {
 // défaut qu'on vient de corriger sur l'ajout d'un jeu, mais permanent. Un
 // réglage d'affichage change comment on regarde, un filtre change ce qu'on
 // voit : seul le premier a vocation à durer.
-export const AFFICHAGE_DEFAUT = { view: "liste", sort: "titre", sortDir: 1, groupePar: "aucun" };
+// `doublons` ne concerne que l'univers PC, où deux fiches d'un même titre ne
+// sont qu'une manière de plus de lancer le même jeu. Masqué par défaut : c'est
+// la réponse attendue, et la voir demande un geste, pas l'inverse.
+export const AFFICHAGE_DEFAUT = { view: "liste", sort: "titre", sortDir: 1, groupePar: "aucun", doublons: "masques" };
 
 const VUES = ["liste", "compact", "grille"];
 const GROUPES = ["aucun", "plateforme", "boutique", "serie", "genre"];
@@ -161,5 +164,6 @@ export function affichageRecu(brut, trisConnus = []) {
   if (trisConnus.includes(brut.sort)) p.sort = brut.sort;
   // Le sens ne vaut que 1 ou -1 : tout le reste renverserait le comparateur.
   if (brut.sortDir === -1 || brut.sortDir === 1) p.sortDir = brut.sortDir;
+  if (brut.doublons === "masques" || brut.doublons === "montres") p.doublons = brut.doublons;
   return p;
 }

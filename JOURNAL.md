@@ -1089,6 +1089,36 @@ PC, invisible tant qu'un seul univers existait, et qu'aucune question sur le
 partage n'aurait fait apparaître : il a fallu demander « c'est ce que tu veux ? »
 pour aller relire le code et voir que la réponse était déjà non.
 
+### Phase 33 — Deux boutiques, un seul jeu
+
+Neuf titres sur cent quatre-vingts occupaient deux cartes voisines côté PC :
+Borderlands 2 sur Steam et Epic, Sims 4 sur Steam et EA app, Fortnite sur Epic
+et Xbox. Identiques jusqu'à la jaquette, puisque la complétion de la phase
+précédente les avait remplies l'une par l'autre.
+
+Trois voies étaient possibles. Fusionner pour de bon — `boutique` devenant une
+liste — est le plus juste dans le modèle, et le plus cher : filtres,
+statistiques, import, exclusions, partage, et surtout la perte de l'identifiant
+par boutique, qui est ce qui rend les réimports exacts. Supprimer à la main
+coûte deux minutes et fait perdre l'information que Tomb Raider est aussi sur
+GOG, donc sans DRM. Reste la troisième : masquer à l'affichage.
+
+C'est une règle de rendu, pas une transformation de données. Rien n'est
+supprimé, rien n'est migré, la fiche cachée garde sa référence de boutique, et
+un interrupteur la fait revenir. Le genre de fonctionnalité qu'on peut retirer
+sans rien réparer — ce qui est exactement ce qu'on veut d'un choix de confort.
+
+Deux détails ont demandé une décision. La carte gardée est la plus complète, pas
+la première : une bibliothèque où l'on masque la seule fiche à jaquette pour
+garder une fiche nue serait pire que le doublon. Et la pastille « Aussi sur PC ·
+Steam » désigne précisément une carte retirée de la liste : la toucher rend donc
+les doublons visibles, sinon le geste ne fait rien du tout — un bouton qui ne
+répond pas est un défaut, pas une protection.
+
+Enfin l'en-tête a été raccourci en cours de route. « 180 jeux · 171 affichés ·
+9 doublons masqués » disait trois fois la même soustraction ; « affichés » ne
+parle plus que du filtrage, et la ligne tient en deux mentions.
+
 ---
 
 ## 3. Architecture finale

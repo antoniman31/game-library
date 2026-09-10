@@ -101,8 +101,12 @@ test("l'âge se dit en français, pas en millisecondes", () => {
 test("les réglages d'affichage relus sont ceux qu'on connaît, ou ceux par défaut", () => {
   const tris = ["titre", "date", "sortie", "metacritic", "aleatoire"];
   assert.deepEqual(affichageRecu(null, tris), AFFICHAGE_DEFAUT);
-  assert.deepEqual(affichageRecu({ view: "grille", sort: "sortie", sortDir: -1, groupePar: "serie" }, tris),
-    { view: "grille", sort: "sortie", sortDir: -1, groupePar: "serie" });
+  assert.deepEqual(affichageRecu({ view: "grille", sort: "sortie", sortDir: -1, groupePar: "serie", doublons: "montres" }, tris),
+    { view: "grille", sort: "sortie", sortDir: -1, groupePar: "serie", doublons: "montres" });
+  // Le réglage manquant — une sauvegarde d'avant qu'il existe — prend le
+  // défaut, sans empêcher les autres d'être relus.
+  assert.equal(affichageRecu({ view: "grille" }, tris).doublons, "masques");
+  assert.equal(affichageRecu({ doublons: "parfois" }, tris).doublons, "masques");
   // Une valeur inconnue — vieille version, fichier bricolé — retombe sur le
   // défaut plutôt que d'entrer telle quelle et de casser l'affichage.
   assert.deepEqual(affichageRecu({ view: "mosaique", sort: "prix", sortDir: 0, groupePar: "editeur" }, tris), AFFICHAGE_DEFAUT);
