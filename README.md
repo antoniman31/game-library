@@ -515,6 +515,14 @@ function ExportLudotheque()
 - **Ce qui est ignoré** : une ligne sans titre, une ligne en double, et toute
   plateforme qui n'est pas celle d'un PC — les importateurs PSN et Xbox de
   Playnite et ses jeux émulés partagent la même base que Steam.
+- **La série est choisie, pas prise au hasard.** Les sources de Playnite ne
+  s'accordent pas sur ce qu'est une série : un export réel donne « ''Half-Life'' »
+  avec son balisage wiki, « AmplitudeStudios » qui est le studio, et pour Age of
+  Mythology deux réponses à la fois. Le balisage est retiré, ce qui porte le nom d'un
+  studio du jeu est écarté, et entre plusieurs candidates on garde la plus longue que
+  le titre contient — « Age of Mythology » plutôt qu'« Age of Empires », « Plague Inc. »
+  plutôt qu'« Inc. ». Les deux premières règles vivent dans le modèle et sont rejouées
+  à chaque chargement : les fiches déjà importées se nettoient seules.
 - **Ce qui n'est pas repris** : les jaquettes (des fichiers sur le disque du PC,
   pas des URL — elles continuent de venir de RAWG), le temps de jeu (retiré du
   modèle) et le statut de complétion de Playnite.

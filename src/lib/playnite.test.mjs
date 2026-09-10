@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { lirePlaynite, analyserImport, jeuxAImporter, jeuDepuisEntree, dateISOdepuisPlaynite, texteDepuisHtml, estLignePC, refImport, resumerDescription, DESCRIPTION_MAX } from "./playnite.js";
+import { lirePlaynite, analyserImport, jeuxAImporter, jeuDepuisEntree, dateISOdepuisPlaynite, texteDepuisHtml, estLignePC, refImport, resumerDescription, DESCRIPTION_MAX, serieDepuisPlaynite } from "./playnite.js";
 import { PC } from "./model.js";
 
 const ligne = (p = {}) => ({ titre: "Hades", boutique: "Steam", idBoutique: "1145360", ...p });
@@ -204,4 +204,33 @@ test("une description de dossier de presse est coupée à la fin d'une phrase", 
   // texte ; sinon on tranche, mais jamais au tiers du texte gardé.
   assert.ok(resumerDescription("A. " + "x".repeat(2000)).startsWith("A. xxx"));
   assert.ok(resumerDescription("x".repeat(400) + ". " + "y".repeat(2000)).endsWith(". […]"));
+});
+
+
+test("la série retenue est celle qui dit quelque chose", () => {
+  // Les valeurs ci-dessous viennent toutes d'un export réel.
+  const s = serieDepuisPlaynite;
+  // Le balisage wiki arrive tel quel dans certaines sources.
+  assert.equal(s(["''Half-Life''"], "Entropy : Zero 2", ["Breadmen"]), "Half-Life");
+  // Un studio n'est pas une série, même écrit sans espace.
+  assert.equal(s(["AmplitudeStudios"], "Dungeon of the ENDLESS", ["AMPLITUDE Studios"]), "");
+  // Entre plusieurs candidates, la plus longue que le titre contient : le titre
+  // contient « Inc. » autant que « Plague Inc. », et c'est la seconde qui parle.
+  assert.equal(s(["Inc.", "Plague Inc."], "Plague Inc: Evolved", ["Ndemic Creations"]), "Plague Inc.");
+  assert.equal(s(["Age of Empires", "Age of Mythology"], "Age of Mythology: Retold", []), "Age of Mythology");
+  assert.equal(s(["Tomb Raider", "Tomb Raider: Survivor"], "Tomb Raider", []), "Tomb Raider");
+  // Aucune candidate dans le titre : la première, faute de mieux — « Of Orcs
+  // and Men » est bien la série de Styx, et rien dans le titre ne le dit.
+  assert.equal(s(["Of Orcs and Men"], "Styx: Master of Shadows", ["Cyanide Studio"]), "Of Orcs and Men");
+  assert.equal(s([], "Hades", []), "");
+  assert.equal(s(undefined, "Hades", undefined), "");
+});
+
+test("la série nettoyée arrive bien dans la fiche", () => {
+  const [e] = lirePlaynite(JSON.stringify([brute({
+    Series: [{ Name: "''Star Wars Jedi''" }],
+    Developers: [{ Name: "Respawn" }], Publishers: [{ Name: "Electronic Arts" }],
+    Name: "STAR WARS Jedi: Survivor",
+  })])).entrees;
+  assert.equal(jeuDepuisEntree(e, "2026-09-10").infobox.series, "Star Wars Jedi");
 });

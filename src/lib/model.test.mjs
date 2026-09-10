@@ -1266,3 +1266,18 @@ test("une note posée à la main efface le « pas de note connue »", () => {
   const { valeurs } = validerEdition(brouillonValide({ metacritic: "88" }));
   assert.equal(valeurs.noteAbsente, false);
 });
+
+test("la série se débarrasse du balisage et du nom du studio, dès la lecture", () => {
+  const info = (p) => ({ developers: ["AMPLITUDE Studios"], publishers: [], releases: [], modes: [],
+    series: "", follows: "", followedBy: "", sources: ["playnite"], ...p });
+  const jeu = (serie) => migrateGames([{ id: 1, title: "X", infobox: info({ series: serie }) }])[0].infobox.series;
+  assert.equal(jeu("''Half-Life''"), "Half-Life");
+  assert.equal(jeu("[[Fallout]]"), "Fallout");
+  // Le studio du jeu n'est pas sa série, même écrit sans espace.
+  assert.equal(jeu("AmplitudeStudios"), "");
+  // Ce qui est déjà propre n'est pas touché, et l'objet non plus.
+  const propre = migrateGames([{ id: 1, title: "X", infobox: info({ series: "Fallout" }) }])[0];
+  assert.equal(propre.infobox.series, "Fallout");
+  // Une fiche sans infobox ne doit pas exploser.
+  assert.equal(migrateGames([{ id: 2, title: "Y" }])[0].infobox, null);
+});

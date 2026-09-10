@@ -92,6 +92,12 @@ export function migrateGames(list) {
     // « À compléter → Note » : un travail qui ne finit jamais parce qu'il n'a
     // pas d'objet — Metacritic n'existait pas encore.
     if (typeof ng.noteAbsente !== "boolean") ng.noteAbsente = false;
+    // La série, débarrassée de ce qui n'en est pas une.
+    if (ng.infobox?.series) {
+      const serie = sansBalisageWiki(ng.infobox.series);
+      const gardee = estNomDeStudio(serie, ng.infobox) ? "" : serie;
+      if (gardee !== ng.infobox.series) ng.infobox = { ...ng.infobox, series: gardee };
+    }
     if (typeof ng.metacritic === "number") ng.noteAbsente = false;
     // Un jeu PC est toujours démat, et n'est jamais rétrocompatible : ces deux
     // champs répondent à des questions de console.
@@ -392,6 +398,24 @@ export function sourcesInfobox(info) {
 
 export const libelleSources = (info) =>
   sourcesInfobox(info).map(s => SOURCES_INFO[s]).join(" et ");
+
+// ── Hygiène de la série ────────────────────────────────────────────────────
+//
+// Deux saletés arrivent des sources et se voient dans le filtre par série :
+// le balisage wiki d'un titre — « \'\'Half-Life\'\' », apostrophes comprises — et
+// le nom d'un studio pris pour une série, « AmplitudeStudios » sur un jeu
+// d'AMPLITUDE Studios. Les deux se nettoient sans rien savoir de la source,
+// donc à la lecture : la migration les rattrape sur les fiches déjà là.
+export const sansBalisageWiki = (s) => String(s || "").replace(/''+/g, "").replace(/\[\[|\]\]/g, "").trim();
+
+// Une clé qui ignore la ponctuation ET les espaces : « AmplitudeStudios » et
+// « AMPLITUDE Studios » sont le même nom écrit deux fois.
+const cleNom = (v) => normTitle(v).replace(/ /g, "");
+export function estNomDeStudio(serie, info) {
+  const cle = cleNom(serie);
+  if (!cle) return false;
+  return [...(info?.developers || []), ...(info?.publishers || [])].some(x => cleNom(x) === cle);
+}
 
 const LISTES_INFO = ["developers", "publishers", "releases", "modes"];
 const TEXTES_INFO = ["series", "follows", "followedBy"];

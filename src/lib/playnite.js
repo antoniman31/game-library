@@ -13,7 +13,8 @@
 // ce soit ; c'est un import de cent lignes, il ne doit pas être une surprise.
 
 import { PC, migrateGames, normTitle, normaliserGenres, modesDepuisNoms, infoboxVide, aujourdhuiISO, estDatePlausible,
-  editionsDuJeu, completerDepuisEditions, libelleEdition, universDuJeu } from "./model.js";
+  editionsDuJeu, completerDepuisEditions, libelleEdition, universDuJeu,
+  sansBalisageWiki, estNomDeStudio } from "./model.js";
 
 // ── Ce que l'export contient ───────────────────────────────────────────────
 //
@@ -122,6 +123,35 @@ function normaliserLigne(ligne) {
   };
 }
 
+// ── La série, parmi ce que Playnite en dit ─────────────────────────────────
+//
+// Ses sources ne s'accordent pas sur ce qu'est une série. Un export réel donne
+// « ''Half-Life'' » avec son balisage wiki, « AmplitudeStudios » qui est le
+// studio, « Inc. » pour Plague Inc., et pour Age of Mythology deux réponses à
+// la fois — « Age of Empires » et « Age of Mythology ». Prendre la première
+// venue, c'est ce qui a mis « WB Games » en série sur une fiche.
+//
+// Trois règles, dans cet ordre : on retire le balisage ; on écarte ce qui porte
+// le nom d'un studio du jeu ; et entre plusieurs candidates, on garde celle qui
+// apparaît dans le titre — « Age of Mythology » plutôt qu'« Age of Empires »,
+// « Plague Inc. » plutôt qu'« Inc. ». À défaut, la première, faute de mieux.
+// Le nettoyage lui-même vit dans le modèle : la migration l'applique aussi aux
+// fiches déjà enregistrées, et deux copies de la même règle finiraient par ne
+// plus dire la même chose.
+export function serieDepuisPlaynite(series, titre, studios = []) {
+  const info = { developers: liste(studios), publishers: [] };
+  const propres = liste(series).map(x => texte(sansBalisageWiki(x))).filter(s => s && !estNomDeStudio(s, info));
+  if (!propres.length) return "";
+  // La plus longue des candidates que le titre contient, et non la première :
+  // « Plague Inc: Evolved » contient « Inc. » autant que « Plague Inc. », et
+  // c'est la seconde qui dit quelque chose.
+  const t = normTitle(titre);
+  const dansLeTitre = propres
+    .filter(x => normTitle(x) && t.includes(normTitle(x)))
+    .sort((a, b) => normTitle(b).length - normTitle(a).length);
+  return dansLeTitre[0] || propres[0];
+}
+
 // ── L'identité d'une ligne ─────────────────────────────────────────────────
 //
 // Deux imports successifs doivent reconnaître le même jeu. Le titre ne suffit
@@ -180,10 +210,11 @@ export function lirePlaynite(contenu) {
       genres: liste(ligne.genres),
       developpeurs: liste(ligne.developpeurs),
       editeurs: liste(ligne.editeurs),
-      series: liste(ligne.series),
+      serie: "",
       modes: modesDepuisNoms(liste(ligne.fonctionnalites)),
       description: resumerDescription(texteDepuisHtml(ligne.description)),
     };
+    entree.serie = serieDepuisPlaynite(ligne.series, titre, [...entree.developpeurs, ...entree.editeurs]);
     entree.ref = refImport(entree);
 
     // Playnite lui-même peut porter deux fois le même jeu (le même titre chez
@@ -207,7 +238,7 @@ export function jeuDepuisEntree(entree, aujourdhui = aujourdhuiISO()) {
     publishers: entree.editeurs,
     releases: entree.sortie ? [{ date: entree.sortie }] : [],
     modes: entree.modes,
-    series: entree.series[0] || "",
+    series: entree.serie,
     follows: "",
     followedBy: "",
   };
