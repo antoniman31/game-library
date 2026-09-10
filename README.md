@@ -372,7 +372,16 @@ intégrations ici aurait donc coûté cher pour un résultat partiel.
 quatre boutiques depuis les clients installés et télécharge les métadonnées
 d'IGDB. Il fait ce travail sur le PC ; l'application lit son export.
 
-**Sur le PC**, créer un dossier `ExportLudotheque` dans
+**Deux façons d'obtenir le fichier**, l'application lit les deux.
+
+La plus simple : installer l'extension [Json Library Import
+Export](https://github.com/sokolinthesky/JsonLibraryImportExport) depuis
+l'annuaire d'add-ons de Playnite, puis Extensions → Json Library Import Export
+→ Export. Elle écrit un dossier de fichiers ; seul `games.json` sert ici. Son
+format est celui des objets Playnite bruts, en anglais et imbriqué.
+
+L'autre, sans extension tierce : le script ci-dessous, qui écrit directement un
+fichier plat. Créer un dossier `ExportLudotheque` dans
 `%AppData%\Playnite\Extensions\` (ou dans le dossier `Extensions` de
 l'installation portable) avec ces deux fichiers, en UTF-8, puis relancer
 Playnite : l'entrée apparaît dans le menu principal.
@@ -447,8 +456,15 @@ function ExportLudotheque()
   seules les nouvelles sont cochables. Rien n'est écrit avant validation.
 - **Ce qui entre** : une fiche PC, démat, avec sa boutique, sa référence
   boutique, ses genres (ramenés au vocabulaire du projet), sa description
-  (nettoyée de son HTML) et une infobox signée « IGDB (via Playnite) ». La date
-  d'ajout reprend la date de sortie quand elle est complète.
+  (nettoyée de son HTML, résumée au-delà de 900 caractères) et une infobox
+  signée « IGDB (via Playnite) ». La date d'ajout reprend la date de sortie
+  quand elle est complète.
+- **Deux langues dans le même fichier** : Playnite répond dans la langue de son
+  interface, mais ses sources ne sont pas toutes traduites. Un export réel de
+  181 jeux porte « Solo » 130 fois et « Single Player » 17, « Indépendant » et
+  « Indie », « Course automobile » et « Racing ». Les tables de genres et de
+  modes couvrent donc les deux formes, sans quoi les filtres couperaient la
+  bibliothèque en deux moitiés arbitraires.
 - **Ce qui est ignoré** : une ligne sans titre, une ligne en double, et toute
   plateforme qui n'est pas celle d'un PC — les importateurs PSN et Xbox de
   Playnite et ses jeux émulés partagent la même base que Steam.
