@@ -501,6 +501,37 @@ d'importer. La liste voyage avec la sauvegarde en ligne (elle ne contient aucun
 secret) et se vide depuis ⚙️ → Sauvegarde. Annuler une suppression retire
 l'exclusion.
 
+### Le même jeu chez deux boutiques
+
+Sur PC, la boutique distingue une édition d'une autre — mais posséder
+Borderlands 2 sur Steam **et** sur Epic ne donne pas deux jeux à jouer, seulement
+deux façons de le lancer. Sur une bibliothèque réelle, neuf titres sur cent
+quatre-vingts occupaient ainsi deux cartes voisines, identiques jusqu'à la
+jaquette.
+
+- **Une seule carte par titre**, côté PC uniquement : sur console, deux fiches
+  d'un même titre sont deux machines, donc deux objets qu'on possède vraiment.
+- **La carte gardée est la plus complète** — celle qui a la jaquette et la
+  description, pas celle qui est arrivée la première. À égalité, l'ordre de la
+  bibliothèque tranche, pour que deux affichages successifs montrent la même.
+- **Rien n'est supprimé ni fusionné.** La fiche cachée garde sa référence de
+  boutique, donc la liste des écartés et les prochains imports continuent de la
+  reconnaître. Fusionner aurait demandé de changer le modèle — `boutique`
+  devenant une liste — et fait perdre l'identifiant par boutique, qui est ce qui
+  rend les réimports exacts.
+- **L'en-tête le dit** : « 180 jeux · 9 doublons masqués ». Un jeu qui manque à
+  l'appel doit s'expliquer là où on compte les jeux.
+- **Filtres → Même jeu, deux boutiques** bascule entre « Une seule carte » et
+  « Toutes les boutiques ». Le réglage vit avec la vue et le regroupement, pas
+  avec les filtres : il change comment on regarde, pas ce qu'on possède.
+- **Toucher « Aussi sur PC · Steam » sur la carte gardée montre les doublons** :
+  la pastille désigne précisément une carte retirée de la liste, et c'est le seul
+  moyen que le geste aboutisse. Le réglage reste alors sur « Toutes les
+  boutiques » jusqu'à ce qu'on le remette.
+- Les statistiques comptent les fiches, pas les cartes : elles annoncent donc
+  180 là où la liste en montre 171. Elles disent ce qu'on possède, la liste dit
+  ce qu'on peut lancer.
+
 ### Remplir une fiche depuis ses autres éditions
 
 Posséder « Forza Horizon 5 » sur Xbox et sur PC, c'est avoir deux fiches pour un

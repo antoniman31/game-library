@@ -25,7 +25,7 @@ import {
   fusionnerInfobox, infoboxDepuisRawg, sourcesInfobox, libelleSources, infoboxVide,
   viderChamps, CHAMPS_VIDABLES, FILTRES, FILTRES_VIDES,
   PC, estPC, universDuJeu, jeuDansUnivers, boutiquesPresentes, jeuDeLaBoutique,
-  completerDepuisEditions, editionsDuJeu, titreDeTri,
+  completerDepuisEditions, editionsDuJeu, titreDeTri, masquerDoublons,
   autresEditions, libelleEdition,
 } from "./model.js";
 import { ecouterMiseAJour } from "./maj.js";
@@ -1179,4 +1179,40 @@ test("le tri met l'article initial de côté, et lui seul", () => {
   // Un titre qui n'est QUE son article garde de quoi se trier.
   assert.equal(titreDeTri("The"), "The");
   assert.equal(titreDeTri(""), "");
+});
+
+// ── Le même jeu chez deux boutiques ────────────────────────────────────────
+
+const pcJeu = (p = {}) => ({
+  id: 1, title: "Borderlands 2", platform: PC, boutique: "Steam",
+  cover: null, style: "", metacritic: null, genre: [], infobox: null, ...p,
+});
+
+test("de deux cartes du même jeu, c'est la plus complète qui reste", () => {
+  const nue = pcJeu({ id: 1, boutique: "Epic" });
+  const remplie = pcJeu({ id: 2, boutique: "Steam", cover: "https://x.jpg", style: "Un jeu.", metacritic: 89 });
+  assert.deepEqual(masquerDoublons([nue, remplie]).map(g => g.id), [2]);
+  // L'ordre d'entrée ne change pas le choix : c'est la complétude qui décide.
+  assert.deepEqual(masquerDoublons([remplie, nue]).map(g => g.id), [2]);
+});
+
+test("à complétude égale, la première rencontrée reste — deux affichages donnent la même", () => {
+  const a = pcJeu({ id: 1, boutique: "Epic" });
+  const b = pcJeu({ id: 2, boutique: "Steam" });
+  assert.deepEqual(masquerDoublons([a, b]).map(g => g.id), [1]);
+  assert.deepEqual(masquerDoublons([a, b]).map(g => g.id), [1]);
+});
+
+test("des titres différents ne se masquent pas, et l'ordre est conservé", () => {
+  const l = [pcJeu({ id: 1, title: "Hades" }), pcJeu({ id: 2, title: "Celeste" }), pcJeu({ id: 3, title: "hadès" })];
+  // « hadès » et « Hades » : le même titre une fois normalisé.
+  assert.deepEqual(masquerDoublons(l).map(g => g.id), [1, 2]);
+  assert.deepEqual(masquerDoublons([]).map(g => g.id), []);
+});
+
+test("une fiche sans titre n'en masque aucune autre", () => {
+  // Deux fiches sans titre ne sont pas « le même jeu » : elles n'ont pas de
+  // clé, et se compter comme doublons ferait disparaître la seconde.
+  const l = [pcJeu({ id: 1, title: "" }), pcJeu({ id: 2, title: "   " }), pcJeu({ id: 3, title: "Hades" })];
+  assert.deepEqual(masquerDoublons(l).map(g => g.id), [1, 2, 3]);
 });

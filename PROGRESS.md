@@ -95,6 +95,9 @@ et la fiche affiche d'où viennent ses infos (« Source : RAWG et Wikidata »).
   obligatoire, chaque ligne marquée Nouveau / Déjà présent / Écarté / Ignoré.
 - **Liste des écartés** : un jeu importé puis supprimé ne revient pas au prochain
   import. Elle voyage avec la sauvegarde et se vide depuis les réglages.
+- **Le même jeu chez deux boutiques** : une seule carte côté PC, la plus complète,
+  avec « 9 doublons masqués » dans l'en-tête et un interrupteur dans les filtres.
+  Rien n'est supprimé : la fiche cachée garde sa référence de boutique.
 - **Rattraper les jaquettes manquantes** (⋯) : SteamGridDB pour toutes les fiches sans
   image, avec progression et arrêt. Un titre trop éloigné est laissé vide plutôt que
   d'écrire une jaquette fausse.

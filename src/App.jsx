@@ -20,6 +20,7 @@ import { jeuDansUnivers, boutiquesPresentes, jeuDeLaBoutique, autresEditions,
   jeuALeMode, jeuSurPlateforme, compterRetro, genresPresents, dureeEntreeHistorique, supprimerEntreeHistorique,
   joursDePret, jeuPasseSeuil, jeuACompleter, completudeManquante, dateDeSortie, serieDuJeu,
   empreinteMelange, compterFichesIncompletes, completerDepuisEditions, titreDeTri, rapprochementDouteux,
+  masquerDoublons,
   PLATFORM_COLORS } from "./lib/model.js";
 import { lire, ecrire, surEchecStockage } from "./lib/storage.js";
 import { chargerSync, enregistrerSync, genererCode, envoyer, recuperer } from "./lib/sync.js";
@@ -104,6 +105,7 @@ export default function App() {
   const [modeFil, setModeFil] = useState("tous");
   const [sort, setSort] = useState(affichage.sort);
   const [view, setView] = useState(affichage.view);
+  const [doublons, setDoublons] = useState(affichage.doublons);
   // « Jeux » s'est scindé en « Console » et « PC ». L'onglet actif ne choisit
   // plus seulement un écran, il choisit un univers : une machine et un format
   // d'un côté, une boutique de l'autre, et deux jeux de filtres qui n'ont
@@ -206,8 +208,8 @@ export default function App() {
   useEffect(() => { ecrire("gl_exclusions", JSON.stringify(exclusions)); }, [exclusions]);
   // Les filtres ne sont volontairement pas de la partie : un filtre qui survit
   // au lancement, c'est une bibliothèque amputée sans qu'on sache pourquoi.
-  useEffect(() => { ecrire("gl_affichage", JSON.stringify({ view, sort, sortDir, groupePar })); },
-    [view, sort, sortDir, groupePar]);
+  useEffect(() => { ecrire("gl_affichage", JSON.stringify({ view, sort, sortDir, groupePar, doublons })); },
+    [view, sort, sortDir, groupePar, doublons]);
 
   // Le téléphone peut basculer pendant que l'application est ouverte — la nuit
   // tombe, ou l'économiseur de batterie s'enclenche. En mode automatique, elle
@@ -410,10 +412,10 @@ export default function App() {
     // partagée est celle de l'univers courant : depuis Console, cent
     // cinquante-cinq jeux sur trois cent trente-cinq passaient pour une
     // sélection filtrée, et le titre annonçait une ludothèque entière.
-    const filtree = filtered.length < jeuxUnivers.length;
+    const filtree = affichee.length < jeuxUnivers.length;
     const ou = univers === "pc" ? "PC" : "console";
     const titre = `Ma ludothèque ${ou}${filtree ? " (sélection)" : ""}`;
-    const quoi = await partagerTexte(texteListe(filtered, titre), titre);
+    const quoi = await partagerTexte(texteListe(affichee, titre), titre);
     if (quoi === "annule") return;
     setAvis(quoi === "copie" ? "Liste copiée — colle-la où tu veux."
       : quoi === "echec" ? "Impossible de copier la liste."
@@ -446,6 +448,10 @@ export default function App() {
   // lève les filtres — celui qui nous a amené là masquerait la fiche visée —
   // et on demande son ouverture.
   const ouvrirAutreEdition = (edition) => {
+    // La fiche visée peut être celle qu'on masque : la pastille « Aussi sur PC
+    // · EA app » désigne précisément une carte retirée de la liste. Rendre les
+    // doublons visibles est le seul moyen que le geste aboutisse.
+    if (edition.univers === "pc") setDoublons("montres");
     if (edition.univers !== univers) {
       setUnivers(edition.univers);
       setTab(edition.univers);
@@ -790,6 +796,15 @@ export default function App() {
   // l'onglet Console ne rendrait jamais rien.
   const jeuxUnivers = useMemo(() => games.filter(g => jeuDansUnivers(g, univers)), [games, univers]);
 
+  // Les doublons se retirent APRÈS le filtrage et le tri : la carte gardée est
+  // la plus complète, pas la première rencontrée, et ce choix ne doit pas
+  // dépendre du filtre en cours. Côté console, deux fiches d'un même titre sont
+  // deux machines : elles restent toutes les deux.
+  const affichee = useMemo(
+    () => (univers === "pc" && doublons === "masques" ? masquerDoublons(filtered) : filtered),
+    [filtered, univers, doublons]);
+  const nbMasques = filtered.length - affichee.length;
+
   const stats = useMemo(() => {
     const total = jeuxUnivers.length;
     // Les prêts ne concernent que la console : un jeu PC ne se prête pas.
@@ -839,19 +854,19 @@ export default function App() {
   // entière visible : c'est le change qu'on a fait. Ce commentaire garde les
   // chiffres pour le jour où la bibliothèque aura doublé.
   const sections = useMemo(() => {
-    if (groupePar === "aucun") return [{ titre: null, jeux: filtered }];
+    if (groupePar === "aucun") return [{ titre: null, jeux: affichee }];
     const cle = (g) => (groupePar === "plateforme" ? g.platform
       : groupePar === "boutique" ? (String(g.boutique || "").trim() || "Sans boutique")
       : groupePar === "serie" ? (serieDuJeu(g) || "Sans série")
       : (g.genre?.[0] || "Sans genre"));
     const par = new Map();
-    for (const g of filtered) {
+    for (const g of affichee) {
       const k = cle(g) || "Sans réponse";
       if (!par.has(k)) par.set(k, []);
       par.get(k).push(g);
     }
     return [...par.entries()].map(([titre, jeux]) => ({ titre, jeux }));
-  }, [filtered, groupePar]);
+  }, [affichee, groupePar]);
 
   // Les jeux d'une section, dans la vue demandée.
   //
@@ -925,7 +940,13 @@ export default function App() {
               {/* Le nombre affiché ne se dit que s'il diffère du total : il
                   vivait sur une rangée à lui sous l'en-tête, que le tri a
                   libérée en remontant à côté de la recherche. */}
-              {estBibliotheque && filtered.length < jeuxUnivers.length ? ` · ${filtered.length} affiché${filtered.length > 1 ? "s" : ""}` : ""}
+              {/* « affichés » ne parle que du filtrage : quand seuls les doublons
+                  manquent, « 180 jeux · 171 affichés · 9 doublons masqués »
+                  disait trois fois la même soustraction. */}
+              {estBibliotheque && filtered.length < jeuxUnivers.length ? ` · ${affichee.length} affiché${affichee.length > 1 ? "s" : ""}` : ""}
+              {/* Un jeu qui manque à l'appel doit s'expliquer là où on compte
+                  les jeux, sinon c'est une bibliothèque qui perd des fiches. */}
+              {nbMasques > 0 ? ` · ${nbMasques} doublon${nbMasques > 1 ? "s" : ""} masqué${nbMasques > 1 ? "s" : ""}` : ""}
               {stats.pretes > 0 ? ` · ${stats.pretes} prêté${stats.pretes > 1 ? "s" : ""}` : ""}
               {stats.enRetard > 0 ? <span style={{ color: warn }}> · {stats.enRetard} en retard</span> : null}
             </div>
@@ -1091,7 +1112,7 @@ export default function App() {
 
       {/* Body */}
       <div style={{ padding:"14px calc(14px + var(--safe-right)) calc(60px + var(--safe-bottom)) calc(14px + var(--safe-left))" }}>
-        {estBibliotheque && (filtered.length === 0 ? emptyState : (
+        {estBibliotheque && (affichee.length === 0 ? emptyState : (
           <>
           {sections.map(({ titre, jeux }) => (
             <div key={titre || "tout"}>
@@ -1248,7 +1269,8 @@ export default function App() {
           serieFil={serieFil} setSerieFil={setSerieFil}
           groupePar={groupePar} setGroupePar={setGroupePar}
           view={view} setView={setView}
-          resultats={filtered.length}
+          doublons={doublons} setDoublons={setDoublons} nbDoublons={nbMasques}
+          resultats={affichee.length}
           onReinitialiser={reinitialiserFiltres}
           onClose={() => setShowFilters(false)}
         />
@@ -1283,8 +1305,8 @@ export default function App() {
           onAnnulerScores={annulerScores}
           scoresManquants={jeuxSansScore(games).length}
           onPartager={partagerListe}
-          partageTotal={filtered.length}
-          partageFiltre={filtered.length < jeuxUnivers.length}
+          partageTotal={affichee.length}
+          partageFiltre={affichee.length < jeuxUnivers.length}
         />
       )}
 
