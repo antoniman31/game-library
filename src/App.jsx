@@ -14,7 +14,8 @@ import SettingsView from "./components/SettingsView.jsx";
 
 import { hdr, card, bdr, txt, mut, accent, accentDoux, accentFond, warnDoux, dangerDoux, ok, warn, warnFond, danger } from "./lib/theme.js";
 import { GAMES_INIT } from "./lib/seed.js";
-import { migrateGames, compterFiltres, FILTRES, validerJeuxImportes, pretEnRetard, jeuxSansScore, normaliserGenres,
+import { jeuDansUnivers, boutiquesPresentes, jeuDeLaBoutique, autresEditions,
+  migrateGames, compterFiltres, FILTRES, validerJeuxImportes, pretEnRetard, jeuxSansScore, normaliserGenres,
   jeuALeMode, jeuSurPlateforme, compterRetro, genresPresents, dureeEntreeHistorique, supprimerEntreeHistorique,
   joursDePret, jeuPasseSeuil, jeuACompleter, completudeManquante, dateDeSortie, serieDuJeu,
   empreinteMelange, compterFichesIncompletes, PLATFORM_COLORS } from "./lib/model.js";
@@ -94,7 +95,18 @@ export default function App() {
   const [modeFil, setModeFil] = useState("tous");
   const [sort, setSort] = useState(affichage.sort);
   const [view, setView] = useState(affichage.view);
-  const [tab, setTab] = useState("library");
+  // « Jeux » s'est scindé en « Console » et « PC ». L'onglet actif ne choisit
+  // plus seulement un écran, il choisit un univers : une machine et un format
+  // d'un côté, une boutique de l'autre, et deux jeux de filtres qui n'ont
+  // presque rien en commun.
+  const [tab, setTab] = useState("console");
+  // L'univers ne se déduit pas de l'onglet : « Stats » et « Réglages » n'en
+  // désignent aucun, et le déduire faisait retomber les statistiques sur la
+  // console alors qu'on venait de l'onglet PC. Il se retient donc à part, et
+  // ne change qu'en touchant « Console » ou « PC ».
+  const [univers, setUnivers] = useState("console");
+  const estBibliotheque = tab === "console" || tab === "pc";
+  const [boutiqueFil, setBoutiqueFil] = useState("tous");
   const [showAdd, setShowAdd] = useState(false);
   const [showImport, setShowImport] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
@@ -344,6 +356,7 @@ export default function App() {
   const SETTEURS_FILTRE = {
     plat: setPlat, pretFil: setPretFil, fmtFil: setFmtFil, genreFil: setGenreFil,
     modeFil: setModeFil, noteFil: setNoteFil, completFil: setCompletFil, serieFil: setSerieFil,
+    boutiqueFil: setBoutiqueFil,
   };
 
   // La rétrocompatibilité n'est pas un filtre mais une façon de lire le filtre
@@ -351,6 +364,36 @@ export default function App() {
   const reinitialiserFiltres = () => {
     for (const f of FILTRES) SETTEURS_FILTRE[f]("tous");
     setAvecRetro(true);
+  };
+
+  // Changer d'univers remet les filtres à zéro. « Xbox One » et « Steam » ne
+  // veulent rien dire l'un pour l'autre : les garder afficherait une
+  // bibliothèque vide sans qu'on comprenne pourquoi — le défaut qu'on a déjà
+  // corrigé sur l'ajout d'un jeu, transposé au changement d'onglet.
+  // Ouvrir la même jeu dans l'autre univers : on change d'onglet si besoin, on
+  // lève les filtres — celui qui nous a amené là masquerait la fiche visée —
+  // et on demande son ouverture.
+  const ouvrirAutreEdition = (edition) => {
+    if (edition.univers !== univers) {
+      setUnivers(edition.univers);
+      setTab(edition.univers);
+    }
+    reinitialiserFiltres();
+    applySearch("");
+    setFocusId(edition.id);
+  };
+
+  const allerVers = (k) => {
+    // La comparaison porte sur l'univers retenu, pas sur l'onglet courant :
+    // en passant par Stats, l'onglet n'en désigne aucun et les filtres du PC
+    // repassaient intacts côté console — une bibliothèque vide, un badge qui
+    // annonce un filtre, et rien pour comprendre.
+    if ((k === "console" || k === "pc") && k !== univers) {
+      setUnivers(k);
+      reinitialiserFiltres();
+      applySearch("");
+    }
+    setTab(k);
   };
 
   // Ajoute le jeu puis l'ouvre directement en fiche complète (parité fiche/ajout).
@@ -567,6 +610,9 @@ export default function App() {
     // uniquement : la description (style) est exclue pour éviter les faux positifs.
     const q = normTitle(search);
     let list = games.filter(g => {
+      // L'univers d'abord : il ne se combine avec rien, il décide de quelle
+      // bibliothèque on parle.
+      if (!jeuDansUnivers(g, univers)) return false;
       const searchMatch = !q
         || normTitle(g.title).includes(q)
         || g.genre.some(x => normTitle(x).includes(q))
@@ -584,6 +630,7 @@ export default function App() {
         && jeuPasseSeuil(g, noteFil)
         && jeuACompleter(g, completFil)
         && (serieFil === "tous" || serieDuJeu(g) === serieFil)
+        && jeuDeLaBoutique(g, boutiqueFil)
         && pretMatch;
     });
 
@@ -613,16 +660,23 @@ export default function App() {
       if (kb == null) return -1;
       return compare(ka, kb) * sortDir;
     });
-  }, [games, search, plat, avecRetro, pretFil, fmtFil, genreFil, modeFil, noteFil, completFil, serieFil,
-    sort, sortDir, graine]);
+  }, [games, univers, search, plat, avecRetro, pretFil, fmtFil, genreFil, modeFil, noteFil, completFil, serieFil,
+    boutiqueFil, sort, sortDir, graine]);
+
+  // La bibliothèque de l'univers courant. Tout ce qui se dérive de « toute la
+  // bibliothèque » — genres présents, boutiques, ce qui manque, le compteur de
+  // l'en-tête — s'en tient à celle-là : proposer un filtre « Steam » sur
+  // l'onglet Console ne rendrait jamais rien.
+  const jeuxUnivers = useMemo(() => games.filter(g => jeuDansUnivers(g, univers)), [games, univers]);
 
   const stats = useMemo(() => {
-    const total = games.length;
+    const total = jeuxUnivers.length;
+    // Les prêts ne concernent que la console : un jeu PC ne se prête pas.
     const pretes = games.filter(g => g.lentA).length;
     const enRetard = games.filter(pretEnRetard).length;
     // Seul l'en-tête s'en sert encore : le détail vit dans StatsView.
     return { total, pretes, enRetard };
-  }, [games]);
+  }, [games, jeuxUnivers]);
 
   const lentGames = games.filter(g => g.lentA);
   // Tous les prêts rendus, jeu par jeu, du plus récent au plus ancien.
@@ -634,18 +688,19 @@ export default function App() {
   const sauvegarde = etatSauvegarde({ ...sync, proxy: keys.proxy });
   const sauvegardeAlerte = sauvegarde.configuree && sauvegarde.niveau !== "fraiche";
 
-  const filtresActifs = compterFiltres({ plat, pretFil, fmtFil, genreFil, modeFil, noteFil, completFil, serieFil });
-  // Dérivés de TOUTE la bibliothèque, pas de la liste filtrée : sinon les
+  const filtresActifs = compterFiltres({ plat, pretFil, fmtFil, genreFil, modeFil, noteFil, completFil, serieFil, boutiqueFil });
+  // Dérivés de tout l'univers courant, pas de la liste filtrée : sinon les
   // options disparaîtraient au fur et à mesure qu'on s'en sert.
-  const genres = useMemo(() => genresPresents(games), [games]);
-  const sansMode = useMemo(() => games.filter(g => !g.infobox?.modes?.length).length, [games]);
-  const nbRetro = useMemo(() => compterRetro(games, plat), [games, plat]);
-  const nbNatifs = useMemo(() => games.filter(g => g.platform === plat).length, [games, plat]);
+  const genres = useMemo(() => genresPresents(jeuxUnivers), [jeuxUnivers]);
+  const boutiques = useMemo(() => boutiquesPresentes(jeuxUnivers), [jeuxUnivers]);
+  const sansMode = useMemo(() => jeuxUnivers.filter(g => !g.infobox?.modes?.length).length, [jeuxUnivers]);
+  const nbRetro = useMemo(() => compterRetro(jeuxUnivers, plat), [jeuxUnivers, plat]);
+  const nbNatifs = useMemo(() => jeuxUnivers.filter(g => g.platform === plat).length, [jeuxUnivers, plat]);
   // Ce qui manque réellement : une option « Jaquette 0 » promettrait du travail
   // qui n'existe pas, et si tout est complet le groupe entier disparaît.
-  const aCompleter = useMemo(() => completudeManquante(games), [games]);
+  const aCompleter = useMemo(() => completudeManquante(jeuxUnivers), [jeuxUnivers]);
   // Pas la somme des colonnes : un même jeu peut manquer de trois choses.
-  const fichesIncompletes = useMemo(() => compterFichesIncompletes(games), [games]);
+  const fichesIncompletes = useMemo(() => compterFichesIncompletes(jeuxUnivers), [jeuxUnivers]);
 
   // Regrouper ne change pas l'ordre : les sections apparaissent dans l'ordre
   // où le tri les fait apparaître, et un jeu ne bouge pas de place à
@@ -665,6 +720,7 @@ export default function App() {
   const sections = useMemo(() => {
     if (groupePar === "aucun") return [{ titre: null, jeux: filtered }];
     const cle = (g) => (groupePar === "plateforme" ? g.platform
+      : groupePar === "boutique" ? (String(g.boutique || "").trim() || "Sans boutique")
       : groupePar === "serie" ? (serieDuJeu(g) || "Sans série")
       : (g.genre?.[0] || "Sans genre"));
     const par = new Map();
@@ -719,6 +775,7 @@ export default function App() {
       <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
         {liste.map(g => <GameCard key={g.id} g={g} onEdit={edit} onDelete={deleteGame} onEnrich={enrichGame}
           onSerie={setSerieFil}
+          autresEditions={autresEditions(g, games)} onAutreEdition={ouvrirAutreEdition}
           autoOpen={g.id === lastAddedId || g.id === focusId} onOuverte={consommerOuverture} />)}
       </div>
     );
@@ -747,7 +804,7 @@ export default function App() {
               {/* Le nombre affiché ne se dit que s'il diffère du total : il
                   vivait sur une rangée à lui sous l'en-tête, que le tri a
                   libérée en remontant à côté de la recherche. */}
-              {tab === "library" && filtered.length < games.length ? ` · ${filtered.length} affiché${filtered.length > 1 ? "s" : ""}` : ""}
+              {estBibliotheque && filtered.length < jeuxUnivers.length ? ` · ${filtered.length} affiché${filtered.length > 1 ? "s" : ""}` : ""}
               {stats.pretes > 0 ? ` · ${stats.pretes} prêté${stats.pretes > 1 ? "s" : ""}` : ""}
               {stats.enRetard > 0 ? <span style={{ color: warn }}> · {stats.enRetard} en retard</span> : null}
             </div>
@@ -817,16 +874,25 @@ export default function App() {
           </div>
         )}
 
-        {/* Onglets : pleine largeur, à la hauteur de cible tactile. */}
-        <div style={{ display: "flex", gap: "var(--ecart-tap)", marginBottom: tab === "library" ? 10 : 0 }}>
-          {/* « Bibliothèque » se coupait en « Bibliothè… » dès qu'il devenait l'onglet
-              actif : le gras l'élargit, et quatre onglets ne tiennent pas dans
-              360 px. Un libellé tronqué sur l'onglet principal donne l'air d'un
-              écran cassé — « Jeux » dit la même chose et tient partout. */}
-          {[["library","Jeux"],["loans",`Prêts${lentGames.length ? ` (${lentGames.length})` : ""}`],["stats","Stats"],["settings","⚙️"]].map(([k,l]) => (
+        {/* Onglets : pleine largeur, à la hauteur de cible tactile.
+            « Bibliothèque » se coupait en « Bibliothè… » dès qu'il devenait
+            l'onglet actif : le gras l'élargit, et quatre onglets ne tiennent
+            pas dans 360 px. Un libellé tronqué sur l'onglet principal donne
+            l'air d'un écran cassé — « Jeux » disait la même chose et tenait
+            partout. Il s'est scindé en « Console » et « PC », ce qui en fait
+            cinq : mesuré, ça rentre, l'engrenage n'étant qu'une icône.
+
+            « Prêts » disparaît côté PC. Un jeu Steam ne se prête pas, et un
+            onglet qui ne mène qu'à un écran vide est pire qu'un onglet absent.
+            Le prix est que la barre change sous le doigt en basculant
+            d'univers : c'est un choix, pas un oubli. */}
+        <div style={{ display: "flex", gap: 6, marginBottom: estBibliotheque ? 10 : 0 }}>
+          {[["console","Console"],["pc","PC"],
+            ...(univers === "pc" && tab !== "loans" ? [] : [["loans",`Prêts${lentGames.length ? ` (${lentGames.length})` : ""}`]]),
+            ["stats","Stats"],["settings","⚙️"]].map(([k,l]) => (
             // Le dernier onglet n'a qu'un émoji pour libellé : un lecteur
             // d'écran annonçait « engrenage », ce qui ne dit pas où l'on va.
-            <button key={k} onClick={() => setTab(k)} aria-pressed={tab === k}
+            <button key={k} onClick={() => allerVers(k)} aria-pressed={tab === k}
               aria-label={k === "settings"
                 ? (sauvegardeAlerte ? "Réglages — sauvegarde à faire" : "Réglages")
                 : undefined}
@@ -835,7 +901,7 @@ export default function App() {
                 flex: k === "settings" ? "0 0 auto" : 1, minWidth: k === "settings" ? "var(--tap)" : 0,
                 minHeight: "var(--tap)", background: tab===k ? accentFond : "transparent",
                 border: `1px solid ${tab===k ? accentFond : bdr}`, color: tab===k ? "#fff" : mut,
-                borderRadius: "var(--r-md)", padding: "0 8px", fontSize: "var(--t-petit)", fontWeight: tab===k ? 600 : 400,
+                borderRadius: "var(--r-md)", padding: "0 2px", fontSize: "var(--t-petit)", fontWeight: tab===k ? 600 : 400,
                 cursor: "pointer", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
               }}>
               {l}
@@ -869,7 +935,7 @@ export default function App() {
             s'abrège pas, elle se coupe net. Il ne reste alors qu'une loupe,
             qui se lit entière. Le nom accessible, lui, ne dépend plus de
             l'invite — sinon un lecteur d'écran annoncerait l'émoji. */}
-        {tab === "library" && (
+        {estBibliotheque && (
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
             <input value={searchInput} onChange={e => setSearchInput(e.target.value)} type="search"
               aria-label="Rechercher" placeholder={sort === TRI_DEFAUT ? "Rechercher…" : "🔍"}
@@ -904,7 +970,7 @@ export default function App() {
 
       {/* Body */}
       <div style={{ padding:"14px calc(14px + var(--safe-right)) calc(60px + var(--safe-bottom)) calc(14px + var(--safe-left))" }}>
-        {tab === "library" && (filtered.length === 0 ? emptyState : (
+        {estBibliotheque && (filtered.length === 0 ? emptyState : (
           <>
           {sections.map(({ titre, jeux }) => (
             <div key={titre || "tout"}>
@@ -989,7 +1055,18 @@ export default function App() {
           />
         )}
 
-        {tab === "stats" && <StatsView games={games} />}
+        {/* Les statistiques suivent l'onglet où l'on était : cent cinquante-cinq
+            jeux console et deux cents jeux PC dans le même camembert ne
+            voudraient rien dire. Le titre le rappelle, sinon on lirait des
+            chiffres sans savoir de quelle bibliothèque ils parlent. */}
+        {tab === "stats" && (
+          <>
+            <div style={{ color: mut, fontSize: "var(--t-petit)", marginBottom: 12 }}>
+              Statistiques de ta bibliothèque {univers === "pc" ? "PC" : "console"} — {jeuxUnivers.length} jeu{jeuxUnivers.length > 1 ? "x" : ""}
+            </div>
+            <StatsView games={jeuxUnivers} />
+          </>
+        )}
       </div>
 
       {importChoix && (
@@ -1029,6 +1106,8 @@ export default function App() {
       {showImport && <ImportModal games={games} onImportGames={importGames} onClose={() => setShowImport(false)} />}
       {showFilters && (
         <FiltersSheet
+          univers={univers}
+          boutiques={boutiques} boutiqueFil={boutiqueFil} setBoutiqueFil={setBoutiqueFil}
           plat={plat} setPlat={setPlat}
           avecRetro={avecRetro} setAvecRetro={setAvecRetro} nbRetro={nbRetro} nbNatifs={nbNatifs}
           pretFil={pretFil} setPretFil={setPretFil}

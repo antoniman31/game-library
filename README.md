@@ -122,7 +122,42 @@ erreur CORS.
 
 ## Fonctionnalités
 
-### Bibliothèque — onglet « Jeux »
+### Deux univers — onglets « Console » et « PC »
+
+Une ludothèque de console et une bibliothèque PC ne se décrivent pas avec les
+mêmes mots. Sur console, la plateforme dit sur quelle machine le jeu tourne et le
+format dit s'il est sur une galette ou dans un compte ; sur PC la machine est
+toujours la même, et ce qui distingue un jeu d'un autre est la **boutique**.
+D'où `platform: "PC"` et un champ `boutique` séparé, plutôt qu'une liste
+« PC (Steam) », « PC (Epic) » qui mélangerait deux axes sans rapport et qu'on
+paierait à chaque filtre.
+
+La boutique n'est **pas une liste fermée**, contrairement aux plateformes : elle
+est dérivée de la bibliothèque comme les genres. Une boutique nouvelle se saisit
+une fois dans une fiche et apparaît dans les filtres — Ubisoft Connect, EA App,
+itch.io entrent sans modification du code.
+
+Un jeu PC est toujours démat et jamais rétrocompatible : le modèle le force, et
+l'édition ne propose ni format ni case de rétrocompatibilité. Le panneau des
+filtres change avec l'univers — Boutique remplace Plateforme, Prêt et Format
+disparaissent — les statistiques suivent l'univers et le disent en titre, et
+« Prêts » quitte la barre d'onglets côté PC : un jeu Steam ne se prête pas.
+
+**Un jeu possédé des deux côtés se signale tout seul.** Deux fiches dont les
+titres sont identiques une fois normalisés sont le même jeu : la fiche console
+affiche « Aussi sur PC · Steam », la fiche PC « Aussi sur Xbox Series X », et
+toucher la pastille ouvre l'autre. Rien n'est stocké — un lien enregistré
+devrait être tenu à jour et finirait par mentir. La correspondance est exacte et
+jamais approximative : « GTA V » et « Grand Theft Auto V » ne se rejoindront
+pas, ce qui est un manque silencieux mais préférable à une affirmation fausse
+sur ce qu'on possède. Le même mécanisme signale un jeu possédé sur deux
+consoles.
+
+Changer d'univers remet les filtres à zéro : « Xbox One » et « Steam » ne
+veulent rien dire l'un pour l'autre, et un filtre survivant afficherait une
+bibliothèque vide sans qu'on comprenne pourquoi.
+
+### La bibliothèque
 
 - **94 jeux** pré-remplis en données de départ ; ajout, édition et suppression libres.
 - **Recherche** sur titre + genre + tag, **insensible à la casse et aux accents**

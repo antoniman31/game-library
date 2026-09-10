@@ -98,6 +98,7 @@ const Aide = ({ children }) => (
 const GENRES_VISIBLES = 6;
 
 export default function FiltersSheet({
+  univers, boutiques, boutiqueFil, setBoutiqueFil,
   plat, setPlat, avecRetro, setAvecRetro, nbRetro, nbNatifs,
   pretFil, setPretFil, fmtFil, setFmtFil,
   genreFil, setGenreFil, modeFil, setModeFil, genres, sansMode,
@@ -107,8 +108,13 @@ export default function FiltersSheet({
 }) {
   // Tous les filtres, sans exception : oublier les nouveaux ici laisserait
   // « Réinitialiser » grisé alors qu'il y a bien quelque chose à réinitialiser.
-  const actifs = compterFiltres({ plat, pretFil, fmtFil, genreFil, modeFil, noteFil, completFil, serieFil });
+  const actifs = compterFiltres({ plat, pretFil, fmtFil, genreFil, modeFil, noteFil, completFil, serieFil, boutiqueFil });
   const [ouvert, setOuvert] = useState(null);
+  // Le panneau ne montre pas la même chose selon l'univers. Une machine, un
+  // format et un prêt ne veulent rien dire d'un jeu Steam ; une boutique ne
+  // veut rien dire d'une cartouche. Montrer les deux jeux de filtres partout
+  // remplirait la moitié du panneau de lignes qui ne rendraient jamais rien.
+  const estPC = univers === "pc";
   const [tousLesGenres, setTousLesGenres] = useState(false);
 
   // Le genre choisi reste visible même s'il est dans la traîne : sinon le
@@ -136,7 +142,11 @@ export default function FiltersSheet({
     ...aCompleter,
     ...(choisiComble ? [[completFil, CHAMPS_A_COMPLETER.find(([c]) => c === completFil)?.[1] || completFil, 0]] : []),
   ];
-  const GROUPES = [["aucun", "Aucun"], ["plateforme", "Plateforme"], ["serie", "Série"], ["genre", "Genre"]];
+  // Regrouper par plateforme n'a rien à dire d'une bibliothèque où tout est
+  // sur la même machine : côté PC, c'est la boutique qui sépare.
+  const GROUPES = [["aucun", "Aucun"],
+    estPC ? ["boutique", "Boutique"] : ["plateforme", "Plateforme"],
+    ["serie", "Série"], ["genre", "Genre"]];
   const PRETS = [["tous", "Tous"], ["chez moi", "🏠 Chez moi"], ["prêtés", "📤 Prêtés"]];
   const FORMATS = [["tous", "Tous"], ["physique", "Physique"], ["démat", "Démat"]];
   const PLATEFORMES = PLATFORMS.map(p => [p, p === "tous" ? "Toutes" : p]);
@@ -177,9 +187,27 @@ export default function FiltersSheet({
         </div>
       )}
 
+      {/* La boutique tient la place de la plateforme côté PC : c'est ce qui
+          distingue un jeu d'un autre quand la machine est toujours la même.
+          Elle est dérivée de la bibliothèque, comme les genres — personne ne
+          sait quelles boutiques existeront dans un an. */}
+      {estPC && (
+        <Groupe label="Boutique" resume={boutiqueFil === "tous" ? "Toutes" : boutiqueFil} actif={boutiqueFil !== "tous"}
+          ouvert={ouvert === "boutique"} onBascule={bascule("boutique")}>
+          {boutiques.length === 0
+            ? <div style={{ color: mut, fontSize: "var(--t-legende)", lineHeight: 1.5 }}>
+                Aucun jeu PC ne porte encore de boutique. Elle se saisit dans la fiche, et
+                apparaîtra ici dès le premier.
+              </div>
+            : <Puces value={boutiqueFil} onChange={setBoutiqueFil}
+                options={[["tous", "Toutes"], ...boutiques.map(([b, n]) => [b, `${b} ${n}`])]} />}
+        </Groupe>
+      )}
+
       {/* Le résumé dit « seul » quand la case est décochée : c'est tout
           l'intérêt d'une ligne repliée que d'annoncer ce qu'elle fait, et un
           filtre plus étroit que la normale doit se voir sans être ouvert. */}
+      {!estPC && (
       <Groupe label="Plateforme" actif={plat !== "tous"}
         resume={libelle(PLATEFORMES, plat) + (enfant && !avecRetro ? " seul" : "")}
         ouvert={ouvert === "plat"} onBascule={bascule("plat")}>
@@ -210,19 +238,25 @@ export default function FiltersSheet({
           </label>
         )}
       </Groupe>
+      )}
 
       {/* Le groupe Statut a laissé la place au seul état que l'application
-          suit encore : le jeu est-il ici, ou chez quelqu'un ? */}
-      <Groupe label="Prêt" resume={libelle(PRETS, pretFil)} actif={pretFil !== "tous"}
-        ouvert={ouvert === "pret"} onBascule={bascule("pret")}>
-        <Puces options={PRETS} value={pretFil} onChange={setPretFil}
-          colorOf={k => (k === "prêtés" ? warn : ACCENT)} />
-      </Groupe>
+          suit encore : le jeu est-il ici, ou chez quelqu'un ? Un jeu PC ne
+          part chez personne : ni le prêt ni le format n'ont d'objet. */}
+      {!estPC && (
+        <Groupe label="Prêt" resume={libelle(PRETS, pretFil)} actif={pretFil !== "tous"}
+          ouvert={ouvert === "pret"} onBascule={bascule("pret")}>
+          <Puces options={PRETS} value={pretFil} onChange={setPretFil}
+            colorOf={k => (k === "prêtés" ? warn : ACCENT)} />
+        </Groupe>
+      )}
 
-      <Groupe label="Format" resume={libelle(FORMATS, fmtFil)} actif={fmtFil !== "tous"}
-        ouvert={ouvert === "format"} onBascule={bascule("format")}>
-        <Puces options={FORMATS} value={fmtFil} onChange={setFmtFil} />
-      </Groupe>
+      {!estPC && (
+        <Groupe label="Format" resume={libelle(FORMATS, fmtFil)} actif={fmtFil !== "tous"}
+          ouvert={ouvert === "format"} onBascule={bascule("format")}>
+          <Puces options={FORMATS} value={fmtFil} onChange={setFmtFil} />
+        </Groupe>
+      )}
 
       {/* « On est deux ce soir, on lance quoi ? » — la question que cent
           cinquante jeux rendent difficile, et à laquelle Wikidata répondait

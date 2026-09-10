@@ -3,9 +3,10 @@ import Cover from "./Cover.jsx";
 import InfoboxView from "./InfoboxView.jsx";
 import Sheet from "./Sheet.jsx";
 import { bg, card, bdr, txt, mut, demat, accent, accentDoux, accentFond, okDoux, warnDoux, dangerDoux, ok, warn, warnFond, danger } from "../lib/theme.js";
-import { PLATFORM_COLORS, BACK_COMPAT_PARENT, PLATFORMES_JEU, estUrlImage, estLienSur, normaliserGenres, joursDePret, pretEnRetard, brouillonDepuisJeu, validerEdition,
+import { PC, PLATFORM_COLORS, BACK_COMPAT_PARENT, PLATFORMES_JEU, estUrlImage, estLienSur, normaliserGenres, joursDePret, pretEnRetard, brouillonDepuisJeu, validerEdition,
   rendreJeu, preterJeu, annulerPret, dureeEntreeHistorique,
-  fusionnerInfobox, infoboxDepuisRawg, libelleSources, CHAMPS_VIDABLES, viderChamps, jeuACompleter } from "../lib/model.js";
+  fusionnerInfobox, infoboxDepuisRawg, libelleSources, CHAMPS_VIDABLES, viderChamps, jeuACompleter,
+  libelleEdition } from "../lib/model.js";
 import {
   rawgSearch, rawgDetail, wikiFrenchTitles, wikiArticleData, wikidataInfobox,
   sgdbSearch, sgdbGrids,
@@ -31,7 +32,7 @@ const Segment = ({ options, valeur, onChange }) => (
 
 const boutonSource = { minHeight: "var(--tap-min)", padding: "0 12px", background: "transparent", border: `1px solid ${accent}`, color: accent, borderRadius: "var(--r-sm)", fontSize: "var(--t-legende)", cursor: "pointer" };
 
-function GameCard({ g, onEdit, onDelete, onEnrich, onSerie, autoOpen, onOuverte }) {
+function GameCard({ g, onEdit, onDelete, onEnrich, onSerie, autresEditions: autres = [], onAutreEdition, autoOpen, onOuverte }) {
   const [open, setOpen] = useState(!!autoOpen);
   const rootRef = useRef(null);
   // L'ouverture automatique n'a lieu qu'une fois : le marqueur est consommé
@@ -173,6 +174,10 @@ function GameCard({ g, onEdit, onDelete, onEnrich, onSerie, autoOpen, onOuverte 
     // Une plateforme sans console parente ne peut pas être rétrocompatible :
     // la ligne disparaît de l'écran, la valeur doit disparaître avec elle.
     if (k === "platform" && !BACK_COMPAT_PARENT[v]) suivant.backCompat = false;
+    // Passer un jeu en PC le rend démat ; l'en sortir lui rend un format, et
+    // lui retire une boutique qui n'aurait plus de sens.
+    if (k === "platform" && v === PC) suivant.format = "démat";
+    if (k === "platform" && v !== PC) suivant.boutique = "";
     return suivant;
   });
   const enregistrer = () => {
@@ -223,7 +228,12 @@ function GameCard({ g, onEdit, onDelete, onEnrich, onSerie, autoOpen, onOuverte 
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginBottom: 4 }}>
             <span style={{ background: PLATFORM_COLORS[g.platform] || accentFond, color: "#fff", fontSize: "var(--t-legende)", fontWeight: 700, borderRadius: "var(--r-xs)", padding: "1px 5px" }}>{g.platform}</span>
-            {g.format === "démat" && <span style={{ background: demat, color: accent, fontSize: "var(--t-legende)", borderRadius: "var(--r-xs)", padding: "1px 5px" }}>démat</span>}
+            {/* Sur PC, « démat » ne dit rien : ils le sont tous. La pastille
+                porte donc la boutique, qui est ce qui distingue un jeu d'un
+                autre — et reste muette tant qu'aucune n'est renseignée. */}
+            {g.platform === PC
+              ? (g.boutique ? <span style={{ background: demat, color: accent, fontSize: "var(--t-legende)", borderRadius: "var(--r-xs)", padding: "1px 5px" }}>{g.boutique}</span> : null)
+              : g.format === "démat" && <span style={{ background: demat, color: accent, fontSize: "var(--t-legende)", borderRadius: "var(--r-xs)", padding: "1px 5px" }}>démat</span>}
             {BACK_COMPAT_PARENT[g.platform] && g.backCompat && <span title={`Rétrocompatible ${BACK_COMPAT_PARENT[g.platform]}`} style={{ background: "#107C1022", color: ok, fontSize: "var(--t-legende)", borderRadius: "var(--r-xs)", padding: "1px 5px" }}>🔄 Compatible {BACK_COMPAT_PARENT[g.platform].replace("Xbox ", "")}</span>}
             {g.lentA && <span key={g.lentA} style={{ background: "#7c320044", color: warn, fontSize: "var(--t-legende)", borderRadius: "var(--r-xs)", padding: "1px 5px", animation: "statusPop 200ms ease" }}>📤 {g.lentA}{jours !== null ? ` · ${jours}j` : ""}</span>}
             {/* Rien d'autre ici : les badges disent l'exemplaire, pas le contenu. */}
@@ -257,11 +267,36 @@ function GameCard({ g, onEdit, onDelete, onEnrich, onSerie, autoOpen, onOuverte 
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: "var(--t-chiffre)", fontWeight: 700, lineHeight: 1.25, color: txt, marginBottom: 6 }}>{g.title}</div>
               <div style={{ color: mut, fontSize: "var(--t-legende)", lineHeight: 1.7 }}>
-                <b style={{ color: txt, fontWeight: 600 }}>{g.platform}</b> · {g.format}
+                <b style={{ color: txt, fontWeight: 600 }}>{g.platform}</b>{g.platform === PC ? (g.boutique ? ` · ${g.boutique}` : "") : ` · ${g.format}`}
                 {g.genre.length > 0 && <><br />{g.genre.join(" · ")}</>}
                 {g.metacritic ? <><br />Metacritic <b style={{ color: noteCouleur, fontWeight: 700 }}>{g.metacritic}</b></> : null}
                 <br />Ajouté le {new Date(g.addedDate).toLocaleDateString("fr-FR")}
+
               </div>
+
+              {/* Le même jeu, ailleurs. Rien n'est stocké : deux titres
+                  identiques une fois normalisés sont le même jeu, et la
+                  mention disparaît d'elle-même si l'autre fiche part.
+
+                  Une pastille et non un lien au fil du texte : un lien pris
+                  dans une phrase échappe à la règle des 44 px — le document le
+                  dit — mais 14 px de haut ne se visent pas au doigt, et il
+                  s'agit ici d'aller ouvrir une autre fiche, pas de lire. */}
+              {autres.length > 0 && (
+                <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginTop: 8 }}>
+                  <span style={{ color: mut, fontSize: "var(--t-legende)" }}>Aussi sur</span>
+                  {autres.map(e => (
+                    <button key={e.id} onClick={() => onAutreEdition?.(e)}
+                      title="Ouvrir cette version"
+                      style={{
+                        minHeight: "var(--tap-min)", padding: "0 10px",
+                        background: accentDoux, border: `1px solid ${accent}`, color: accent,
+                        borderRadius: "var(--r-sm)", fontSize: "var(--t-legende)", fontWeight: 600,
+                        cursor: "pointer", fontFamily: "inherit",
+                      }}>{libelleEdition(e)}</button>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 
@@ -316,7 +351,12 @@ function GameCard({ g, onEdit, onDelete, onEnrich, onSerie, autoOpen, onOuverte 
 
               Le prêt reste : c'est une action, répétée, et il était auparavant
               enfermé dans un accordéon où « rendu » se devinait en vidant le
-              champ du nom. */}
+              champ du nom.
+
+              Sauf sur PC : un jeu attaché à un compte ne part chez personne.
+              L'onglet « Prêts » disparaît déjà de cet univers, ce bloc devait
+              suivre — sinon la fiche proposait un geste impossible. */}
+          {g.platform !== PC && (
           <div style={{ background: bg, borderRadius: "var(--r-md)", padding: 12, marginBottom: 4 }}>
             <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
               <span style={{ color: mut, fontSize: "var(--t-legende)", flex: "0 0 52px", paddingTop: 10 }}>Prêt</span>
@@ -367,9 +407,10 @@ function GameCard({ g, onEdit, onDelete, onEnrich, onSerie, autoOpen, onOuverte 
               )}
             </div>
           </div>
+          )}
 
           {/* Ce jeu a-t-il déjà voyagé ? La question que « Rendu » effaçait. */}
-          {g.pretsPasses?.length > 0 && (
+          {g.platform !== PC && g.pretsPasses?.length > 0 && (
             <div style={{ color: mut, fontSize: "var(--t-legende)", lineHeight: 1.6, padding: "10px 2px 2px" }}>
               Déjà prêté {g.pretsPasses.length} fois : {g.pretsPasses.map(e => `${e.a} (${dureeEntreeHistorique(e)} j)`).join(" · ")}
             </div>
@@ -627,10 +668,18 @@ function GameCard({ g, onEdit, onDelete, onEnrich, onSerie, autoOpen, onOuverte 
                 </select>
               ))}
 
-              {ligneEdition("Format", "format", (
-                <Segment valeur={brouillon.format} onChange={v => champ("format", v)}
-                  options={[["physique", "physique"], ["démat", "démat"]]} />
-              ), null, "div")}
+              {/* Un jeu PC est toujours démat : le choix disparaît plutôt que
+                  de proposer une réponse que le modèle refusera. Ce qui le
+                  distingue, c'est la boutique, et elle prend sa place. */}
+              {brouillon.platform === PC
+                ? ligneEdition("Boutique", "boutique", (
+                    <input value={brouillon.boutique} onChange={e => champ("boutique", e.target.value)}
+                      placeholder="Steam, Epic, GOG…" style={champStyle("boutique")} />
+                  ), "démat, forcément")
+                : ligneEdition("Format", "format", (
+                    <Segment valeur={brouillon.format} onChange={v => champ("format", v)}
+                      options={[["physique", "physique"], ["démat", "démat"]]} />
+                  ), null, "div")}
 
               {BACK_COMPAT_PARENT[brouillon.platform] && ligneEdition(
                 `Jouable sur ${BACK_COMPAT_PARENT[brouillon.platform].replace("Xbox ", "")}`, "backCompat", (

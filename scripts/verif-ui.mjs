@@ -88,9 +88,30 @@ const mesurer = () => ({
     .map(el => parseFloat(getComputedStyle(el).fontSize))
     .filter(t => t < 16))],
   // Un libellé coupé par `text-overflow` fait passer l'écran pour cassé.
+  //
+  // La largeur voulue se mesure par un Range sur le texte, pas par
+  // `scrollWidth` : sur un élément à `text-overflow: ellipsis`, Chrome rend un
+  // `scrollWidth` égal au `clientWidth` et la coupure ne se signale jamais.
+  // C'est ainsi qu'un onglet « Cons… » est passé sous ce contrôle alors qu'il
+  // sautait aux yeux sur une capture.
   tronques: [...new Set([...document.querySelectorAll("button, a, span, div")]
-    .filter(el => !el.children.length && el.scrollWidth > el.clientWidth + 1 && el.textContent.trim())
-    .map(el => el.textContent.trim().slice(0, 28)))],
+    .filter(el => !el.children.length && el.textContent.trim() && el.clientWidth)
+    .map(el => {
+      const noeud = [...el.childNodes].find(n => n.nodeType === 3 && n.textContent.trim());
+      if (!noeud) return null;
+      const r = document.createRange();
+      r.selectNodeContents(noeud);
+      const style = getComputedStyle(el);
+      const dispo = el.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
+      const veut = r.getBoundingClientRect().width;
+      // Un texte qui revient à la ligne occupe plusieurs lignes et déborde
+      // « en largeur » sans être coupé : seul le non-retour est concerné.
+      const surUneLigne = style.whiteSpace === "nowrap" || style.textOverflow === "ellipsis";
+      return surUneLigne && veut > dispo + 0.5
+        ? `${el.textContent.trim().slice(0, 28)} — ${Math.ceil(veut)} px voulus pour ${Math.round(dispo)}`
+        : null;
+    })
+    .filter(Boolean))],
 });
 
 let echecs = 0;
@@ -120,7 +141,7 @@ for (const [largeur, theme] of ECRANS) {
   // Chaque onglet, puis un panneau, puis une fiche dépliée : les défauts de
   // taille se cachent dans ce qui n'est pas affiché au premier écran.
   const etapes = [
-    ["Jeux", async () => {}],
+    ["Console", async () => {}],
     ["Filtres", async () => { await page.getByRole("button", { name: /^Filtres/ }).click(); }],
     // Les groupes sont repliés : sans les ouvrir, leurs puces ne sont pas
     // rendues et ne seraient donc jamais mesurées.
@@ -164,6 +185,14 @@ for (const [largeur, theme] of ECRANS) {
       await page.getByRole("button", { name: /^Voir \d+ jeu/ }).click();
     }],
     ["Prêts", async () => { await page.getByRole("button", { name: /^Prêts/ }).click(); }],
+    // L'univers PC : d'autres filtres, d'autres pastilles, un onglet en moins.
+    ["PC", async () => { await page.getByRole("button", { name: /^PC$/ }).click(); }],
+    ["PC · filtres", async () => { await page.getByRole("button", { name: /^Filtres/ }).click(); }],
+    ["PC · boutiques", async () => { await page.getByRole("button", { name: /^Boutique/ }).first().click(); }],
+    ["retour Console", async () => {
+      await page.keyboard.press("Escape");
+      await page.getByRole("button", { name: /^Console$/ }).click();
+    }],
     ["Stats", async () => { await page.getByRole("button", { name: "Stats" }).click(); }],
     ["panneau Actions", async () => {
       await page.getByRole("button", { name: "Actions" }).click();
@@ -175,7 +204,7 @@ for (const [largeur, theme] of ECRANS) {
     // un « Lire la suite » de 20 px sur une fiche assez longue pour l'afficher.
     // Un garde-fou ne protège que ce qu'il regarde.
     ["Ajouter un jeu", async () => {
-      await page.getByRole("button", { name: /^Jeux$/ }).click();
+      await page.getByRole("button", { name: /^Console$/ }).click();
       await page.getByRole("button", { name: "+ Ajouter" }).click();
     }],
     ["édition à la main", async () => {
@@ -189,12 +218,33 @@ for (const [largeur, theme] of ECRANS) {
     // d'espérer en croiser une. Écrire dans `localStorage` ne marcherait pas —
     // au rechargement, la sauvegarde `pagehide` de l'application réécrit la
     // clé avec ce qu'elle a en mémoire.
-    ["fiche à longue description", async () => {
+    // Deux mentions qui n'existent que dans des cas particuliers, et qu'aucune
+    // bibliothèque de départ ne présente : le bouton « Lire la suite », qui
+    // demande plus de cent soixante caractères de description, et « Aussi sur
+    // … », qui demande le même jeu possédé deux fois. On fabrique les deux en
+    // une seule édition — sans quoi ces deux commandes ne seraient jamais
+    // mesurées, et c'est ainsi que trois défauts ont vécu des mois derrière un
+    // « Rien à signaler ».
+    ["fiche longue et possédée deux fois", async () => {
+      // Le titre du voisin se lit dans le stock, pas sur la carte : la
+      // première ligne d'une carte repliée est sa pastille de plateforme, et
+      // renommer un jeu « Xbox Series X » ne fabrique aucun jumeau.
+      const jumeau = await page.evaluate(() => {
+        const jeux = JSON.parse(localStorage.getItem("gl_v2") || "[]");
+        return jeux[1]?.title || "Jumeau";
+      });
       await page.locator("textarea").first().fill(
         "Description délibérément longue pour faire apparaître le bouton de repli, "
         + "qui ne se montre qu'au-delà de cent soixante caractères et n'avait donc "
         + "jamais été mesuré par ce script.");
+      // Le champ de recherche de l'en-tête reste dans le document derrière la
+      // feuille : viser « le premier champ » le visait lui, et renommait donc
+      // une recherche au lieu d'un jeu.
+      await page.locator("label").filter({ hasText: /^Titre/ }).locator("input").fill(jumeau);
       await page.getByRole("button", { name: "Enregistrer" }).click();
+      // Enregistrer referme la feuille ET la carte : sans la rouvrir, ni la
+      // mention ni le bouton de repli ne sont à l'écran au moment de mesurer.
+      await page.locator(".gl-card").first().click();
     }],
   ];
 

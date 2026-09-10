@@ -75,6 +75,22 @@ en lecture seule, avec « Modifier » et « Supprimer » séparés et confirmés
 Les deux sources d'infobox ne s'écrasent jamais : chacune ne remplit que les champs vides,
 et la fiche affiche d'où viennent ses infos (« Source : RAWG et Wikidata »).
 
+### Deux univers : Console et PC
+
+- **Onglets « Console » et « PC »** à la place de « Jeux ». « Prêts » disparaît côté PC :
+  un jeu démat ne se prête pas.
+- **`platform: "PC"` et un champ `boutique`** — Steam, Epic, GOG et le reste. Un jeu PC
+  est toujours démat et jamais rétrocompatible, le modèle le force.
+- **La boutique est dérivée de la bibliothèque**, pas d'une liste fermée : une nouvelle
+  boutique se saisit une fois dans une fiche et apparaît dans les filtres.
+- **Le panneau des filtres change avec l'univers** : Boutique remplace Plateforme,
+  Prêt et Format disparaissent, le regroupement propose Boutique au lieu de Plateforme.
+- **Les statistiques suivent l'univers** et le disent en titre.
+- **« Aussi sur … »** : un jeu possédé des deux côtés le dit sur ses deux fiches, et la
+  pastille ouvre l'autre. Déduit du titre normalisé, rien n'est stocké.
+- **Changer d'univers remet les filtres à zéro** : « Xbox One » et « Steam » ne veulent
+  rien dire l'un pour l'autre.
+
 ### Actions de masse (panneau ⋯)
 
 - **Partager la liste** : la liste affichée, en texte groupé par plateforme, envoyée au
