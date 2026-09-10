@@ -1,7 +1,7 @@
 import { useState } from "react";
 import Sheet from "./Sheet.jsx";
 import { card, bdr, txt, mut, accent, accentDoux, warn } from "../lib/theme.js";
-import { PLATFORMS, BACK_COMPAT, SEUILS_NOTE, CHAMPS_A_COMPLETER, compterFiltres } from "../lib/model.js";
+import { PLATFORMS, BACK_COMPAT, SEUILS_NOTE, SANS_NOTE, CHAMPS_A_COMPLETER, compterFiltres } from "../lib/model.js";
 
 const ACCENT = accent;
 
@@ -127,7 +127,7 @@ export default function FiltersSheet({
   const MODES = [["tous", "Tous"], ["solo", "Solo"], ["multi", "À plusieurs"], ["coop", "Coopératif"]];
   // Un seuil, pas des tranches : la question n'est pas « lesquels sont entre 80
   // et 89 » mais « qu'est-ce que j'ai de vraiment bien ».
-  const NOTES = [["tous", "Toutes"], ...SEUILS_NOTE.map(n => [String(n), `${n} et +`])];
+  const NOTES = [["tous", "Toutes"], ...SEUILS_NOTE.map(n => [String(n), `${n} et +`]), [SANS_NOTE, "Sans note"]];
   // Le manque choisi reste proposé même une fois comblé.
   //
   // Sans ça : on filtre sur « Note », on remplit la dernière note, et le bloc

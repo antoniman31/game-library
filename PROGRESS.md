@@ -103,6 +103,10 @@ et la fiche affiche d'où viennent ses infos (« Source : RAWG et Wikidata »).
 - **Les genres parlent français**, d'où qu'ils viennent : « Card & Board Game » devient
   « Jeu de société », « Tactical » « Tactique ». « Indie » et « Open World » restent,
   ce sont les formes en usage. 31 genres sur 335 jeux.
+- **Filtre « Sans note »** dans le groupe Note : montre les fiches sans note, y compris
+  celles déclarées « pas de note connue » que « À compléter » ne compte plus.
+- **Un seul bouton pour les notes** : les fiches jamais cherchées d'abord, puis, quand
+  il n'en reste plus, une proposition de revérifier celles déclarées sans note.
 - **Les notes manquantes ont trois sources** : RAWG par titre, le magasin Steam par
   appid (exact, y compris via une autre édition du même jeu), puis Wikidata. Quand les
   trois disent non, la fiche porte « Pas de note connue » et sort de « À compléter ».

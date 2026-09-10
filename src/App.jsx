@@ -18,7 +18,7 @@ import { GAMES_INIT } from "./lib/seed.js";
 import { jeuDansUnivers, boutiquesPresentes, jeuDeLaBoutique, autresEditions,
   migrateGames, compterFiltres, FILTRES, validerJeuxImportes, pretEnRetard, jeuxSansScore, normaliserGenres,
   jeuALeMode, jeuSurPlateforme, compterRetro, genresPresents, dureeEntreeHistorique, supprimerEntreeHistorique,
-  joursDePret, jeuPasseSeuil, jeuACompleter, completudeManquante, dateDeSortie, serieDuJeu,
+  joursDePret, jeuPasseSeuil, jeuxNoteDeclareeAbsente, jeuACompleter, completudeManquante, dateDeSortie, serieDuJeu,
   empreinteMelange, compterFichesIncompletes, completerDepuisEditions, titreDeTri, rapprochementDouteux,
   masquerDoublons, appidSteam,
   PLATFORM_COLORS } from "./lib/model.js";
@@ -288,9 +288,27 @@ export default function App() {
   // importés, donc jamais la bibliothèque déjà en place.
   const completerScores = async () => {
     if (scoresEnCours) return;
-    if (!hasRawgKey()) { setScoresBilan({ message: "Aucune clé RAWG n'est configurée — voir Réglages." }); return; }
-    const cibles = jeuxSansScore(games);
-    if (!cibles.length) { setScoresBilan({ message: "Tous les jeux ont déjà une note." }); return; }
+    // Plus de garde sur la clé RAWG : elle datait du temps où RAWG était la
+    // seule source. Wikidata n'en demande aucune, et Steam répond par le relais
+    // sur un appid — exiger une clé pour deux sources qui s'en passent, c'est
+    // refuser de chercher là où on peut trouver.
+    // Deux populations, un seul bouton. Les fiches jamais interrogées d'abord —
+    // ce sont les jeux ajoutés depuis la dernière fois. Quand il n'y en a plus,
+    // le bouton propose de revenir sur celles qu'on a déclarées sans note : un
+    // jeu de 1994 le restera, un jeu sorti l'an dernier peut être noté depuis.
+    const declarees = jeuxNoteDeclareeAbsente(games);
+    let cibles = jeuxSansScore(games);
+    let reprise = false;
+    if (!cibles.length) {
+      if (!declarees.length) { setScoresBilan({ message: "Tous les jeux ont déjà une note." }); return; }
+      const revoir = window.confirm(
+        `Aucun nouveau jeu sans note.\n\n`
+        + `Revérifier les ${declarees.length} fiche(s) déclarées « pas de note connue » ?\n`
+        + `Les jeux antérieurs à Metacritic n'en auront jamais ; les autres, peut-être depuis.`);
+      if (!revoir) return;
+      cibles = declarees;
+      reprise = true;
+    }
 
     scoresCancelRef.current = false;
     setScoresEnCours(true);
@@ -352,7 +370,12 @@ export default function App() {
       await new Promise(res => setTimeout(res, 150)); // sous la limite de RAWG
     }
     setScoresEnCours(false);
-    setScoresBilan({ trouves, sansScore, stopped: scoresCancelRef.current });
+    // Le bilan dit ce qui reste à portée : sans cette ligne, rien n'indique que
+    // le bouton sait aussi revenir sur les fiches déjà réglées.
+    setScoresBilan({
+      trouves, sansScore, stopped: scoresCancelRef.current,
+      declarees: reprise ? 0 : declarees.length,
+    });
   };
   const annulerScores = () => { scoresCancelRef.current = true; };
 
@@ -1343,6 +1366,7 @@ export default function App() {
           scoresTotal={scoresTotal}
           onAnnulerScores={annulerScores}
           scoresManquants={jeuxSansScore(games).length}
+          notesDeclarees={jeuxNoteDeclareeAbsente(games).length}
           onPartager={partagerListe}
           partageTotal={affichee.length}
           partageFiltre={affichee.length < jeuxUnivers.length}
