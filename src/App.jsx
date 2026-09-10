@@ -14,7 +14,7 @@ import SettingsView from "./components/SettingsView.jsx";
 
 import { hdr, card, bdr, txt, mut, accent, accentDoux, accentFond, warnDoux, dangerDoux, ok, warn, warnFond, danger } from "./lib/theme.js";
 import { GAMES_INIT } from "./lib/seed.js";
-import { jeuDansUnivers, boutiquesPresentes, jeuDeLaBoutique,
+import { jeuDansUnivers, boutiquesPresentes, jeuDeLaBoutique, autresEditions,
   migrateGames, compterFiltres, FILTRES, validerJeuxImportes, pretEnRetard, jeuxSansScore, normaliserGenres,
   jeuALeMode, jeuSurPlateforme, compterRetro, genresPresents, dureeEntreeHistorique, supprimerEntreeHistorique,
   joursDePret, jeuPasseSeuil, jeuACompleter, completudeManquante, dateDeSortie, serieDuJeu,
@@ -370,6 +370,19 @@ export default function App() {
   // veulent rien dire l'un pour l'autre : les garder afficherait une
   // bibliothèque vide sans qu'on comprenne pourquoi — le défaut qu'on a déjà
   // corrigé sur l'ajout d'un jeu, transposé au changement d'onglet.
+  // Ouvrir la même jeu dans l'autre univers : on change d'onglet si besoin, on
+  // lève les filtres — celui qui nous a amené là masquerait la fiche visée —
+  // et on demande son ouverture.
+  const ouvrirAutreEdition = (edition) => {
+    if (edition.univers !== univers) {
+      setUnivers(edition.univers);
+      setTab(edition.univers);
+    }
+    reinitialiserFiltres();
+    applySearch("");
+    setFocusId(edition.id);
+  };
+
   const allerVers = (k) => {
     // La comparaison porte sur l'univers retenu, pas sur l'onglet courant :
     // en passant par Stats, l'onglet n'en désigne aucun et les filtres du PC
@@ -762,6 +775,7 @@ export default function App() {
       <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
         {liste.map(g => <GameCard key={g.id} g={g} onEdit={edit} onDelete={deleteGame} onEnrich={enrichGame}
           onSerie={setSerieFil}
+          autresEditions={autresEditions(g, games)} onAutreEdition={ouvrirAutreEdition}
           autoOpen={g.id === lastAddedId || g.id === focusId} onOuverte={consommerOuverture} />)}
       </div>
     );
@@ -887,7 +901,7 @@ export default function App() {
                 flex: k === "settings" ? "0 0 auto" : 1, minWidth: k === "settings" ? "var(--tap)" : 0,
                 minHeight: "var(--tap)", background: tab===k ? accentFond : "transparent",
                 border: `1px solid ${tab===k ? accentFond : bdr}`, color: tab===k ? "#fff" : mut,
-                borderRadius: "var(--r-md)", padding: "0 4px", fontSize: "var(--t-petit)", fontWeight: tab===k ? 600 : 400,
+                borderRadius: "var(--r-md)", padding: "0 2px", fontSize: "var(--t-petit)", fontWeight: tab===k ? 600 : 400,
                 cursor: "pointer", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
               }}>
               {l}

@@ -907,6 +907,47 @@ donc se tronquait. C'est `verif-ui` qui l'a dit, pas l'œil — et il l'a dit pa
 qu'on venait d'étendre sa promenade. Rembourrage ramené de 8 à 4 px et écart de
 8 à 6 : les cinq onglets tiennent à 360 comme à 412 px, sans troncature.
 
+### Phase 29 — Le même jeu, ailleurs
+
+« Faut aussi, sur n'importe quelle fiche console ou PC, préciser si j'ai le jeu
+sur console et PC. » L'information existait déjà et personne ne la lisait : deux
+fiches dont les titres sont identiques une fois normalisés, c'est le même jeu.
+
+Rien n'est donc stocké, tout se déduit à la lecture, comme les modes. Un lien
+enregistré entre deux fiches devrait être tenu à jour et finirait par mentir :
+supprimer la version PC laisserait une console qui prétend l'avoir. Ici, la
+mention disparaît d'elle-même. La correspondance est exacte, jamais
+approximative : « GTA V » et « Grand Theft Auto V » ne se rejoindront pas —
+un manque silencieux, assumé, contre des affirmations fausses sur ce qu'on
+possède. La règle des séries de l'audit avait montré ce que vaut le
+rapprochement à la louche.
+
+Toucher la mention ouvre l'autre fiche : changement d'univers si besoin, filtres
+levés — celui qui nous a amené là masquerait la fiche visée — et ouverture.
+
+**Trois défauts trouvés en vérifiant, tous par la mesure et aucun à l'œil.**
+
+Le lien faisait d'abord 14 px de haut, au fil du texte. Le document exempte de
+la règle des 44 px ce qui est pris dans une phrase, mais il s'agit ici d'aller
+ouvrir une autre fiche, pas de lire : c'est devenu une pastille de 44 px sous
+l'identité. Et la fiche PC proposait « Prêter ce jeu » alors que l'onglet
+« Prêts » avait déjà disparu de cet univers — un geste impossible offert par
+une moitié de l'application qui ignorait ce que l'autre avait décidé.
+
+Le troisième est le plus intéressant, et concerne le garde-fou lui-même. Deux
+fois de suite, `verif-ui` a répondu « Rien à signaler » sur des défauts bien
+réels. La première parce que sa promenade ne croisait aucun jeu possédé deux
+fois — aucune bibliothèque de départ n'a de doublon — et qu'il fallait donc en
+fabriquer un en renommant une fiche. La seconde parce que son contrôle de
+troncature reposait sur `scrollWidth`, qui rend `clientWidth` sur un élément à
+`text-overflow: ellipsis` : un onglet « Cons… » lui échappait alors qu'il
+sautait aux yeux sur une capture. La largeur voulue se mesure désormais par un
+Range sur le texte, et le contrôle a été vérifié en le faisant échouer exprès.
+
+Un garde-fou qu'on n'a jamais vu échouer ne prouve rien. Les deux corrections
+de cette phase ont été validées de la même façon : casser volontairement, voir
+la CI le nommer, puis remettre.
+
 ---
 
 ## 3. Architecture finale

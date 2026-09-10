@@ -423,6 +423,37 @@ export function viderChamps(g, choisis) {
   return vides;
 }
 
+// ── Le même jeu, ailleurs ──────────────────────────────────────────────────
+//
+// Un jeu possédé deux fois — sur console et sur PC, ou sur deux consoles — a
+// deux fiches, et rien ne les reliait. L'information existait pourtant déjà :
+// deux titres identiques une fois normalisés, c'est le même jeu.
+//
+// Rien n'est stocké, tout se déduit à la lecture, comme les modes de jeu. Un
+// lien enregistré entre deux fiches devrait être tenu à jour, et il finirait
+// par mentir : supprimer la version PC laisserait une console qui prétend
+// l'avoir. Ici, la mention disparaît d'elle-même.
+//
+// La correspondance est exacte sur le titre normalisé, jamais approximative.
+// « GTA V » et « Grand Theft Auto V » ne se rejoindront pas — c'est un manque
+// silencieux, qu'on corrige en harmonisant les titres. L'inverse, un
+// rapprochement à la louche, produirait des affirmations fausses sur ce qu'on
+// possède, et la règle des séries de l'audit a montré ce que ça vaut.
+export function autresEditions(jeu, games) {
+  const cle = normTitle(jeu?.title);
+  if (!cle) return [];
+  return (games || [])
+    .filter(g => g.id !== jeu.id && normTitle(g.title) === cle)
+    .map(g => ({ id: g.id, platform: g.platform, boutique: String(g.boutique || "").trim(), univers: universDuJeu(g) }))
+    .sort((a, b) => a.platform.localeCompare(b.platform, "fr"));
+}
+
+// « Aussi sur PC · Steam », « Aussi sur Xbox Series X ». La boutique n'est dite
+// que sur PC, où elle est ce qui distingue une édition d'une autre ; sur
+// console, le nom de la machine suffit.
+export const libelleEdition = (e) =>
+  e.univers === "pc" ? `PC${e.boutique ? ` · ${e.boutique}` : ""}` : e.platform;
+
 // Ce qui manque à une fiche, et qu'on peut aller remplir.
 //
 // L'onglet Stats savait déjà compter les manques — « 21 jeux sans note » — mais

@@ -143,6 +143,16 @@ filtres change avec l'univers — Boutique remplace Plateforme, Prêt et Format
 disparaissent — les statistiques suivent l'univers et le disent en titre, et
 « Prêts » quitte la barre d'onglets côté PC : un jeu Steam ne se prête pas.
 
+**Un jeu possédé des deux côtés se signale tout seul.** Deux fiches dont les
+titres sont identiques une fois normalisés sont le même jeu : la fiche console
+affiche « Aussi sur PC · Steam », la fiche PC « Aussi sur Xbox Series X », et
+toucher la pastille ouvre l'autre. Rien n'est stocké — un lien enregistré
+devrait être tenu à jour et finirait par mentir. La correspondance est exacte et
+jamais approximative : « GTA V » et « Grand Theft Auto V » ne se rejoindront
+pas, ce qui est un manque silencieux mais préférable à une affirmation fausse
+sur ce qu'on possède. Le même mécanisme signale un jeu possédé sur deux
+consoles.
+
 Changer d'univers remet les filtres à zéro : « Xbox One » et « Steam » ne
 veulent rien dire l'un pour l'autre, et un filtre survivant afficherait une
 bibliothèque vide sans qu'on comprenne pourquoi.

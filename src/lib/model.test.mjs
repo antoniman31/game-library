@@ -25,6 +25,7 @@ import {
   fusionnerInfobox, infoboxDepuisRawg, sourcesInfobox, libelleSources, infoboxVide,
   viderChamps, CHAMPS_VIDABLES, FILTRES, FILTRES_VIDES,
   PC, estPC, universDuJeu, jeuDansUnivers, boutiquesPresentes, jeuDeLaBoutique,
+  autresEditions, libelleEdition,
 } from "./model.js";
 import { ecouterMiseAJour } from "./maj.js";
 
@@ -1010,4 +1011,49 @@ test("le filtre par boutique laisse tout passer quand il vaut « tous »", () =>
   assert.equal(jeuDeLaBoutique(g, "tous"), true);
   assert.equal(jeuDeLaBoutique(g, "GOG"), true);
   assert.equal(jeuDeLaBoutique(g, "Steam"), false);
+});
+
+
+// ── Le même jeu, ailleurs ──────────────────────────────────────────────────
+
+test("un jeu possédé deux fois se reconnaît au titre normalisé", () => {
+  const bib = [
+    jeu({ id: 1, title: "Cyberpunk 2077", platform: "Xbox Series X" }),
+    jeu({ id: 2, title: "cyberpunk 2077", platform: PC, boutique: "GOG" }),
+    jeu({ id: 3, title: "Hadès", platform: "Switch 1" }),
+  ];
+  const autres = autresEditions(bib[0], bib);
+  assert.equal(autres.length, 1);
+  assert.deepEqual(autres[0], { id: 2, platform: PC, boutique: "GOG", univers: "pc" });
+  // La réciproque tient : depuis la fiche PC on retrouve la console.
+  assert.deepEqual(autresEditions(bib[1], bib).map(e => e.platform), ["Xbox Series X"]);
+  // Un jeu ne se retrouve jamais lui-même.
+  assert.deepEqual(autresEditions(bib[2], bib), []);
+});
+
+test("la correspondance est exacte, jamais approximative", () => {
+  const bib = [
+    jeu({ id: 1, title: "GTA V", platform: "Xbox One" }),
+    jeu({ id: 2, title: "Grand Theft Auto V", platform: PC, boutique: "Steam" }),
+  ];
+  // Un manque silencieux, assumé : mieux vaut ne rien dire que d'affirmer à
+  // tort qu'on possède un jeu deux fois.
+  assert.deepEqual(autresEditions(bib[0], bib), []);
+  // Un titre vide ne rapproche pas toutes les fiches sans titre.
+  assert.deepEqual(autresEditions({ id: 9, title: "  " }, bib), []);
+  assert.deepEqual(autresEditions(bib[0], null), []);
+});
+
+test("le même jeu sur deux consoles compte aussi", () => {
+  const bib = [
+    jeu({ id: 1, title: "Sonic Mania", platform: "Switch 1" }),
+    jeu({ id: 2, title: "Sonic Mania", platform: "Xbox One" }),
+  ];
+  assert.deepEqual(autresEditions(bib[0], bib).map(e => e.platform), ["Xbox One"]);
+});
+
+test("le libellé dit la boutique sur PC, la machine sur console", () => {
+  assert.equal(libelleEdition({ univers: "pc", platform: PC, boutique: "Steam" }), "PC · Steam");
+  assert.equal(libelleEdition({ univers: "pc", platform: PC, boutique: "" }), "PC");
+  assert.equal(libelleEdition({ univers: "console", platform: "Switch 2", boutique: "" }), "Switch 2");
 });

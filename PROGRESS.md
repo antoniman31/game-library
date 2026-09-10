@@ -86,6 +86,8 @@ et la fiche affiche d'où viennent ses infos (« Source : RAWG et Wikidata »).
 - **Le panneau des filtres change avec l'univers** : Boutique remplace Plateforme,
   Prêt et Format disparaissent, le regroupement propose Boutique au lieu de Plateforme.
 - **Les statistiques suivent l'univers** et le disent en titre.
+- **« Aussi sur … »** : un jeu possédé des deux côtés le dit sur ses deux fiches, et la
+  pastille ouvre l'autre. Déduit du titre normalisé, rien n'est stocké.
 - **Changer d'univers remet les filtres à zéro** : « Xbox One » et « Steam » ne veulent
   rien dire l'un pour l'autre.
 
