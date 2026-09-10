@@ -370,8 +370,16 @@ export function normaliserGenres(liste) {
 // Un seuil plutôt que des tranches : la question n'est pas « lesquels sont
 // entre 80 et 89 » mais « qu'est-ce que j'ai de vraiment bien ».
 export const SEUILS_NOTE = [90, 80, 70];
-export const jeuPasseSeuil = (g, seuil) =>
-  seuil === "tous" || (typeof g.metacritic === "number" && g.metacritic >= Number(seuil));
+
+// Le filtre répond aussi à la question inverse — « lesquels n'ont pas de note ».
+// « À compléter → Note » ne les montre plus tous depuis qu'une fiche peut être
+// réglée sans note connue, et il fallait bien un moyen de les revoir.
+export const SANS_NOTE = "sans";
+export const jeuPasseSeuil = (g, seuil) => {
+  if (seuil === "tous") return true;
+  if (seuil === SANS_NOTE) return !g.metacritic;
+  return typeof g.metacritic === "number" && g.metacritic >= Number(seuil);
+};
 
 // ── Provenance et fusion des infobox ───────────────────────────────────────
 //
@@ -858,6 +866,17 @@ export function rapprochementDouteux(titreLocal, titreSource) {
 // elle est réglée. La reproposer à chaque passage ferait d'une action qui se
 // termine une corvée qui recommence.
 export const jeuxSansScore = (games) => (games || []).filter(g => !g.metacritic && !g.noteAbsente);
+
+// Celles qu'on a déclarées sans note. Un jeu de 1994 le restera ; un jeu sorti
+// l'an dernier peut recevoir un Metascore plus tard, et il faut un moyen d'y
+// revenir sans rouvrir chaque fiche.
+// Ce qu'une source propose vaut-il d'être montré ? Seulement si elle répond, et
+// si sa réponse diffère de ce qui est en place. Une source qui confirme la note
+// déjà là n'a rien à faire dans une liste de modifications à valider.
+export const noteChangee = (avant, apres) =>
+  Number.isInteger(apres) && apres !== (Number.isInteger(avant) ? avant : null);
+
+export const jeuxNoteDeclareeAbsente = (games) => (games || []).filter(g => g.noteAbsente && !g.metacritic);
 
 // ── Édition manuelle d'une fiche ────────────────────────────────────────────
 // Tout ce que les sources automatiques écrivent (titre, plateforme, genres,

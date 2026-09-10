@@ -15,7 +15,7 @@ import {
   migrateGames, validerJeuxImportes, compterFiltres,
   joursDePret, pretEnRetard, isBackCompatPlatform,
   brouillonDepuisJeu, validerEdition, sortiesDepuisTexte, sortiesVersTexte, listeDepuisTexte,
-  normTitle, rapprochementDouteux, jeuxSansScore, CHAMPS_A_COMPLETER,
+  normTitle, rapprochementDouteux, jeuxSansScore, jeuxNoteDeclareeAbsente, noteChangee, SANS_NOTE, CHAMPS_A_COMPLETER,
   rendreJeu, preterJeu, annulerPret, supprimerEntreeHistorique, dureeEntreeHistorique, MAX_HISTORIQUE_PRET, aujourdhuiISO,
   BACK_COMPAT, XBOX_SERIES_CUTOFF, PRET_LONG_JOURS, PLATFORMES_JEU,
   estDatePlausible, estLienSur, ANNEE_MIN, ANNEES_A_VENIR, normaliserGenres,
@@ -1280,4 +1280,46 @@ test("la série se débarrasse du balisage et du nom du studio, dès la lecture"
   assert.equal(propre.infobox.series, "Fallout");
   // Une fiche sans infobox ne doit pas exploser.
   assert.equal(migrateGames([{ id: 2, title: "Y" }])[0].infobox, null);
+});
+
+test("le filtre par note répond aussi à « lesquels n'en ont pas »", () => {
+  const notee = { id: 1, title: "A", metacritic: 93 };
+  const zero = { id: 2, title: "B", metacritic: 0 };
+  const vide = { id: 3, title: "C", metacritic: null };
+  const declaree = { id: 4, title: "D", metacritic: null, noteAbsente: true };
+  const sans = [notee, zero, vide, declaree].filter(g => jeuPasseSeuil(g, SANS_NOTE));
+  // Une fiche déclarée « sans note connue » n'apparaît plus dans « À compléter »
+  // mais reste sans note : ce filtre est le seul endroit qui la remontre.
+  assert.deepEqual(sans.map(g => g.id), [2, 3, 4]);
+  assert.deepEqual([notee, vide].filter(g => jeuPasseSeuil(g, "90")).map(g => g.id), [1]);
+  assert.deepEqual([notee, vide].filter(g => jeuPasseSeuil(g, "tous")).map(g => g.id), [1, 3]);
+});
+
+test("les fiches déclarées sans note se retrouvent, pour y revenir", () => {
+  const l = [
+    { id: 1, title: "A", metacritic: null, noteAbsente: true },
+    { id: 2, title: "B", metacritic: null, noteAbsente: false },
+    // Une note posée à la main depuis : la fiche n'est plus à revérifier, même
+    // si la marque traîne encore — la migration l'effacera au chargement.
+    { id: 3, title: "C", metacritic: 80, noteAbsente: true },
+  ];
+  assert.deepEqual(jeuxNoteDeclareeAbsente(l).map(g => g.id), [1]);
+  assert.deepEqual(jeuxSansScore(l).map(g => g.id), [2]);
+  assert.deepEqual(jeuxNoteDeclareeAbsente(null), []);
+});
+
+test("une source qui confirme la note en place ne propose rien", () => {
+  // L'écran de choix ne doit lister que ce qui change : une revue de trois
+  // cents fiches où la moitié dit « 82 → 82 » ne se lit pas.
+  assert.equal(noteChangee(82, 82), false);
+  assert.equal(noteChangee(78, 82), true);
+  assert.equal(noteChangee(null, 82), true);
+  assert.equal(noteChangee(undefined, 82), true);
+  // Une source muette ne propose pas d'effacer la note en place.
+  assert.equal(noteChangee(82, null), false);
+  assert.equal(noteChangee(null, null), false);
+  // Zéro est une note comme une autre, dans un sens comme dans l'autre.
+  assert.equal(noteChangee(0, 0), false);
+  assert.equal(noteChangee(null, 0), true);
+  assert.equal(noteChangee(0, 82), true);
 });

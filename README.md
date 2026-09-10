@@ -351,8 +351,27 @@ l'ordre de leur sûreté, la première qui répond gagne.
    sans relais, valable aussi côté console — mais peuplée par des contributeurs, donc
    inégale.
 
+**Un seul bouton, deux populations.** Il traite d'abord les fiches jamais
+interrogées — donc les jeux ajoutés depuis la dernière fois. Quand il n'en reste
+aucune, il propose de revenir sur celles déclarées sans note connue : un jeu de 1994
+le restera, un jeu sorti l'an dernier peut avoir été noté depuis. Le bilan annonce
+combien de fiches attendent cette seconde passe.
+
+**Tout revérifier, notes existantes comprises.** La même question propose de
+reprendre l'ensemble de la bibliothèque. Ce passage **n'écrit rien** : compléter une
+note vide ne peut rien abîmer, mais rafraîchir une note existante peut écraser une
+note juste — y compris une note corrigée à la main — quand une source se trompe de
+jeu. Il rassemble donc ce qui changerait et l'affiche : une ligne par fiche, « 95 →
+82 », la source qui répond, les plus grands écarts en tête parce que ce sont les
+seuls qui demandent un jugement, et un rapprochement douteux signalé en orange. Les
+fiches dont la note est confirmée n'apparaissent pas. On coche, on applique.
+
+**Aucune clé n'est exigée** : Wikidata n'en demande pas, Steam répond par le relais
+sur un appid, et RAWG est simplement sauté si sa clé manque.
+
 **Et quand les trois disent non, la fiche cesse de réclamer.** Elle porte « Pas de note
-connue » et sort de « À compléter → Note ». Sur une bibliothèque réelle, sept des jeux
+connue » et sort de « À compléter → Note ». Le filtre **Note → « Sans note »**
+reste le moyen de toutes les revoir, marquées ou non. Sur une bibliothèque réelle, sept des jeux
 sans note sont antérieurs à Metacritic — Fallout est de 1997, Alone in the Dark 2 de
 1993 — et deux autres sont des remasters gratuits. Aucune source ne leur inventera un
 chiffre ; les redemander à chaque passage transformait une action qui se termine en

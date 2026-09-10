@@ -37,7 +37,7 @@ export default function ActionsSheet({
   onClose,
   onRefreshDescriptions, refreshing, refreshProg, refreshTotal, onCancelRefresh,
   onImportXbox,
-  onCompleterScores, scoresEnCours, scoresProg, scoresTotal, onAnnulerScores, scoresManquants,
+  onCompleterScores, scoresEnCours, scoresProg, scoresTotal, onAnnulerScores, scoresManquants, notesDeclarees,
   onCompleterEditions, editionsCompletables,
   onRattraperJaquettes, jaquettesEnCours, jaquettesProg, jaquettesTotal, onAnnulerJaquettes, jaquettesManquantes,
   onPartager, partageTotal, partageFiltre,
@@ -83,7 +83,9 @@ export default function ActionsSheet({
           titre="Compléter les notes manquantes"
           detail={scoresManquants > 0
             ? `${scoresManquants} jeu${scoresManquants > 1 ? "x" : ""} sans note · RAWG, puis Steam, puis Wikidata`
-            : "Tous les jeux ont déjà une note"}
+            : notesDeclarees > 0
+              ? `${notesDeclarees} sans note connue · relance pour tout revérifier`
+              : "Toutes notées · relance pour tout revérifier"}
           onClick={() => { onClose(); onCompleterScores(); }}
         />
       )}

@@ -156,6 +156,9 @@ for (const [largeur, theme] of ECRANS) {
       const bouton = page.getByRole("button", { name: /^Tous les genres/ });
       if (await bouton.count()) await bouton.click();
     }],
+    ["Filtres · note", async () => {
+      await page.getByRole("button", { name: /^Note Toutes/ }).click();
+    }],
     ["panneau de tri", async () => {
       await page.keyboard.press("Escape");
       await page.getByRole("button", { name: /^Trier/ }).click();
