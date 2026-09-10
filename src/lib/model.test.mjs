@@ -1154,6 +1154,19 @@ test("compléter deux fois ne complète pas deux fois", () => {
   assert.deepEqual(games.map(g => completerDepuisEditions(g, games)), [null, null]);
 });
 
+test("le vocabulaire des genres est français, d'où qu'ils viennent", () => {
+  // RAWG répond en anglais, Playnite dans les deux langues : la forme affichée
+  // est celle du projet, et une seule par notion.
+  assert.deepEqual(
+    normaliserGenres(["Card & Board Game", "Tactical", "Massively Multiplayer", "Family"]),
+    ["Jeu de société", "Tactique", "Massivement multijoueur", "Famille"]);
+  // Les deux langues d'une même notion ne comptent qu'une fois.
+  assert.deepEqual(normaliserGenres(["Famille et enfants", "Family"]), ["Famille"]);
+  assert.deepEqual(normaliserGenres(["Massivement multijoueur", "Massively multiplayer online role-playing"]), ["Massivement multijoueur"]);
+  // « Indie » et « Open World » restent : ce sont les formes en usage.
+  assert.deepEqual(normaliserGenres(["Indépendant", "Open World"]), ["Indie", "Open World"]);
+});
+
 test("les catégories Steam qui ne sont pas des genres sont écartées", () => {
   // Wallpaper Engine est un utilitaire, « Free-to-play » un modèle économique,
   // « Accès anticipé » un stade de développement : aucun n'est une manière de

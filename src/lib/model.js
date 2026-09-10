@@ -256,8 +256,8 @@ const GENRES_CONNUS = [
   "Action", "Aventure", "Plateforme", "Course", "Combat", "Sport", "Stratégie",
   "Horreur", "Puzzle", "RPG", "Simulation", "Arcade", "Furtif", "Exploration",
   "Multijoueur", "Open World", "Indie", "Shooter", "FPS", "TPS", "Beat'em up",
-  "Soulslike", "Musou", "Jeu de société", "Créatif", "Vie", "Family",
-  "Massively Multiplayer", "Action-aventure", "Occasionnel", "Autre",
+  "Soulslike", "Musou", "Jeu de société", "Créatif", "Vie",
+  "Massivement multijoueur", "Action-aventure", "Occasionnel", "Tactique", "Famille", "Autre",
 ];
 
 // Ce que RAWG répond en anglais, et la forme du projet en face.
@@ -287,9 +287,13 @@ const SYNONYMES_GENRE = {
   jeuxdetir: "Shooter",
   actionetaventure: "Action-aventure",
   actionadventure: "Action-aventure",
-  massivementmultijoueur: "Massively Multiplayer",
-  massivelymultiplayeronlineroleplaying: "Massively Multiplayer",
-  familleetenfants: "Family",
+  massivelymultiplayer: "Massivement multijoueur",
+  massivelymultiplayeronlineroleplaying: "Massivement multijoueur",
+  familleetenfants: "Famille",
+  family: "Famille",
+  cardboardgame: "Jeu de société",
+  boardgame: "Jeu de société",
+  tactical: "Tactique",
   casual: "Occasionnel",
   autres: "Autre",
   // « Puzzle » et « Réflexion » cohabitaient dans les seules données de départ,

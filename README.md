@@ -241,6 +241,11 @@ bibliothèque vide sans qu'on comprenne pourquoi.
   une bibliothèque réelle il y a vingt-huit genres, et vingt-huit boutons ne sont plus
   un choix. Le genre sélectionné reste visible même s'il vient de la traîne, sinon le
   filtre actif disparaît de l'écran.
+  Le vocabulaire est français quelle que soit la source : RAWG répond en anglais,
+  Playnite dans les deux langues, et la table ramène chaque notion à une seule forme
+  — « Card & Board Game » devient « Jeu de société », « Tactical » « Tactique »,
+  « Massively Multiplayer » « Massivement multijoueur », « Family » « Famille ».
+  « Indie » et « Open World » restent tels quels : ce sont les formes en usage.
   Sept valeurs venues de Steam sont écartées à la lecture — Utilitaires, Retouche
   photo, Production vidéo, Animation & Modélisation, Conception & Illustration, Accès
   anticipé, Free-to-play : elles décrivent un logiciel, un modèle économique ou un
