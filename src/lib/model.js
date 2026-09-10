@@ -293,6 +293,25 @@ const SYNONYMES_GENRE = {
   reflexion: "Puzzle",
 };
 
+// Ce que Steam range parmi les genres sans que ce soit un genre de jeu.
+// L'export Playnite d'une bibliothèque réelle en a ramené sept : ils décrivent
+// un logiciel (Wallpaper Engine est un utilitaire), un modèle économique ou un
+// stade de développement, jamais une manière de jouer. Les garder remplissait
+// le filtre par genre de rubriques sous lesquelles on ne cherche jamais.
+//
+// Ils sont écartés à la lecture, pas seulement à l'import : la migration
+// rejoue `normaliserGenres` à chaque chargement, donc les fiches déjà en place
+// se nettoient toutes seules.
+const GENRES_ECARTES = new Set([
+  "utilitaires", "utilities",
+  "retouchephoto", "photoediting",
+  "productionvideo", "videoproduction",
+  "animationmodelisation", "animationmodeling",
+  "conceptionillustration", "designillustration",
+  "accesanticipe", "earlyaccess",
+  "freetoplay",
+]);
+
 // Clé de comparaison d'un genre : minuscules, sans accents, sans ponctuation.
 // « aventure », « Aventure » et « AVENTURE » sont le même genre — saisis à la
 // main, ils produisaient trois entrées distinctes dans les filtres.
@@ -316,7 +335,7 @@ export function normaliserGenres(liste) {
     const nettoye = brut.trim();
     if (!nettoye) continue;
     const cle = cleGenre(nettoye);
-    if (!cle || vues.has(cle)) continue;
+    if (!cle || vues.has(cle) || GENRES_ECARTES.has(cle)) continue;
     const canonique = FORMES_GENRE.get(cle);
     // Un genre qu'on ne connaît pas garde sa forme : la table corrige les
     // doublons connus, elle n'impose pas un vocabulaire fermé.
@@ -728,6 +747,19 @@ export function genresPresents(games) {
 // Normalisation d'un titre pour comparaison : minuscules, sans accents ni
 // ponctuation. Sert à la recherche, à la déduplication d'import, et à repérer
 // un rapprochement RAWG douteux.
+// Le titre tel qu'il se classe, article initial mis de côté.
+//
+// « The Legend of Zelda », « The Last of Us », « The Sims 4 » : rangés à la
+// lettre T, ils formaient un bloc où l'on ne trouve rien, et le PC en a ajouté
+// des dizaines. L'affichage ne change pas — c'est un ordre, pas un titre.
+//
+// Les articles anglais et français seulement, et uniquement suivis d'un espace :
+// « A Plague Tale » se range à P, « Alone in the Dark » reste à A.
+// « L'Ombre » n'a pas d'espace après son article : il est traité à part, sans
+// quoi la liste l'aurait mentionné sans jamais le retirer.
+const ARTICLE_INITIAL = /^(?:(?:the|a|an|le|la|les|un|une|des)\s+|l['\u2019]\s*)/i;
+export const titreDeTri = (t) => String(t || "").trim().replace(ARTICLE_INITIAL, "").trim() || String(t || "");
+
 export const normTitle = (s) => (s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, " ").trim();
 
 // Le score récupéré vient du premier résultat RAWG pour le titre : sur une

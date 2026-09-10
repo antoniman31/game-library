@@ -39,6 +39,7 @@ export default function ActionsSheet({
   onImportXbox,
   onCompleterScores, scoresEnCours, scoresProg, scoresTotal, onAnnulerScores, scoresManquants,
   onCompleterEditions, editionsCompletables,
+  onRattraperJaquettes, jaquettesEnCours, jaquettesProg, jaquettesTotal, onAnnulerJaquettes, jaquettesManquantes,
   onPartager, partageTotal, partageFiltre,
 }) {
   return (
@@ -97,6 +98,24 @@ export default function ActionsSheet({
           : "Rien à reprendre : chaque fiche est à jour"}
         onClick={() => { onClose(); onCompleterEditions(); }}
       />
+      {jaquettesEnCours ? (
+        <Action
+          icone="⏳"
+          titre={`Recherche des jaquettes… ${jaquettesProg}/${jaquettesTotal}`}
+          detail="Toucher pour arrêter"
+          onClick={onAnnulerJaquettes}
+          destructif
+        />
+      ) : (
+        <Action
+          icone="🖼"
+          titre="Rattraper les jaquettes manquantes"
+          detail={jaquettesManquantes > 0
+            ? `${jaquettesManquantes} fiche${jaquettesManquantes > 1 ? "s" : ""} sans image · cherche sur SteamGridDB`
+            : "Toutes les fiches ont une jaquette"}
+          onClick={() => { onClose(); onRattraperJaquettes(); }}
+        />
+      )}
       <Action
         icone="🎮"
         titre="Importer ma bibliothèque Xbox"

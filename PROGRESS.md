@@ -95,6 +95,13 @@ et la fiche affiche d'où viennent ses infos (« Source : RAWG et Wikidata »).
   obligatoire, chaque ligne marquée Nouveau / Déjà présent / Écarté / Ignoré.
 - **Liste des écartés** : un jeu importé puis supprimé ne revient pas au prochain
   import. Elle voyage avec la sauvegarde et se vide depuis les réglages.
+- **Rattraper les jaquettes manquantes** (⋯) : SteamGridDB pour toutes les fiches sans
+  image, avec progression et arrêt. Un titre trop éloigné est laissé vide plutôt que
+  d'écrire une jaquette fausse.
+- **Le tri alphabétique saute l'article initial** : « The Sims 4 » se range à S.
+- **Sept catégories Steam ne sont plus des genres** (Utilitaires, Free-to-play, Accès
+  anticipé…) : écartées à la lecture, donc aussi des fiches déjà là.
+- **Le partage suit l'univers** où l'on est, et le titre le dit.
 - **Remplir depuis les autres éditions** (à l'import, et par ⋯) : une fiche nue
   reprend la jaquette, la description, la note, les genres et l'infobox de la
   fiche du même jeu sur une autre plateforme ou une autre boutique. Sans réseau,
