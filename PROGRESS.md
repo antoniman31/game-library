@@ -95,6 +95,10 @@ et la fiche affiche d'où viennent ses infos (« Source : RAWG et Wikidata »).
   obligatoire, chaque ligne marquée Nouveau / Déjà présent / Écarté / Ignoré.
 - **Liste des écartés** : un jeu importé puis supprimé ne revient pas au prochain
   import. Elle voyage avec la sauvegarde et se vide depuis les réglages.
+- **Remplir depuis les autres éditions** (à l'import, et par ⋯) : une fiche nue
+  reprend la jaquette, la description, la note, les genres et l'infobox de la
+  fiche du même jeu sur une autre plateforme ou une autre boutique. Sans réseau,
+  sans rien écraser, et la provenance reste celle de la source d'origine.
 
 ### Actions de masse (panneau ⋯)
 

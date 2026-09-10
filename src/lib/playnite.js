@@ -12,7 +12,8 @@
 // a écartées et pourquoi. L'écran d'import montre ça avant d'écrire quoi que
 // ce soit ; c'est un import de cent lignes, il ne doit pas être une surprise.
 
-import { PC, migrateGames, normTitle, normaliserGenres, modesDepuisNoms, infoboxVide, aujourdhuiISO, estDatePlausible } from "./model.js";
+import { PC, migrateGames, normTitle, normaliserGenres, modesDepuisNoms, infoboxVide, aujourdhuiISO, estDatePlausible,
+  editionsDuJeu, completerDepuisEditions, libelleEdition, universDuJeu } from "./model.js";
 
 // ── Ce que l'export contient ───────────────────────────────────────────────
 //
@@ -250,7 +251,20 @@ export function analyserImport(entrees, { games = [], exclusions = [] } = {}, au
     if (exclus.has(e.ref) || exclus.has(sansRef)) { rejetes.push(e); continue; }
     const existante = parRef.get(e.ref) || parRef.get(sansRef);
     if (existante) { deja.push({ ...e, idExistant: existante.id }); continue; }
-    nouveaux.push({ ...e, jeu: jeuDepuisEntree(e, aujourdhui) });
+    // Une fiche du même jeu ailleurs — sur console, ou chez une autre boutique
+    // — remplira celle-ci sans réseau. Le dire avant l'import, pas après.
+    const [jumelle] = editionsDuJeu({ id: null, title: e.titre }, games);
+    nouveaux.push({
+      ...e,
+      jeu: jeuDepuisEntree(e, aujourdhui),
+      jumelle: jumelle
+        ? libelleEdition({
+            platform: jumelle.platform,
+            boutique: String(jumelle.boutique || "").trim(),
+            univers: universDuJeu(jumelle),
+          })
+        : "",
+    });
   }
   return { nouveaux, deja, exclus: rejetes };
 }
@@ -259,6 +273,12 @@ export function analyserImport(entrees, { games = [], exclusions = [] } = {}, au
 // que le reste de l'application lit sans précaution (prêts, liens, bcV) et
 // force le démat et l'absence de rétrocompatibilité qu'impose une fiche PC :
 // les redire ici, c'est promettre de les mettre à jour deux fois.
-export function jeuxAImporter(nouveaux, base = Date.now()) {
-  return migrateGames(nouveaux.map((n, i) => ({ ...n.jeu, id: base + i })));
+export function jeuxAImporter(nouveaux, base = Date.now(), games = []) {
+  const jeux = migrateGames(nouveaux.map((n, i) => ({ ...n.jeu, id: base + i })));
+  // Une fiche qui existe déjà ailleurs a été remplie au fil des mois : sa
+  // jaquette, sa description et sa note valent pour toutes ses éditions.
+  // Les jeux importés se voient les uns les autres — deux boutiques pour un
+  // même titre s'entraident si l'une des deux a quelque chose.
+  const tous = [...jeux, ...games];
+  return jeux.map(j => completerDepuisEditions(j, tous)?.jeu || j);
 }

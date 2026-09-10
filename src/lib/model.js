@@ -370,6 +370,16 @@ const TEXTES_INFO = ["series", "follows", "followedBy"];
 const listeInfo = (v) => (Array.isArray(v) ? v.filter(Boolean) : []);
 const texteInfo = (v) => String(v || "").trim();
 
+// Deux infobox qui disent la même chose. `fusionnerInfobox` rend toujours un
+// objet neuf, même quand elle n'a rien rempli : comparer les références fait
+// donc croire à un apport à chaque passage — une fiche « complétée » qui se
+// représente indéfiniment, et un compteur qui ne descend jamais.
+export function memeInfobox(a, b) {
+  if (!a || !b) return a === b;
+  return LISTES_INFO.every(c => JSON.stringify(listeInfo(a[c])) === JSON.stringify(listeInfo(b[c])))
+    && TEXTES_INFO.every(c => texteInfo(a[c]) === texteInfo(b[c]));
+}
+
 export const infoboxVide = (info) =>
   !info || (LISTES_INFO.every(c => !listeInfo(info[c]).length) && TEXTES_INFO.every(c => !texteInfo(info[c])));
 
@@ -395,7 +405,10 @@ export function fusionnerInfobox(existante, apport, source) {
   }
   if (infoboxVide(fusion)) return null;
   const sources = existante ? sourcesInfobox(existante) : [];
-  fusion.sources = aRempli && SOURCES_INFO[source] ? [...new Set([...sources, source])] : sources;
+  // `source` accepte une liste : ce qui vient d'une autre édition du même jeu
+  // porte la provenance de cette édition-là, qui peut en compter deux.
+  const apportees = (Array.isArray(source) ? source : [source]).filter(x => SOURCES_INFO[x]);
+  fusion.sources = aRempli && apportees.length ? [...new Set([...sources, ...apportees])] : sources;
   if (!fusion.sources.length) fusion.sources = ["wikidata"];
   return fusion;
 }
@@ -484,11 +497,16 @@ export function viderChamps(g, choisis) {
 // silencieux, qu'on corrige en harmonisant les titres. L'inverse, un
 // rapprochement à la louche, produirait des affirmations fausses sur ce qu'on
 // possède, et la règle des séries de l'audit a montré ce que ça vaut.
-export function autresEditions(jeu, games) {
+// Les autres fiches du même jeu, en entier. `autresEditions` n'en garde que de
+// quoi afficher une pastille ; la complétion, elle, a besoin des fiches.
+export function editionsDuJeu(jeu, games) {
   const cle = normTitle(jeu?.title);
   if (!cle) return [];
-  return (games || [])
-    .filter(g => g.id !== jeu.id && normTitle(g.title) === cle)
+  return (games || []).filter(g => g.id !== jeu.id && normTitle(g.title) === cle);
+}
+
+export function autresEditions(jeu, games) {
+  return editionsDuJeu(jeu, games)
     .map(g => ({ id: g.id, platform: g.platform, boutique: String(g.boutique || "").trim(), univers: universDuJeu(g) }))
     .sort((a, b) => a.platform.localeCompare(b.platform, "fr"));
 }
@@ -496,6 +514,66 @@ export function autresEditions(jeu, games) {
 // « Aussi sur PC · Steam », « Aussi sur Xbox Series X ». La boutique n'est dite
 // que sur PC, où elle est ce qui distingue une édition d'une autre ; sur
 // console, le nom de la machine suffit.
+// ── Ce qu'une édition peut donner à une autre ──────────────────────────────
+//
+// Posséder « Forza Horizon 5 » sur Xbox et sur PC, c'est avoir deux fiches pour
+// un seul jeu : même jaquette, même description, même note, mêmes genres. La
+// première a été remplie par Wikipédia et RAWG au fil des mois ; la seconde
+// arrive nue d'un import Playnite, et rien ne justifie de retourner interroger
+// le réseau pour ce qui est déjà là, à trois lignes de distance.
+//
+// Ne se partage que ce qui décrit LE JEU. Ce qui décrit l'ÉDITION reste à elle
+// — la date d'ajout, la plateforme, la boutique, le format, les prêts, les
+// liens et les notes personnelles. Et la règle habituelle vaut ici comme
+// ailleurs : on ne remplit que le vide, on n'écrase jamais.
+export const CHAMPS_PARTAGES = [
+  ["cover", "jaquette"],
+  ["style", "description"],
+  ["metacritic", "note"],
+  ["genre", "genres"],
+];
+
+const champVide = (g, champ) => {
+  const v = g?.[champ];
+  if (champ === "genre") return !Array.isArray(v) || !v.length;
+  if (champ === "metacritic") return typeof v !== "number";
+  return !String(v || "").trim();
+};
+
+// Rend { jeu, champs } quand quelque chose a été repris, sinon null. Les champs
+// sont nommés pour pouvoir le dire à l'écran : « jaquette et description »
+// vaut mieux que « 2 champs ».
+export function completerDepuisEditions(jeu, games) {
+  const editions = editionsDuJeu(jeu, games);
+  if (!editions.length) return null;
+
+  const nouveau = { ...jeu };
+  const champs = [];
+  for (const [champ, libelle] of CHAMPS_PARTAGES) {
+    if (!champVide(nouveau, champ)) continue;
+    // La première édition qui a la réponse : les fiches sont parcourues dans
+    // l'ordre de la bibliothèque, donc le résultat ne dépend pas du hasard.
+    const donneuse = editions.find(g => !champVide(g, champ));
+    if (!donneuse) continue;
+    nouveau[champ] = champ === "genre" ? [...donneuse.genre] : donneuse[champ];
+    champs.push(libelle);
+  }
+
+  // L'infobox suit sa propre règle de fusion, champ par champ : une édition
+  // peut avoir les développeurs et l'autre la série.
+  let info = nouveau.infobox;
+  for (const e of editions) {
+    if (!e.infobox) continue;
+    info = fusionnerInfobox(info, e.infobox, sourcesInfobox(e.infobox));
+  }
+  if (!memeInfobox(info, nouveau.infobox)) {
+    nouveau.infobox = info;
+    champs.push("infos");
+  }
+
+  return champs.length ? { jeu: nouveau, champs } : null;
+}
+
 export const libelleEdition = (e) =>
   e.univers === "pc" ? `PC${e.boutique ? ` · ${e.boutique}` : ""}` : e.platform;
 
