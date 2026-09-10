@@ -94,6 +94,56 @@ export async function wikiArticleData(title) {
   } catch { return { extract: "", image: null }; }
 }
 
+// ── La note Metacritic, quand RAWG ne l'a pas ──────────────────────────────
+//
+// RAWG cherche par titre, et un titre suffit à la faire échouer : « Hogwarts
+// Legacy : L'Héritage de Poudlard » n'est pas « Hogwarts Legacy ». Steam, lui,
+// répond sur un numéro — l'appid que l'import Playnite a posé sur la fiche —,
+// donc sans aucune approximation. Le magasin n'expose pas de CORS : on passe
+// par le relais, qui n'a besoin d'aucune clé pour lui.
+export async function steamMetacritic(appid) {
+  const id = String(appid || "").trim();
+  if (!/^\d+$/.test(id)) return null;
+  try {
+    const r = await fetch(`${proxyBase()}/steam/appdetails?appids=${id}`);
+    if (!r.ok) return null;
+    const d = await r.json();
+    const jeu = d?.[id];
+    if (!jeu?.success) return null;
+    const note = jeu.data?.metacritic?.score;
+    return Number.isInteger(note) && note >= 0 && note <= 100 ? note : null;
+  } catch { return null; }
+}
+
+// Wikidata porte la note sous « note de critique » (P444), qualifiée par
+// « note attribuée par » (P447) = Metacritic (Q150248). C'est gratuit, sans
+// clé, sans relais, et ça vaut aussi pour les jeux console — mais la couverture
+// dépend des contributeurs, donc c'est un complément, pas une source sûre.
+//
+// La valeur est un texte : « 90/100 », « 90 », parfois « 9/10 ». Seule la forme
+// sur cent est acceptée — une note sur dix multipliée par dix serait une
+// invention, et l'application n'invente pas de chiffres.
+const Q_METACRITIC = "Q150248";
+export async function wikidataMetacritic(wikiTitle) {
+  try {
+    const pp = await (await fetch(`https://fr.wikipedia.org/w/api.php?action=query&prop=pageprops&ppprop=wikibase_item&redirects=1&titles=${encodeURIComponent(wikiTitle)}&format=json&origin=*`)).json();
+    const qid = Object.values(pp?.query?.pages || {})[0]?.pageprops?.wikibase_item;
+    if (!qid) return null;
+    const ent = await (await fetch(`https://www.wikidata.org/w/api.php?action=wbgetentities&ids=${qid}&props=claims&format=json&origin=*`)).json();
+    const claims = ent?.entities?.[qid]?.claims?.P444 || [];
+    for (const c of claims) {
+      const parQui = c.qualifiers?.P447?.[0]?.datavalue?.value?.id;
+      if (parQui !== Q_METACRITIC) continue;
+      const brut = String(c.mainsnak?.datavalue?.value ?? "").trim();
+      const m = brut.match(/^(\d{1,3})\s*(?:\/\s*100)?$/);
+      if (!m) continue;
+      const note = Number(m[1]);
+      if (note >= 0 && note <= 100) return note;
+    }
+    return null;
+  } catch { return null; }
+}
+
 // Infobox structurée via Wikidata (à partir du titre de l'article Wikipédia FR).
 // Développeur, éditeur, dates de sortie par plateforme, mode de jeu, série (+ précédent/
 // suivant). PAS le moteur (exclu). Retourne null si rien d'exploitable. Sans clé.

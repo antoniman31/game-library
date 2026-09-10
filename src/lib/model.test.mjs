@@ -15,7 +15,7 @@ import {
   migrateGames, validerJeuxImportes, compterFiltres,
   joursDePret, pretEnRetard, isBackCompatPlatform,
   brouillonDepuisJeu, validerEdition, sortiesDepuisTexte, sortiesVersTexte, listeDepuisTexte,
-  normTitle, rapprochementDouteux, jeuxSansScore,
+  normTitle, rapprochementDouteux, jeuxSansScore, CHAMPS_A_COMPLETER,
   rendreJeu, preterJeu, annulerPret, supprimerEntreeHistorique, dureeEntreeHistorique, MAX_HISTORIQUE_PRET, aujourdhuiISO,
   BACK_COMPAT, XBOX_SERIES_CUTOFF, PRET_LONG_JOURS, PLATFORMES_JEU,
   estDatePlausible, estLienSur, ANNEE_MIN, ANNEES_A_VENIR, normaliserGenres,
@@ -25,7 +25,7 @@ import {
   fusionnerInfobox, infoboxDepuisRawg, sourcesInfobox, libelleSources, infoboxVide,
   viderChamps, CHAMPS_VIDABLES, FILTRES, FILTRES_VIDES,
   PC, estPC, universDuJeu, jeuDansUnivers, boutiquesPresentes, jeuDeLaBoutique,
-  completerDepuisEditions, editionsDuJeu, titreDeTri, masquerDoublons,
+  completerDepuisEditions, editionsDuJeu, titreDeTri, masquerDoublons, appidSteam,
   autresEditions, libelleEdition,
 } from "./model.js";
 import { ecouterMiseAJour } from "./maj.js";
@@ -1215,4 +1215,41 @@ test("une fiche sans titre n'en masque aucune autre", () => {
   // clé, et se compter comme doublons ferait disparaître la seconde.
   const l = [pcJeu({ id: 1, title: "" }), pcJeu({ id: 2, title: "   " }), pcJeu({ id: 3, title: "Hades" })];
   assert.deepEqual(masquerDoublons(l).map(g => g.id), [1, 2, 3]);
+});
+
+// ── La note qu'aucune source ne connaît ────────────────────────────────────
+
+test("l'appid Steam se trouve sur la fiche, ou chez une autre de ses éditions", () => {
+  const xbox = { id: 1, title: "Age of Mythology: Retold", platform: PC, boutique: "Xbox", refBoutique: "Microsoft.Athens_8wek" };
+  const steam = { id: 2, title: "age of mythology retold", platform: PC, boutique: "Steam", refBoutique: "1934680" };
+  assert.equal(appidSteam(steam, [xbox, steam]), "1934680");
+  // La fiche Xbox n'a pas de numéro Steam, mais le jeu, lui, en a un.
+  assert.equal(appidSteam(xbox, [xbox, steam]), "1934680");
+  assert.equal(appidSteam(xbox, [xbox]), "", "sans jumelle Steam, rien à trouver");
+  // Un identifiant qui n'est pas un appid — GOG, Epic — ne se fait pas passer
+  // pour un numéro Steam.
+  assert.equal(appidSteam({ id: 3, title: "Fallout", boutique: "GOG", refBoutique: "1440148836" }, []), "");
+  assert.equal(appidSteam({ id: 4, title: "X", boutique: "Steam", refBoutique: "abc" }, []), "");
+});
+
+test("une fiche que personne ne note cesse de réclamer", () => {
+  const sans = { id: 1, title: "Alone in the Dark 2", metacritic: null, noteAbsente: false };
+  const reglee = { id: 2, title: "Fallout", metacritic: null, noteAbsente: true };
+  const notee = { id: 3, title: "Hades", metacritic: 93, noteAbsente: false };
+  assert.deepEqual(jeuxSansScore([sans, reglee, notee]).map(g => g.id), [1]);
+  // Et « À compléter » compte la même chose que l'action : une fiche réglée
+  // n'est pas une fiche incomplète.
+  const regleNote = CHAMPS_A_COMPLETER.find(([c]) => c === "metacritic")[2];
+  assert.equal(regleNote(sans), true);
+  assert.equal(regleNote(reglee), false);
+  assert.equal(regleNote(notee), false);
+});
+
+test("une note posée à la main efface le « pas de note connue »", () => {
+  // La migration le fait aussi pour les fiches déjà enregistrées : les deux
+  // états ne peuvent pas coexister sans que l'un des deux mente.
+  assert.equal(migrateGames([{ id: 1, title: "X", metacritic: 88, noteAbsente: true }])[0].noteAbsente, false);
+  assert.equal(migrateGames([{ id: 2, title: "X", metacritic: null, noteAbsente: true }])[0].noteAbsente, true);
+  const { valeurs } = validerEdition(brouillonValide({ metacritic: "88" }));
+  assert.equal(valeurs.noteAbsente, false);
 });

@@ -20,7 +20,7 @@ import { jeuDansUnivers, boutiquesPresentes, jeuDeLaBoutique, autresEditions,
   jeuALeMode, jeuSurPlateforme, compterRetro, genresPresents, dureeEntreeHistorique, supprimerEntreeHistorique,
   joursDePret, jeuPasseSeuil, jeuACompleter, completudeManquante, dateDeSortie, serieDuJeu,
   empreinteMelange, compterFichesIncompletes, completerDepuisEditions, titreDeTri, rapprochementDouteux,
-  masquerDoublons,
+  masquerDoublons, appidSteam,
   PLATFORM_COLORS } from "./lib/model.js";
 import { lire, ecrire, surEchecStockage } from "./lib/storage.js";
 import { chargerSync, enregistrerSync, genererCode, envoyer, recuperer } from "./lib/sync.js";
@@ -34,7 +34,7 @@ import { resoudreTheme, modeSuivant, modeValide, ICONES, LIBELLES, COULEUR_BARRE
 import {
   loadKeys, setApiKeys, normTitle, hasRawgKey, rawgFirstResult,
   rawgSearch, rawgDetail, wikiFrenchTitles, wikiArticleData, pickBestWikiTitle,
-  sgdbSearch, sgdbGrids, xblTitleHistory,
+  sgdbSearch, sgdbGrids, xblTitleHistory, steamMetacritic, wikidataMetacritic,
 } from "./lib/api.js";
 
 // Jaquettes rattrapées au démarrage, par ouverture de l'application.
@@ -302,13 +302,52 @@ export default function App() {
     for (let i = 0; i < cibles.length; i++) {
       if (scoresCancelRef.current) break;
       const g = cibles[i];
+      // Trois sources dans l'ordre de leur sûreté.
+      //
+      // RAWG cherche par titre et se trompe de jeu quand le titre diffère :
+      // « Hogwarts Legacy : L'Héritage de Poudlard » ne lui disait rien. Steam
+      // répond sur l'appid posé par l'import, donc sans aucune approximation —
+      // mais il ne connaît que ses propres jeux. Wikidata ferme la marche : sans
+      // clé, valable aussi côté console, mais peuplé par des contributeurs, donc
+      // inégal. La première qui répond gagne, et on s'arrête là.
+      let note = null;
+      let source = "";
       try {
         const r = await rawgFirstResult(g.title);
-        if (r?.metacritic) {
-          setGames(gs => gs.map(x => x.id === g.id ? { ...x, metacritic: r.metacritic } : x));
-          trouves.push({ id: g.id, titre: g.title, titreRawg: r.name, score: r.metacritic });
-        } else sansScore.push(g.title);
-      } catch { sansScore.push(g.title); }
+        if (r?.metacritic) { note = r.metacritic; source = r.name; }
+      } catch { /* la source suivante a sa chance */ }
+
+      if (!note) {
+        const appid = appidSteam(g, games);
+        if (appid) {
+          try {
+            const n = await steamMetacritic(appid);
+            if (n) { note = n; source = `Steam ${appid}`; }
+          } catch { /* idem */ }
+        }
+      }
+
+      if (!note) {
+        try {
+          const titres = await wikiFrenchTitles(g.title);
+          const best = pickBestWikiTitle(g.title, titres);
+          if (best) {
+            const n = await wikidataMetacritic(best.title);
+            if (n) { note = n; source = `Wikidata · ${best.title}`; }
+          }
+        } catch { /* dernière source : son échec conclut */ }
+      }
+
+      if (note) {
+        setGames(gs => gs.map(x => x.id === g.id ? { ...x, metacritic: note, noteAbsente: false } : x));
+        trouves.push({ id: g.id, titre: g.title, titreRawg: source, score: note });
+      } else {
+        // Les trois sources ont répondu non : la fiche cesse de réclamer. Un
+        // jeu de 1994 n'a pas de Metascore, et le redemander à chaque passage
+        // ferait d'une action qui se termine une corvée qui recommence.
+        setGames(gs => gs.map(x => x.id === g.id ? { ...x, noteAbsente: true } : x));
+        sansScore.push(g.title);
+      }
       setScoresProg(i + 1);
       await new Promise(res => setTimeout(res, 150)); // sous la limite de RAWG
     }

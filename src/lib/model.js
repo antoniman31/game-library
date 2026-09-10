@@ -87,6 +87,12 @@ export function migrateGames(list) {
     // une fiche à l'import suivant sans se fier au titre : deux éditions d'un
     // même jeu portent le même titre, jamais la même référence.
     if (typeof ng.refBoutique !== "string") ng.refBoutique = "";
+    // Une fiche que toutes les sources ont refusé de noter. Sans ce champ, les
+    // sept jeux de 1994 de la bibliothèque resteraient éternellement dans
+    // « À compléter → Note » : un travail qui ne finit jamais parce qu'il n'a
+    // pas d'objet — Metacritic n'existait pas encore.
+    if (typeof ng.noteAbsente !== "boolean") ng.noteAbsente = false;
+    if (typeof ng.metacritic === "number") ng.noteAbsente = false;
     // Un jeu PC est toujours démat, et n'est jamais rétrocompatible : ces deux
     // champs répondent à des questions de console.
     if (ng.platform === PC) { ng.format = "démat"; ng.backCompat = false; }
@@ -573,6 +579,19 @@ export function masquerDoublons(liste) {
   return (liste || []).filter(g => retenus.has(g.id));
 }
 
+// L'appid Steam du jeu, cherché sur la fiche puis sur ses autres éditions.
+//
+// « Age of Mythology: Retold » est ici une fiche Xbox, sans appid — mais la
+// même bibliothèque en tient une seconde, achetée sur Steam, qui en a un. Le
+// jeu est le même : son numéro Steam vaut pour les deux.
+export function appidSteam(jeu, games) {
+  for (const g of [jeu, ...editionsDuJeu(jeu, games)]) {
+    const ref = String(g?.refBoutique || "").trim();
+    if (normTitle(g?.boutique) === "steam" && /^\d+$/.test(ref)) return ref;
+  }
+  return "";
+}
+
 // ── Ce qu'une édition peut donner à une autre ──────────────────────────────
 //
 // Posséder « Forza Horizon 5 » sur Xbox et sur PC, c'est avoir deux fiches pour
@@ -639,7 +658,7 @@ export const CHAMPS_A_COMPLETER = [
   ["cover", "Jaquette", g => !g.cover],
   ["genre", "Genre", g => !g.genre?.length],
   ["style", "Description", g => !g.style],
-  ["metacritic", "Note", g => !g.metacritic],
+  ["metacritic", "Note", g => !g.metacritic && !g.noteAbsente],
   ["infobox", "Fiche détaillée", g => !g.infobox],
 ];
 
@@ -807,7 +826,10 @@ export function rapprochementDouteux(titreLocal, titreSource) {
 
 // Jeux dont la note Metacritic manque — 0 compte comme absent, RAWG ne
 // distingue pas « pas de note » de « note nulle ».
-export const jeuxSansScore = (games) => (games || []).filter(g => !g.metacritic);
+// Une fiche dont on sait qu'aucune source ne la note n'est plus « sans score » :
+// elle est réglée. La reproposer à chaque passage ferait d'une action qui se
+// termine une corvée qui recommence.
+export const jeuxSansScore = (games) => (games || []).filter(g => !g.metacritic && !g.noteAbsente);
 
 // ── Édition manuelle d'une fiche ────────────────────────────────────────────
 // Tout ce que les sources automatiques écrivent (titre, plateforme, genres,
@@ -912,6 +934,9 @@ export function validerEdition(b) {
       title: titre, platform: b.platform, format, backCompat, boutique,
       genre: normaliserGenres(listeDepuisTexte(b.genre)),
       metacritic: mc, addedDate: date, style: String(b.style || "").trim(),
+      // Une note saisie efface le « pas de note connue » ; un champ vidé à la
+      // main rend la fiche aux sources, qui la chercheront à nouveau.
+      noteAbsente: false,
       cover: cover || null, infobox: infoVide ? null : info,
     },
   };

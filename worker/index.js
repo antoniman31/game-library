@@ -25,6 +25,11 @@ const ORIGINES = [
 const CIBLES = {
   "/sgdb": "https://www.steamgriddb.com/api/v2",
   "/xbl": "https://xbl.io/api/v2",
+  // Le magasin Steam rend la note Metacritic d'un jeu à partir de son appid,
+  // que l'import Playnite pose sur la fiche : la note est demandée par numéro,
+  // jamais par titre approché. Il n'expose pas d'en-tête CORS et ne demande
+  // aucune clé — le relais n'a donc rien à transmettre que la requête.
+  "/steam": "https://store.steampowered.com/api",
 };
 
 // Plafond de la sauvegarde. Une bibliothèque de 100 jeux avec descriptions pèse
