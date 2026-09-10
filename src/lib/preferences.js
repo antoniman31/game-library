@@ -21,8 +21,13 @@ export const CLES_SERVICES = ["rawg", "sgdb", "xbl"];
 
 // Ce que cet appareil envoie. `avecCles` est une décision par appareil, pas
 // une valeur synchronisée : chacun choisit ce qu'il expose.
-export function preferencesASauvegarder({ modeTheme, keys, avecCles }) {
+export function preferencesASauvegarder({ modeTheme, keys, avecCles, exclusions }) {
   const p = { theme: modeTheme };
+  // Les exclusions d'import voyagent toujours, sans case à cocher : ce ne sont
+  // pas des secrets, et une liste d'exclusions qui reste sur le PC laisse le
+  // téléphone réimporter les jeux qu'on vient d'écarter.
+  const ex = nettoyerExclusions(exclusions);
+  if (ex.length) p.exclusions = ex;
   if (avecCles) {
     const gardees = {};
     for (const c of CLES_SERVICES) {
@@ -47,6 +52,9 @@ export function preferencesRecues(brut) {
   // choisir. Il est ignoré comme n'importe quel champ inconnu.
   if (MODES.includes(brut.theme)) sortie.modeTheme = brut.theme;
 
+  const ex = nettoyerExclusions(brut.exclusions);
+  if (ex.length) sortie.exclusions = ex;
+
   if (brut.keys && typeof brut.keys === "object") {
     const cles = {};
     for (const c of CLES_SERVICES) {
@@ -68,7 +76,32 @@ export function resumePreferences(p) {
   if (p.modeTheme) morceaux.push("l'apparence");
   const n = p.keys ? Object.keys(p.keys).length : 0;
   if (n) morceaux.push(`${n} clé${n > 1 ? "s" : ""} de service`);
+  const e = p.exclusions ? p.exclusions.length : 0;
+  if (e) morceaux.push(`${e} exclusion${e > 1 ? "s" : ""} d'import`);
   return morceaux.join(" et ");
+}
+
+// ── Exclusions d'import ────────────────────────────────────────────────────
+//
+// Un jeu supprimé après un import Playnite doit rester supprimé : sans cette
+// liste, chaque import ramène les cent lignes qu'on vient d'écarter, et on
+// cesse d'importer. Une exclusion est une référence de boutique, pas un jeu :
+// elle survit à la suppression de la fiche, c'est tout son objet.
+//
+// Cette fonction est la porte d'entrée unique — fichier reçu, stockage local,
+// sauvegarde distante passent tous par elle, parce qu'aucune de ces trois
+// sources n'est écrite par cette version de l'application.
+export const EXCLUSIONS_MAX = 5000;
+export function nettoyerExclusions(brut) {
+  if (!Array.isArray(brut)) return [];
+  const vues = new Set();
+  for (const v of brut) {
+    if (typeof v !== "string") continue;
+    const r = v.trim();
+    if (r && r.length <= 200) vues.add(r);
+    if (vues.size >= EXCLUSIONS_MAX) break;
+  }
+  return [...vues];
 }
 
 

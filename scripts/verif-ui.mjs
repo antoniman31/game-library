@@ -199,11 +199,32 @@ for (const [largeur, theme] of ECRANS) {
     }],
     ["Réglages", async () => { await page.keyboard.press("Escape"); await page.getByRole("button", { name: "Réglages" }).click(); }],
     ["Services", async () => { await page.getByRole("button", { name: "Services" }).click(); }],
+    // L'import Playnite, avant et après lecture d'un fichier : la liste des
+    // lignes n'existe qu'une fois le fichier lu, et c'est elle qui porte les
+    // cases à cocher et les pastilles — donc les cibles à mesurer.
+    ["import Playnite", async () => {
+      await page.getByRole("button", { name: "Sauvegarde" }).click();
+      await page.getByRole("button", { name: /Importer un export Playnite/ }).click();
+    }],
+    ["import Playnite · fichier lu", async () => {
+      // Le champ de fichier de la copie hors ligne est resté dans le document
+      // derrière la modale : c'est le dernier qui appartient à celle-ci.
+      await page.locator('input[type="file"]').last().setInputFiles({
+        name: "playnite.json",
+        mimeType: "application/json",
+        buffer: Buffer.from(JSON.stringify([
+          { titre: "Hades", boutique: "Steam", idBoutique: "1145360", genres: ["Action"], sortie: "2020-9-17" },
+          { titre: "Disco Elysium", boutique: "GOG", idBoutique: "1421632", sortie: "2019-10-15" },
+          { titre: "Mario Kart 8", boutique: "Steam", idBoutique: "mk8", plateformes: ["Nintendo Switch"] },
+        ])),
+      });
+    }],
     // Trois écrans que la promenade ne visitait pas, et où trois défauts ont
     // vécu des mois : des boutons de 26 et 40 px dans la fenêtre d'ajout, et
     // un « Lire la suite » de 20 px sur une fiche assez longue pour l'afficher.
     // Un garde-fou ne protège que ce qu'il regarde.
     ["Ajouter un jeu", async () => {
+      await page.keyboard.press("Escape");
       await page.getByRole("button", { name: /^Console$/ }).click();
       await page.getByRole("button", { name: "+ Ajouter" }).click();
     }],
