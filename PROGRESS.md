@@ -98,6 +98,8 @@ et la fiche affiche d'où viennent ses infos (« Source : RAWG et Wikidata »).
 - **Le même jeu chez deux boutiques** : une seule carte côté PC, la plus complète,
   avec « 9 doublons masqués » dans l'en-tête et un interrupteur dans les filtres.
   Rien n'est supprimé : la fiche cachée garde sa référence de boutique.
+- **La série importée est choisie** : balisage wiki retiré, nom de studio écarté, et
+  entre plusieurs candidates la plus longue que le titre contient.
 - **Les genres parlent français**, d'où qu'ils viennent : « Card & Board Game » devient
   « Jeu de société », « Tactical » « Tactique ». « Indie » et « Open World » restent,
   ce sont les formes en usage. 31 genres sur 335 jeux.

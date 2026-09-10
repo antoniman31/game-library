@@ -68,13 +68,24 @@ const signaler = (categorie, detail, gravite = "moyen") => constats.push({ gravi
 // ── Doublons ───────────────────────────────────────────────────────────────
 // Deux entrées du même titre SUR LA MÊME PLATEFORME : là c'est franchement
 // suspect. Le même jeu sur Switch et sur Xbox, non — c'est deux exemplaires.
+//
+// Sur PC, la plateforme ne suffit plus depuis que la boutique existe : posséder
+// Borderlands 2 sur Steam et sur Epic est un fait, pas une anomalie, et la
+// liste le sait — elle n'en montre qu'une carte. Seules deux fiches du même
+// titre CHEZ LA MÊME BOUTIQUE restent un doublon. Sans cette nuance, l'audit
+// signalait six paires légitimes et disait le contraire de l'application.
 const parCle = new Map();
 for (const g of jeux) {
-  const cle = `${normTitle(g.title)}|${g.platform}`;
+  const cle = g.platform === "PC"
+    ? `${normTitle(g.title)}|PC|${normTitle(g.boutique)}`
+    : `${normTitle(g.title)}|${g.platform}`;
   (parCle.get(cle) || parCle.set(cle, []).get(cle)).push(g);
 }
 for (const [, groupe] of parCle) {
-  if (groupe.length > 1) signaler("doublon", `« ${groupe[0].title} » (${groupe[0].platform}) × ${groupe.length}`);
+  if (groupe.length > 1) {
+    const ou = groupe[0].platform === "PC" && groupe[0].boutique ? `PC · ${groupe[0].boutique}` : groupe[0].platform;
+    signaler("doublon", `« ${groupe[0].title} » (${ou}) × ${groupe.length}`);
+  }
 }
 
 // Identifiants réutilisés : l'édition et la suppression reposent entièrement
@@ -94,7 +105,11 @@ for (const [libelle, predicat] of [
   ["sans jaquette", g => !g.cover],
   ["sans genre", g => !g.genre?.length],
   ["sans description", g => !g.style],
-  ["sans note", g => !g.metacritic],
+  // Une fiche que toutes les sources ont refusé de noter n'est pas un manque à
+  // combler : c'est une question réglée. L'application le sait et cesse de la
+  // proposer ; l'audit annonçait vingt-neuf jeux à noter quand elle en comptait
+  // zéro — deux vérités sur la même bibliothèque, et rien pour les accorder.
+  ["sans note", g => !g.metacritic && !g.noteAbsente],
 ]) {
   const titres = sans(predicat);
   if (titres.length) signaler(libelle, `${titres.length} : ${resume(titres)}`, "info");
