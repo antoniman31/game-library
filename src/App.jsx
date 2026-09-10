@@ -12,6 +12,7 @@ import StatsView from "./components/StatsView.jsx";
 import SortSheet from "./components/SortSheet.jsx";
 import SettingsView from "./components/SettingsView.jsx";
 import PlayniteModal from "./components/PlayniteModal.jsx";
+import NotesChoixSheet from "./components/NotesChoixSheet.jsx";
 
 import { hdr, card, bdr, txt, mut, accent, accentDoux, accentFond, warnDoux, dangerDoux, ok, warn, warnFond, danger } from "./lib/theme.js";
 import { GAMES_INIT } from "./lib/seed.js";
@@ -20,7 +21,7 @@ import { jeuDansUnivers, boutiquesPresentes, jeuDeLaBoutique, autresEditions,
   jeuALeMode, jeuSurPlateforme, compterRetro, genresPresents, dureeEntreeHistorique, supprimerEntreeHistorique,
   joursDePret, jeuPasseSeuil, jeuxNoteDeclareeAbsente, jeuACompleter, completudeManquante, dateDeSortie, serieDuJeu,
   empreinteMelange, compterFichesIncompletes, completerDepuisEditions, titreDeTri, rapprochementDouteux,
-  masquerDoublons, appidSteam,
+  masquerDoublons, appidSteam, noteChangee,
   PLATFORM_COLORS } from "./lib/model.js";
 import { lire, ecrire, surEchecStockage } from "./lib/storage.js";
 import { chargerSync, enregistrerSync, genererCode, envoyer, recuperer } from "./lib/sync.js";
@@ -123,6 +124,7 @@ export default function App() {
   const [showFilters, setShowFilters] = useState(false);
   const [showSort, setShowSort] = useState(false);
   const [showActions, setShowActions] = useState(false);
+  const [notesChoix, setNotesChoix] = useState(null);
   const [jaquettesEnCours, setJaquettesEnCours] = useState(false);
   const [jaquettesProg, setJaquettesProg] = useState(0);
   const [jaquettesTotal, setJaquettesTotal] = useState(0);
@@ -286,6 +288,81 @@ export default function App() {
   // la note qu'au passage : un jeu illustré mais sans note n'était jamais
   // repêché. Et l'enrichissement de masse ne concerne que les jeux fraîchement
   // importés, donc jamais la bibliothèque déjà en place.
+  // La note d'un jeu, demandée à trois sources dans l'ordre de leur sûreté.
+  //
+  // RAWG cherche par titre et se trompe de jeu quand le titre diffère :
+  // « Hogwarts Legacy : L'Héritage de Poudlard » ne lui disait rien. Steam
+  // répond sur l'appid posé par l'import, donc sans aucune approximation — mais
+  // il ne connaît que ses propres jeux. Wikidata ferme la marche : sans clé,
+  // valable aussi côté console, mais peuplée par des contributeurs, donc
+  // inégale. La première qui répond gagne, et on s'arrête là.
+  const chercherNote = async (g) => {
+    try {
+      const r = await rawgFirstResult(g.title);
+      if (r?.metacritic) return { note: r.metacritic, source: r.name };
+    } catch { /* la source suivante a sa chance */ }
+
+    const appid = appidSteam(g, games);
+    if (appid) {
+      try {
+        const n = await steamMetacritic(appid);
+        if (n) return { note: n, source: `Steam ${appid}` };
+      } catch { /* idem */ }
+    }
+
+    try {
+      const titres = await wikiFrenchTitles(g.title);
+      const best = pickBestWikiTitle(g.title, titres);
+      if (best) {
+        const n = await wikidataMetacritic(best.title);
+        if (n) return { note: n, source: `Wikidata · ${best.title}` };
+      }
+    } catch { /* dernière source : son échec conclut */ }
+
+    return { note: null, source: "" };
+  };
+
+  // Revérifier TOUTES les fiches, celles qui ont déjà une note comprise.
+  //
+  // Compléter une note vide ne peut rien abîmer : il n'y avait rien. Rafraîchir
+  // une note existante, si — une source qui se trompe de jeu écraserait une note
+  // juste, y compris une note corrigée à la main. Ce passage n'écrit donc rien :
+  // il rassemble ce qui changerait, et l'écran de choix tranche.
+  const revoirToutesLesNotes = async () => {
+    scoresCancelRef.current = false;
+    setScoresEnCours(true);
+    setScoresProg(0);
+    setScoresTotal(games.length);
+    setScoresBilan(null);
+    const propositions = [];
+    for (let i = 0; i < games.length; i++) {
+      if (scoresCancelRef.current) break;
+      const g = games[i];
+      const { note, source } = await chercherNote(g);
+      if (noteChangee(g.metacritic, note)) {
+        propositions.push({ id: g.id, titre: g.title, avant: g.metacritic ?? null, apres: note, source });
+      }
+      setScoresProg(i + 1);
+      await new Promise(res => setTimeout(res, 150)); // sous la limite de RAWG
+    }
+    setScoresEnCours(false);
+    if (!propositions.length) {
+      setScoresBilan({ message: scoresCancelRef.current
+        ? "Interrompu — aucune différence trouvée jusque-là."
+        : "Toutes les notes sont déjà à jour." });
+      return;
+    }
+    setNotesChoix({ propositions, stopped: scoresCancelRef.current });
+  };
+
+  const appliquerNotes = (choisies) => {
+    setNotesChoix(null);
+    if (!choisies.length) return;
+    const parId = new Map(choisies.map(p => [p.id, p.apres]));
+    setGames(gs => gs.map(g => (parId.has(g.id) ? { ...g, metacritic: parId.get(g.id), noteAbsente: false } : g)));
+    setAvis(`${choisies.length} note(s) mise(s) à jour.`);
+  };
+
   const completerScores = async () => {
     if (scoresEnCours) return;
     // Plus de garde sur la clé RAWG : elle datait du temps où RAWG était la
@@ -300,14 +377,27 @@ export default function App() {
     let cibles = jeuxSansScore(games);
     let reprise = false;
     if (!cibles.length) {
-      if (!declarees.length) { setScoresBilan({ message: "Tous les jeux ont déjà une note." }); return; }
+      if (!declarees.length) {
+        // Tout est noté : il reste la seule chose que le bouton sache encore
+        // faire, et le dire vaut mieux qu'un message qui clôt la discussion.
+        const revoir = window.confirm(
+          `Tous les jeux ont déjà une note.\n\n`
+          + `Les revérifier toutes (${games.length} fiches) ?\n\n`
+          + `Rien ne sera écrit : tu verras d'abord ce qui changerait, et tu choisiras.`);
+        if (!revoir) return;
+        await revoirToutesLesNotes();
+        return;
+      }
+      // Une seule question, et elle porte sur tout : les fiches déclarées sans
+      // note comme celles qui en ont une. Trois questions enchaînées dans un
+      // seul bouton, personne ne les lit.
       const revoir = window.confirm(
         `Aucun nouveau jeu sans note.\n\n`
-        + `Revérifier les ${declarees.length} fiche(s) déclarées « pas de note connue » ?\n`
-        + `Les jeux antérieurs à Metacritic n'en auront jamais ; les autres, peut-être depuis.`);
+        + `Tout revérifier — ${declarees.length} fiche(s) sans note connue et ${games.length - declarees.length} déjà notée(s) ?\n\n`
+        + `Rien ne sera écrit : tu verras d'abord ce qui changerait, et tu choisiras.`);
       if (!revoir) return;
-      cibles = declarees;
-      reprise = true;
+      await revoirToutesLesNotes();
+      return;
     }
 
     scoresCancelRef.current = false;
@@ -320,41 +410,7 @@ export default function App() {
     for (let i = 0; i < cibles.length; i++) {
       if (scoresCancelRef.current) break;
       const g = cibles[i];
-      // Trois sources dans l'ordre de leur sûreté.
-      //
-      // RAWG cherche par titre et se trompe de jeu quand le titre diffère :
-      // « Hogwarts Legacy : L'Héritage de Poudlard » ne lui disait rien. Steam
-      // répond sur l'appid posé par l'import, donc sans aucune approximation —
-      // mais il ne connaît que ses propres jeux. Wikidata ferme la marche : sans
-      // clé, valable aussi côté console, mais peuplé par des contributeurs, donc
-      // inégal. La première qui répond gagne, et on s'arrête là.
-      let note = null;
-      let source = "";
-      try {
-        const r = await rawgFirstResult(g.title);
-        if (r?.metacritic) { note = r.metacritic; source = r.name; }
-      } catch { /* la source suivante a sa chance */ }
-
-      if (!note) {
-        const appid = appidSteam(g, games);
-        if (appid) {
-          try {
-            const n = await steamMetacritic(appid);
-            if (n) { note = n; source = `Steam ${appid}`; }
-          } catch { /* idem */ }
-        }
-      }
-
-      if (!note) {
-        try {
-          const titres = await wikiFrenchTitles(g.title);
-          const best = pickBestWikiTitle(g.title, titres);
-          if (best) {
-            const n = await wikidataMetacritic(best.title);
-            if (n) { note = n; source = `Wikidata · ${best.title}`; }
-          }
-        } catch { /* dernière source : son échec conclut */ }
-      }
+      const { note, source } = await chercherNote(g);
 
       if (note) {
         setGames(gs => gs.map(x => x.id === g.id ? { ...x, metacritic: note, noteAbsente: false } : x));
@@ -1371,6 +1427,12 @@ export default function App() {
           partageTotal={affichee.length}
           partageFiltre={affichee.length < jeuxUnivers.length}
         />
+      )}
+
+      {notesChoix && (
+        <NotesChoixSheet
+          propositions={notesChoix.propositions} stopped={notesChoix.stopped}
+          onAppliquer={appliquerNotes} onClose={() => setNotesChoix(null)} />
       )}
 
       {scoresBilan && (scoresBilan.message

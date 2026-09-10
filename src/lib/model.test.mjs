@@ -15,7 +15,7 @@ import {
   migrateGames, validerJeuxImportes, compterFiltres,
   joursDePret, pretEnRetard, isBackCompatPlatform,
   brouillonDepuisJeu, validerEdition, sortiesDepuisTexte, sortiesVersTexte, listeDepuisTexte,
-  normTitle, rapprochementDouteux, jeuxSansScore, jeuxNoteDeclareeAbsente, SANS_NOTE, CHAMPS_A_COMPLETER,
+  normTitle, rapprochementDouteux, jeuxSansScore, jeuxNoteDeclareeAbsente, noteChangee, SANS_NOTE, CHAMPS_A_COMPLETER,
   rendreJeu, preterJeu, annulerPret, supprimerEntreeHistorique, dureeEntreeHistorique, MAX_HISTORIQUE_PRET, aujourdhuiISO,
   BACK_COMPAT, XBOX_SERIES_CUTOFF, PRET_LONG_JOURS, PLATFORMES_JEU,
   estDatePlausible, estLienSur, ANNEE_MIN, ANNEES_A_VENIR, normaliserGenres,
@@ -1306,4 +1306,20 @@ test("les fiches déclarées sans note se retrouvent, pour y revenir", () => {
   assert.deepEqual(jeuxNoteDeclareeAbsente(l).map(g => g.id), [1]);
   assert.deepEqual(jeuxSansScore(l).map(g => g.id), [2]);
   assert.deepEqual(jeuxNoteDeclareeAbsente(null), []);
+});
+
+test("une source qui confirme la note en place ne propose rien", () => {
+  // L'écran de choix ne doit lister que ce qui change : une revue de trois
+  // cents fiches où la moitié dit « 82 → 82 » ne se lit pas.
+  assert.equal(noteChangee(82, 82), false);
+  assert.equal(noteChangee(78, 82), true);
+  assert.equal(noteChangee(null, 82), true);
+  assert.equal(noteChangee(undefined, 82), true);
+  // Une source muette ne propose pas d'effacer la note en place.
+  assert.equal(noteChangee(82, null), false);
+  assert.equal(noteChangee(null, null), false);
+  // Zéro est une note comme une autre, dans un sens comme dans l'autre.
+  assert.equal(noteChangee(0, 0), false);
+  assert.equal(noteChangee(null, 0), true);
+  assert.equal(noteChangee(0, 82), true);
 });

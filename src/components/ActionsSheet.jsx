@@ -84,8 +84,8 @@ export default function ActionsSheet({
           detail={scoresManquants > 0
             ? `${scoresManquants} jeu${scoresManquants > 1 ? "x" : ""} sans note · RAWG, puis Steam, puis Wikidata`
             : notesDeclarees > 0
-              ? `${notesDeclarees} fiche${notesDeclarees > 1 ? "s" : ""} sans note connue · à revérifier`
-              : "Tous les jeux ont déjà une note"}
+              ? `${notesDeclarees} sans note connue · relance pour tout revérifier`
+              : "Toutes notées · relance pour tout revérifier"}
           onClick={() => { onClose(); onCompleterScores(); }}
         />
       )}

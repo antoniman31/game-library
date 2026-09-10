@@ -870,6 +870,12 @@ export const jeuxSansScore = (games) => (games || []).filter(g => !g.metacritic 
 // Celles qu'on a déclarées sans note. Un jeu de 1994 le restera ; un jeu sorti
 // l'an dernier peut recevoir un Metascore plus tard, et il faut un moyen d'y
 // revenir sans rouvrir chaque fiche.
+// Ce qu'une source propose vaut-il d'être montré ? Seulement si elle répond, et
+// si sa réponse diffère de ce qui est en place. Une source qui confirme la note
+// déjà là n'a rien à faire dans une liste de modifications à valider.
+export const noteChangee = (avant, apres) =>
+  Number.isInteger(apres) && apres !== (Number.isInteger(avant) ? avant : null);
+
 export const jeuxNoteDeclareeAbsente = (games) => (games || []).filter(g => g.noteAbsente && !g.metacritic);
 
 // ── Édition manuelle d'une fiche ────────────────────────────────────────────

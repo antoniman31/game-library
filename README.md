@@ -357,6 +357,15 @@ aucune, il propose de revenir sur celles déclarées sans note connue : un jeu d
 le restera, un jeu sorti l'an dernier peut avoir été noté depuis. Le bilan annonce
 combien de fiches attendent cette seconde passe.
 
+**Tout revérifier, notes existantes comprises.** La même question propose de
+reprendre l'ensemble de la bibliothèque. Ce passage **n'écrit rien** : compléter une
+note vide ne peut rien abîmer, mais rafraîchir une note existante peut écraser une
+note juste — y compris une note corrigée à la main — quand une source se trompe de
+jeu. Il rassemble donc ce qui changerait et l'affiche : une ligne par fiche, « 95 →
+82 », la source qui répond, les plus grands écarts en tête parce que ce sont les
+seuls qui demandent un jugement, et un rapprochement douteux signalé en orange. Les
+fiches dont la note est confirmée n'apparaissent pas. On coche, on applique.
+
 **Aucune clé n'est exigée** : Wikidata n'en demande pas, Steam répond par le relais
 sur un appid, et RAWG est simplement sauté si sa clé manque.
 
