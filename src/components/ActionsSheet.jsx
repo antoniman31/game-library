@@ -38,6 +38,7 @@ export default function ActionsSheet({
   onRefreshDescriptions, refreshing, refreshProg, refreshTotal, onCancelRefresh,
   onImportXbox,
   onCompleterScores, scoresEnCours, scoresProg, scoresTotal, onAnnulerScores, scoresManquants,
+  onCompleterEditions, editionsCompletables,
   onPartager, partageTotal, partageFiltre,
 }) {
   return (
@@ -85,6 +86,17 @@ export default function ActionsSheet({
           onClick={() => { onClose(); onCompleterScores(); }}
         />
       )}
+      {/* Avant d'aller chercher dehors : ce que la bibliothèque sait déjà.
+          Un jeu possédé sur deux plateformes a une fiche remplie et une nue,
+          et la seconde n'a rien à demander au réseau. */}
+      <Action
+        icone="🔗"
+        titre="Remplir depuis les autres éditions"
+        detail={editionsCompletables > 0
+          ? `${editionsCompletables} fiche${editionsCompletables > 1 ? "s" : ""} à compléter · sans réseau`
+          : "Rien à reprendre : chaque fiche est à jour"}
+        onClick={() => { onClose(); onCompleterEditions(); }}
+      />
       <Action
         icone="🎮"
         titre="Importer ma bibliothèque Xbox"

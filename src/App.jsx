@@ -19,7 +19,7 @@ import { jeuDansUnivers, boutiquesPresentes, jeuDeLaBoutique, autresEditions,
   migrateGames, compterFiltres, FILTRES, validerJeuxImportes, pretEnRetard, jeuxSansScore, normaliserGenres,
   jeuALeMode, jeuSurPlateforme, compterRetro, genresPresents, dureeEntreeHistorique, supprimerEntreeHistorique,
   joursDePret, jeuPasseSeuil, jeuACompleter, completudeManquante, dateDeSortie, serieDuJeu,
-  empreinteMelange, compterFichesIncompletes, PLATFORM_COLORS } from "./lib/model.js";
+  empreinteMelange, compterFichesIncompletes, completerDepuisEditions, PLATFORM_COLORS } from "./lib/model.js";
 import { lire, ecrire, surEchecStockage } from "./lib/storage.js";
 import { chargerSync, enregistrerSync, genererCode, envoyer, recuperer } from "./lib/sync.js";
 import { preferencesASauvegarder, preferencesRecues, resumePreferences,
@@ -120,7 +120,10 @@ export default function App() {
   const [showFilters, setShowFilters] = useState(false);
   const [showSort, setShowSort] = useState(false);
   const [showActions, setShowActions] = useState(false);
-  const [partageEtat, setPartageEtat] = useState(null);
+  // Compte rendu d'une action ponctuelle, en bas d'écran, jusqu'à ce qu'on le
+  // referme. Il ne servait qu'au partage ; son nom disait donc le contraire de
+  // ce qu'il devenait dès qu'une deuxième action a voulu s'y annoncer.
+  const [avis, setAvis] = useState(null);
   const [keys, setKeys] = useState(() => loadKeys());   // clés API saisies par l'utilisateur
   const [keyTest, setKeyTest] = useState({});           // résultat du bouton « Tester »
   const [importedIds, setImportedIds] = useState([]); // pour l'enrichissement post-import (E)
@@ -352,7 +355,7 @@ export default function App() {
     const titre = filtree ? "Ma ludothèque (sélection)" : "Ma ludothèque";
     const quoi = await partagerTexte(texteListe(filtered, titre), titre);
     if (quoi === "annule") return;
-    setPartageEtat(quoi === "copie" ? "Liste copiée — colle-la où tu veux."
+    setAvis(quoi === "copie" ? "Liste copiée — colle-la où tu veux."
       : quoi === "echec" ? "Impossible de copier la liste."
       : "Liste envoyée.");
   };
@@ -431,6 +434,27 @@ export default function App() {
     setView("liste");
     reinitialiserFiltres();
     applySearch("");
+  };
+
+  // Ce qu'une fiche peut reprendre d'une autre édition du même jeu, sans rien
+  // demander au réseau. Le compte est recalculé à chaque changement de la
+  // bibliothèque : c'est lui qui décide si l'action est proposée ou grisée.
+  const editionsCompletables = useMemo(
+    () => games.reduce((n, g) => n + (completerDepuisEditions(g, games) ? 1 : 0), 0),
+    [games]);
+
+  const completerEditions = () => {
+    const complets = games.map(g => completerDepuisEditions(g, games));
+    const touchees = complets.filter(Boolean).length;
+    if (!touchees) { setAvis("Aucune fiche n'a quelque chose à reprendre d'une autre édition."); return; }
+    // Les champs repris, dits par leur nom : « 12 jaquettes, 8 descriptions »
+    // se vérifie d'un coup d'œil, « 20 fiches complétées » ne se vérifie pas.
+    const parChamp = {};
+    for (const c of complets) for (const champ of c?.champs || []) parChamp[champ] = (parChamp[champ] || 0) + 1;
+    const detail = Object.entries(parChamp).map(([champ, n]) => `${n} ${champ}`).join(", ");
+    if (!window.confirm(`${touchees} fiche(s) peuvent reprendre quelque chose d'une autre édition du même jeu :\n${detail}.\n\nRien ne sera écrasé.`)) return;
+    setGames(gs => gs.map((g, i) => complets[i]?.jeu || g));
+    setAvis(`${touchees} fiche(s) complétée(s) depuis leurs autres éditions.`);
   };
 
   // L'import Playnite ne passe pas par `importGames` : il pose des fiches PC,
@@ -1183,6 +1207,8 @@ export default function App() {
           refreshTotal={games.length}
           onCancelRefresh={cancelRefresh}
           onImportXbox={() => setShowImport(true)}
+          onCompleterEditions={completerEditions}
+          editionsCompletables={editionsCompletables}
           onCompleterScores={completerScores}
           scoresEnCours={scoresEnCours}
           scoresProg={scoresProg}
@@ -1214,10 +1240,10 @@ export default function App() {
           repliaient leur texte sur trois lignes bien avant d'atteindre le bord.
           Invisible tant que le texte était court — « supprimé » précédé d'un
           titre à rallonge le montrait déjà. */}
-      {partageEtat && (
+      {avis && (
         <div role="status" style={{ position:"fixed", bottom:20, left:"50%", transform:"translateX(-50%)", width:"max-content", zIndex:400, display:"flex", alignItems:"center", gap:14, maxWidth:"calc(100vw - 24px)", background:card, border:`1px solid ${bdr}`, borderRadius: "var(--r-md)", padding:"10px 14px", boxShadow:"0 8px 24px rgba(0,0,0,0.4)", animation:"toastIn 200ms ease" }}>
-          <span style={{ color:txt, fontSize: "var(--t-corps)" }}>{partageEtat}</span>
-          <button onClick={() => setPartageEtat(null)} aria-label="Masquer"
+          <span style={{ color:txt, fontSize: "var(--t-corps)" }}>{avis}</span>
+          <button onClick={() => setAvis(null)} aria-label="Masquer"
             style={{ background:"transparent", border:`1px solid ${bdr}`, color:mut, borderRadius: "var(--r-sm)", padding:"4px 12px", fontSize: "var(--t-petit)", cursor:"pointer" }}>OK</button>
         </div>
       )}

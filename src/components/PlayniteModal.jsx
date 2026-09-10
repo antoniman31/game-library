@@ -49,6 +49,7 @@ function PlayniteModal({ games, exclusions, onImport, onClose }) {
   };
 
   const nouveaux = analyse?.nouveaux || [];
+  const avecJumelle = nouveaux.filter(n => n.jumelle).length;
   const choisis = nouveaux.filter(n => coches[n.ref]);
   const toutCoche = nouveaux.length > 0 && choisis.length === nouveaux.length;
   const basculerTout = () => {
@@ -91,6 +92,7 @@ function PlayniteModal({ games, exclusions, onImport, onClose }) {
         <>
           <div style={{ color: mut, fontSize: "var(--t-legende)", marginBottom: 10 }}>
             {nouveaux.length} nouveau(x) · {analyse.deja.length} déjà présent(s) · {analyse.exclus.length} écarté(s) · {analyse.ignorees.length} ignoré(s)
+            {avecJumelle > 0 && <><br />{avecJumelle} rempli(s) depuis une fiche déjà là</>}
           </div>
           {nouveaux.length > 0 && (
             <button onClick={basculerTout} style={{ background: "transparent", border: `1px solid ${bdr}`, color: mut, borderRadius: "var(--r-xs)", minHeight: "var(--tap-min)", padding: "0 10px", fontSize: "var(--t-legende)", cursor: "pointer", marginBottom: 8 }}>
@@ -112,7 +114,9 @@ function PlayniteModal({ games, exclusions, onImport, onClose }) {
                         peut passer à la ligne — la tronquer laisserait « plateforme de
                         console ou ému… », qui n'apprend rien. */}
                     <div style={{ color: mut, fontSize: "var(--t-legende)", lineHeight: 1.35 }}>
-                      {l.raison ? `${l.raison}${l.detail ? ` · ${l.detail}` : ""}` : l.boutique || "sans boutique"}
+                      {l.raison
+                        ? `${l.raison}${l.detail ? ` · ${l.detail}` : ""}`
+                        : `${l.boutique || "sans boutique"}${l.jumelle ? ` · déjà sur ${l.jumelle}` : ""}`}
                     </div>
                   </div>
                   <span style={{ fontSize: "var(--t-legende)", color: couleur || mut, border: `1px solid ${couleur || bdr}`, borderRadius: "var(--r-xs)", padding: "1px 5px", whiteSpace: "nowrap" }}>{libelle}</span>
@@ -120,7 +124,7 @@ function PlayniteModal({ games, exclusions, onImport, onClose }) {
               );
             })}
           </div>
-          <button onClick={() => onImport(jeuxAImporter(choisis))} disabled={!choisis.length}
+          <button onClick={() => onImport(jeuxAImporter(choisis, Date.now(), games))} disabled={!choisis.length}
             style={{ width: "100%", background: accentFond, border: "none", color: "#fff", borderRadius: "var(--r-sm)", minHeight: "var(--tap)", cursor: choisis.length ? "pointer" : "default", opacity: choisis.length ? 1 : 0.5, fontSize: "var(--t-corps)", fontWeight: 600 }}>
             Importer {choisis.length} jeu(x)
           </button>

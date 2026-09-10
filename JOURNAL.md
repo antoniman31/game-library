@@ -1005,6 +1005,48 @@ part comme l'import Xbox : Échap referme, le focus reste dedans, la liste ne
 défile pas derrière. Trois comportements qu'une fenêtre maison perd sans que
 personne ne s'en aperçoive avant longtemps.
 
+### Phase 31 — Ce que la bibliothèque sait déjà
+
+Le plan suivant était IGDB : une application Twitch, un jeton, deux cibles de
+plus dans le relais, une demi-journée. Antoni l'a abandonné pour une remarque
+plus juste : « s'il trouve qu'il y a déjà un jeu sur une autre plateforme, il
+faudrait qu'il récupère déjà tout ce qu'il y a en description, les jaquettes,
+et cetera sur l'autre plateforme. »
+
+Il avait raison, et les chiffres le disaient avant qu'on écrive une ligne : sur
+ses 180 jeux PC importés, 38 ont une jumelle console, et les 38 jumelles sont
+complètes — jaquette, description, note, genres, infobox. Trente-huit fiches
+remplies sans un seul appel réseau, contre une intégration entière pour aller
+chercher dehors ce qui était à trois lignes de distance.
+
+La règle de partage est celle qu'on tenait déjà ailleurs : ne se partage que ce
+qui décrit LE JEU — jaquette, description, note, genres, infobox. Ce qui décrit
+l'ÉDITION lui reste : la date d'ajout, la plateforme, la boutique, le format,
+les prêts, les liens et les notes personnelles. Une fiche Steam ne prend pas la
+date d'acquisition de sa jumelle Xbox.
+
+La provenance a demandé une décision. Une donnée reprise vient bien de Wikidata
+ou de RAWG, seulement par le chemin de la fiche voisine : elle garde donc sa
+source d'origine, et `fusionnerInfobox` accepte maintenant une liste de sources
+plutôt qu'une seule. Inventer une source « autre édition » aurait été plus
+bavard et moins vrai.
+
+**Le défaut de la phase, et comment il s'est montré.** L'action annonçait 82
+fiches à compléter sur la bibliothèque réelle. Une fois complétées, elle en
+annonçait 82. Puis 82. La détection de l'apport comparait les références de
+l'infobox avant et après fusion — or `fusionnerInfobox` rend toujours un objet
+neuf, même quand elle n'a rien rempli. Toutes les fiches ayant une jumelle avec
+infobox se déclaraient donc complétées, indéfiniment.
+
+Aucun test unitaire ne l'aurait attrapé : chacun vérifiait un passage, et un
+passage donnait le bon résultat. C'est une boucle de quatre passages sur les
+vraies données qui l'a nommé, en montrant un compteur qui ne descend jamais.
+La comparaison porte désormais sur le contenu (`memeInfobox`), le compte réel
+tombe à 6, puis à 0, et un test d'idempotence garde la porte.
+
+Un compteur qui ne descend pas est pire qu'un compteur absent : il fait douter
+de l'action au moment précis où elle vient de faire son travail.
+
 ---
 
 ## 3. Architecture finale

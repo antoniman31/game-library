@@ -479,6 +479,30 @@ d'importer. La liste voyage avec la sauvegarde en ligne (elle ne contient aucun
 secret) et se vide depuis ⚙️ → Sauvegarde. Annuler une suppression retire
 l'exclusion.
 
+### Remplir une fiche depuis ses autres éditions
+
+Posséder « Forza Horizon 5 » sur Xbox et sur PC, c'est avoir deux fiches pour un
+seul jeu. La première a été remplie par Wikipédia et RAWG au fil des mois ; la
+seconde arrive nue d'un import. Rien ne justifie d'aller réinterroger le réseau
+pour ce qui est déjà là, à trois lignes de distance.
+
+- **Ce qui se partage** décrit le jeu : jaquette, description, note, genres,
+  infobox. **Ce qui ne se partage pas** décrit l'édition : date d'ajout,
+  plateforme, boutique, format, prêts, liens et notes personnelles.
+- **On ne remplit que le vide**, jamais on n'écrase — la règle de
+  `fusionnerInfobox`, appliquée aux autres champs. L'infobox, elle, se fusionne
+  champ par champ : une édition peut avoir les développeurs et l'autre la série.
+- **La provenance ne ment pas** : une donnée reprise garde la source d'origine
+  (Wikidata, RAWG…), parce que c'est bien de là qu'elle vient — seulement par le
+  chemin de la fiche voisine.
+- **Deux moments** : à l'import Playnite, où le récapitulatif annonce combien de
+  lignes se rempliront toutes seules et lesquelles (« déjà sur Xbox One ») ; et
+  par ⋯ → **« Remplir depuis les autres éditions »** pour les fiches déjà en
+  place, qui annonce le détail par champ avant d'écrire.
+- Sur une bibliothèque réelle de 155 jeux console et 180 jeux PC importés :
+  **38 fiches remplies à l'import** — jaquette, description, note, genres — puis
+  6 complétées par l'action, et plus rien ensuite.
+
 ### Plateformes et rétrocompatibilité
 
 L'ancienne plateforme « Xbox » est séparée en **Xbox One** / **Xbox Series X**

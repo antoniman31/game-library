@@ -25,6 +25,7 @@ import {
   fusionnerInfobox, infoboxDepuisRawg, sourcesInfobox, libelleSources, infoboxVide,
   viderChamps, CHAMPS_VIDABLES, FILTRES, FILTRES_VIDES,
   PC, estPC, universDuJeu, jeuDansUnivers, boutiquesPresentes, jeuDeLaBoutique,
+  completerDepuisEditions, editionsDuJeu,
   autresEditions, libelleEdition,
 } from "./model.js";
 import { ecouterMiseAJour } from "./maj.js";
@@ -1060,4 +1061,95 @@ test("le libellé dit la boutique sur PC, la machine sur console", () => {
   assert.equal(libelleEdition({ univers: "pc", platform: PC, boutique: "Steam" }), "PC · Steam");
   assert.equal(libelleEdition({ univers: "pc", platform: PC, boutique: "" }), "PC");
   assert.equal(libelleEdition({ univers: "console", platform: "Switch 2", boutique: "" }), "Switch 2");
+});
+
+
+// ── Ce qu'une édition reprend d'une autre ──────────────────────────────────
+
+const infoPleine = (p = {}) => ({
+  developers: ["Playground"], publishers: [], releases: [{ date: "2021-11-09" }],
+  modes: ["solo"], series: "Forza", follows: "", followedBy: "", sources: ["wikidata"], ...p,
+});
+
+const console_ = (p = {}) => ({
+  id: 1, title: "Forza Horizon 5", platform: "Xbox Series X", boutique: "",
+  cover: "https://x/forza.jpg", style: "Un jeu de course.", metacritic: 92,
+  genre: ["Course"], infobox: infoPleine(), addedDate: "2021-11-09", ...p,
+});
+
+const pc = (p = {}) => ({
+  id: 2, title: "forza horizon 5", platform: PC, boutique: "Steam",
+  cover: null, style: "", metacritic: null, genre: [], infobox: null,
+  addedDate: "2024-01-15", ...p,
+});
+
+test("une fiche nue reprend tout ce que son autre édition a déjà", () => {
+  const games = [console_(), pc()];
+  const { jeu, champs } = completerDepuisEditions(games[1], games);
+  assert.deepEqual(champs, ["jaquette", "description", "note", "genres", "infos"]);
+  assert.equal(jeu.cover, "https://x/forza.jpg");
+  assert.equal(jeu.style, "Un jeu de course.");
+  assert.equal(jeu.metacritic, 92);
+  assert.deepEqual(jeu.genre, ["Course"]);
+  assert.equal(jeu.infobox.series, "Forza");
+  // La provenance reste celle de la source d'origine : la donnée vient bien de
+  // Wikidata, seulement par le chemin de la fiche voisine.
+  assert.deepEqual(jeu.infobox.sources, ["wikidata"]);
+});
+
+test("ce qui appartient à l'édition ne se copie jamais", () => {
+  const games = [console_(), pc()];
+  const { jeu } = completerDepuisEditions(games[1], games);
+  assert.equal(jeu.platform, PC, "la plateforme reste celle de la fiche");
+  assert.equal(jeu.boutique, "Steam");
+  assert.equal(jeu.addedDate, "2024-01-15", "la date d'acquisition est propre à l'édition");
+  assert.equal(jeu.id, 2);
+});
+
+test("rien n'est écrasé, et une fiche complète n'est pas touchée", () => {
+  const games = [console_(), pc({ cover: "https://x/steam.jpg", style: "Ma description.", metacritic: 80 })];
+  const { jeu, champs } = completerDepuisEditions(games[1], games);
+  assert.equal(jeu.cover, "https://x/steam.jpg");
+  assert.equal(jeu.style, "Ma description.");
+  assert.equal(jeu.metacritic, 80);
+  assert.deepEqual(champs, ["genres", "infos"]);
+  // La fiche console, elle, n'a rien à recevoir.
+  assert.equal(completerDepuisEditions(games[0], games), null);
+});
+
+test("un titre sans jumelle, ou un titre vide, ne rend rien", () => {
+  assert.equal(completerDepuisEditions(pc({ title: "Un jeu tout seul" }), [console_()]), null);
+  assert.equal(completerDepuisEditions(pc({ title: "" }), [console_()]), null);
+  assert.deepEqual(editionsDuJeu({ id: 9, title: "" }, [console_()]), []);
+});
+
+test("deux éditions incomplètes se complètent l'une l'autre, champ par champ", () => {
+  const games = [
+    console_({ id: 1, cover: "https://x/xbox.jpg", style: "", metacritic: null, genre: [], infobox: null }),
+    console_({ id: 3, title: "Forza Horizon 5", platform: "Xbox One", cover: null, style: "Une course.", metacritic: null, genre: [], infobox: infoPleine({ developers: [], series: "Forza" }) }),
+    pc(),
+  ];
+  const { jeu, champs } = completerDepuisEditions(games[2], games);
+  assert.equal(jeu.cover, "https://x/xbox.jpg");
+  assert.equal(jeu.style, "Une course.");
+  assert.equal(jeu.metacritic, null, "personne n'a la note : elle reste vide");
+  assert.deepEqual(champs, ["jaquette", "description", "infos"]);
+});
+
+test("une note de zéro est une note, et ne se remplace pas", () => {
+  const games = [console_({ metacritic: 92 }), pc({ metacritic: 0 })];
+  const { jeu } = completerDepuisEditions(games[1], games);
+  assert.equal(jeu.metacritic, 0);
+});
+
+test("compléter deux fois ne complète pas deux fois", () => {
+  // `fusionnerInfobox` rend toujours un objet neuf : comparer les références
+  // faisait croire à un apport à chaque passage. Sur une bibliothèque réelle,
+  // l'action annonçait 82 fiches à compléter, en boucle, après les avoir
+  // complétées — un compteur qui ne descend jamais et qu'on cesse de croire.
+  let games = [console_(), pc()];
+  const premier = games.map(g => completerDepuisEditions(g, games));
+  assert.equal(premier.filter(Boolean).length, 1);
+  games = games.map((g, i) => premier[i]?.jeu || g);
+  assert.deepEqual(games.map(g => completerDepuisEditions(g, games)), [null, null]);
 });
