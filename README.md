@@ -361,6 +361,104 @@ Bouton **« 🎮 Importer Xbox »** → récupère l'historique de jeux du compt
 > mais jamais lancé n'apparaît pas, un jeu Game Pass lancé une fois apparaît.
 > Aucun temps de jeu n'est importé (absent de l'endpoint).
 
+### Import des jeux PC (Playnite)
+
+**Le problème.** Steam demande une clé d'API ; Epic, GOG et Amazon n'ont pas
+d'API publique du tout. Les mails de confirmation ne portent les titres que
+dans leur corps HTML, et il n'existe aucun mail Amazon Gaming. Écrire quatre
+intégrations ici aurait donc coûté cher pour un résultat partiel.
+
+[Playnite](https://github.com/JosefNemec/Playnite) (Windows, MIT) lit ces
+quatre boutiques depuis les clients installés et télécharge les métadonnées
+d'IGDB. Il fait ce travail sur le PC ; l'application lit son export.
+
+**Sur le PC**, créer un dossier `ExportLudotheque` dans
+`%AppData%\Playnite\Extensions\` (ou dans le dossier `Extensions` de
+l'installation portable) avec ces deux fichiers, en UTF-8, puis relancer
+Playnite : l'entrée apparaît dans le menu principal.
+
+`extension.yaml` :
+
+```yaml
+Id: ExportLudotheque_Script
+Name: Export ludothèque
+Author: Antoni
+Version: 1.0
+Module: export.psm1
+Type: Script
+```
+
+`export.psm1` :
+
+```powershell
+function GetMainMenuItems()
+{
+    param($menuArgs)
+    $item = New-Object Playnite.SDK.Plugins.ScriptMainMenuItem
+    $item.Description = "Exporter la ludothèque (JSON)"
+    $item.FunctionName = "ExportLudotheque"
+    $item.MenuSection = "@Export ludothèque"
+    return $item
+}
+
+function ExportLudotheque()
+{
+    $chemin = $PlayniteApi.Dialogs.SaveFile("JSON|*.json")
+    if (!$chemin) { return }
+
+    $jeux = @()
+    foreach ($j in $PlayniteApi.Database.Games)
+    {
+        $boutique = ""
+        if ($j.Source) { $boutique = $j.Source.Name }
+
+        $sortie = ""
+        if ($j.ReleaseDate -ne $null) { $sortie = $j.ReleaseDate.Serialize() }
+
+        $jeux += [PSCustomObject]@{
+            titre           = $j.Name
+            boutique        = $boutique
+            idBoutique      = $j.GameId
+            plateformes     = @($j.Platforms  | ForEach-Object { $_.Name })
+            sortie          = $sortie
+            genres          = @($j.Genres     | ForEach-Object { $_.Name })
+            developpeurs    = @($j.Developers | ForEach-Object { $_.Name })
+            editeurs        = @($j.Publishers | ForEach-Object { $_.Name })
+            series          = @($j.Series     | ForEach-Object { $_.Name })
+            fonctionnalites = @($j.Features   | ForEach-Object { $_.Name })
+            description     = $j.Description
+            installe        = $j.IsInstalled
+        }
+    }
+
+    $jeux | ConvertTo-Json -Depth 4 | Out-File -FilePath $chemin -Encoding utf8
+    $PlayniteApi.Dialogs.ShowMessage("$($jeux.Count) jeux exportés.")
+}
+```
+
+**Dans l'application** : ⚙️ → Sauvegarde → **« 🖥️ Importer un export Playnite »**.
+
+- **Écran de prévisualisation obligatoire**, comme pour l'import Xbox : chaque
+  ligne est marquée **Nouveau**, **Déjà présent**, **Écarté** ou **Ignoré**, et
+  seules les nouvelles sont cochables. Rien n'est écrit avant validation.
+- **Ce qui entre** : une fiche PC, démat, avec sa boutique, sa référence
+  boutique, ses genres (ramenés au vocabulaire du projet), sa description
+  (nettoyée de son HTML) et une infobox signée « IGDB (via Playnite) ». La date
+  d'ajout reprend la date de sortie quand elle est complète.
+- **Ce qui est ignoré** : une ligne sans titre, une ligne en double, et toute
+  plateforme qui n'est pas celle d'un PC — les importateurs PSN et Xbox de
+  Playnite et ses jeux émulés partagent la même base que Steam.
+- **Ce qui n'est pas repris** : les jaquettes (des fichiers sur le disque du PC,
+  pas des URL — elles continuent de venir de RAWG), le temps de jeu (retiré du
+  modèle) et le statut de complétion de Playnite.
+
+**La liste des écartés.** Un jeu importé puis supprimé est retenu par sa
+référence de boutique dans `gl_exclusions`, et ne revient pas au prochain
+import. Sans elle, chaque import ramène ce qu'on vient d'écarter et l'on cesse
+d'importer. La liste voyage avec la sauvegarde en ligne (elle ne contient aucun
+secret) et se vide depuis ⚙️ → Sauvegarde. Annuler une suppression retire
+l'exclusion.
+
 ### Plateformes et rétrocompatibilité
 
 L'ancienne plateforme « Xbox » est séparée en **Xbox One** / **Xbox Series X**
@@ -510,6 +608,7 @@ navigation basse, c'est-à-dire une refonte de l'ossature.
 | Wikidata | non | ✅ direct | Développeur, éditeur, sorties, mode de jeu, série |
 | SteamGridDB | oui | ❌ via relais | Jaquettes verticales format boîte |
 | xbl.io | oui | ❌ via relais | Historique de la bibliothèque Xbox |
+| Playnite (fichier) | non | — | Jeux PC des boutiques, et leurs infos IGDB |
 
 ---
 
@@ -527,7 +626,9 @@ Un jeu est un objet simple, persisté dans `localStorage` sous la clé `gl_v2` :
   pretsPasses: [{ a, du, au, prevu }],   // historique, borné à 20 par jeu
   myLinks: ["", "", ""], tips, tag,
   backCompat, bcV,                   // rétrocompatibilité + version de migration
-  infobox                            // données Wikidata, ou null
+  boutique,                          // PC uniquement : Steam, GOG, Epic…
+  refBoutique,                       // identifiant chez la boutique (import Playnite)
+  infobox                            // données Wikidata / RAWG / IGDB, ou null
 }
 ```
 
@@ -842,6 +943,7 @@ import, beaucoup moins.
 │   │   ├── model.js               Plateformes, prêts, migration, validation, édition
 │   │   ├── stats.js               Agrégats des deux sous-onglets Stats
 │   │   ├── apparence.js           Modes de thème et couleur de barre système
+│   │   ├── playnite.js            Lecture d'un export Playnite (jeux PC)
 │   │   ├── preferences.js         Ce que la sauvegarde emporte en plus des jeux
 │   │   ├── garde-fous.js          Messages des confirmations destructrices
 │   │   ├── maj.js                 Détection d'une version déjà installée
@@ -853,7 +955,7 @@ import, beaucoup moins.
 │   │   ├── coherence.test.mjs     Ce qui est écrit deux fois doit concorder
 │   │   └── *.test.mjs             Tests des modules ci-dessus (node --test)
 │   └── components/
-│       ├── GameCard.jsx  AddModal.jsx  ImportModal.jsx
+│       ├── GameCard.jsx  AddModal.jsx  ImportModal.jsx  PlayniteModal.jsx
 │       ├── StatsView.jsx  SettingsView.jsx  ScoresSheet.jsx
 │       ├── Sheet.jsx  FiltersSheet.jsx  SortSheet.jsx  ActionsSheet.jsx  SousOnglets.jsx
 │       └── Cover.jsx  InfoboxView.jsx  ChampProtege.jsx  ErrorBoundary.jsx

@@ -7,7 +7,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { preferencesASauvegarder, preferencesRecues, resumePreferences,
-  etatSauvegarde, texteAgeSauvegarde, affichageRecu, AFFICHAGE_DEFAUT, JOURS_SAUVEGARDE_VIEILLE } from "./preferences.js";
+  etatSauvegarde, texteAgeSauvegarde, affichageRecu, AFFICHAGE_DEFAUT, JOURS_SAUVEGARDE_VIEILLE,
+  nettoyerExclusions, EXCLUSIONS_MAX } from "./preferences.js";
 
 const CLES = { rawg: "R", sgdb: "S", xbl: "X", proxy: "https://relais.workers.dev" };
 
@@ -108,4 +109,26 @@ test("les réglages d'affichage relus sont ceux qu'on connaît, ou ceux par déf
   // Le sens de tri n'accepte que 1 et -1 : un 2 renverserait le comparateur.
   assert.equal(affichageRecu({ sortDir: 2 }, tris).sortDir, 1);
   assert.equal(affichageRecu({ sortDir: -1 }, tris).sortDir, -1);
+});
+
+
+test("les exclusions d'import voyagent sans case à cocher, et se nettoient", () => {
+  // Elles ne sont pas des secrets : une liste restée sur le PC laisserait le
+  // téléphone réimporter ce qu'on vient d'écarter.
+  const p = preferencesASauvegarder({ modeTheme: "sombre", keys: CLES, avecCles: false, exclusions: ["steam#42", "steam#42"] });
+  assert.deepEqual(p.exclusions, ["steam#42"]);
+  assert.equal(p.keys, undefined);
+  // Rien à dire quand il n'y a rien à écarter.
+  assert.equal(preferencesASauvegarder({ modeTheme: "clair", keys: CLES, avecCles: false }).exclusions, undefined);
+});
+
+test("une liste d'exclusions aberrante ne devient pas une liste", () => {
+  assert.deepEqual(nettoyerExclusions(null), []);
+  assert.deepEqual(nettoyerExclusions("steam#42"), []);
+  assert.deepEqual(nettoyerExclusions([3, null, {}, " gog#1 ", ""]), ["gog#1"]);
+  // Une entrée démesurée ne vient pas d'ici : elle est écartée, pas tronquée.
+  assert.deepEqual(nettoyerExclusions(["x".repeat(201)]), []);
+  assert.equal(nettoyerExclusions(Array.from({ length: EXCLUSIONS_MAX + 50 }, (_, i) => `s#${i}`)).length, EXCLUSIONS_MAX);
+  assert.deepEqual(preferencesRecues({ exclusions: ["steam#42", 7] }).exclusions, ["steam#42"]);
+  assert.equal(preferencesRecues({ exclusions: [] }).exclusions, undefined);
 });

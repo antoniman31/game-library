@@ -102,6 +102,7 @@ export default function SettingsView({
   keys, setKeys, appliquerCles, testerCle, etatCles,
   sync, majSync, genererCode, syncEtat, setSyncEtat, onEnvoyer, onRecuperer,
   onExporter, onImporter,
+  onPlaynite, exclusions, onViderExclusions,
 }) {
   // Le relais vit avec les clés et ne part jamais dans la sauvegarde : sans
   // lui, il n'y a rien à joindre, donc rien à réclamer.
@@ -260,6 +261,19 @@ export default function SettingsView({
               <Bouton pleinePlace onClick={() => importRef.current?.click()}>⬇ Importer</Bouton>
               <input ref={importRef} type="file" accept="application/json,.json" onChange={onImporter} style={{ display: "none" }} />
             </div>
+          </Section>
+
+          <Section titre="Jeux PC (Playnite)"
+            aide="Playnite lit Steam, Epic, GOG et Amazon depuis ton PC ; son export apporte ici les jeux avec leur boutique, et les infos qu'il a téléchargées. Rien n'est écrit avant que tu aies vu la liste.">
+            <Bouton pleinePlace intention="principal" onClick={onPlaynite}>🖥️ Importer un export Playnite</Bouton>
+            {exclusions?.length > 0 && (
+              <div style={{ marginTop: 12 }}>
+                <p style={{ color: mut, fontSize: "var(--t-legende)", lineHeight: 1.5, margin: "0 0 8px" }}>
+                  {exclusions.length} jeu(x) écarté(s) : supprimés après un import, ils ne reviendront pas au suivant.
+                </p>
+                <Bouton onClick={onViderExclusions}>Vider la liste des écartés</Bouton>
+              </div>
+            )}
           </Section>
         </>
       ) : (

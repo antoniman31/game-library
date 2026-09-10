@@ -948,6 +948,63 @@ Un garde-fou qu'on n'a jamais vu échouer ne prouve rien. Les deux corrections
 de cette phase ont été validées de la même façon : casser volontairement, voir
 la CI le nommer, puis remettre.
 
+### Phase 30 — Les jeux PC arrivent par Playnite
+
+Le plan initial était une intégration Steam par l'API Web, puis Epic, GOG et
+Amazon « selon ce que donnerait la première ». Le dépouillement des mails avait
+déjà montré la difficulté : les titres ne figurent que dans le corps HTML des
+confirmations, et il n'existe aucun mail Amazon Gaming. Steam demande une clé,
+les trois autres n'ont pas d'API publique du tout.
+
+Antoni a envoyé un lien vers **Playnite** — gestionnaire de ludothèque PC,
+Windows, C#/WPF, licence MIT — en demandant si ça pouvait servir. Lecture du
+dépôt plutôt que de la mémoire : ses importateurs intégrés couvrent Steam,
+Epic, GOG, Amazon, EA, Battle.net, Ubisoft, itch.io, Humble, Xbox et PSN
+(`BuiltInExtensions.cs`), et il embarque un exporteur PowerShell. Autrement dit,
+le travail qu'on s'apprêtait à écrire quatre fois existe déjà, tourne sur le PC,
+et rend un fichier.
+
+D'où la décision : **ne rien intégrer, lire un export**. Un script PowerShell
+d'une trentaine de lignes (documenté dans le README) sort un JSON portant le
+titre, la boutique, l'identifiant boutique, la plateforme, la date, les genres,
+les studios, la série, les modes et la description ; l'application le lit.
+
+**Ce que Playnite a validé au passage.** Son modèle sépare `Platform` (la
+machine) de `Source` (la boutique) : exactement le découpage adopté la veille.
+Et sa fusion de métadonnées ne remplit que les champs vides
+(`SkipExistingValues`), la règle de `fusionnerInfobox` — avec un raffinement
+qu'on n'a pas repris, la priorité des sources réglable **par champ**. À deux
+sources, ça ne vaut pas son coût ; à trois, ce sera la bonne forme. Ce qu'on n'a
+pas copié non plus : son système de plugins. Trois types d'extensions, un
+manifeste, un annuaire d'addons — tout cela n'a de sens qu'avec des auteurs
+tiers, et ce projet a un utilisateur et un dépôt.
+
+**La liste des écartés est la brique qui décide de tout.** Sans elle, l'import
+est jetable : chaque passage ramène les jeux qu'on vient de supprimer, et on
+cesse d'importer au deuxième essai. Playnite tient la même
+(`ImportExclusionItem`, identifiant boutique + source). Ici, supprimer un jeu
+venu d'un import retient sa référence ; annuler la suppression la retire. Elle
+voyage avec la sauvegarde en ligne — ce ne sont pas des secrets, et une liste
+restée sur le PC laisserait le téléphone tout réimporter.
+
+D'où aussi le champ **`refBoutique`** : l'appid Steam plutôt que le titre. Un
+titre se corrige à la main, et « Resident Evil 4 » désigne deux jeux différents
+selon qu'il vient de Steam ou de GOG. Quand la référence manque — un jeu ajouté
+à la main dans Playnite — on retombe sur le titre normalisé, en le disant.
+
+**Un défaut trouvé en vérifiant**, encore par `verif-ui` : la raison d'une ligne
+ignorée, « plateforme de console ou émulée · Nintendo Switch », demandait 275 px
+pour 211 disponibles et se tronquait en « plateforme de console ou ému… ». Deux
+corrections plutôt qu'une : la raison a été raccourcie en « console ou émulé »,
+et cette seconde ligne a le droit de passer à la ligne — le titre, lui, reste
+sur une seule. Un motif d'exclusion tronqué n'apprend rien à celui qui cherche
+pourquoi son jeu n'est pas entré.
+
+Le panneau, enfin, est un `Sheet` comme les autres et non une fenêtre écrite à
+part comme l'import Xbox : Échap referme, le focus reste dedans, la liste ne
+défile pas derrière. Trois comportements qu'une fenêtre maison perd sans que
+personne ne s'en aperçoive avant longtemps.
+
 ---
 
 ## 3. Architecture finale

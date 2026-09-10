@@ -90,6 +90,11 @@ et la fiche affiche d'où viennent ses infos (« Source : RAWG et Wikidata »).
   pastille ouvre l'autre. Déduit du titre normalisé, rien n'est stocké.
 - **Changer d'univers remet les filtres à zéro** : « Xbox One » et « Steam » ne veulent
   rien dire l'un pour l'autre.
+- **Import d'un export Playnite** (⚙️ → Sauvegarde) : Steam, Epic, GOG et Amazon en un
+  fichier, avec les infos IGDB que Playnite a téléchargées. Écran de prévisualisation
+  obligatoire, chaque ligne marquée Nouveau / Déjà présent / Écarté / Ignoré.
+- **Liste des écartés** : un jeu importé puis supprimé ne revient pas au prochain
+  import. Elle voyage avec la sauvegarde et se vide depuis les réglages.
 
 ### Actions de masse (panneau ⋯)
 
@@ -301,11 +306,11 @@ game-library/
     ├── App.jsx           ← ossature : état global, en-tête, onglets
     ├── main.jsx          ← montage + garde-fou d'erreurs global
     ├── index.css         ← jetons de thème, animations, survol
-    ├── lib/              ← api, model, stats, apparence, preferences,
+    ├── lib/              ← api, model, stats, apparence, playnite, preferences,
     │                       garde-fous, maj, seed, storage, sync, theme
     │                       (+ *.test.mjs, dont coherence.test.mjs qui
     │                        surveille ce qui est écrit deux fois)
-    └── components/       ← GameCard, AddModal, ImportModal, StatsView,
+    └── components/       ← GameCard, AddModal, ImportModal, PlayniteModal, StatsView,
                              SettingsView, ScoresSheet, Sheet, FiltersSheet,
                              ActionsSheet, SousOnglets, Cover, InfoboxView,
                              ChampProtege, ErrorBoundary

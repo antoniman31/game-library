@@ -82,6 +82,11 @@ export function migrateGames(list) {
     // champ absent est lu `undefined` par les composants, et une fiche console
     // qui basculerait en PC n'aurait rien où écrire.
     if (typeof ng.boutique !== "string") ng.boutique = "";
+    // L'identifiant du jeu chez sa boutique (l'appid Steam, par exemple), posé
+    // par l'import Playnite et par lui seul. Il est ce qui permet de retrouver
+    // une fiche à l'import suivant sans se fier au titre : deux éditions d'un
+    // même jeu portent le même titre, jamais la même référence.
+    if (typeof ng.refBoutique !== "string") ng.refBoutique = "";
     // Un jeu PC est toujours démat, et n'est jamais rétrocompatible : ces deux
     // champs répondent à des questions de console.
     if (ng.platform === PC) { ng.format = "démat"; ng.backCompat = false; }
@@ -323,7 +328,7 @@ export const jeuPasseSeuil = (g, seuil) =>
 // jamais. Passer RAWG puis Wikipédia sur un remaster garde la date de la
 // version possédée et complète le reste. Et pour repartir d'une base propre
 // quand le mélange a mal tourné, il y a le vidage.
-export const SOURCES_INFO = { wikidata: "Wikidata", rawg: "RAWG" };
+export const SOURCES_INFO = { wikidata: "Wikidata", rawg: "RAWG", playnite: "IGDB (via Playnite)" };
 
 // Une infobox sans provenance vient de Wikidata : c'était la seule source
 // jusqu'ici, et les cent trente fiches déjà remplies n'ont pas à mentir.
@@ -383,15 +388,24 @@ const MODES_RAWG = [
   [/co[- ]?op/i, "coopératif"],
 ];
 
+// Solo, multijoueur, coopératif : la même table sert aux tags RAWG et aux
+// « features » de Playnite, qui les nomment pareil. Deux tables pour trois
+// modes finiraient par diverger, et le filtre par mode ne verrait plus qu'une
+// moitié de la bibliothèque.
+export function modesDepuisNoms(noms) {
+  const modes = [];
+  for (const nom of (Array.isArray(noms) ? noms : [])) {
+    for (const [regle, libelle] of MODES_RAWG) {
+      if (regle.test(String(nom || "").trim()) && !modes.includes(libelle)) modes.push(libelle);
+    }
+  }
+  return modes;
+}
+
 export function infoboxDepuisRawg(detail) {
   if (!detail || typeof detail !== "object") return null;
   const noms = (liste) => (Array.isArray(liste) ? liste : []).map(x => String(x?.name || "").trim()).filter(Boolean);
-  const modes = [];
-  for (const tag of noms(detail.tags)) {
-    for (const [regle, libelle] of MODES_RAWG) {
-      if (regle.test(tag) && !modes.includes(libelle)) modes.push(libelle);
-    }
-  }
+  const modes = modesDepuisNoms(noms(detail.tags));
   const info = {
     developers: noms(detail.developers), publishers: noms(detail.publishers),
     releases: estDateISO(detail.released) ? [{ date: detail.released }] : [],
@@ -741,7 +755,7 @@ export function validerEdition(b) {
 const JEU_VIDE = {
   platform: "Xbox Series X", format: "physique", genre: [], style: "",
   lentA: null, lentDate: null, lentRetourPrevu: null, pretsPasses: [],
-  cover: null, metacritic: null, boutique: "",
+  cover: null, metacritic: null, boutique: "", refBoutique: "",
   myLinks: ["", "", ""], tips: "", tag: "", infobox: null,
 };
 

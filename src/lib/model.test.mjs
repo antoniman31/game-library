@@ -990,6 +990,10 @@ test("la migration donne un champ boutique à tout le monde et redresse les PC",
   assert.equal(console_.boutique, "", "le champ existe même côté console");
   assert.equal(pc.format, "démat");
   assert.equal(pc.backCompat, false);
+  // La référence de boutique existe partout et ne se perd pas en route :
+  // c'est elle qui reconnaît un jeu d'un import Playnite au suivant.
+  assert.equal(console_.refBoutique, "");
+  assert.equal(migrateGames([{ id: 3, platform: PC, refBoutique: "1145360" }])[0].refBoutique, "1145360");
 });
 
 test("les boutiques sont dérivées de la bibliothèque, classées par nombre", () => {

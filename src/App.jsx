@@ -11,6 +11,7 @@ import Sheet from "./components/Sheet.jsx";
 import StatsView from "./components/StatsView.jsx";
 import SortSheet from "./components/SortSheet.jsx";
 import SettingsView from "./components/SettingsView.jsx";
+import PlayniteModal from "./components/PlayniteModal.jsx";
 
 import { hdr, card, bdr, txt, mut, accent, accentDoux, accentFond, warnDoux, dangerDoux, ok, warn, warnFond, danger } from "./lib/theme.js";
 import { GAMES_INIT } from "./lib/seed.js";
@@ -22,7 +23,8 @@ import { jeuDansUnivers, boutiquesPresentes, jeuDeLaBoutique, autresEditions,
 import { lire, ecrire, surEchecStockage } from "./lib/storage.js";
 import { chargerSync, enregistrerSync, genererCode, envoyer, recuperer } from "./lib/sync.js";
 import { preferencesASauvegarder, preferencesRecues, resumePreferences,
-  affichageRecu, etatSauvegarde } from "./lib/preferences.js";
+  affichageRecu, etatSauvegarde, nettoyerExclusions } from "./lib/preferences.js";
+import { refImport } from "./lib/playnite.js";
 import { surMiseAJour } from "./lib/maj.js";
 import { libelleTri, TRI_DEFAUT, TRIS } from "./lib/tri.js";
 import { texteListe, partagerTexte } from "./lib/partage.js";
@@ -60,6 +62,12 @@ const btnHdr = {
 };
 
 export default function App() {
+  // Les références écartées d'un import : un jeu Playnite supprimé ne doit pas
+  // revenir au prochain fichier. Elles survivent aux fiches, c'est leur objet.
+  const [exclusions, setExclusions] = useState(() => {
+    try { return nettoyerExclusions(JSON.parse(lire("gl_exclusions") || "[]")); } catch { return []; }
+  });
+  const [showPlaynite, setShowPlaynite] = useState(false);
   const [games, setGames] = useState(() => { try { const s = lire("gl_v2"); return migrateGames(s ? JSON.parse(s) : GAMES_INIT); } catch { return migrateGames(GAMES_INIT); } });
   // `searchInput` suit la frappe, `search` ne la rattrape qu'après 180 ms :
   // sans ce délai, chaque caractère refiltrait et remontait toute la liste.
@@ -187,6 +195,7 @@ export default function App() {
     document.querySelector('meta[name="theme-color"]')?.setAttribute("content", COULEUR_BARRE[theme]);
   }, [theme]);
   useEffect(() => { ecrire("gl_theme", modeTheme); }, [modeTheme]);
+  useEffect(() => { ecrire("gl_exclusions", JSON.stringify(exclusions)); }, [exclusions]);
   // Les filtres ne sont volontairement pas de la partie : un filtre qui survit
   // au lancement, c'est une bibliothèque amputée sans qu'on sache pourquoi.
   useEffect(() => { ecrire("gl_affichage", JSON.stringify({ view, sort, sortDir, groupePar })); },
@@ -424,6 +433,20 @@ export default function App() {
     applySearch("");
   };
 
+  // L'import Playnite ne passe pas par `importGames` : il pose des fiches PC,
+  // donc il faut basculer d'univers, et il n'y a rien à enrichir derrière —
+  // les infos viennent du fichier.
+  const importerPlaynite = (jeux) => {
+    setShowPlaynite(false);
+    if (!jeux.length) return;
+    setGames(gs => [...jeux, ...gs]);
+    setUnivers("pc");
+    setTab("pc");
+    setView("liste");
+    reinitialiserFiltres();
+    applySearch("");
+  };
+
   // Enrichissement best-effort des jeux importés : RAWG (cover/metacritic/genre si manquants)
   // + description Wikipédia. Annulable, avec délai anti-rate-limit.
   const enrichImported = async () => {
@@ -466,6 +489,11 @@ export default function App() {
     const index = gamesRef.current.findIndex(x => x.id === g.id);
     setGames(gs => gs.filter(x => x.id !== g.id));
     setDeleted({ game: g, index });
+    // Un jeu venu d'un import Playnite est écarté en même temps qu'il est
+    // supprimé, sinon le prochain fichier le ramène. L'annulation retire
+    // l'exclusion : cinq secondes plus tôt, elle n'aurait pas dû exister.
+    const ref = g.refBoutique ? refImport({ boutique: g.boutique, refBoutique: g.refBoutique, titre: g.title }) : "";
+    if (ref) setExclusions(l => (l.includes(ref) ? l : [...l, ref]));
     clearTimeout(undoRef.current);
     undoRef.current = setTimeout(() => setDeleted(null), 5000);
   }, []);
@@ -473,6 +501,11 @@ export default function App() {
     if (!deleted) return;
     clearTimeout(undoRef.current);
     setGames(gs => { const c = [...gs]; c.splice(Math.min(deleted.index, c.length), 0, deleted.game); return c; });
+    const g = deleted.game;
+    if (g.refBoutique) {
+      const ref = refImport({ boutique: g.boutique, refBoutique: g.refBoutique, titre: g.title });
+      setExclusions(l => l.filter(x => x !== ref));
+    }
     setDeleted(null);
   };
 
@@ -484,7 +517,7 @@ export default function App() {
     // La sauvegarde ne portait que les jeux : un appareil neuf les retrouvait,
     // puis il fallait tout re-régler. Les clés n'y vont que si la case est
     // cochée sur cet appareil-ci.
-    const prefs = preferencesASauvegarder({ modeTheme, keys, avecCles: sync.avecCles });
+    const prefs = preferencesASauvegarder({ modeTheme, keys, avecCles: sync.avecCles, exclusions });
     const r = await envoyer(keys.proxy, sync.code, games, base, prefs);
 
     // Un autre appareil a envoyé depuis notre dernière synchronisation. Écraser
@@ -560,6 +593,9 @@ export default function App() {
         setKeys(fusion);
         setApiKeys(fusion);
       }
+      // Les exclusions s'ajoutent au lieu de remplacer : deux appareils qui ont
+      // chacun écarté des jeux ont chacun raison.
+      if (prefs.exclusions) setExclusions(l => [...new Set([...l, ...prefs.exclusions])]);
     }
 
     majSync({ ...sync, majLe: r.data.updatedAt || null });
@@ -1052,6 +1088,11 @@ export default function App() {
             syncEtat={syncEtat} setSyncEtat={setSyncEtat}
             onEnvoyer={() => envoyerAuCloud()} onRecuperer={recupererDuCloud}
             onExporter={exportJSON} onImporter={importJSON}
+            onPlaynite={() => setShowPlaynite(true)}
+            exclusions={exclusions}
+            onViderExclusions={() => {
+              if (window.confirm(`Vider la liste des ${exclusions.length} jeu(x) écarté(s) ?\n\nAu prochain import Playnite, ils reviendront.`)) setExclusions([]);
+            }}
           />
         )}
 
@@ -1104,6 +1145,7 @@ export default function App() {
 
       {showAdd && <AddModal onAdd={addGame} onClose={() => setShowAdd(false)} />}
       {showImport && <ImportModal games={games} onImportGames={importGames} onClose={() => setShowImport(false)} />}
+      {showPlaynite && <PlayniteModal games={games} exclusions={exclusions} onImport={importerPlaynite} onClose={() => setShowPlaynite(false)} />}
       {showFilters && (
         <FiltersSheet
           univers={univers}
