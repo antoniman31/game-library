@@ -15,10 +15,20 @@
 import { PC, migrateGames, normTitle, normaliserGenres, modesDepuisNoms, infoboxVide, aujourdhuiISO, estDatePlausible } from "./model.js";
 
 // ── Ce que l'export contient ───────────────────────────────────────────────
-// Le script d'export (documenté dans le README) écrit un tableau d'objets
-// plats. Chaque champ est facultatif sauf le titre : une bibliothèque Playnite
-// jamais enrichie n'a ni genres, ni éditeurs, ni description, et cet import
-// doit quand même servir à quelque chose.
+//
+// Deux formats sont acceptés, parce que deux outils produisent l'export :
+//
+//   1. le script PowerShell du README, qui écrit des objets plats en français
+//      (`titre`, `boutique`, `genres`) ;
+//   2. l'extension « Json Library Import Export », plus simple à installer,
+//      qui sérialise les objets Playnite bruts — noms anglais capitalisés,
+//      valeurs imbriquées (`Source: {Name}`, `Genres: [{Name}]`), date sous
+//      la forme `{"ReleaseDate": "2010-10-21"}`.
+//
+// La seconde forme est ramenée à la première dès la lecture : tout le reste du
+// module n'en connaît qu'une. Chaque champ est facultatif sauf le titre — une
+// bibliothèque Playnite jamais enrichie n'a ni genres, ni éditeurs, ni
+// description, et cet import doit quand même servir à quelque chose.
 
 const texte = (v) => String(v == null ? "" : v).replace(/\s+/g, " ").trim();
 const liste = (v) => (Array.isArray(v) ? v : [v]).map(texte).filter(Boolean);
@@ -61,6 +71,56 @@ export function texteDepuisHtml(html) {
     .trim();
 }
 
+// Les listes de l'export brut sont des objets nommés : `[{Id, Name}, …]`.
+const nomsDe = (v) => (Array.isArray(v) ? v : []).map(x => texte(x?.Name)).filter(Boolean);
+
+// La date de l'export brut. Playnite implémente `ISerializable` sur ce type,
+// et la bibliothèque de sérialisation de l'extension en tire un objet à une
+// seule clé — `{"ReleaseDate": "2010-10-21"}`. Une version future pourrait
+// tout aussi bien écrire `{Year, Month, Day}` : les deux sont lues.
+function dateBrute(v) {
+  if (typeof v === "string") return texte(v);
+  if (!v || typeof v !== "object") return "";
+  if (typeof v.ReleaseDate === "string") return texte(v.ReleaseDate);
+  if (Number.isFinite(v.Year)) {
+    return [v.Year, v.Month, v.Day].filter(n => Number.isFinite(n)).join("-");
+  }
+  return "";
+}
+
+// Une description d'IGDB ou de Steam peut être un dossier de presse : la plus
+// longue de la bibliothèque d'essai faisait 55 000 caractères, soit plus que
+// tout le reste de la fiche réuni. On garde de quoi savoir ce qu'est le jeu,
+// coupé à la fin d'une phrase pour ne pas laisser un mot tranché en deux.
+export const DESCRIPTION_MAX = 900;
+export function resumerDescription(t, max = DESCRIPTION_MAX) {
+  const texteEntier = String(t || "");
+  if (texteEntier.length <= max) return texteEntier;
+  const debut = texteEntier.slice(0, max);
+  const fin = Math.max(debut.lastIndexOf(". "), debut.lastIndexOf(".\n"));
+  return (fin > max / 3 ? debut.slice(0, fin + 1) : debut.trimEnd()) + " […]";
+}
+
+// Une ligne de l'export brut prend la forme de celle du script maison. Le
+// choix se fait sur `Name` : le script maison n'écrit que des clés en
+// minuscules, l'export brut n'en écrit aucune.
+function normaliserLigne(ligne) {
+  if (ligne.titre !== undefined || ligne.Name === undefined) return ligne;
+  return {
+    titre: ligne.Name,
+    boutique: ligne.Source?.Name || "",
+    idBoutique: ligne.GameId,
+    plateformes: nomsDe(ligne.Platforms),
+    sortie: dateBrute(ligne.ReleaseDate),
+    genres: nomsDe(ligne.Genres),
+    developpeurs: nomsDe(ligne.Developers),
+    editeurs: nomsDe(ligne.Publishers),
+    series: nomsDe(ligne.Series),
+    fonctionnalites: nomsDe(ligne.Features),
+    description: ligne.Description,
+  };
+}
+
 // ── L'identité d'une ligne ─────────────────────────────────────────────────
 //
 // Deux imports successifs doivent reconnaître le même jeu. Le titre ne suffit
@@ -101,8 +161,9 @@ export function lirePlaynite(contenu) {
   const ignorees = [];
   const vues = new Set();
 
-  for (const ligne of brut) {
-    if (!ligne || typeof ligne !== "object") { ignorees.push({ titre: "(ligne vide)", raison: RAISONS.sansTitre }); continue; }
+  for (const ligneBrute of brut) {
+    if (!ligneBrute || typeof ligneBrute !== "object") { ignorees.push({ titre: "(ligne vide)", raison: RAISONS.sansTitre }); continue; }
+    const ligne = normaliserLigne(ligneBrute);
     const titre = texte(ligne.titre);
     if (!titre) { ignorees.push({ titre: "(sans titre)", raison: RAISONS.sansTitre }); continue; }
     if (!estLignePC(ligne.plateformes)) {
@@ -120,7 +181,7 @@ export function lirePlaynite(contenu) {
       editeurs: liste(ligne.editeurs),
       series: liste(ligne.series),
       modes: modesDepuisNoms(liste(ligne.fonctionnalites)),
-      description: texteDepuisHtml(ligne.description),
+      description: resumerDescription(texteDepuisHtml(ligne.description)),
     };
     entree.ref = refImport(entree);
 

@@ -251,18 +251,41 @@ const GENRES_CONNUS = [
   "Horreur", "Puzzle", "RPG", "Simulation", "Arcade", "Furtif", "Exploration",
   "Multijoueur", "Open World", "Indie", "Shooter", "FPS", "TPS", "Beat'em up",
   "Soulslike", "Musou", "Jeu de société", "Créatif", "Vie", "Family",
-  "Massively Multiplayer", "Autre",
+  "Massively Multiplayer", "Action-aventure", "Occasionnel", "Autre",
 ];
 
 // Ce que RAWG répond en anglais, et la forme du projet en face.
+//
+// Playnite ajoute une difficulté : il répond dans la langue de son interface,
+// mais ses sources ne sont pas toutes traduites. Un même export porte donc
+// « Indépendant » et « Indie », « Course automobile » et « Racing », « Jeux de
+// rôles » et « RPG » — le doublon franco-anglais qu'on avait déjà réglé pour
+// RAWG, revenu par une autre porte. La table s'élargit plutôt que de laisser
+// le filtre par genre couper la bibliothèque en deux.
 const SYNONYMES_GENRE = {
   adventure: "Aventure",
   platformer: "Plateforme",
+  platform: "Plateforme",
   racing: "Course",
+  courseautomobile: "Course",
+  courseetpilotage: "Course",
   sports: "Sport",
   fighting: "Combat",
   strategy: "Stratégie",
+  realtimestrategyrts: "Stratégie",
   horror: "Horreur",
+  independant: "Indie",
+  simulator: "Simulation",
+  roleplayingrpg: "RPG",
+  jeuxderoles: "RPG",
+  jeuxdetir: "Shooter",
+  actionetaventure: "Action-aventure",
+  actionadventure: "Action-aventure",
+  massivementmultijoueur: "Massively Multiplayer",
+  massivelymultiplayeronlineroleplaying: "Massively Multiplayer",
+  familleetenfants: "Family",
+  casual: "Occasionnel",
+  autres: "Autre",
   // « Puzzle » et « Réflexion » cohabitaient dans les seules données de départ,
   // sans qu'aucune source n'impose l'un ou l'autre. « Puzzle » l'emporte parce
   // que c'est la forme que RAWG renvoie et la seule des deux qu'on trouve dans
@@ -382,9 +405,17 @@ export function fusionnerInfobox(existante, apport, source) {
 // Une seule date de sortie, celle de l'édition — c'est moins riche que les
 // dates par plateforme de Wikidata, et c'est justement ce qu'on venait
 // chercher pour un remaster.
-const MODES_RAWG = [
+// Les tags de RAWG sont en anglais, les « features » de Playnite suivent la
+// langue de l'application — la bibliothèque réelle porte « Solo » 130 fois et
+// « Single Player » 17 fois, dans le même export. Les deux langues sont donc
+// dans la même table, sans quoi le filtre par mode ne verrait qu'une partie
+// des jeux.
+const MODES_CONNUS = [
   [/^single[- ]?player$/i, "solo"],
-  [/^multi[- ]?player$/i, "multijoueur"],
+  [/^solo$/i, "solo"],
+  [/^multi[- ]?player/i, "multijoueur"],
+  [/^multijoueur/i, "multijoueur"],
+  // « Coopération », « Coopération En Ligne », « Co-op » : le même mode.
   [/co[- ]?op/i, "coopératif"],
 ];
 
@@ -395,7 +426,7 @@ const MODES_RAWG = [
 export function modesDepuisNoms(noms) {
   const modes = [];
   for (const nom of (Array.isArray(noms) ? noms : [])) {
-    for (const [regle, libelle] of MODES_RAWG) {
+    for (const [regle, libelle] of MODES_CONNUS) {
       if (regle.test(String(nom || "").trim()) && !modes.includes(libelle)) modes.push(libelle);
     }
   }

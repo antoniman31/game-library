@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { lirePlaynite, analyserImport, jeuxAImporter, jeuDepuisEntree, dateISOdepuisPlaynite, texteDepuisHtml, estLignePC, refImport } from "./playnite.js";
+import { lirePlaynite, analyserImport, jeuxAImporter, jeuDepuisEntree, dateISOdepuisPlaynite, texteDepuisHtml, estLignePC, refImport, resumerDescription, DESCRIPTION_MAX } from "./playnite.js";
 import { PC } from "./model.js";
 
 const ligne = (p = {}) => ({ titre: "Hades", boutique: "Steam", idBoutique: "1145360", ...p });
@@ -131,4 +131,77 @@ test("les identifiants des jeux importés sont distincts", () => {
   const { nouveaux } = analyserImport(entrees, {});
   const ids = jeuxAImporter(nouveaux, 5000).map(j => j.id);
   assert.deepEqual(ids, [5000, 5001]);
+});
+
+
+// ── L'autre format : l'export brut de l'extension « Json Library Import
+// Export », qui sérialise les objets Playnite tels quels. Les valeurs ci-
+// dessous sont copiées d'un export réel de 181 jeux.
+
+const brute = (p = {}) => ({
+  Name: "Fallout: New Vegas",
+  GameId: "1454587428",
+  Source: { Id: "cf332a42-1486-47f8-8cee-14e0e39e1054", Name: "GOG" },
+  SourceId: "cf332a42-1486-47f8-8cee-14e0e39e1054",
+  Platforms: [{ SpecificationId: "pc_windows", Id: "79f4", Name: "PC (Windows)" }],
+  Genres: [{ Id: "9b3f", Name: "Action" }, { Id: "3657", Name: "RPG" }],
+  Developers: [{ Id: "1f11", Name: "Obsidian Entertainment" }],
+  Publishers: [{ Id: "30f4", Name: "Bethesda Softworks" }],
+  Series: [{ Id: "dcae", Name: "Fallout" }],
+  Features: [{ Id: "2921", Name: "Solo" }, { Id: "a1a2", Name: "Compat. Contrôleurs Partielle" }],
+  ReleaseDate: { ReleaseDate: "2010-10-21" },
+  Description: "Bienvenue à Vegas.<br>New Vegas.",
+  ...p,
+});
+
+test("l'export brut de l'extension est lu comme celui du script", () => {
+  const [e] = lirePlaynite(JSON.stringify([brute()])).entrees;
+  const jeu = jeuDepuisEntree(e, "2026-09-10");
+  assert.equal(jeu.title, "Fallout: New Vegas");
+  assert.equal(jeu.boutique, "GOG");
+  assert.equal(jeu.refBoutique, "1454587428");
+  assert.equal(jeu.addedDate, "2010-10-21");
+  assert.deepEqual(jeu.genre, ["Action", "RPG"]);
+  assert.deepEqual(jeu.infobox.developers, ["Obsidian Entertainment"]);
+  assert.equal(jeu.infobox.series, "Fallout");
+  // « Solo » et non « Single Player » : Playnite répond dans sa langue.
+  assert.deepEqual(jeu.infobox.modes, ["solo"]);
+  assert.equal(jeu.style, "Bienvenue à Vegas.\nNew Vegas.");
+});
+
+test("la date de l'export brut se lit sous ses deux formes", () => {
+  const iso = (d) => jeuDepuisEntree(lirePlaynite(JSON.stringify([brute({ ReleaseDate: d })])).entrees[0], "2026-09-10").addedDate;
+  assert.equal(iso({ ReleaseDate: "2010-10-21" }), "2010-10-21");
+  assert.equal(iso({ Year: 2010, Month: 10, Day: 21 }), "2010-10-21");
+  // Sans date exploitable, la date du jour — jamais une date inventée.
+  assert.equal(iso({ Year: 2010 }), "2026-09-10");
+  assert.equal(iso(null), "2026-09-10");
+});
+
+test("un jeu sans boutique ni plateforme entre quand même", () => {
+  const [e] = lirePlaynite(JSON.stringify([brute({ Source: null, Platforms: [] })])).entrees;
+  const jeu = jeuDepuisEntree(e, "2026-09-10");
+  assert.equal(jeu.boutique, "");
+  assert.equal(jeu.platform, PC);
+});
+
+test("une fiche console de Playnite reste dehors, même dans l'export brut", () => {
+  const { entrees, ignorees } = lirePlaynite(JSON.stringify([
+    brute({ Name: "Zelda: The Wind Waker HD", Platforms: [{ Name: "Nintendo Wii U" }] }),
+  ]));
+  assert.equal(entrees.length, 0);
+  assert.equal(ignorees[0].raison, "console ou émulé");
+});
+
+test("une description de dossier de presse est coupée à la fin d'une phrase", () => {
+  const court = "Un jeu court.";
+  assert.equal(resumerDescription(court), court);
+  const long = "Première phrase. " + "Mot ".repeat(600) + "fin.";
+  const r = resumerDescription(long);
+  assert.ok(r.length <= DESCRIPTION_MAX + 6, `${r.length} caractères`);
+  assert.ok(r.endsWith(" […]"));
+  // La coupure tombe après un point quand il y en a un assez loin dans le
+  // texte ; sinon on tranche, mais jamais au tiers du texte gardé.
+  assert.ok(resumerDescription("A. " + "x".repeat(2000)).startsWith("A. xxx"));
+  assert.ok(resumerDescription("x".repeat(400) + ". " + "y".repeat(2000)).endsWith(". […]"));
 });
