@@ -403,6 +403,10 @@ function GetMainMenuItems()
 
 function ExportLudotheque()
 {
+    # Playnite passe un argument à la fonction du menu : sans ce `param`,
+    # le clic échoue sur « Impossible de trouver un paramètre positionnel ».
+    param($menuArgs)
+
     $chemin = $PlayniteApi.Dialogs.SaveFile("JSON|*.json")
     if (!$chemin) { return }
 
