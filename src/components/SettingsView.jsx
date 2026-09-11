@@ -1,10 +1,11 @@
 import { useRef, useState } from "react";
-import { card, bdr, txt, mut, accent, accentDoux, accentFond, ok, warn, danger } from "../lib/theme.js";
+import { card, bdr, bdrChamp, txt, mut, accent, accentDoux, accentFond, ok, warn, danger } from "../lib/theme.js";
 import { MODES, LIBELLES, ICONES } from "../lib/apparence.js";
 import { pertesDeReglages, messageDePerte, messageCodeSync, CONSEQUENCES } from "../lib/garde-fous.js";
 import { etatSauvegarde, texteAgeSauvegarde } from "../lib/preferences.js";
 import ChampProtege from "./ChampProtege.jsx";
 import SousOnglets from "./SousOnglets.jsx";
+import PanneauOutils from "./PanneauOutils.jsx";
 
 // Les réglages, refaits.
 //
@@ -19,10 +20,16 @@ import SousOnglets from "./SousOnglets.jsx";
 // une saisie, Bouton en trois intentions (principale, neutre, danger), une
 // hauteur unique à la taille du pouce.
 //
-// Deux sous-onglets, comme dans les Stats et avec le même sélecteur : depuis
-// que les clés se verrouillent, « Clés des services » a doublé de hauteur et
-// repoussait la synchronisation hors de l'écran. Sauvegarde répond à « où
-// vont mes données », Services à « avec quoi l'application parle dehors ».
+// Trois sous-onglets, avec le même sélecteur que les Stats. Depuis que les
+// clés se verrouillent, « Clés des services » a doublé de hauteur et
+// repoussait la synchronisation hors de l'écran. Sauvegarde répond à « où vont
+// mes données », Outils à « qu'est-ce que je lance », Services à « avec quoi
+// l'application parle dehors ».
+//
+// « Outils » est arrivé en dernier, en remplacement du panneau « ⋯ » de
+// l'en-tête. Deux raisons : l'import Xbox y vivait pendant que l'import
+// Playnite vivait ici, pour le même geste ; et rien de ce que ce panneau lance
+// ne dépend de l'écran d'où l'on vient. Voir PanneauOutils.jsx.
 //
 // L'apparence reste au-dessus des onglets plutôt que dans l'un des deux :
 // trois boutons ne remplissent pas un onglet, et c'est le seul réglage qu'on
@@ -33,7 +40,7 @@ const ACCENT = accent;
 
 const Section = ({ titre, aide, children }) => (
   <section style={{ background: card, border: `1px solid ${bdr}`, borderRadius: "var(--r-md)", padding: 14, marginBottom: "var(--ecart-bloc)" }}>
-    <h2 style={{ color: txt, fontWeight: 600, fontSize: "var(--t-corps)", margin: 0 }}>{titre}</h2>
+    <h2 style={{ color: txt, fontWeight: 600, fontSize: "var(--t-titre)", lineHeight: 1.3, margin: 0 }}>{titre}</h2>
     {aide && <p style={{ color: mut, fontSize: "var(--t-legende)", lineHeight: 1.5, margin: "4px 0 0" }}>{aide}</p>}
     <div style={{ marginTop: 12 }}>{children}</div>
   </section>
@@ -50,7 +57,7 @@ const Section = ({ titre, aide, children }) => (
 const STYLES_BOUTON = {
   principal: { background: accentFond, border: "1px solid transparent", color: "#fff", fontWeight: 600 },
   selection: { background: accentDoux, border: `1px solid ${ACCENT}`, color: ACCENT, fontWeight: 600 },
-  neutre: { background: "transparent", border: `1px solid ${bdr}`, color: txt, fontWeight: 400 },
+  neutre: { background: "transparent", border: `1px solid ${bdrChamp}`, color: txt, fontWeight: 400 },
   danger: { background: "transparent", border: `1px solid ${danger}`, color: danger, fontWeight: 600 },
 };
 
@@ -88,7 +95,7 @@ const EnTeteChamp = ({ nom, lien, quoi }) => (
           style={{
             display: "inline-flex", alignItems: "center", flexShrink: 0,
             minHeight: "var(--tap-min)", padding: "0 10px",
-            border: `1px solid ${bdr}`, borderRadius: "var(--r-sm)",
+            border: `1px solid ${bdrChamp}`, borderRadius: "var(--r-sm)",
             color: ACCENT, fontSize: "var(--t-legende)", textDecoration: "none",
           }}>obtenir ↗</a>
       )}
@@ -103,13 +110,13 @@ export default function SettingsView({
   sync, majSync, genererCode, syncEtat, setSyncEtat, onEnvoyer, onRecuperer,
   onExporter, onImporter,
   onPlaynite, exclusions, onViderExclusions,
+  outils,
 }) {
   // Le relais vit avec les clés et ne part jamais dans la sauvegarde : sans
   // lui, il n'y a rien à joindre, donc rien à réclamer.
   const ageSauvegarde = etatSauvegarde({ ...sync, proxy: keys.proxy });
 
   const [onglet, setOnglet] = useState("sauvegarde");
-  const [visible, setVisible] = useState(false);
   const [enregistre, setEnregistre] = useState(false);
   // Le code de synchronisation ne s'écrit qu'à la validation : sinon effacer
   // le champ pour le retaper efface la valeur au premier caractère supprimé.
@@ -158,16 +165,19 @@ export default function SettingsView({
       </Section>
 
       <SousOnglets valeur={onglet} onChange={setOnglet}
-        options={[["sauvegarde", "Sauvegarde"], ["services", "Services"]]} />
+        options={[["sauvegarde", "Sauvegarde"], ["outils", "Outils"], ["services", "Services"]]} />
 
-      {onglet === "sauvegarde" ? (
+      {onglet === "outils" ? (
+        <PanneauOutils {...outils} onPlaynite={onPlaynite}
+          exclusions={exclusions} onViderExclusions={onViderExclusions} />
+      ) : onglet === "sauvegarde" ? (
         <>
           <Section titre="Synchronisation"
             aide="Dépose la bibliothèque sur ton relais Cloudflare pour la retrouver sur un autre appareil. Saisis le même code partout ; il reste sur l'appareil et ne part jamais dans l'export.">
             <div style={{ marginBottom: 10 }}>
               <EnTeteChamp nom="Code de synchronisation" />
               <ChampProtege
-                valeur={codeAffiche} visible={visible} placeholder="aucun code"
+                valeur={codeAffiche} placeholder="aucun code"
                 ariaLabel="Code de synchronisation"
                 quoi="le code de synchronisation"
                 consequence="La sauvegarde en ligne existera toujours, mais plus rien ici ne permettra de la retrouver."
@@ -203,7 +213,7 @@ export default function SettingsView({
                 et « ⬇ Exporter » vers un fichier, pour deux gestes qui sortent
                 tous les deux les données d'ici. La direction suit désormais
                 l'appareil : ce qui part monte, ce qui arrive descend. */}
-            <div style={{ display: "flex", gap: 8 }}>
+            <div style={{ display: "flex", gap: "var(--ecart-tap)" }}>
               <Bouton pleinePlace intention="principal" disabled={syncEtat?.type === "…"} onClick={onEnvoyer}>⬆ Envoyer</Bouton>
               <Bouton pleinePlace disabled={syncEtat?.type === "…"} onClick={onRecuperer}>⬇ Récupérer</Bouton>
             </div>
@@ -216,7 +226,7 @@ export default function SettingsView({
             {/* Les clés ne partent que si on le demande, et la conséquence est
             écrite à côté : cocher change ce que le code de synchronisation
             protège — une liste de jeux devient une liste d'identifiants. */}
-        <label style={{ display: "flex", gap: 8, alignItems: "flex-start", marginTop: 12, paddingTop: 12, borderTop: `1px solid ${bdr}`, cursor: "pointer" }}>
+        <label style={{ display: "flex", gap: "var(--ecart-tap)", alignItems: "flex-start", marginTop: 12, paddingTop: 12, borderTop: `1px solid ${bdr}`, cursor: "pointer" }}>
           <input type="checkbox" checked={!!sync.avecCles}
             onChange={e => majSync({ ...sync, avecCles: e.target.checked })}
             style={{ marginTop: 2, width: 16, height: 16, accentColor: ACCENT, flexShrink: 0 }} />
@@ -256,25 +266,13 @@ export default function SettingsView({
 
           <Section titre="Copie hors ligne"
             aide="Un fichier JSON sur cet appareil, utile avant une manipulation risquée ou quand le relais n'est pas configuré. Il contient les jeux, mais ni les clés ni le code de synchronisation.">
-            <div style={{ display: "flex", gap: 8 }}>
+            <div style={{ display: "flex", gap: "var(--ecart-tap)" }}>
               <Bouton pleinePlace intention="principal" onClick={onExporter}>⬆ Exporter</Bouton>
               <Bouton pleinePlace onClick={() => importRef.current?.click()}>⬇ Importer</Bouton>
               <input ref={importRef} type="file" accept="application/json,.json" onChange={onImporter} style={{ display: "none" }} />
             </div>
           </Section>
 
-          <Section titre="Jeux PC (Playnite)"
-            aide="Playnite lit Steam, Epic, GOG et Amazon depuis ton PC ; son export apporte ici les jeux avec leur boutique, et les infos qu'il a téléchargées. Rien n'est écrit avant que tu aies vu la liste.">
-            <Bouton pleinePlace intention="principal" onClick={onPlaynite}>🖥️ Importer un export Playnite</Bouton>
-            {exclusions?.length > 0 && (
-              <div style={{ marginTop: 12 }}>
-                <p style={{ color: mut, fontSize: "var(--t-legende)", lineHeight: 1.5, margin: "0 0 8px" }}>
-                  {exclusions.length} jeu(x) écarté(s) : supprimés après un import, ils ne reviendront pas au suivant.
-                </p>
-                <Bouton onClick={onViderExclusions}>Vider la liste des écartés</Bouton>
-              </div>
-            )}
-          </Section>
         </>
       ) : (
         <Section titre="Clés et relais"
@@ -283,7 +281,7 @@ export default function SettingsView({
             <div key={id} style={{ marginBottom: 12 }}>
               <EnTeteChamp nom={nom} lien={lien} quoi={quoi} />
               <ChampProtege
-                valeur={keys[id]} visible={visible} placeholder="non configurée"
+                valeur={keys[id]} placeholder="non configurée"
                 ariaLabel={`Clé ${nom}`}
                 quoi={CONSEQUENCES[id][0]} consequence={`Conséquence : ${CONSEQUENCES[id][1]}.`}
                 onChange={v => setKeys(k => ({ ...k, [id]: v.trim() }))}
@@ -304,7 +302,7 @@ export default function SettingsView({
             <EnTeteChamp nom="Relais CORS"
               quoi="Worker Cloudflare, requis en ligne pour SteamGridDB, l'import Xbox et la synchronisation. À laisser vide en développement local." />
             <ChampProtege
-              valeur={keys.proxy} visible placeholder="https://mon-worker.workers.dev"
+              valeur={keys.proxy} enClair placeholder="https://mon-worker.workers.dev"
               ariaLabel="Adresse du relais"
               quoi={CONSEQUENCES.proxy[0]} consequence={`Conséquence : ${CONSEQUENCES.proxy[1]}.`}
               onChange={v => setKeys(k => ({ ...k, proxy: v.trim() }))}
@@ -312,9 +310,8 @@ export default function SettingsView({
             />
           </div>
 
-          <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+          <div style={{ display: "flex", gap: "var(--ecart-tap)", alignItems: "center", flexWrap: "wrap" }}>
             <Bouton intention="principal" onClick={enregistrerCles}>Enregistrer</Bouton>
-            <Bouton onClick={() => setVisible(v => !v)}>{visible ? "Masquer" : "Afficher"}</Bouton>
             {enregistre && <span role="status" style={{ color: ok, fontSize: "var(--t-legende)" }}>Enregistré ✓</span>}
           </div>
         </Section>

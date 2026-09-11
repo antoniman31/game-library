@@ -47,20 +47,39 @@ const Tuiles = ({ items }) => (
 
 // Trois séries temporelles partagent désormais cette forme. Une barre à zéro
 // garde deux pixels de gris : sans elle, un mois vide disparaît et l'axe ment.
-const Histogramme = ({ donnees, couleur = accentFond, etiquette = (c) => c }) => {
+const Histogramme = ({ donnees, couleur = accentFond, etiquette = (c) => c, periode }) => {
   const max = Math.max(...donnees.map(([, n]) => n), 1);
   return (
-    <div style={{ display: "flex", gap: 3, alignItems: "flex-end", height: 70 }}>
-      {donnees.map(([cle, n]) => (
-        <div key={cle} style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", alignItems: "center", gap: 3 }}>
-          <span style={{ color: mut, fontSize: "var(--t-legende)" }}>{n || ""}</span>
-          <div title={`${cle} : ${n}`} style={{ width: "100%", height: `${Math.max(2, (n / max) * 42)}px`, background: n ? couleur : bdr, borderRadius: "2px 2px 0 0" }} />
-          <span style={{ color: mut, fontSize: "var(--t-legende)" }}>{etiquette(cle)}</span>
-        </div>
-      ))}
-    </div>
+    <>
+      <div style={{ display: "flex", gap: 3, alignItems: "flex-end", height: 70 }}>
+        {donnees.map(([cle, n]) => (
+          <div key={cle} style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", alignItems: "center", gap: 3 }}>
+            <span style={{ color: mut, fontSize: "var(--t-legende)" }}>{n || ""}</span>
+            <div title={`${cle} : ${n}`} style={{ width: "100%", height: `${Math.max(2, (n / max) * 42)}px`, background: n ? couleur : bdr, borderRadius: "2px 2px 0 0" }} />
+            <span style={{ color: mut, fontSize: "var(--t-legende)" }}>{etiquette(cle)}</span>
+          </div>
+        ))}
+      </div>
+      {/* Les douze barres ne portent que le mois : « 09 » deux fois dans
+          l'année ne dit pas laquelle. L'année se lisait au survol — c'est-à-dire
+          nulle part sur un téléphone, où il n'y a pas de survol. Elle se lit
+          donc sous le graphique, une fois, au lieu de douze. */}
+      {periode && (
+        <div style={{ color: mut, fontSize: "var(--t-legende)", marginTop: 4, textAlign: "center" }}>{periode}</div>
+      )}
+    </>
   );
 };
+
+// « 2025-10 » → « oct. 2025 », pour nommer les deux bouts d'une série de mois.
+const moisLong = (cle) => {
+  const [an, mois] = String(cle).split("-");
+  const d = new Date(Number(an), Number(mois) - 1, 1);
+  return Number.isNaN(d.getTime()) ? cle : d.toLocaleDateString("fr-FR", { month: "short", year: "numeric" });
+};
+const periodeMois = (donnees) => (donnees.length > 1
+  ? `${moisLong(donnees[0][0])} → ${moisLong(donnees[donnees.length - 1][0])}`
+  : donnees.length ? moisLong(donnees[0][0]) : "");
 
 // « 2026-09 » → « 09 ». Le mois seul suffit sur douze barres : l'année se lit
 // au survol, et l'écrire douze fois mangerait la place des chiffres.
@@ -147,7 +166,7 @@ function Circulation({ games, jour }) {
       )}
 
       <Bloc titre="Rythme des prêts">
-        <Histogramme donnees={s.parMois} couleur={warnFond} etiquette={moisCourt} />
+        <Histogramme donnees={s.parMois} couleur={warnFond} etiquette={moisCourt} periode={periodeMois(s.parMois)} />
         <div style={{ color: mut, fontSize: "var(--t-legende)", marginTop: 8 }}>Prêts commencés, mois par mois, sur un an.</div>
       </Bloc>
 
@@ -322,12 +341,12 @@ function Collection({ games, jour }) {
 
       {s.parAnnee.length > 1 && (
         <Bloc titre="Ajouts par année">
-          <Histogramme donnees={s.parAnnee} etiquette={(an) => an.slice(2)} />
+          <Histogramme donnees={s.parAnnee} etiquette={(an) => an.slice(2)} periode={s.parAnnee.length > 1 ? `${s.parAnnee[0][0]} → ${s.parAnnee[s.parAnnee.length - 1][0]}` : ""} />
         </Bloc>
       )}
 
       <Bloc titre="Ajouts sur 12 mois">
-        <Histogramme donnees={s.parMoisAjout} etiquette={moisCourt} />
+        <Histogramme donnees={s.parMoisAjout} etiquette={moisCourt} periode={periodeMois(s.parMoisAjout)} />
       </Bloc>
 
       {s.doublons.length > 0 && (

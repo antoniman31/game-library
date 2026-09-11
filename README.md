@@ -330,7 +330,7 @@ qui explique que certains éditeurs ne remontent pas si on ne demande que
 `Multiplayer` et `Co-op`, traduites dans le vocabulaire que le filtre par mode
 sait déjà lire.
 
-**Bouton « Partager la liste »** (panneau ⋯ Actions) : produit la liste **affichée** —
+**Bouton « 📤 Partager la liste »** (en-tête, sur Console et PC) : produit la liste **affichée** —
 donc celle de l'univers où l'on se trouve, console ou PC, et le titre le dit — en
 texte lisible — groupée par plateforme, un jeu par ligne avec son format et, le cas
 échéant, le prêt en cours avec sa date de retour convenue ; la note Metacritic n'y figure
@@ -339,7 +339,7 @@ dans le presse-papier ailleurs. Pas de sélecteur de plateforme : le panneau des
 déjà composé la liste, et deux endroits pour dire la même chose finiraient par se
 contredire.
 
-**Bouton « Compléter les notes manquantes »** (panneau ⋯ Actions) : trois sources dans
+**Bouton « Compléter les notes manquantes »** (⚙️ → Outils) : trois sources dans
 l'ordre de leur sûreté, la première qui répond gagne.
 
 1. **RAWG**, qui cherche par titre — et qu'un titre suffit à faire échouer :
@@ -378,7 +378,7 @@ chiffre ; les redemander à chaque passage transformait une action qui se termin
 corvée qui recommence. Une note saisie à la main efface la mention, un champ vidé rend
 la fiche aux sources.
 
-**Bouton « Rattraper les jaquettes manquantes »** (panneau ⋯ Actions) : cherche sur
+**Bouton « Rattraper les jaquettes manquantes »** (⚙️ → Outils) : cherche sur
 SteamGridDB une jaquette pour chaque fiche qui n'en a pas, avec progression et arrêt
 possible. L'application en rattrape déjà douze à chaque ouverture, ce qui convenait à une
 bibliothèque qui grandit d'un jeu par semaine ; un import Playnite en laisse cent
@@ -388,7 +388,7 @@ une grille où un jeu sur trois n'a pas la même forme se lit plus mal qu'une gr
 manque une image. Un titre trop éloigné de ce que la recherche renvoie est laissé sans
 image et compté à part : une jaquette fausse ne se remarque pas dans trois cents fiches.
 
-**Bouton « Actualiser les descriptions »** (panneau ⋯ Actions) : régénère la description de
+**Bouton « Actualiser les descriptions »** (⚙️ → Outils) : régénère la description de
 toute la bibliothèque depuis Wikipédia. Il est **annulable en cours de route**,
 respecte un délai anti-rate-limit (~150 ms) et affiche en fin de course la
 **liste des jeux sans page Wikipédia trouvée**. Il retient le **meilleur titre**
@@ -602,7 +602,7 @@ pour ce qui est déjà là, à trois lignes de distance.
   chemin de la fiche voisine.
 - **Deux moments** : à l'import Playnite, où le récapitulatif annonce combien de
   lignes se rempliront toutes seules et lesquelles (« déjà sur Xbox One ») ; et
-  par ⋯ → **« Remplir depuis les autres éditions »** pour les fiches déjà en
+  par ⚙️ → Outils → **« Remplir depuis les autres éditions »** pour les fiches déjà en
   place, qui annonce le détail par champ avant d'écrire.
 - Sur une bibliothèque réelle de 155 jeux console et 180 jeux PC importés :
   **38 fiches remplies à l'import** — jaquette, description, note, genres — puis
@@ -698,6 +698,8 @@ peut recopier de travers finit par l'être.
 | `--tap-min` | 44 px | Plancher d'une commande posée dans une ligne (Apple HIG, WCAG 2.5.5) |
 | `--ecart-tap` | 8 px | Séparation entre deux cibles voisines |
 | `--ecart-bloc` | 28 px | Séparation entre deux blocs — contre 12 px à l'intérieur d'un bloc |
+| `--large-lisible` | 720 px | Largeur maximale du contenu ; le fond des barres collantes reste pleine largeur |
+| `--bdr` / `--bdr-champ` | — | Filet décoratif / contour d'un contrôle, à 3:1 (WCAG 1.4.11) |
 | `--t-legende` → `--t-chiffre` | 12 → 24 px | Cinq rôles typographiques, texte courant à 16 |
 | `--r-xs` → `--r-lg` | 4 → 16 px | Échelle de formes |
 
@@ -711,6 +713,27 @@ Quelques règles qui ne se voient qu'à l'usage :
 - **`--accent` se lit SUR le fond, `--accent-fond` porte du blanc.** Un seul
   bleu ne peut pas satisfaire les deux contraintes ; les confondre fait tomber
   le contraste de 5,17 à 3,00:1.
+- **`--bdr` sépare, `--bdr-champ` délimite.** Un filet entre deux lignes n'a
+  rien à prouver ; la bordure d'un champ de saisie ou d'un bouton fantôme est
+  la seule chose qui dise où le contrôle commence, et WCAG 1.4.11 la chiffre à
+  3:1. `--bdr` n'en donnait que 1,3 sur son fond. Relever `--bdr` lui-même
+  aurait quadrillé chaque carte de traits durs pour rien : une carte se
+  distingue déjà par son fond.
+- **Le contenu s'arrête à 720 px, les barres collantes non.** Sans plafond, un
+  écran de bureau étirait chaque onglet à 350 px et faisait courir une
+  description sur cent soixante caractères par ligne, deux fois la longueur que
+  l'œil suit. C'est le contenu des barres qui se centre, pas leur fond : un
+  en-tête centré laisserait voir la liste défiler dans les bandes nues.
+- **Un formulaire tient sur une colonne.** Deux colonnes sur mobile font sauter
+  des champs au regard, qui descend la première sans voir la seconde.
+- **Ce qui se clique est un bouton.** Une suggestion de recherche ou une
+  vignette de jaquette posée sur un `<div onClick>` ne répond pas à Entrée, ne
+  reçoit pas le focus — donc échappe au piège à focus du panneau, que Tab
+  traverse sans la voir — et s'annonce comme du texte.
+- **Chaque valeur masquée porte son propre œil.** Un seul « Afficher » pour
+  quatre champs oblige à défiler jusqu'en bas pour relire une clé, et
+  n'atteignait pas du tout le code de synchronisation, qui vit dans l'autre
+  onglet.
 - **Un bouton a cinq états** : repos, survol (réservé aux pointeurs fins),
   focus (anneau de 2 px sur `:focus-visible`, jamais au doigt), pressé, et
   désactivé.
@@ -726,7 +749,9 @@ Quelques règles qui ne se voient qu'à l'usage :
 
 Ces règles ne se relisent pas, elles se mesurent : `npm run verif:ui` construit
 l'application, la sert lui-même et échoue si une cible passe sous le plancher,
-si un texte descend sous 12 px, si un libellé se tronque ou si la page déborde.
+si deux cibles voisines sont séparées de moins de 8 px, si un texte descend
+sous 12 px, si un bandeau flottant oublie la zone sûre du bas, si un libellé se
+tronque ou si la page déborde.
 
 Un audit complet, mené en mesurant dans le navigateur sur quatorze écrans et
 deux thèmes, a montré la limite de ce garde-fou : il ne visitait ni la fenêtre
@@ -738,13 +763,38 @@ trouvé un jeton de couleur qui passait sur les cartes (4,91:1) et échouait sur
 l'en-tête (4,31:1) : un jeton mesuré sur un seul de ses fonds n'est mesuré nulle
 part.
 
-Trois écarts restent assumés, et sont écrits ici plutôt que tus : les commandes
-secondaires font 44 px et non 48 ; les listes contiguës — accordéon des filtres,
-cases à cocher, segments — n'ont pas 8 px entre elles, la règle visant des
-boutons distincts et non le motif de liste ; et tout se trouve en haut de
-l'écran, dans la zone que la cartographie du pouce désigne comme la plus
-difficile à atteindre à une main. Ce dernier point demanderait une barre de
-navigation basse, c'est-à-dire une refonte de l'ossature.
+Un second audit, mené contre le même cahier des charges, a montré que la
+première correction n'avait pas suffi — et pour la même raison. Le garde-fou ne
+visitait toujours ni les accordéons d'une fiche (trois champs de liens et un
+mémo, à 27 px), ni les trois panneaux de source (un champ de recherche à 32 px
+chacun), ni les bandeaux flottants, qui n'apparaissent qu'après une action et
+portaient donc depuis toujours des boutons de 26 px. La fenêtre d'import Xbox,
+elle, n'y était jamais entrée du tout : elle demande une clé xbl.io pour
+s'ouvrir. C'était la seule à réimplémenter le panneau glissant au lieu
+d'utiliser `Sheet`, et elle avait gardé tous les défauts que les autres écrans
+avaient corrigés depuis — pas de piège à focus, pas d'Échap, des boutons de
+39 px. Une fenêtre écrite à part ne reçoit aucune des corrections faites
+ailleurs.
+
+Le garde-fou a donc gagné deux règles de plus — la séparation de 8 px et la
+zone sûre du bas — et l'une comme l'autre a trouvé quelque chose le jour même :
+six paires de boutons à 6 px, dont la barre d'onglets entière, et les trois
+bandeaux posés à vingt pixels du bord, c'est-à-dire dans la bande où le
+balayage du système passe avant l'application. La zone sûre ne se mesure pas en
+pixels sur une machine sans encoche, où `env(safe-area-inset-bottom)` vaut
+zéro : c'est la déclaration qui se lit, pas son résultat.
+
+Deux écarts restent assumés, et sont écrits ici plutôt que tus : les commandes
+secondaires font 44 px et non 48 ; et tout se trouve en haut de l'écran, dans
+la zone que la cartographie du pouce désigne comme la plus difficile à
+atteindre à une main. Ce dernier point demanderait une barre de navigation
+basse, c'est-à-dire une refonte de l'ossature. L'échelle typographique, elle,
+s'arrête à 24 px et n'a ni Display ni H1 au sens des référentiels : c'est une
+liste dense, pas un article, et un titre de 32 px y prendrait la place de deux
+jeux sans rien apprendre. Les listes contiguës — accordéon des filtres, cases à
+cocher, segments — n'ont toujours pas 8 px entre elles, et c'est volontaire :
+la règle vise deux boutons distincts qu'on risque de confondre, pas le motif
+d'une liste, où le contact est justement ce qui dit qu'on lit la même chose.
 
 ---
 
@@ -1108,7 +1158,7 @@ import, beaucoup moins.
 │   └── components/
 │       ├── GameCard.jsx  AddModal.jsx  ImportModal.jsx  PlayniteModal.jsx
 │       ├── StatsView.jsx  SettingsView.jsx  ScoresSheet.jsx
-│       ├── Sheet.jsx  FiltersSheet.jsx  SortSheet.jsx  ActionsSheet.jsx  SousOnglets.jsx
+│       ├── Sheet.jsx  FiltersSheet.jsx  SortSheet.jsx  PanneauOutils.jsx  SousOnglets.jsx
 │       └── Cover.jsx  InfoboxView.jsx  ChampProtege.jsx  ErrorBoundary.jsx
 ├── index.html
 ├── vite.config.js                 base, PWA, proxys de dev

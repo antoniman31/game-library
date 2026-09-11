@@ -265,6 +265,21 @@ Deux sous-onglets. Chaque bloc disparaît quand il n'a rien à dire.
 
 ## Fait récemment
 
+- **Les actions déménagent dans les Réglages**, sous un troisième sous-onglet « Outils »
+  aux côtés de Sauvegarde et Services : les deux imports — Xbox et Playnite — y sont
+  enfin voisins au lieu de vivre dans deux écrans différents pour le même geste. Le
+  bouton « ⋯ » de l'en-tête laisse la place à « 📤 Partager », la seule de ces actions
+  qui dépende de ce que les filtres montrent.
+
+- **Second audit d'ergonomie**, fichier par fichier et mesuré dans le navigateur : la
+  fenêtre d'import Xbox repose enfin sur `Sheet` (elle n'avait ni piège à focus, ni
+  Échap, ni boutons au plancher), les trois bandeaux flottants respectent la zone sûre
+  du bas et portent des boutons de 44 px, sept éléments cliquables sont devenus des
+  boutons, le contenu s'arrête à 720 px sur grand écran, un jeton `--bdr-champ` donne
+  aux contours de contrôle les 3:1 de WCAG 1.4.11, et chaque valeur masquée porte son
+  propre œil. `verif:ui` a gagné les écrans qui manquaient et deux règles — séparation
+  de 8 px, zone sûre du bas — vérifiées en réintroduisant les défauts qu'elles visent.
+
 - **Audit du code** : cinq défauts que le format laissait passer — une année d'ajout
   invraisemblable qui faisait tracer deux mille colonnes à l'histogramme, un « NaN j »
   affiché comme une durée, deux tableaux non garantis par la migration, un lien
@@ -316,6 +331,9 @@ divergence entre deux copies d'une même liste était restée invisible des sema
 - Passer `npm run audit -- export.json` sur la vraie bibliothèque : le script n'a
   jamais vu autre chose que des données de test.
 - Trancher le contraste du thème clair (voir Limites connues).
+- Tester la PWA sur le téléphone avec 288 jeux : temps d'ouverture, défilement en liste
+  et en grille, zoom du champ de recherche, bannière de stockage, rechargement hors
+  ligne. La mesure de pagination du README date de 155 jeux.
 
 ## Structure
 
@@ -340,6 +358,6 @@ game-library/
     │                        surveille ce qui est écrit deux fois)
     └── components/       ← GameCard, AddModal, ImportModal, PlayniteModal, StatsView,
                              SettingsView, ScoresSheet, Sheet, FiltersSheet,
-                             ActionsSheet, SousOnglets, Cover, InfoboxView,
+                             PanneauOutils, SousOnglets, Cover, InfoboxView,
                              ChampProtege, ErrorBoundary
 ```

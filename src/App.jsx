@@ -5,7 +5,6 @@ import GameCard from "./components/GameCard.jsx";
 import AddModal from "./components/AddModal.jsx";
 import ImportModal from "./components/ImportModal.jsx";
 import FiltersSheet from "./components/FiltersSheet.jsx";
-import ActionsSheet from "./components/ActionsSheet.jsx";
 import ScoresSheet from "./components/ScoresSheet.jsx";
 import Sheet from "./components/Sheet.jsx";
 import StatsView from "./components/StatsView.jsx";
@@ -14,7 +13,7 @@ import SettingsView from "./components/SettingsView.jsx";
 import PlayniteModal from "./components/PlayniteModal.jsx";
 import NotesChoixSheet from "./components/NotesChoixSheet.jsx";
 
-import { hdr, card, bdr, txt, mut, accent, accentDoux, accentFond, warnDoux, dangerDoux, ok, warn, warnFond, danger } from "./lib/theme.js";
+import { hdr, card, bdr, bdrChamp, txt, mut, accent, accentDoux, accentFond, warnDoux, dangerDoux, ok, warn, warnFond, danger } from "./lib/theme.js";
 import { GAMES_INIT } from "./lib/seed.js";
 import { jeuDansUnivers, boutiquesPresentes, jeuDeLaBoutique, autresEditions,
   migrateGames, compterFiltres, FILTRES, validerJeuxImportes, pretEnRetard, jeuxSansScore, normaliserGenres,
@@ -59,10 +58,36 @@ const btnFermer = {
 // Bouton d'en-tête : même gabarit pour tous, à la hauteur de cible tactile.
 const btnHdr = {
   minHeight: "var(--tap)", minWidth: "var(--tap)", background: "transparent",
-  border: `1px solid ${bdr}`, color: txt, borderRadius: "var(--r-md)", padding: "0 12px",
+  border: `1px solid ${bdrChamp}`, color: txt, borderRadius: "var(--r-md)", padding: "0 12px",
   fontSize: "var(--t-titre)", cursor: "pointer", display: "inline-flex", alignItems: "center",
-  justifyContent: "center", gap: 6, flexShrink: 0,
+  justifyContent: "center", gap: "var(--ecart-tap)", flexShrink: 0,
 };
+
+// Bandeau flottant du bas — nouvelle version, avis, suppression annulable.
+//
+// Les trois étaient écrits trois fois, et les trois portaient les deux mêmes
+// défauts : un bouton de 26 px de haut, et `bottom: 20` sans la zone sûre. Sur
+// un téléphone à barre de gestes, la page passe SOUS cette barre — c'est ce que
+// `viewport-fit=cover` demande — et vingt pixels ne suffisent pas à en sortir :
+// le bouton du bandeau tombait dans la bande où le balayage du système passe
+// avant l'application.
+const bandeauBas = {
+  position: "fixed", bottom: "calc(20px + var(--safe-bottom))", left: "50%",
+  transform: "translateX(-50%)", width: "max-content",
+  maxWidth: "calc(100vw - 24px)", display: "flex", alignItems: "center",
+  background: card, borderRadius: "var(--r-md)", padding: "8px 10px 8px 14px",
+  boxShadow: "0 8px 24px rgba(0,0,0,0.4)", animation: "toastIn 200ms ease",
+};
+
+// Le bouton d'un bandeau reste un bouton : `padding: 4px 12px` lui donnait la
+// hauteur de son texte — 26 px mesurés — pour l'action la plus pressée de
+// l'écran, celle qui annule une suppression avant qu'elle ne devienne vraie.
+const btnBandeau = (couleur, fond = "transparent") => ({
+  minHeight: "var(--tap-min)", padding: "0 14px", flexShrink: 0,
+  background: fond, border: `1px solid ${couleur}`, color: couleur,
+  borderRadius: "var(--r-sm)", fontSize: "var(--t-petit)", fontWeight: 600,
+  cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap",
+});
 
 export default function App() {
   // Les références écartées d'un import : un jeu Playnite supprimé ne doit pas
@@ -123,7 +148,6 @@ export default function App() {
   const [showImport, setShowImport] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [showSort, setShowSort] = useState(false);
-  const [showActions, setShowActions] = useState(false);
   const [notesChoix, setNotesChoix] = useState(null);
   const [jaquettesEnCours, setJaquettesEnCours] = useState(false);
   const [jaquettesProg, setJaquettesProg] = useState(0);
@@ -1047,8 +1071,12 @@ export default function App() {
     <div style={{ minHeight: "100vh" }}>
 
       {/* Header */}
+      {/* La barre collante garde son fond d'un bord à l'autre — un en-tête
+          centré laisserait deux bandes de fond nu de part et d'autre, et on
+          verrait la liste défiler dedans. C'est son contenu qui se plafonne. */}
       <div style={{ background: hdr, borderBottom: `1px solid ${bdr}`, padding: "calc(12px + var(--safe-top)) calc(14px + var(--safe-right)) 12px calc(14px + var(--safe-left))", position: "sticky", top: 0, zIndex: 100 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, marginBottom: 10 }}>
+        <div style={{ maxWidth: "var(--large-lisible)", margin: "0 auto" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "var(--ecart-tap)", marginBottom: 10 }}>
           <div style={{ minWidth: 0 }}>
             <h1 style={{ fontFamily: "'Press Start 2P', monospace", fontSize: "var(--t-legende)", color: ACCENT, lineHeight: 1.4, margin: 0, fontWeight: 400 }}>GAME LIBRARY</h1>
             {/* La ligne répond aux deux questions que l'application sert à poser :
@@ -1069,19 +1097,34 @@ export default function App() {
               {stats.enRetard > 0 ? <span style={{ color: warn }}> · {stats.enRetard} en retard</span> : null}
             </div>
           </div>
-          {/* Deux boutons seulement. Les quatre actions à libellé complet qui
-              tenaient ici débordaient de l'écran de 13 px : elles sont passées
-              dans le panneau « Actions ». */}
-          <div style={{ display: "flex", gap: 8, alignItems: "center", flexShrink: 0 }}>
+          {/* Trois boutons. Les quatre actions à libellé complet qui tenaient
+              ici débordaient de l'écran de 13 px ; elles vivent maintenant dans
+              ⚙️ → Outils, avec les deux imports.
+
+              Le « ⋯ » qui les ouvrait a laissé la place au partage. C'est la
+              seule de ces actions qui soit restée : elle envoie ce que les
+              filtres montrent en ce moment, donc elle appartient à l'écran où
+              cette sélection se compose — depuis les Réglages, on partagerait
+              une liste qu'on ne voit pas. Et une icône qui dit ce qu'elle fait
+              vaut mieux qu'une ellipse qui dit « il y a autre chose ici ».
+
+              Le ⏳ que portait le « ⋯ » pendant une actualisation disparaît
+              avec lui, sans perte : les bandeaux du dessous annoncent la même
+              progression avec de quoi l'arrêter, et sur tous les onglets. */}
+          <div style={{ display: "flex", gap: "var(--ecart-tap)", alignItems: "center", flexShrink: 0 }}>
             <button onClick={() => setModeTheme(modeSuivant)}
               aria-label={`Thème : ${LIBELLES[modeTheme]}`} title={`Thème : ${LIBELLES[modeTheme]}`}
               style={{ ...btnHdr, color: txt }}>
               {ICONES[modeTheme]}
             </button>
-            <button onClick={() => setShowActions(true)} aria-label="Actions" title="Actions"
-              style={{ ...btnHdr, color: refreshing || enriching ? ACCENT : txt, borderColor: refreshing || enriching ? ACCENT : bdr }}>
-              {refreshing || enriching ? "⏳" : "⋯"}
-            </button>
+            {estBibliotheque && (
+              <button onClick={partagerListe}
+                aria-label={`Partager la liste — ${affichee.length} jeu${affichee.length > 1 ? "x" : ""}`}
+                title="Partager la liste"
+                style={{ ...btnHdr, color: txt }}>
+                📤
+              </button>
+            )}
             <button onClick={() => setShowAdd(true)}
               style={{ ...btnHdr, background: accentFond, border: "none", color: "#fff", fontSize: "var(--t-corps)", fontWeight: 600 }}>
               + Ajouter
@@ -1099,7 +1142,7 @@ export default function App() {
         {scoresEnCours && (
           <div style={{ display: "flex", alignItems: "center", gap: 8, background: card, border: `1px solid ${bdr}`, borderRadius: "var(--r-sm)", padding: "8px 10px", marginBottom: 10 }}>
             <div style={{ flex: 1, minWidth: 0, color: txt, fontSize: "var(--t-legende)", fontWeight: 600 }}>Recherche des notes… {scoresProg}/{scoresTotal}</div>
-            <button onClick={annulerScores} style={{ background: dangerDoux, border: `1px solid ${danger}`, color: danger, borderRadius: "var(--r-xs)", padding: "3px 8px", fontSize: "var(--t-legende)", cursor: "pointer" }}>Arrêter</button>
+            <button onClick={annulerScores} style={{ ...btnBandeau(danger, dangerDoux), fontSize: "var(--t-legende)" }}>Arrêter</button>
           </div>
         )}
 
@@ -1126,9 +1169,9 @@ export default function App() {
               {enriching ? `Enrichissement… ${enrichProg}/${importedIds.length}` : `${importedIds.length} jeu(x) importé(s) — enrichir via RAWG + Wikipédia ?`}
             </div>
             {enriching
-              ? <button onClick={cancelEnrich} style={{ background: dangerDoux, border: `1px solid ${danger}`, color: danger, borderRadius: "var(--r-xs)", padding: "3px 8px", fontSize: "var(--t-legende)", cursor: "pointer" }}>Arrêter</button>
+              ? <button onClick={cancelEnrich} style={{ ...btnBandeau(danger, dangerDoux), fontSize: "var(--t-legende)" }}>Arrêter</button>
               : <>
-                  <button onClick={enrichImported} style={{ background: accentDoux, border: `1px solid ${accent}`, color: accent, borderRadius: "var(--r-xs)", padding: "3px 8px", fontSize: "var(--t-legende)", cursor: "pointer" }}>Enrichir</button>
+                  <button onClick={enrichImported} style={{ ...btnBandeau(accent, accentDoux), fontSize: "var(--t-legende)" }}>Enrichir</button>
                   <button onClick={() => setImportedIds([])} aria-label="Masquer" style={{ ...btnFermer, color: mut }}>✕</button>
                 </>}
           </div>
@@ -1146,7 +1189,7 @@ export default function App() {
             onglet qui ne mène qu'à un écran vide est pire qu'un onglet absent.
             Le prix est que la barre change sous le doigt en basculant
             d'univers : c'est un choix, pas un oubli. */}
-        <div style={{ display: "flex", gap: 6, marginBottom: estBibliotheque ? 10 : 0 }}>
+        <div style={{ display: "flex", gap: "var(--ecart-tap)", marginBottom: estBibliotheque ? 10 : 0 }}>
           {[["console","Console"],["pc","PC"],
             ...(univers === "pc" && tab !== "loans" ? [] : [["loans",`Prêts${lentGames.length ? ` (${lentGames.length})` : ""}`]]),
             ["stats","Stats"],["settings","⚙️"]].map(([k,l]) => (
@@ -1160,7 +1203,7 @@ export default function App() {
                 position: "relative",
                 flex: k === "settings" ? "0 0 auto" : 1, minWidth: k === "settings" ? "var(--tap)" : 0,
                 minHeight: "var(--tap)", background: tab===k ? accentFond : "transparent",
-                border: `1px solid ${tab===k ? accentFond : bdr}`, color: tab===k ? "#fff" : mut,
+                border: `1px solid ${tab===k ? accentFond : bdrChamp}`, color: tab===k ? "#fff" : mut,
                 borderRadius: "var(--r-md)", padding: "0 2px", fontSize: "var(--t-petit)", fontWeight: tab===k ? 600 : 400,
                 cursor: "pointer", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
               }}>
@@ -1199,7 +1242,7 @@ export default function App() {
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
             <input value={searchInput} onChange={e => setSearchInput(e.target.value)} type="search"
               aria-label="Rechercher" placeholder={sort === TRI_DEFAUT ? "Rechercher…" : "🔍"}
-              style={{ flex: 1, minWidth: 0, minHeight: "var(--tap)", background: card, border: `1px solid ${bdr}`, borderRadius: "var(--r-md)", color: txt, padding: "0 12px", fontSize: "var(--t-corps)" }} />
+              style={{ flex: 1, minWidth: 0, minHeight: "var(--tap)", background: card, border: `1px solid ${bdrChamp}`, borderRadius: "var(--r-md)", color: txt, padding: "0 12px", fontFamily: "inherit" }} />
             {/* Le contour accentué est réservé à « Filtres ». Un tri choisi se
                 dit par son libellé et par la couleur du texte, pas par une
                 bordure : deux boutons au même traitement, côte à côte et sans
@@ -1226,10 +1269,11 @@ export default function App() {
             </button>
           </div>
         )}
+        </div>
       </div>
 
       {/* Body */}
-      <div style={{ padding:"14px calc(14px + var(--safe-right)) calc(60px + var(--safe-bottom)) calc(14px + var(--safe-left))" }}>
+      <div style={{ maxWidth: "var(--large-lisible)", margin: "0 auto", padding:"14px calc(14px + var(--safe-right)) calc(60px + var(--safe-bottom)) calc(14px + var(--safe-left))" }}>
         {estBibliotheque && (affichee.length === 0 ? emptyState : (
           <>
           {sections.map(({ titre, jeux }) => (
@@ -1303,6 +1347,10 @@ export default function App() {
         )}
 
         {tab === "settings" && (
+          // `outils` : les opérations longues, rassemblées dans le sous-onglet
+          // du même nom. Toutes portent sur `games`, la bibliothèque entière —
+          // ni l'univers courant ni les filtres n'entrent dans leur compte, et
+          // c'est ce qui leur permet de vivre hors de la liste.
           <SettingsView
             modeTheme={modeTheme} setModeTheme={setModeTheme}
             keys={keys} setKeys={setKeys}
@@ -1316,6 +1364,23 @@ export default function App() {
             exclusions={exclusions}
             onViderExclusions={() => {
               if (window.confirm(`Vider la liste des ${exclusions.length} jeu(x) écarté(s) ?\n\nAu prochain import Playnite, ils reviendront.`)) setExclusions([]);
+            }}
+            outils={{
+              onRefreshDescriptions: refreshAllDescriptions,
+              refreshing, refreshProg, refreshTotal: games.length,
+              onCancelRefresh: cancelRefresh,
+              onImportXbox: () => setShowImport(true),
+              onCompleterEditions: completerEditions,
+              editionsCompletables,
+              onRattraperJaquettes: rattraperJaquettes,
+              jaquettesEnCours, jaquettesProg, jaquettesTotal,
+              onAnnulerJaquettes: annulerJaquettes,
+              jaquettesManquantes: games.filter(g => !g.cover).length,
+              onCompleterScores: completerScores,
+              scoresEnCours, scoresProg, scoresTotal,
+              onAnnulerScores: annulerScores,
+              scoresManquants: jeuxSansScore(games).length,
+              notesDeclarees: jeuxNoteDeclareeAbsente(games).length,
             }}
           />
         )}
@@ -1399,36 +1464,6 @@ export default function App() {
           onClose={() => setShowSort(false)} />
       )}
 
-      {showActions && (
-        <ActionsSheet
-          onClose={() => setShowActions(false)}
-          onRefreshDescriptions={refreshAllDescriptions}
-          refreshing={refreshing}
-          refreshProg={refreshProg}
-          refreshTotal={games.length}
-          onCancelRefresh={cancelRefresh}
-          onImportXbox={() => setShowImport(true)}
-          onCompleterEditions={completerEditions}
-          editionsCompletables={editionsCompletables}
-          onRattraperJaquettes={rattraperJaquettes}
-          jaquettesEnCours={jaquettesEnCours}
-          jaquettesProg={jaquettesProg}
-          jaquettesTotal={jaquettesTotal}
-          onAnnulerJaquettes={annulerJaquettes}
-          jaquettesManquantes={games.filter(g => !g.cover).length}
-          onCompleterScores={completerScores}
-          scoresEnCours={scoresEnCours}
-          scoresProg={scoresProg}
-          scoresTotal={scoresTotal}
-          onAnnulerScores={annulerScores}
-          scoresManquants={jeuxSansScore(games).length}
-          notesDeclarees={jeuxNoteDeclareeAbsente(games).length}
-          onPartager={partagerListe}
-          partageTotal={affichee.length}
-          partageFiltre={affichee.length < jeuxUnivers.length}
-        />
-      )}
-
       {notesChoix && (
         <NotesChoixSheet
           propositions={notesChoix.propositions} stopped={notesChoix.stopped}
@@ -1440,11 +1475,11 @@ export default function App() {
         : <ScoresSheet bilan={scoresBilan} onAnnulerScore={retirerScore} onClose={() => setScoresBilan(null)} />)}
 
       {majDispo && (
-        <div role="status" style={{ position:"fixed", bottom:20, left:"50%", transform:"translateX(-50%)", width:"max-content", zIndex:401, display:"flex", alignItems:"center", gap:10, maxWidth:"calc(100vw - 24px)", background:card, border:`1px solid ${accent}`, borderRadius: "var(--r-md)", padding:"10px 14px", boxShadow:"0 8px 24px rgba(0,0,0,0.4)", animation:"toastIn 200ms ease" }}>
+        <div role="status" style={{ ...bandeauBas, zIndex:401, gap:"var(--ecart-tap)", border:`1px solid ${accent}` }}>
           {/* Sur 412 px, les trois éléments ne tiennent que si le libellé ne
               se casse pas : « installée » partait à la ligne, seul. */}
           <span style={{ color:txt, fontSize: "var(--t-corps)", whiteSpace:"nowrap" }}>✨ Nouvelle version</span>
-          <button onClick={() => location.reload()} style={{ background:accentDoux, border:`1px solid ${accent}`, color:accent, borderRadius: "var(--r-sm)", padding:"4px 12px", fontSize: "var(--t-petit)", fontWeight:600, cursor:"pointer" }}>Recharger</button>
+          <button onClick={() => location.reload()} style={btnBandeau(accent, accentDoux)}>Recharger</button>
           <button onClick={() => setMajDispo(false)} aria-label="Plus tard" style={{ ...btnFermer, color:mut }}>✕</button>
         </div>
       )}
@@ -1455,17 +1490,17 @@ export default function App() {
           Invisible tant que le texte était court — « supprimé » précédé d'un
           titre à rallonge le montrait déjà. */}
       {avis && (
-        <div role="status" style={{ position:"fixed", bottom:20, left:"50%", transform:"translateX(-50%)", width:"max-content", zIndex:400, display:"flex", alignItems:"center", gap:14, maxWidth:"calc(100vw - 24px)", background:card, border:`1px solid ${bdr}`, borderRadius: "var(--r-md)", padding:"10px 14px", boxShadow:"0 8px 24px rgba(0,0,0,0.4)", animation:"toastIn 200ms ease" }}>
+        <div role="status" style={{ ...bandeauBas, zIndex:400, gap:14, border:`1px solid ${bdr}` }}>
           <span style={{ color:txt, fontSize: "var(--t-corps)" }}>{avis}</span>
           <button onClick={() => setAvis(null)} aria-label="Masquer"
-            style={{ background:"transparent", border:`1px solid ${bdr}`, color:mut, borderRadius: "var(--r-sm)", padding:"4px 12px", fontSize: "var(--t-petit)", cursor:"pointer" }}>OK</button>
+            style={{ ...btnBandeau(bdrChamp), color:mut, fontWeight:400 }}>OK</button>
         </div>
       )}
 
       {deleted && (
-        <div role="status" style={{ position:"fixed", bottom:20, left:"50%", transform:"translateX(-50%)", width:"max-content", zIndex:400, display:"flex", alignItems:"center", gap:14, background:card, border:`1px solid ${bdr}`, borderRadius: "var(--r-md)", padding:"10px 14px", boxShadow:"0 8px 24px rgba(0,0,0,0.4)", animation:"toastIn 200ms ease" }}>
-          <span style={{ color:txt, fontSize: "var(--t-corps)" }}>🗑 « {deleted.game.title} » supprimé</span>
-          <button onClick={undoDelete} style={{ background:"transparent", border:`1px solid ${accent}`, color:accent, borderRadius: "var(--r-sm)", padding:"4px 12px", fontSize: "var(--t-petit)", fontWeight:600, cursor:"pointer" }}>Annuler</button>
+        <div role="status" style={{ ...bandeauBas, zIndex:400, gap:14, border:`1px solid ${bdr}` }}>
+          <span style={{ color:txt, fontSize: "var(--t-corps)", minWidth:0 }}>🗑 « {deleted.game.title} » supprimé</span>
+          <button onClick={undoDelete} style={btnBandeau(accent)}>Annuler</button>
         </div>
       )}
     </div>

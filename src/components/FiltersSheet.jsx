@@ -1,6 +1,6 @@
 import { useState } from "react";
 import Sheet from "./Sheet.jsx";
-import { card, bdr, txt, mut, accent, accentDoux, warn } from "../lib/theme.js";
+import { card, bdr, txt, mut, accent, accentDoux, warn, bdrChamp } from "../lib/theme.js";
 import { PLATFORMS, BACK_COMPAT, SEUILS_NOTE, SANS_NOTE, CHAMPS_A_COMPLETER, compterFiltres } from "../lib/model.js";
 
 const ACCENT = accent;
@@ -349,7 +349,7 @@ export default function FiltersSheet({
           bouton qui dit en direct combien de jeux il reste. Le fond reprend
           celui du panneau, donc la liste passe dessous sans transparence. */}
       <div style={{
-        display: "flex", gap: 8, alignItems: "center",
+        display: "flex", gap: "var(--ecart-tap)", alignItems: "center",
         position: "sticky", bottom: 0, background: card,
         paddingTop: 12, marginTop: 16, borderTop: `1px solid ${bdr}`,
       }}>
@@ -362,7 +362,7 @@ export default function FiltersSheet({
           disabled={actifs === 0}
           style={{
             flex: 1, minHeight: "var(--tap)", background: "transparent",
-            border: `1px solid ${bdr}`, color: actifs ? txt : mut, borderRadius: "var(--r-sm)",
+            border: `1px solid ${bdrChamp}`, color: actifs ? txt : mut, borderRadius: "var(--r-sm)",
             fontSize: "var(--t-corps)", cursor: actifs ? "pointer" : "default", opacity: actifs ? 1 : 0.5,
             fontFamily: "inherit",
           }}

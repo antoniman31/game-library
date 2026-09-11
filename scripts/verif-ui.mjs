@@ -10,10 +10,17 @@
 // Ce script ouvre l'application construite, à la largeur de deux téléphones
 // courants, dans les deux thèmes, et échoue s'il trouve :
 //   - une cible interactive sous 44 × 24 px (Apple HIG, WCAG 2.5.5) ;
+//   - deux cibles voisines séparées de moins de 8 px (règle de séparation) ;
 //   - un texte sous 12 px ;
 //   - un champ de saisie sous 16 px (sous quoi Safari iOS zoome tout seul) ;
+//   - un élément fixe posé dans la bande de la barre de gestes du téléphone ;
 //   - un débordement horizontal de la page ;
 //   - une erreur JavaScript.
+//
+// Les deux contrôles ajoutés en dernier ont trouvé, le jour même : six paires
+// de boutons à 6 px l'une de l'autre — dont la barre d'onglets entière — et
+// les trois bandeaux flottants du bas, posés à vingt pixels du bord, c'est-à-dire
+// dans la bande où le balayage du système passe avant l'application.
 //
 // Il n'est pas dans `npm test` : il demande un navigateur, là où les autres
 // tests tournent sur des modules purs. `npm run verif:ui` construit puis
@@ -63,6 +70,11 @@ const PLANCHER_HAUTEUR = 44;   // HIG, WCAG 2.5.5
 const PLANCHER_LARGEUR = 24;   // WCAG 2.5.8, pour les commandes en ligne
 const PLANCHER_TEXTE = 12;   // plancher d'une pastille ou d'un horodatage
 const PLANCHER_CHAMP = 16;     // au-dessous, Safari iOS zoome à la prise de focus
+const ECART_MIN = 8;           // séparation entre deux cibles voisines
+// Hauteur de la barre de gestes d'un téléphone récent. `viewport-fit=cover`
+// fait passer la page dessous : ce qui y est posé est atteignable en théorie
+// et capturé par le système en pratique.
+const BARRE_GESTES = 34;
 
 const ECRANS = [[360, "dark"], [360, "light"], [412, "dark"]];
 
@@ -87,6 +99,87 @@ const mesurer = () => ({
   champs: [...new Set([...document.querySelectorAll("input, textarea, select")]
     .map(el => parseFloat(getComputedStyle(el).fontSize))
     .filter(t => t < 16))],
+  // Deux cibles distinctes veulent 8 px entre elles, sans quoi le doigt prend
+  // l'une pour l'autre. Trois familles de paires n'en sont pas :
+  //   - celles dont l'une est couverte par un panneau — elle n'est pas
+  //     touchable, donc pas confondable ; sans ce filtre, chaque panneau
+  //     ouvert signalait sa distance aux onglets restés derrière lui ;
+  //   - celles qui traversent une barre collante, où l'écart est celui d'un
+  //     instant de défilement et non une disposition ;
+  //   - les lignes d'une liste contiguë et le contenu d'un accordéon sous son
+  //     propre en-tête, où le contact EST le motif.
+  colles: (() => {
+    const collant = (el) => {
+      for (let n = el; n && n !== document.body; n = n.parentElement) {
+        const p = getComputedStyle(n).position;
+        if (p === "sticky" || p === "fixed") return n;
+      }
+      return null;
+    };
+    // Une cible que le point de son centre ne renvoie pas est recouverte.
+    const touchable = (el, r) => {
+      const x = Math.min(Math.max(r.left + r.width / 2, 1), innerWidth - 1);
+      const y = Math.min(Math.max(r.top + r.height / 2, 1), innerHeight - 1);
+      const dessus = document.elementFromPoint(x, y);
+      return dessus && (el === dessus || el.contains(dessus) || dessus.contains(el));
+    };
+    const cibles = [...document.querySelectorAll('button, a[href], input, select, textarea, [role="button"]')]
+      .map(el => [el, el.getBoundingClientRect()])
+      .filter(([, r]) => r.width > 1 && r.height > 1 && r.bottom > 0 && r.top < innerHeight)
+      .filter(([el, r]) => touchable(el, r));
+    const voisinsDeListe = (a, b) => {
+      const pa = a.closest("label, li") || a.parentElement;
+      const pb = b.closest("label, li") || b.parentElement;
+      return pa && pb && pa !== pb && pa.parentElement === pb.parentElement;
+    };
+    const vus = new Set();
+    for (let i = 0; i < cibles.length; i++) {
+      for (let j = i + 1; j < cibles.length; j++) {
+        const [ea, a] = cibles[i], [eb, b] = cibles[j];
+        if (ea.contains(eb) || eb.contains(ea)) continue;
+        if (collant(ea) !== collant(eb)) continue;
+        // Un en-tête d'accordéon et ce qu'il déplie ne sont pas deux voisins
+        // qu'on risque de confondre : l'un fait apparaître l'autre.
+        if (ea.hasAttribute("aria-expanded") || eb.hasAttribute("aria-expanded")) continue;
+        const dx = Math.max(0, Math.max(a.left, b.left) - Math.min(a.right, b.right));
+        const dy = Math.max(0, Math.max(a.top, b.top) - Math.min(a.bottom, b.bottom));
+        if (dx === 0 && dy === 0) continue;          // superposées
+        if (dx >= 8 && dy >= 8) continue;            // en diagonale, pas voisines
+        const d = Math.hypot(dx, dy);
+        if (d >= 7.5) continue;
+        if (voisinsDeListe(ea, eb)) continue;
+        const nom = el => (el.innerText || el.getAttribute("aria-label") || el.type || el.tagName)
+          .trim().replace(/\s+/g, " ").slice(0, 22);
+        vus.add(`${nom(ea)} / ${nom(eb)} — ${d.toFixed(1)} px`);
+      }
+    }
+    return [...vus];
+  })(),
+  // `viewport-fit=cover` fait passer la page SOUS la barre de gestes du
+  // téléphone. Un bandeau flottant doit donc ajouter --safe-bottom à sa
+  // distance au bord, sans quoi son bouton tombe dans la bande où le balayage
+  // du système passe avant l'application.
+  //
+  // Ce n'est pas mesurable en pixels ici : ce navigateur n'a ni encoche ni
+  // barre, `env(safe-area-inset-bottom)` y vaut zéro, et un bandeau correct
+  // rend exactement la même valeur qu'un bandeau fautif. C'est donc la
+  // déclaration qu'on lit — le style en ligne, tel qu'il est écrit — et non
+  // son résultat.
+  sousLaBarre: [...new Set([...document.querySelectorAll("*")]
+    .filter(el => getComputedStyle(el).position === "fixed")
+    .filter(el => el.matches("button, a[href], input") || el.querySelector("button, a[href], input"))
+    .map(el => [el, el.getBoundingClientRect()])
+    // Un panneau ancré au bas de l'écran couvre légitimement le bord : c'est
+    // sa garniture intérieure qui écarte ses boutons de la barre, pas sa
+    // position. Seuls les éléments qui flottent au-dessus sont concernés.
+    .filter(([el, r]) => r.height && r.bottom > innerHeight - 34 && r.top > 0
+      && getComputedStyle(el).inset !== "0px" && r.width < innerWidth)
+    .filter(([el]) => {
+      const declare = (n) => n && (/safe-bottom|safe-area-inset-bottom/.test(n.getAttribute("style") || "")
+        || (n !== document.body && declare(n.parentElement)));
+      return !declare(el);
+    })
+    .map(([el, r]) => `${el.textContent.trim().replace(/\s+/g, " ").slice(0, 30)} — bas à ${Math.round(innerHeight - r.bottom)} px, sans --safe-bottom`))],
   // Un libellé coupé par `text-overflow` fait passer l'écran pour cassé.
   //
   // La largeur voulue se mesure par un Range sur le texte, pas par
@@ -134,6 +227,9 @@ for (const [largeur, theme] of ECRANS) {
   const page = await ctx.newPage();
   const erreurs = [];
   page.on("pageerror", e => erreurs.push(String(e)));
+  // Supprimer un jeu demande confirmation ; sans réponse, l'étape resterait
+  // bloquée sur une boîte que Playwright refuse par défaut.
+  page.on("dialog", d => d.accept());
   await page.goto(URL_APP, { waitUntil: "networkidle" });
   await page.evaluate(t => localStorage.setItem("gl_theme", t), theme);
   await page.reload({ waitUntil: "networkidle" });
@@ -202,16 +298,18 @@ for (const [largeur, theme] of ECRANS) {
       await page.getByRole("button", { name: /^Console$/ }).click();
     }],
     ["Stats", async () => { await page.getByRole("button", { name: "Stats" }).click(); }],
-    ["panneau Actions", async () => {
-      await page.getByRole("button", { name: "Actions" }).click();
-    }],
     ["Réglages", async () => { await page.keyboard.press("Escape"); await page.getByRole("button", { name: "Réglages" }).click(); }],
+    // Les trois sous-onglets. « Outils » est celui où vivent désormais les
+    // opérations longues et les deux imports, et c'est un onglet de plus à
+    // tenir sur 360 px : trois boutons en `flex: 1` y tombent à 105 px, et
+    // « Sauvegarde » en demande presque autant.
+    ["Réglages · Outils", async () => { await page.getByRole("button", { name: "Outils" }).click(); }],
     ["Services", async () => { await page.getByRole("button", { name: "Services" }).click(); }],
     // L'import Playnite, avant et après lecture d'un fichier : la liste des
     // lignes n'existe qu'une fois le fichier lu, et c'est elle qui porte les
     // cases à cocher et les pastilles — donc les cibles à mesurer.
     ["import Playnite", async () => {
-      await page.getByRole("button", { name: "Sauvegarde" }).click();
+      await page.getByRole("button", { name: "Outils" }).click();
       await page.getByRole("button", { name: /Importer un export Playnite/ }).click();
     }],
     ["import Playnite · fichier lu", async () => {
@@ -227,18 +325,77 @@ for (const [largeur, theme] of ECRANS) {
         ])),
       });
     }],
+    // Les accordéons d'une fiche restent repliés : leurs champs — trois liens,
+    // un mémo, un tag — n'étaient donc jamais rendus, donc jamais mesurés. Ils
+    // faisaient 27 px.
+    // On revient d'abord dans la bibliothèque : les étapes précédentes
+    // s'arrêtaient dans les Réglages, où il n'y a pas de fiche à déplier.
+    ["fiche · liens et notes", async () => {
+      await page.keyboard.press("Escape");
+      await page.getByRole("button", { name: /^Console$/ }).click();
+      if (!(await page.getByRole("button", { name: /Liens & contenu/ }).count())) {
+        await page.locator(".gl-card").first().click();
+      }
+      await page.getByRole("button", { name: /Liens & contenu/ }).first().click();
+      await page.getByRole("button", { name: /Notes/ }).first().click();
+    }],
+    // Les trois panneaux de source d'une fiche, chacun avec son champ de
+    // recherche — trois champs de 32 px, pour l'endroit où le doigt se pose en
+    // arrivant dans le panneau.
+    ["fiche · panneau RAWG", async () => {
+      await page.getByRole("button", { name: /Modifier la fiche/ }).first().click();
+      await page.getByRole("button", { name: "🔄 RAWG" }).click();
+    }],
+    ["fiche · panneau Wikipédia", async () => {
+      await page.keyboard.press("Escape");
+      await page.getByRole("button", { name: /Modifier la fiche/ }).first().click();
+      await page.getByRole("button", { name: "📚 Wikipédia" }).click();
+    }],
+    ["fiche · panneau Jaquette", async () => {
+      await page.keyboard.press("Escape");
+      await page.getByRole("button", { name: /Modifier la fiche/ }).first().click();
+      await page.getByRole("button", { name: "📦 Jaquette" }).click();
+    }],
+    // Le formulaire de prêt : deux champs et deux boutons que rien n'ouvrait
+    // dans la promenade, puisqu'il faut d'abord toucher « Prêter ce jeu ».
+    ["fiche · formulaire de prêt", async () => {
+      await page.keyboard.press("Escape");
+      const bouton = page.getByRole("button", { name: /Prêter ce jeu/ }).first();
+      if (await bouton.count()) await bouton.click();
+    }],
+    // Les trois bandeaux flottants du bas. Ils n'apparaissent qu'après une
+    // action, et c'est pour ça que leurs boutons de 26 px ont tenu si
+    // longtemps. Celui de suppression se fabrique : on supprime un jeu, et on
+    // l'annule aussitôt par le bandeau lui-même — ce qui mesure les deux.
+    ["bandeau de suppression", async () => {
+      await page.keyboard.press("Escape");
+      if (!(await page.getByRole("button", { name: /^Supprimer$/ }).count())) {
+        await page.locator(".gl-card").first().click();
+      }
+      await page.getByRole("button", { name: /^Supprimer$/ }).first().click();
+      await page.waitForTimeout(300);
+    }],
+    ["retour du jeu supprimé", async () => {
+      const annuler = page.getByRole("button", { name: "Annuler" }).last();
+      if (await annuler.count()) await annuler.click();
+      await page.waitForTimeout(200);
+    }],
     // Trois écrans que la promenade ne visitait pas, et où trois défauts ont
     // vécu des mois : des boutons de 26 et 40 px dans la fenêtre d'ajout, et
     // un « Lire la suite » de 20 px sur une fiche assez longue pour l'afficher.
     // Un garde-fou ne protège que ce qu'il regarde.
     ["Ajouter un jeu", async () => {
       await page.keyboard.press("Escape");
+      await page.keyboard.press("Escape");
       await page.getByRole("button", { name: /^Console$/ }).click();
       await page.getByRole("button", { name: "+ Ajouter" }).click();
     }],
     ["édition à la main", async () => {
       await page.keyboard.press("Escape");
-      await page.locator(".gl-card").first().click();
+      // La fiche peut déjà être dépliée : la rouvrir la refermerait.
+      if (!(await page.getByRole("button", { name: /Modifier la fiche/ }).count())) {
+        await page.locator(".gl-card").first().click();
+      }
       await page.getByRole("button", { name: /Modifier la fiche/ }).first().click();
       await page.getByRole("button", { name: /À la main/ }).first().click();
     }],
@@ -274,6 +431,7 @@ for (const [largeur, theme] of ECRANS) {
       // Enregistrer referme la feuille ET la carte : sans la rouvrir, ni la
       // mention ni le bouton de repli ne sont à l'écran au moment de mesurer.
       await page.locator(".gl-card").first().click();
+      await page.waitForTimeout(200);
     }],
   ];
 
@@ -286,6 +444,8 @@ for (const [largeur, theme] of ECRANS) {
     if (r.cibles.length) signaler(ou, `${r.cibles.length} cible(s) sous ${PLANCHER_HAUTEUR}×${PLANCHER_LARGEUR} px`, r.cibles);
     if (r.textes.length) signaler(ou, `texte sous ${PLANCHER_TEXTE} px`, r.textes);
     if (r.champs.length) signaler(ou, `champ sous ${PLANCHER_CHAMP} px (zoom iOS)`, r.champs.map(t => `${t}px`));
+    if (r.colles.length) signaler(ou, `${r.colles.length} paire(s) de cibles à moins de ${ECART_MIN} px`, r.colles);
+    if (r.sousLaBarre.length) signaler(ou, `élément fixe dans les ${BARRE_GESTES} px de la barre de gestes`, r.sousLaBarre);
     if (r.tronques.length) signaler(ou, "libellé tronqué", r.tronques);
   }
 

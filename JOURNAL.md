@@ -1160,6 +1160,138 @@ ce qu'on a écrit.
 
 ---
 
+### Phase 35 — Le second audit d'ergonomie, et pourquoi le premier n'avait pas suffi
+
+L'application a été reconfrontée à son cahier des charges d'ergonomie, fichier
+par fichier cette fois, et mesurée dans le navigateur plutôt que relue. Le
+garde-fou `verif:ui` disait « Rien à signaler ». Il avait raison sur ce qu'il
+regardait, et c'est exactement le problème : la promenade ne visitait ni les
+accordéons d'une fiche — trois champs de liens et un mémo, à 27 px —, ni les
+trois panneaux de source, dont le champ de recherche faisait 32 px, ni les
+bandeaux flottants du bas, qui n'apparaissent qu'après une action et portaient
+donc depuis toujours des boutons de 26 px pour « Recharger », « OK » et
+« Annuler » — cette dernière étant la commande la plus pressée de
+l'application, celle qui rattrape une suppression avant qu'elle ne devienne
+vraie.
+
+Ces mêmes bandeaux étaient posés à `bottom: 20`, sans la zone sûre. Or
+`viewport-fit=cover` fait passer la page SOUS la barre de gestes du téléphone,
+et vingt pixels n'en sortent pas : le bouton tombait dans la bande où le
+balayage du système passe avant l'application. Tout le reste du projet respecte
+`--safe-bottom` ; ces trois-là l'avaient manqué parce qu'ils étaient écrits
+trois fois, chacun dans son coin.
+
+La fenêtre d'import Xbox, elle, n'était jamais entrée dans la promenade du
+tout : elle demande une clé xbl.io pour seulement s'ouvrir. C'était la seule à
+réimplémenter le panneau glissant au lieu d'utiliser `Sheet` — même fond noir,
+même repli par le bas, mais sans piège à focus, sans Échap, sans verrou de
+défilement, sans `role="dialog"` et sans croix. Elle avait donc gardé tous les
+défauts que les autres écrans avaient corrigés depuis : des boutons de 39 px —
+la hauteur de leur texte, faute de plancher, exactement le bug dont le
+commentaire d'`AddModal` raconte la correction —, un « Tout cocher » de 24, des
+lignes sans hauteur minimale, un rayon écrit en dur et `85vh` là où `dvh` évite
+de passer sous la barre d'adresse. Une fenêtre écrite à part ne reçoit aucune
+des corrections faites ailleurs, et personne ne s'en aperçoit.
+
+Le reste s'est trouvé en lisant, pas en mesurant :
+
+Sept éléments cliquables n'étaient pas des boutons — suggestions RAWG et
+Wikipédia, vignettes de jaquette, posées sur des `<div onClick>` et des `<img
+onClick>`. Trois conséquences invisibles à l'œil : Entrée ne les activait pas,
+le piège à focus du panneau ne les voyait pas — Tab sautait donc par-dessus la
+liste entière —, et un lecteur d'écran les annonçait comme du texte.
+
+`--bdr` donne 1,3:1 sur son fond. Pour un filet entre deux lignes, c'est sans
+conséquence ; mais c'était aussi le contour des champs de saisie et des boutons
+fantômes, c'est-à-dire la seule chose qui dise où le contrôle commence, et WCAG
+1.4.11 chiffre ça à 3:1. D'où `--bdr-champ`, un second jeton plutôt qu'un
+relèvement du premier : monter `--bdr` aurait quadrillé chaque carte de traits
+durs pour un gain nul, une carte se distinguant déjà par son fond.
+
+Le corps de l'application n'avait aucune largeur maximale. Les panneaux étaient
+plafonnés à 500 px depuis toujours ; le corps, non. Sur un écran de 1440, chaque
+onglet s'étirait à 350 px, « Supprimer » se retrouvait à treize cents pixels de
+« Modifier la fiche », et une description aurait couru sur cent soixante
+caractères par ligne — deux fois ce que l'œil suit. Le contenu s'arrête
+désormais à 720 px, mais pas le fond des barres collantes : centrer la barre
+elle-même aurait laissé voir la liste défiler dans les bandes nues de chaque
+côté.
+
+Deux jetons, `--platine` et `--slate`, étaient déclarés et utilisés nulle part.
+`--slate` n'était même pas redéfini pour le thème clair. Les deux échouaient au
+contraste s'ils avaient servi.
+
+Une douzaine de `fontSize` étaient écrits sur des champs de saisie qu'une règle
+`!important` d'`index.css` écrase à 16 px depuis la phase 13. Du code mort, et
+trompeur : il laissait croire qu'un champ faisait 14 px.
+
+Le code de synchronisation était en `type="password"`, et le seul bouton
+« Afficher » vivait au bas de l'onglet Services — l'autre onglet. On ne pouvait
+donc pas lire sur le téléphone le code qu'il faut retaper sur l'autre appareil.
+Chaque valeur masquée porte maintenant son propre œil, ce qui règle du même coup
+l'ergonomie des clés : relire la troisième n'oblige plus à défiler jusqu'en bas
+en découvrant les deux autres au passage.
+
+Enfin, deux ajustements de disposition. La fenêtre d'ajout mettait « Plateforme »
+et « Format » sur deux colonnes, ce que le cahier des charges interdit sur
+mobile — le regard descend la première sans voir la seconde. Et le panneau
+Actions offrait six choix à plat : les nommer en trois groupes n'en retire
+aucun, mais ramène le premier choix à trois.
+
+Le garde-fou a gagné les écrans manquants et deux règles neuves : la séparation
+de 8 px entre deux cibles voisines, et la zone sûre du bas. L'une et l'autre ont
+trouvé quelque chose le jour même — six paires de boutons à 6 px, dont la barre
+d'onglets entière. La seconde ne peut pas se mesurer en pixels ici : sans
+encoche, `env(safe-area-inset-bottom)` vaut zéro, et un bandeau correct rend
+exactement la même valeur qu'un bandeau fautif. C'est donc la déclaration qui se
+lit, pas son résultat. Les deux règles ont été vérifiées en réintroduisant les
+défauts qu'elles visent — un garde-fou qu'on n'a pas vu échouer ne prouve rien.
+
+---
+
+### Phase 36 — Les actions descendent dans les Réglages
+
+Le panneau « ⋯ » de l'en-tête a déménagé dans ⚙️, sous un troisième sous-onglet
+« Outils », à côté de Sauvegarde et Services.
+
+Le déclencheur est une incohérence que l'audit de la phase 35 avait laissée
+passer : « Importer ma bibliothèque Xbox » vivait dans le panneau ⋯ pendant que
+« Importer un export Playnite » vivait dans les Réglages. Même geste, même
+raison, deux écrans. Ils sont maintenant voisins dans le groupe « Faire entrer
+des jeux ».
+
+La vérification qui a décidé de la forme : ces actions travaillent sur `games`,
+la bibliothèque entière. Ni l'univers courant, ni les filtres n'entrent dans
+leur compte — `jaquettesManquantes` compte sur `games`, pas sur `jeuxUnivers`.
+Un panneau qui s'ouvre par-dessus la liste laissait croire le contraire, et
+rien ne les rattachait à l'écran d'où l'on venait.
+
+Une seule fait exception, et elle est restée : « Partager la liste » envoie ce
+que les filtres montrent, dans l'univers courant. Depuis les Réglages, on
+partagerait une sélection qu'on ne voit pas et qu'on n'a pas posée, sous un
+libellé qui dirait « ceux que les filtres montrent » sans qu'aucun filtre soit
+à l'écran. Elle prend donc la place du « ⋯ » dans l'en-tête, sous la forme
+« 📤 » — et une icône qui dit ce qu'elle fait vaut mieux qu'une ellipse qui dit
+« il y a autre chose ici ». Elle disparaît sur Stats et Réglages, où il n'y a
+pas de liste à partager.
+
+Ce qu'on perd : le « ⋯ » virait au ⏳ accentué pendant une actualisation. Ce
+signal doublait déjà les bandeaux de l'en-tête, qui annoncent la même
+progression avec de quoi l'arrêter — et qui s'affichent sur tous les onglets,
+Réglages compris. On peut donc lancer depuis ⚙️ et arrêter depuis n'importe où.
+
+Deux choses mesurées plutôt que supposées : trois sous-onglets en `flex: 1`
+tombent à 105 px sur 360, et « Sauvegarde » y tient sans se tronquer ; et le
+nouvel onglet est entré dans la promenade de `verif:ui` en même temps que le
+code, faute de quoi on recommençait l'histoire de la phase 35 — un garde-fou
+qui ne regarde pas là où on vient d'écrire.
+
+`ActionsSheet.jsx` devient `PanneauOutils.jsx` et perd son enveloppe `Sheet` :
+il n'est plus une fenêtre, c'est le contenu d'un onglet. Les lignes n'ont pas
+bougé d'un pixel.
+
+---
+
 ## 3. Architecture finale
 
 ```
