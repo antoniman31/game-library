@@ -5,6 +5,7 @@ import { pertesDeReglages, messageDePerte, messageCodeSync, CONSEQUENCES } from 
 import { etatSauvegarde, texteAgeSauvegarde } from "../lib/preferences.js";
 import ChampProtege from "./ChampProtege.jsx";
 import SousOnglets from "./SousOnglets.jsx";
+import PanneauOutils from "./PanneauOutils.jsx";
 
 // Les réglages, refaits.
 //
@@ -19,10 +20,16 @@ import SousOnglets from "./SousOnglets.jsx";
 // une saisie, Bouton en trois intentions (principale, neutre, danger), une
 // hauteur unique à la taille du pouce.
 //
-// Deux sous-onglets, comme dans les Stats et avec le même sélecteur : depuis
-// que les clés se verrouillent, « Clés des services » a doublé de hauteur et
-// repoussait la synchronisation hors de l'écran. Sauvegarde répond à « où
-// vont mes données », Services à « avec quoi l'application parle dehors ».
+// Trois sous-onglets, avec le même sélecteur que les Stats. Depuis que les
+// clés se verrouillent, « Clés des services » a doublé de hauteur et
+// repoussait la synchronisation hors de l'écran. Sauvegarde répond à « où vont
+// mes données », Outils à « qu'est-ce que je lance », Services à « avec quoi
+// l'application parle dehors ».
+//
+// « Outils » est arrivé en dernier, en remplacement du panneau « ⋯ » de
+// l'en-tête. Deux raisons : l'import Xbox y vivait pendant que l'import
+// Playnite vivait ici, pour le même geste ; et rien de ce que ce panneau lance
+// ne dépend de l'écran d'où l'on vient. Voir PanneauOutils.jsx.
 //
 // L'apparence reste au-dessus des onglets plutôt que dans l'un des deux :
 // trois boutons ne remplissent pas un onglet, et c'est le seul réglage qu'on
@@ -103,6 +110,7 @@ export default function SettingsView({
   sync, majSync, genererCode, syncEtat, setSyncEtat, onEnvoyer, onRecuperer,
   onExporter, onImporter,
   onPlaynite, exclusions, onViderExclusions,
+  outils,
 }) {
   // Le relais vit avec les clés et ne part jamais dans la sauvegarde : sans
   // lui, il n'y a rien à joindre, donc rien à réclamer.
@@ -157,9 +165,12 @@ export default function SettingsView({
       </Section>
 
       <SousOnglets valeur={onglet} onChange={setOnglet}
-        options={[["sauvegarde", "Sauvegarde"], ["services", "Services"]]} />
+        options={[["sauvegarde", "Sauvegarde"], ["outils", "Outils"], ["services", "Services"]]} />
 
-      {onglet === "sauvegarde" ? (
+      {onglet === "outils" ? (
+        <PanneauOutils {...outils} onPlaynite={onPlaynite}
+          exclusions={exclusions} onViderExclusions={onViderExclusions} />
+      ) : onglet === "sauvegarde" ? (
         <>
           <Section titre="Synchronisation"
             aide="Dépose la bibliothèque sur ton relais Cloudflare pour la retrouver sur un autre appareil. Saisis le même code partout ; il reste sur l'appareil et ne part jamais dans l'export.">
@@ -262,18 +273,6 @@ export default function SettingsView({
             </div>
           </Section>
 
-          <Section titre="Jeux PC (Playnite)"
-            aide="Playnite lit Steam, Epic, GOG et Amazon depuis ton PC ; son export apporte ici les jeux avec leur boutique, et les infos qu'il a téléchargées. Rien n'est écrit avant que tu aies vu la liste.">
-            <Bouton pleinePlace intention="principal" onClick={onPlaynite}>🖥️ Importer un export Playnite</Bouton>
-            {exclusions?.length > 0 && (
-              <div style={{ marginTop: 12 }}>
-                <p style={{ color: mut, fontSize: "var(--t-legende)", lineHeight: 1.5, margin: "0 0 8px" }}>
-                  {exclusions.length} jeu(x) écarté(s) : supprimés après un import, ils ne reviendront pas au suivant.
-                </p>
-                <Bouton onClick={onViderExclusions}>Vider la liste des écartés</Bouton>
-              </div>
-            )}
-          </Section>
         </>
       ) : (
         <Section titre="Clés et relais"

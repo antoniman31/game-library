@@ -265,6 +265,12 @@ Deux sous-onglets. Chaque bloc disparaît quand il n'a rien à dire.
 
 ## Fait récemment
 
+- **Les actions déménagent dans les Réglages**, sous un troisième sous-onglet « Outils »
+  aux côtés de Sauvegarde et Services : les deux imports — Xbox et Playnite — y sont
+  enfin voisins au lieu de vivre dans deux écrans différents pour le même geste. Le
+  bouton « ⋯ » de l'en-tête laisse la place à « 📤 Partager », la seule de ces actions
+  qui dépende de ce que les filtres montrent.
+
 - **Second audit d'ergonomie**, fichier par fichier et mesuré dans le navigateur : la
   fenêtre d'import Xbox repose enfin sur `Sheet` (elle n'avait ni piège à focus, ni
   Échap, ni boutons au plancher), les trois bandeaux flottants respectent la zone sûre
@@ -352,6 +358,6 @@ game-library/
     │                        surveille ce qui est écrit deux fois)
     └── components/       ← GameCard, AddModal, ImportModal, PlayniteModal, StatsView,
                              SettingsView, ScoresSheet, Sheet, FiltersSheet,
-                             ActionsSheet, SousOnglets, Cover, InfoboxView,
+                             PanneauOutils, SousOnglets, Cover, InfoboxView,
                              ChampProtege, ErrorBoundary
 ```

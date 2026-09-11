@@ -1249,6 +1249,49 @@ défauts qu'elles visent — un garde-fou qu'on n'a pas vu échouer ne prouve ri
 
 ---
 
+### Phase 36 — Les actions descendent dans les Réglages
+
+Le panneau « ⋯ » de l'en-tête a déménagé dans ⚙️, sous un troisième sous-onglet
+« Outils », à côté de Sauvegarde et Services.
+
+Le déclencheur est une incohérence que l'audit de la phase 35 avait laissée
+passer : « Importer ma bibliothèque Xbox » vivait dans le panneau ⋯ pendant que
+« Importer un export Playnite » vivait dans les Réglages. Même geste, même
+raison, deux écrans. Ils sont maintenant voisins dans le groupe « Faire entrer
+des jeux ».
+
+La vérification qui a décidé de la forme : ces actions travaillent sur `games`,
+la bibliothèque entière. Ni l'univers courant, ni les filtres n'entrent dans
+leur compte — `jaquettesManquantes` compte sur `games`, pas sur `jeuxUnivers`.
+Un panneau qui s'ouvre par-dessus la liste laissait croire le contraire, et
+rien ne les rattachait à l'écran d'où l'on venait.
+
+Une seule fait exception, et elle est restée : « Partager la liste » envoie ce
+que les filtres montrent, dans l'univers courant. Depuis les Réglages, on
+partagerait une sélection qu'on ne voit pas et qu'on n'a pas posée, sous un
+libellé qui dirait « ceux que les filtres montrent » sans qu'aucun filtre soit
+à l'écran. Elle prend donc la place du « ⋯ » dans l'en-tête, sous la forme
+« 📤 » — et une icône qui dit ce qu'elle fait vaut mieux qu'une ellipse qui dit
+« il y a autre chose ici ». Elle disparaît sur Stats et Réglages, où il n'y a
+pas de liste à partager.
+
+Ce qu'on perd : le « ⋯ » virait au ⏳ accentué pendant une actualisation. Ce
+signal doublait déjà les bandeaux de l'en-tête, qui annoncent la même
+progression avec de quoi l'arrêter — et qui s'affichent sur tous les onglets,
+Réglages compris. On peut donc lancer depuis ⚙️ et arrêter depuis n'importe où.
+
+Deux choses mesurées plutôt que supposées : trois sous-onglets en `flex: 1`
+tombent à 105 px sur 360, et « Sauvegarde » y tient sans se tronquer ; et le
+nouvel onglet est entré dans la promenade de `verif:ui` en même temps que le
+code, faute de quoi on recommençait l'histoire de la phase 35 — un garde-fou
+qui ne regarde pas là où on vient d'écrire.
+
+`ActionsSheet.jsx` devient `PanneauOutils.jsx` et perd son enveloppe `Sheet` :
+il n'est plus une fenêtre, c'est le contenu d'un onglet. Les lignes n'ont pas
+bougé d'un pixel.
+
+---
+
 ## 3. Architecture finale
 
 ```

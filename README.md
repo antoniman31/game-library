@@ -330,7 +330,7 @@ qui explique que certains éditeurs ne remontent pas si on ne demande que
 `Multiplayer` et `Co-op`, traduites dans le vocabulaire que le filtre par mode
 sait déjà lire.
 
-**Bouton « Partager la liste »** (panneau ⋯ Actions) : produit la liste **affichée** —
+**Bouton « 📤 Partager la liste »** (en-tête, sur Console et PC) : produit la liste **affichée** —
 donc celle de l'univers où l'on se trouve, console ou PC, et le titre le dit — en
 texte lisible — groupée par plateforme, un jeu par ligne avec son format et, le cas
 échéant, le prêt en cours avec sa date de retour convenue ; la note Metacritic n'y figure
@@ -339,7 +339,7 @@ dans le presse-papier ailleurs. Pas de sélecteur de plateforme : le panneau des
 déjà composé la liste, et deux endroits pour dire la même chose finiraient par se
 contredire.
 
-**Bouton « Compléter les notes manquantes »** (panneau ⋯ Actions) : trois sources dans
+**Bouton « Compléter les notes manquantes »** (⚙️ → Outils) : trois sources dans
 l'ordre de leur sûreté, la première qui répond gagne.
 
 1. **RAWG**, qui cherche par titre — et qu'un titre suffit à faire échouer :
@@ -378,7 +378,7 @@ chiffre ; les redemander à chaque passage transformait une action qui se termin
 corvée qui recommence. Une note saisie à la main efface la mention, un champ vidé rend
 la fiche aux sources.
 
-**Bouton « Rattraper les jaquettes manquantes »** (panneau ⋯ Actions) : cherche sur
+**Bouton « Rattraper les jaquettes manquantes »** (⚙️ → Outils) : cherche sur
 SteamGridDB une jaquette pour chaque fiche qui n'en a pas, avec progression et arrêt
 possible. L'application en rattrape déjà douze à chaque ouverture, ce qui convenait à une
 bibliothèque qui grandit d'un jeu par semaine ; un import Playnite en laisse cent
@@ -388,7 +388,7 @@ une grille où un jeu sur trois n'a pas la même forme se lit plus mal qu'une gr
 manque une image. Un titre trop éloigné de ce que la recherche renvoie est laissé sans
 image et compté à part : une jaquette fausse ne se remarque pas dans trois cents fiches.
 
-**Bouton « Actualiser les descriptions »** (panneau ⋯ Actions) : régénère la description de
+**Bouton « Actualiser les descriptions »** (⚙️ → Outils) : régénère la description de
 toute la bibliothèque depuis Wikipédia. Il est **annulable en cours de route**,
 respecte un délai anti-rate-limit (~150 ms) et affiche en fin de course la
 **liste des jeux sans page Wikipédia trouvée**. Il retient le **meilleur titre**
@@ -602,7 +602,7 @@ pour ce qui est déjà là, à trois lignes de distance.
   chemin de la fiche voisine.
 - **Deux moments** : à l'import Playnite, où le récapitulatif annonce combien de
   lignes se rempliront toutes seules et lesquelles (« déjà sur Xbox One ») ; et
-  par ⋯ → **« Remplir depuis les autres éditions »** pour les fiches déjà en
+  par ⚙️ → Outils → **« Remplir depuis les autres éditions »** pour les fiches déjà en
   place, qui annonce le détail par champ avant d'écrire.
 - Sur une bibliothèque réelle de 155 jeux console et 180 jeux PC importés :
   **38 fiches remplies à l'import** — jaquette, description, note, genres — puis
@@ -1158,7 +1158,7 @@ import, beaucoup moins.
 │   └── components/
 │       ├── GameCard.jsx  AddModal.jsx  ImportModal.jsx  PlayniteModal.jsx
 │       ├── StatsView.jsx  SettingsView.jsx  ScoresSheet.jsx
-│       ├── Sheet.jsx  FiltersSheet.jsx  SortSheet.jsx  ActionsSheet.jsx  SousOnglets.jsx
+│       ├── Sheet.jsx  FiltersSheet.jsx  SortSheet.jsx  PanneauOutils.jsx  SousOnglets.jsx
 │       └── Cover.jsx  InfoboxView.jsx  ChampProtege.jsx  ErrorBoundary.jsx
 ├── index.html
 ├── vite.config.js                 base, PWA, proxys de dev

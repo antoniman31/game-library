@@ -5,7 +5,6 @@ import GameCard from "./components/GameCard.jsx";
 import AddModal from "./components/AddModal.jsx";
 import ImportModal from "./components/ImportModal.jsx";
 import FiltersSheet from "./components/FiltersSheet.jsx";
-import ActionsSheet from "./components/ActionsSheet.jsx";
 import ScoresSheet from "./components/ScoresSheet.jsx";
 import Sheet from "./components/Sheet.jsx";
 import StatsView from "./components/StatsView.jsx";
@@ -149,7 +148,6 @@ export default function App() {
   const [showImport, setShowImport] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [showSort, setShowSort] = useState(false);
-  const [showActions, setShowActions] = useState(false);
   const [notesChoix, setNotesChoix] = useState(null);
   const [jaquettesEnCours, setJaquettesEnCours] = useState(false);
   const [jaquettesProg, setJaquettesProg] = useState(0);
@@ -1099,19 +1097,34 @@ export default function App() {
               {stats.enRetard > 0 ? <span style={{ color: warn }}> · {stats.enRetard} en retard</span> : null}
             </div>
           </div>
-          {/* Deux boutons seulement. Les quatre actions à libellé complet qui
-              tenaient ici débordaient de l'écran de 13 px : elles sont passées
-              dans le panneau « Actions ». */}
-          <div style={{ display: "flex", gap: 8, alignItems: "center", flexShrink: 0 }}>
+          {/* Trois boutons. Les quatre actions à libellé complet qui tenaient
+              ici débordaient de l'écran de 13 px ; elles vivent maintenant dans
+              ⚙️ → Outils, avec les deux imports.
+
+              Le « ⋯ » qui les ouvrait a laissé la place au partage. C'est la
+              seule de ces actions qui soit restée : elle envoie ce que les
+              filtres montrent en ce moment, donc elle appartient à l'écran où
+              cette sélection se compose — depuis les Réglages, on partagerait
+              une liste qu'on ne voit pas. Et une icône qui dit ce qu'elle fait
+              vaut mieux qu'une ellipse qui dit « il y a autre chose ici ».
+
+              Le ⏳ que portait le « ⋯ » pendant une actualisation disparaît
+              avec lui, sans perte : les bandeaux du dessous annoncent la même
+              progression avec de quoi l'arrêter, et sur tous les onglets. */}
+          <div style={{ display: "flex", gap: "var(--ecart-tap)", alignItems: "center", flexShrink: 0 }}>
             <button onClick={() => setModeTheme(modeSuivant)}
               aria-label={`Thème : ${LIBELLES[modeTheme]}`} title={`Thème : ${LIBELLES[modeTheme]}`}
               style={{ ...btnHdr, color: txt }}>
               {ICONES[modeTheme]}
             </button>
-            <button onClick={() => setShowActions(true)} aria-label="Actions" title="Actions"
-              style={{ ...btnHdr, color: refreshing || enriching ? ACCENT : txt, borderColor: refreshing || enriching ? ACCENT : bdr }}>
-              {refreshing || enriching ? "⏳" : "⋯"}
-            </button>
+            {estBibliotheque && (
+              <button onClick={partagerListe}
+                aria-label={`Partager la liste — ${affichee.length} jeu${affichee.length > 1 ? "x" : ""}`}
+                title="Partager la liste"
+                style={{ ...btnHdr, color: txt }}>
+                📤
+              </button>
+            )}
             <button onClick={() => setShowAdd(true)}
               style={{ ...btnHdr, background: accentFond, border: "none", color: "#fff", fontSize: "var(--t-corps)", fontWeight: 600 }}>
               + Ajouter
@@ -1334,6 +1347,10 @@ export default function App() {
         )}
 
         {tab === "settings" && (
+          // `outils` : les opérations longues, rassemblées dans le sous-onglet
+          // du même nom. Toutes portent sur `games`, la bibliothèque entière —
+          // ni l'univers courant ni les filtres n'entrent dans leur compte, et
+          // c'est ce qui leur permet de vivre hors de la liste.
           <SettingsView
             modeTheme={modeTheme} setModeTheme={setModeTheme}
             keys={keys} setKeys={setKeys}
@@ -1347,6 +1364,23 @@ export default function App() {
             exclusions={exclusions}
             onViderExclusions={() => {
               if (window.confirm(`Vider la liste des ${exclusions.length} jeu(x) écarté(s) ?\n\nAu prochain import Playnite, ils reviendront.`)) setExclusions([]);
+            }}
+            outils={{
+              onRefreshDescriptions: refreshAllDescriptions,
+              refreshing, refreshProg, refreshTotal: games.length,
+              onCancelRefresh: cancelRefresh,
+              onImportXbox: () => setShowImport(true),
+              onCompleterEditions: completerEditions,
+              editionsCompletables,
+              onRattraperJaquettes: rattraperJaquettes,
+              jaquettesEnCours, jaquettesProg, jaquettesTotal,
+              onAnnulerJaquettes: annulerJaquettes,
+              jaquettesManquantes: games.filter(g => !g.cover).length,
+              onCompleterScores: completerScores,
+              scoresEnCours, scoresProg, scoresTotal,
+              onAnnulerScores: annulerScores,
+              scoresManquants: jeuxSansScore(games).length,
+              notesDeclarees: jeuxNoteDeclareeAbsente(games).length,
             }}
           />
         )}
@@ -1428,36 +1462,6 @@ export default function App() {
         <SortSheet sort={sort} setSort={setSort}
           onMelanger={() => setGraine(g => (g + 1 + Math.floor(Math.random() * 9999)) % 100000)}
           onClose={() => setShowSort(false)} />
-      )}
-
-      {showActions && (
-        <ActionsSheet
-          onClose={() => setShowActions(false)}
-          onRefreshDescriptions={refreshAllDescriptions}
-          refreshing={refreshing}
-          refreshProg={refreshProg}
-          refreshTotal={games.length}
-          onCancelRefresh={cancelRefresh}
-          onImportXbox={() => setShowImport(true)}
-          onCompleterEditions={completerEditions}
-          editionsCompletables={editionsCompletables}
-          onRattraperJaquettes={rattraperJaquettes}
-          jaquettesEnCours={jaquettesEnCours}
-          jaquettesProg={jaquettesProg}
-          jaquettesTotal={jaquettesTotal}
-          onAnnulerJaquettes={annulerJaquettes}
-          jaquettesManquantes={games.filter(g => !g.cover).length}
-          onCompleterScores={completerScores}
-          scoresEnCours={scoresEnCours}
-          scoresProg={scoresProg}
-          scoresTotal={scoresTotal}
-          onAnnulerScores={annulerScores}
-          scoresManquants={jeuxSansScore(games).length}
-          notesDeclarees={jeuxNoteDeclareeAbsente(games).length}
-          onPartager={partagerListe}
-          partageTotal={affichee.length}
-          partageFiltre={affichee.length < jeuxUnivers.length}
-        />
       )}
 
       {notesChoix && (

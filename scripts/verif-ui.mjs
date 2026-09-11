@@ -298,16 +298,18 @@ for (const [largeur, theme] of ECRANS) {
       await page.getByRole("button", { name: /^Console$/ }).click();
     }],
     ["Stats", async () => { await page.getByRole("button", { name: "Stats" }).click(); }],
-    ["panneau Actions", async () => {
-      await page.getByRole("button", { name: "Actions" }).click();
-    }],
     ["Réglages", async () => { await page.keyboard.press("Escape"); await page.getByRole("button", { name: "Réglages" }).click(); }],
+    // Les trois sous-onglets. « Outils » est celui où vivent désormais les
+    // opérations longues et les deux imports, et c'est un onglet de plus à
+    // tenir sur 360 px : trois boutons en `flex: 1` y tombent à 105 px, et
+    // « Sauvegarde » en demande presque autant.
+    ["Réglages · Outils", async () => { await page.getByRole("button", { name: "Outils" }).click(); }],
     ["Services", async () => { await page.getByRole("button", { name: "Services" }).click(); }],
     // L'import Playnite, avant et après lecture d'un fichier : la liste des
     // lignes n'existe qu'une fois le fichier lu, et c'est elle qui porte les
     // cases à cocher et les pastilles — donc les cibles à mesurer.
     ["import Playnite", async () => {
-      await page.getByRole("button", { name: "Sauvegarde" }).click();
+      await page.getByRole("button", { name: "Outils" }).click();
       await page.getByRole("button", { name: /Importer un export Playnite/ }).click();
     }],
     ["import Playnite · fichier lu", async () => {
