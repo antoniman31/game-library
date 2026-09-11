@@ -1292,6 +1292,52 @@ bougé d'un pixel.
 
 ---
 
+### Phase 37 — Des statistiques qui savent dans quel univers elles sont
+
+Antoni signale que l'onglet « Circulation » ne sert à rien quand on regarde les
+statistiques des jeux PC. Il a raison, et pour une raison déjà écrite ailleurs
+dans le projet : toutes les tuiles et tous les blocs de cet onglet comptent des
+prêts, et un jeu Steam ne se prête pas. C'est exactement pourquoi l'onglet
+« Prêts » de la barre principale disparaît déjà dans cet univers — « un onglet
+qui ne mène qu'à un écran vide est pire qu'un onglet absent ». La règle
+existait, elle n'avait simplement pas été appliquée un cran plus bas.
+
+Le sélecteur part avec l'onglet : deux sous-onglets dont un seul existe, ce
+n'est plus un choix, c'est un bouton qui ne fait rien. L'état `vue` n'est pas
+remis à zéro pour autant — en revenant sur Console, on retrouve l'onglet qu'on
+y regardait.
+
+Mais l'onglet qui reste avait le même défaut, en moins voyant, et c'est ce que
+la vérification a montré avant d'écrire une ligne. « Collection » est écrit pour
+la console. Sur PC, « Par plateforme » n'affiche qu'une barre pleine à 100 %,
+puisque la plateforme y est constante ; les tuiles « Physiques / Démat »
+affichent 0 et le total, puisque `migrateGames` force `format = "démat"` pour
+tout jeu PC ; et « Où tu choisis le mieux » n'aurait qu'une ligne, « PC », qui
+redit la moyenne générale. Retirer Circulation sans toucher à ça aurait échangé
+un onglet vide contre trois blocs vides de sens.
+
+Ce qui varie dans une bibliothèque PC, c'est la boutique — et c'est déjà ce que
+les filtres de cet univers utilisent. `statsCollection` gagne donc `parBoutique`
+et `noteParBoutique`, et les trois blocs changent de sujet plutôt que de
+disparaître. Les tuiles deviennent Total / Boutiques / Notés.
+
+Une fiche PC sans boutique existe : un jeu ajouté à la main, un import dont la
+source n'en donnait pas. Elle est comptée sous « Sans boutique » plutôt
+qu'écartée, et un test vérifie que la somme des barres égale le total — sans
+quoi l'écran afficherait 131 en tuile et 128 en barres, à trois lignes d'écart.
+
+Le bloc « Physique et démat », lui, n'a rien demandé : son garde
+`formatParPlateforme.length > 1` le masquait déjà côté PC, où il n'y a qu'une
+plateforme. Vérifié plutôt que supposé, et donc pas touché.
+
+Mesuré sur la vraie bibliothèque : 131 jeux PC, 9 boutiques — Steam 65, GOG 25,
+Epic 24, puis Xbox, Amazon, EA app, Battle.net, P2P, Rockstar Games —, 103
+notés. Et l'écran des statistiques PC est entré dans la promenade de
+`verif:ui`, qui visitait l'univers PC et les statistiques console sans jamais
+croiser les deux.
+
+---
+
 ## 3. Architecture finale
 
 ```

@@ -265,6 +265,11 @@ Deux sous-onglets. Chaque bloc disparaît quand il n'a rien à dire.
 
 ## Fait récemment
 
+- **Statistiques par univers** : côté PC, « Circulation » disparaît — un jeu Steam ne se
+  prête pas — et avec elle le sélecteur de sous-onglets. Dans « Collection », la
+  répartition par plateforme et le partage physique/démat, tous deux constants dans cet
+  univers, cèdent la place à la **boutique** : Steam, Epic, GOG, Amazon.
+
 - **Les actions déménagent dans les Réglages**, sous un troisième sous-onglet « Outils »
   aux côtés de Sauvegarde et Services : les deux imports — Xbox et Playnite — y sont
   enfin voisins au lieu de vivre dans deux écrans différents pour le même geste. Le
