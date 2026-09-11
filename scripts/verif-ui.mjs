@@ -293,11 +293,19 @@ for (const [largeur, theme] of ECRANS) {
     ["PC · doublons", async () => {
       await page.getByRole("button", { name: "Toutes les boutiques" }).click();
     }],
-    ["retour Console", async () => {
+    // Les statistiques de l'univers PC : d'autres tuiles, une répartition par
+    // boutique au lieu de la plateforme, et aucun sous-onglet — « Circulation »
+    // n'a rien à compter là où rien ne se prête. Un écran de moins dans la
+    // promenade est un écran où personne ne mesure.
+    ["PC · Stats", async () => {
       await page.keyboard.press("Escape");
+      await page.getByRole("button", { name: "Stats" }).click();
+    }],
+    ["retour Console", async () => {
       await page.getByRole("button", { name: /^Console$/ }).click();
     }],
     ["Stats", async () => { await page.getByRole("button", { name: "Stats" }).click(); }],
+    ["Stats · Collection", async () => { await page.getByRole("button", { name: "Collection" }).click(); }],
     ["Réglages", async () => { await page.keyboard.press("Escape"); await page.getByRole("button", { name: "Réglages" }).click(); }],
     // Les trois sous-onglets. « Outils » est celui où vivent désormais les
     // opérations longues et les deux imports, et c'est un onglet de plus à

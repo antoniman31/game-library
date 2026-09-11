@@ -212,25 +212,40 @@ function Circulation({ games, jour }) {
   );
 }
 
-function Collection({ games, jour }) {
+// `estPC` : dans cet univers, trois des blocs de cet écran ne disent rien.
+// Le format est constant — un jeu PC est forcé en démat à l'import —, et la
+// plateforme aussi, ce qui donnait une barre unique à 100 % et des tuiles
+// « 0 physique · 131 démat ». Ce qui varie sur PC, c'est la boutique, et c'est
+// elle qui prend la place. Le reste — genres, notes, âge, séries, studios,
+// ajouts, doublons, complétude — vaut dans les deux univers sans un mot de
+// changement.
+function Collection({ games, jour, estPC }) {
   const s = useMemo(() => statsCollection(games, jour), [games, jour]);
   if (s.total === 0) return <div style={{ textAlign: "center", color: mut, padding: "40px 0" }}>Bibliothèque vide</div>;
+  const noteParSource = estPC ? s.noteParBoutique : s.noteParPlateforme;
 
   return (
     <div>
-      <Tuiles items={[
-        ["Total", s.total, accent],
-        ["Physiques", s.physique, txt],
-        ["Démat", s.demat, accent],
-      ]} />
+      <Tuiles items={estPC
+        ? [
+            ["Total", s.total, accent],
+            ["Boutiques", s.parBoutique.length, txt],
+            ["Notés", s.note.combien, accent],
+          ]
+        : [
+            ["Total", s.total, accent],
+            ["Physiques", s.physique, txt],
+            ["Démat", s.demat, accent],
+          ]} />
 
-      <Bloc titre="Par plateforme">
-        {s.parPlateforme.map(([p, n]) => (
+      <Bloc titre={estPC ? "Par boutique" : "Par plateforme"}>
+        {(estPC ? s.parBoutique : s.parPlateforme).map(([p, n]) => (
           <Barre key={p} label={p} valeur={n} total={s.total} couleur={PLATFORM_COLORS[p] || accentFond}
             suffixe={`${n} · ${Math.round((n / s.total) * 100)} %`} />
         ))}
         {/* Seuls les exemplaires physiques se prêtent : ce partage dit quelle
-            part de la collection est concernée par le sujet de l'application. */}
+            part de la collection est concernée par le sujet de l'application.
+            Côté PC il n'y en a aucun, et la ligne ne s'écrit pas. */}
         {s.physique > 0 && (
           <div style={{ color: mut, fontSize: "var(--t-legende)", marginTop: 6, paddingTop: 8, borderTop: `1px solid ${bdr}` }}>
             {Math.round((s.physique / s.total) * 100)} % de la collection est prêtable.
@@ -268,12 +283,14 @@ function Collection({ games, jour }) {
         </Bloc>
       )}
 
-      {(s.noteParPlateforme.length > 0 || s.noteParGenre.length > 0) && (
+      {(noteParSource.length > 0 || s.noteParGenre.length > 0) && (
         <Bloc titre="Où tu choisis le mieux">
           {/* Pas de couleur de plateforme ici : le rouge Switch, sur une ligne
               de texte, se lit comme une alerte alors qu'il n'est qu'une
-              identité. Le vert et le rouge restent réservés au jugement. */}
-          {s.noteParPlateforme.map(([p, note, n]) => (
+              identité. Le vert et le rouge restent réservés au jugement.
+              Sur PC, la moyenne par plateforme n'aurait qu'une ligne — « PC » —
+              qui redit la moyenne générale : c'est la boutique qui distingue. */}
+          {noteParSource.map(([p, note, n]) => (
             <Ligne key={`p${p}`} gauche={p} droite={`${note} de moyenne · ${n} notés`} />
           ))}
           {s.noteParGenre.map(([g, note, n]) => (
@@ -384,7 +401,19 @@ function Collection({ games, jour }) {
   );
 }
 
-export default function StatsView({ games }) {
+// L'univers décide de ce qu'il y a à compter.
+//
+// Côté PC, « Circulation » n'a aucun objet : un jeu Steam ne se prête pas, et
+// toutes ses tuiles, tous ses blocs parlent de prêts. C'est la même règle que
+// l'onglet « Prêts » de la barre principale, qui disparaît déjà dans cet
+// univers — un écran qui ne peut rien afficher vaut mieux absent que vide.
+//
+// Le sélecteur part avec lui : deux sous-onglets dont un seul existe, ce n'est
+// plus un choix, c'est un bouton qui ne fait rien. `vue` n'est pas remis à
+// zéro pour autant : en revenant sur Console, on retrouve l'onglet qu'on y
+// regardait.
+export default function StatsView({ games, univers }) {
+  const estPC = univers === "pc";
   const [vue, setVue] = useState("circulation");
   // Les chiffres suivent la bibliothèque d'eux-mêmes : tout est recalculé dès
   // que `games` change. Ce qui se fige, c'est la date — les jours de prêt
@@ -398,12 +427,14 @@ export default function StatsView({ games }) {
 
   return (
     <div>
-      <SousOnglets valeur={vue} onChange={setVue}
-        options={[["circulation", "Circulation"], ["collection", "Collection"]]} />
+      {!estPC && (
+        <SousOnglets valeur={vue} onChange={setVue}
+          options={[["circulation", "Circulation"], ["collection", "Collection"]]} />
+      )}
 
-      {vue === "circulation"
+      {vue === "circulation" && !estPC
         ? <Circulation games={games} jour={jour} />
-        : <Collection games={games} jour={jour} />}
+        : <Collection games={games} jour={jour} estPC={estPC} />}
 
       <button onClick={() => setCalculLe(Date.now())}
         style={{

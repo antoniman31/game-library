@@ -88,6 +88,35 @@ test("une bibliothèque sans le moindre prêt ne produit ni NaN ni plantage", ()
 
 // ── Collection ─────────────────────────────────────────────────────────────
 
+test("côté PC, la répartition se lit par boutique et non par plateforme", () => {
+  const s = statsCollection([
+    jeu({ id: 1, platform: "PC", format: "démat", boutique: "Steam", metacritic: 90 }),
+    jeu({ id: 2, platform: "PC", format: "démat", boutique: "Steam", metacritic: 70 }),
+    jeu({ id: 3, platform: "PC", format: "démat", boutique: "Steam", metacritic: 80 }),
+    jeu({ id: 4, platform: "PC", format: "démat", boutique: "GOG", metacritic: 60 }),
+  ]);
+  // `parPlateforme` ne donnerait qu'une barre pleine : dans cet univers, la
+  // plateforme est constante par construction.
+  assert.deepEqual(s.parPlateforme, [["PC", 4]]);
+  assert.deepEqual(s.parBoutique, [["Steam", 3], ["GOG", 1]]);
+  // Trois notes au minimum, comme pour les plateformes et les genres : GOG
+  // n'en a qu'une et ne compte pas.
+  assert.deepEqual(s.noteParBoutique, [["Steam", 80, 3]]);
+});
+
+test("une fiche sans boutique est comptée, pas perdue", () => {
+  // Un jeu ajouté à la main n'a pas toujours de boutique. L'écarter ferait
+  // une somme de barres inférieure au total affiché juste au-dessus.
+  const s = statsCollection([
+    jeu({ id: 1, platform: "PC", boutique: "Steam" }),
+    jeu({ id: 2, platform: "PC", boutique: "   " }),
+    jeu({ id: 3, platform: "PC" }),
+  ]);
+  assert.deepEqual(s.parBoutique, [["Sans boutique", 2], ["Steam", 1]]);
+  assert.equal(s.parBoutique.reduce((a, [, n]) => a + n, 0), s.total);
+});
+
+
 test("formats, plateformes et rétrocompatibilité s'additionnent", () => {
   const s = statsCollection([
     jeu({ id: 1, platform: "Xbox One", format: "physique", backCompat: true }),

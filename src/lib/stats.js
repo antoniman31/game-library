@@ -11,6 +11,11 @@
 import { dureeEntreeHistorique, aujourdhuiISO, pretEnRetard, BACK_COMPAT_PARENT, normTitle,
   dateDeSortie, CHAMPS_A_COMPLETER } from "./model.js";
 
+// Une fiche PC sans boutique existe : un jeu ajouté à la main, ou un import
+// dont la source n'en donnait pas. La compter à part vaut mieux que la faire
+// disparaître d'un total qui doit rester égal au nombre de jeux.
+const nomBoutique = (g) => String(g.boutique || "").trim() || "Sans boutique";
+
 const compter = (paires) => {
   const m = new Map();
   for (const c of paires) m.set(c, (m.get(c) || 0) + 1);
@@ -283,6 +288,14 @@ export function statsCollection(games, aujourdhui = aujourdhuiISO()) {
     physique: jeux.filter(g => g.format === "physique").length,
     demat: jeux.filter(g => g.format === "démat").length,
     parPlateforme: compter(jeux.map(g => g.platform).filter(Boolean)),
+    // La répartition d'une bibliothèque PC, c'est la boutique.
+    //
+    // `parPlateforme` y répond « PC : 131 · 100 % », une barre pleine qui
+    // n'apprend rien : dans cet univers, la plateforme est constante par
+    // construction. Ce qui varie, et ce que les filtres de l'univers PC
+    // utilisent déjà, c'est Steam, Epic, GOG, Amazon.
+    parBoutique: compter(jeux.map(g => nomBoutique(g)).filter(Boolean)),
+    noteParBoutique: moyenneParCle(jeux, nomBoutique, 3),
     retrocompatibles: retro,
     parGenre: compter(jeux.flatMap(g => g.genre || [])).slice(0, 8),
     note: {

@@ -631,9 +631,14 @@ jamais une décision prise à la main.
 
 ### Statistiques
 
-Deux sous-onglets, parce que les deux familles ne répondent pas à la même
-question. Chaque bloc disparaît quand il n'a rien à dire : un « aucune donnée »
-répété six fois occupe autant de place qu'un vrai contenu.
+Deux sous-onglets côté console, parce que les deux familles ne répondent pas à
+la même question. Chaque bloc disparaît quand il n'a rien à dire : un « aucune
+donnée » répété six fois occupe autant de place qu'un vrai contenu.
+
+Côté PC, il n'y en a qu'un — et donc aucun sélecteur, puisqu'un choix unique
+n'est pas un choix. « Circulation » ne compte que des prêts, et un jeu Steam ne
+se prête pas : c'est la même règle que l'onglet « Prêts » de la barre
+principale, absent du même univers pour la même raison.
 
 **Circulation** — ce qui sort. Nombre de prêts, durée moyenne, jeux jamais
 prêtés, taux de rotation de la collection, personnes distinctes, qui emprunte le
@@ -648,6 +653,15 @@ note moyenne **et médiane** (deux mauvais jeux tirent une moyenne, pas une
 médiane), moyenne par plateforme et par genre, âge réel des jeux d'après leur
 date de sortie Wikidata, délai médian entre la sortie et l'achat, rythme
 d'ajout, studios et séries, et ce qui manque encore à remplir.
+
+Côté PC, trois de ces blocs changent de sujet. La plateforme y est constante
+par construction — une seule barre à 100 % — et le format aussi, puisqu'un jeu
+PC est forcé en démat à l'import : les tuiles « Physiques / Démat » y affichaient
+0 et le total. C'est la **boutique** qui distingue une bibliothèque PC, et c'est
+elle qui prend la place : répartition par boutique, moyenne par boutique, et les
+tuiles deviennent Total / Boutiques / Notés. Une fiche sans boutique est comptée
+sous « Sans boutique » plutôt qu'écartée — sans quoi la somme des barres serait
+inférieure au total affiché juste au-dessus.
 
 S'y ajoutent deux listes qui ne sont pas des statistiques mais qui valent le
 reste : les **doublons possibles** — deux fiches sur deux plateformes, c'est

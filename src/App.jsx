@@ -1394,7 +1394,7 @@ export default function App() {
             <div style={{ color: mut, fontSize: "var(--t-petit)", marginBottom: 12 }}>
               Statistiques de ta bibliothèque {univers === "pc" ? "PC" : "console"} — {jeuxUnivers.length} jeu{jeuxUnivers.length > 1 ? "x" : ""}
             </div>
-            <StatsView games={jeuxUnivers} />
+            <StatsView games={jeuxUnivers} univers={univers} />
           </>
         )}
       </div>
