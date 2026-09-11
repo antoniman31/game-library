@@ -1,7 +1,23 @@
 import { useState, useEffect, useRef } from "react";
-import { card, bdr, txt, mut, accent, accentFond, dangerDoux, ok, danger } from "../lib/theme.js";
+import { bdr, bdrChamp, txt, mut, accent, accentFond, dangerDoux, ok, danger } from "../lib/theme.js";
 import { XBOX_SERIES_CUTOFF, isBackCompatPlatform } from "../lib/model.js";
 import { xblTitleHistory, normTitle, rawgSearch } from "../lib/api.js";
+import Sheet from "./Sheet.jsx";
+
+// Import de la bibliothèque Xbox.
+//
+// Cette fenêtre était la seule à réimplémenter le panneau glissant au lieu
+// d'utiliser `Sheet` : même fond noir, même repli par le bas, mais sans piège
+// à focus, sans Échap, sans verrou de défilement, sans `role="dialog"` et sans
+// croix de fermeture. Elle avait aussi gardé les défauts que les autres
+// écrans avaient corrigés depuis — des boutons de trente-neuf pixels (la
+// hauteur de leur texte, faute de plancher), un « Tout cocher » de
+// vingt-quatre, des lignes de liste sans hauteur minimale, un rayon écrit en
+// dur et `85vh` là où `dvh` évite de passer sous la barre d'adresse.
+//
+// C'est le prix d'une fenêtre écrite à part : elle ne reçoit aucune des
+// corrections faites ailleurs, et personne ne s'en aperçoit puisqu'elle
+// demande une clé xbl.io pour seulement s'ouvrir.
 
 function ImportModal({ games, onImportGames, onClose }) {
   const [list, setList] = useState(null);
@@ -68,9 +84,7 @@ function ImportModal({ games, onImportGames, onClose }) {
   };
 
   return (
-    <div style={{ position: "fixed", inset: 0, background: "#000b", zIndex: 300, display: "flex", alignItems: "flex-end" }} onClick={importing ? undefined : onClose}>
-      <div style={{ background: card, border: `1px solid ${bdr}`, borderRadius: "16px 16px 0 0", padding: "20px 20px calc(20px + var(--safe-bottom))", width: "100%", maxWidth: 500, margin: "0 auto", maxHeight: "85vh", display: "flex", flexDirection: "column" }} onClick={e => e.stopPropagation()}>
-        <div style={{ fontWeight: 700, fontSize: "var(--t-titre)", color: txt, marginBottom: 4 }}>🎮 Importer ma bibliothèque Xbox</div>
+    <Sheet title="🎮 Importer ma bibliothèque Xbox" onClose={importing ? () => {} : onClose}>
         {loading && <div style={{ color: accent, fontSize: "var(--t-petit)", padding: "16px 0" }}>Récupération de l'historique Xbox…</div>}
 
         {!loading && list && (
@@ -79,14 +93,16 @@ function ImportModal({ games, onImportGames, onClose }) {
               {newOnes.length} nouveau(x) · {existingCount} déjà présent(s) · {list.length} jeux Xbox détectés
             </div>
             {newOnes.length > 0 && (
-              <button onClick={toggleAll} disabled={importing} style={{ alignSelf: "flex-start", background: "transparent", border: `1px solid ${bdr}`, color: mut, borderRadius: "var(--r-xs)", padding: "3px 8px", fontSize: "var(--t-legende)", cursor: "pointer", marginBottom: 8 }}>
+              <button onClick={toggleAll} disabled={importing} style={{ alignSelf: "flex-start", background: "transparent", border: `1px solid ${bdrChamp}`, color: mut, borderRadius: "var(--r-xs)", minHeight: "var(--tap-min)", padding: "0 10px", fontSize: "var(--t-legende)", cursor: importing ? "default" : "pointer", opacity: importing ? 0.45 : 1, fontFamily: "inherit", marginBottom: 8 }}>
                 {allChecked ? "Tout décocher" : "Tout cocher"}
               </button>
             )}
-            <div style={{ overflowY: "auto", flex: 1, border: `1px solid ${bdr}`, borderRadius: "var(--r-sm)", marginBottom: 12 }}>
+            <div style={{ overflowY: "auto", maxHeight: "40dvh", border: `1px solid ${bdr}`, borderRadius: "var(--r-sm)", marginBottom: 12 }}>
               {list.map((t, i) => (
-                <label key={i} style={{ display: "flex", gap: 8, alignItems: "center", padding: "6px 9px", borderBottom: i < list.length - 1 ? `1px solid ${bdr}` : "none", cursor: t.isNew ? "pointer" : "default", opacity: t.isNew ? 1 : 0.5 }}>
-                  <input type="checkbox" disabled={!t.isNew || importing} checked={!!checked[t.name]} onChange={e => setChecked(c => ({ ...c, [t.name]: e.target.checked }))} style={{ accentColor: accent }} />
+                <label key={i} style={{ display: "flex", gap: "var(--ecart-tap)", alignItems: "center", minHeight: "var(--tap-min)", padding: "6px 9px", borderBottom: i < list.length - 1 ? `1px solid ${bdr}` : "none", cursor: t.isNew ? "pointer" : "default", opacity: t.isNew ? 1 : 0.5 }}>
+                  <input type="checkbox" disabled={!t.isNew || importing} checked={!!checked[t.name]} aria-label={t.name}
+                    onChange={e => setChecked(c => ({ ...c, [t.name]: e.target.checked }))}
+                    style={{ accentColor: accent, width: 18, height: 18, flexShrink: 0 }} />
                   {t.image && <img src={t.image} alt="" style={{ width: 30, height: 45, minWidth: 30, objectFit: "cover", borderRadius: "var(--r-xs)" }} />}
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ color: txt, fontSize: "var(--t-petit)", fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.name}</div>
@@ -96,14 +112,17 @@ function ImportModal({ games, onImportGames, onClose }) {
                 </label>
               ))}
             </div>
-            {importing && <div style={{ color: accent, fontSize: "var(--t-legende)", marginBottom: 8 }}>Import en cours… {progress}/{selectedCount} (récupération des dates de sortie)</div>}
-            <div style={{ display: "flex", gap: 8 }}>
+            {importing && <div role="status" style={{ color: accent, fontSize: "var(--t-legende)", marginBottom: 8 }}>Import en cours… {progress}/{selectedCount} (récupération des dates de sortie)</div>}
+            {/* `padding: 10` donnait à ces boutons la hauteur de leur texte —
+                trente-neuf pixels — pour les deux commandes qui terminent le
+                geste. Le plancher se pose, il ne se déduit pas d'une marge. */}
+            <div style={{ display: "flex", gap: "var(--ecart-tap)" }}>
               {!importing
                 ? <>
-                    <button onClick={onClose} style={{ flex: 1, background: "transparent", border: `1px solid ${bdr}`, color: mut, borderRadius: "var(--r-sm)", padding: 10, cursor: "pointer", fontSize: "var(--t-corps)" }}>Annuler</button>
-                    <button onClick={doImport} disabled={selectedCount === 0} style={{ flex: 2, background: accentFond, border: "none", color: "#fff", borderRadius: "var(--r-sm)", padding: 10, cursor: selectedCount ? "pointer" : "default", opacity: selectedCount ? 1 : 0.5, fontSize: "var(--t-corps)", fontWeight: 600 }}>Importer {selectedCount} jeu(x)</button>
+                    <button onClick={onClose} style={{ flex: 1, minHeight: "var(--tap)", background: "transparent", border: `1px solid ${bdrChamp}`, color: mut, borderRadius: "var(--r-sm)", padding: "0 12px", cursor: "pointer", fontSize: "var(--t-corps)", fontFamily: "inherit" }}>Annuler</button>
+                    <button onClick={doImport} disabled={selectedCount === 0} style={{ flex: 2, minHeight: "var(--tap)", background: accentFond, border: "none", color: "#fff", borderRadius: "var(--r-sm)", padding: "0 12px", cursor: selectedCount ? "pointer" : "default", opacity: selectedCount ? 1 : 0.5, fontSize: "var(--t-corps)", fontWeight: 600, fontFamily: "inherit" }}>Importer {selectedCount} jeu(x)</button>
                   </>
-                : <button onClick={() => { cancelRef.current = true; }} style={{ flex: 1, background: dangerDoux, border: `1px solid ${danger}`, color: danger, borderRadius: "var(--r-sm)", padding: 10, cursor: "pointer", fontSize: "var(--t-corps)", fontWeight: 600 }}>Arrêter l'import</button>}
+                : <button onClick={() => { cancelRef.current = true; }} style={{ flex: 1, minHeight: "var(--tap)", background: dangerDoux, border: `1px solid ${danger}`, color: danger, borderRadius: "var(--r-sm)", padding: "0 12px", cursor: "pointer", fontSize: "var(--t-corps)", fontWeight: 600, fontFamily: "inherit" }}>Arrêter l'import</button>}
             </div>
           </>
         )}
@@ -111,8 +130,7 @@ function ImportModal({ games, onImportGames, onClose }) {
         {!loading && list && list.length === 0 && (
           <div style={{ color: mut, fontSize: "var(--t-petit)", padding: "8px 0 16px" }}>Aucun jeu Xbox détecté (ou connexion xbl.io indisponible).</div>
         )}
-      </div>
-    </div>
+    </Sheet>
   );
 }
 

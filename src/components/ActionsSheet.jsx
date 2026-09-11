@@ -1,5 +1,5 @@
 import Sheet from "./Sheet.jsx";
-import { bdr, txt, mut, danger } from "../lib/theme.js";
+import { bdrChamp, txt, mut, danger } from "../lib/theme.js";
 
 // Une action = une ligne pleine largeur : intitulé, explication, et la hauteur
 // de cible qu'il faut. Dans l'en-tête, ces mêmes boutons tenaient sur une seule
@@ -16,7 +16,7 @@ function Action({ icone, titre, detail, onClick, disabled, destructif }) {
       style={{
         display: "flex", alignItems: "center", gap: 12, width: "100%", textAlign: "left",
         minHeight: "var(--tap)", background: "transparent",
-        border: `1px solid ${destructif ? danger : bdr}`, borderRadius: "var(--r-md)",
+        border: `1px solid ${destructif ? danger : bdrChamp}`, borderRadius: "var(--r-md)",
         padding: "10px 12px", marginBottom: 8, cursor: disabled ? "default" : "pointer",
         opacity: disabled ? 0.5 : 1,
       }}
@@ -29,6 +29,23 @@ function Action({ icone, titre, detail, onClick, disabled, destructif }) {
     </button>
   );
 }
+
+// Trois groupes, et non six lignes à la file.
+//
+// Le temps de décision croît avec le nombre d'options offertes ensemble, et six
+// rectangles identiques en offrent six. Les nommer n'en retire aucune : ça
+// ramène le premier choix à trois — sortir quelque chose, remplir des fiches,
+// faire entrer des jeux — et le second à deux ou trois voisines qui se
+// ressemblent vraiment. C'est le même geste que l'accordéon des filtres, en
+// moins cher : ici rien n'est replié, seulement rangé.
+const Groupe = ({ titre, children }) => (
+  <div style={{ marginBottom: "var(--ecart-bloc)" }}>
+    <div style={{ color: mut, fontSize: "var(--t-legende)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 7 }}>
+      {titre}
+    </div>
+    {children}
+  </div>
+);
 
 // Le panneau ne garde que les opérations ponctuelles — celles qui se lancent,
 // durent un moment et se terminent. Le thème, qui est une préférence, est passé
@@ -47,12 +64,16 @@ export default function ActionsSheet({
       {/* En tête : c'est la seule action qui s'adresse à quelqu'un d'autre, et
           la seule qu'on lance plusieurs fois par mois. Les autres rechargent
           des données et durent des minutes. */}
+      <Groupe titre="Sortir la liste">
       <Action
         icone="📤"
         titre="Partager la liste"
         detail={`${partageTotal} jeu${partageTotal > 1 ? "x" : ""}${partageFiltre ? " — ceux que les filtres montrent" : ""} · texte à envoyer`}
         onClick={() => { onClose(); onPartager(); }}
       />
+      </Groupe>
+
+      <Groupe titre="Compléter les fiches">
       {refreshing ? (
         <Action
           icone="⏳"
@@ -118,12 +139,16 @@ export default function ActionsSheet({
           onClick={() => { onClose(); onRattraperJaquettes(); }}
         />
       )}
+      </Groupe>
+
+      <Groupe titre="Faire entrer des jeux">
       <Action
         icone="🎮"
         titre="Importer ma bibliothèque Xbox"
         detail="Via xbl.io — nécessite la clé et le relais"
         onClick={() => { onClose(); onImportXbox(); }}
       />
+      </Groupe>
     </Sheet>
   );
 }

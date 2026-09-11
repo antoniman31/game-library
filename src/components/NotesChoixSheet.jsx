@@ -1,6 +1,6 @@
 import { useState } from "react";
 import Sheet from "./Sheet.jsx";
-import { bdr, txt, mut, accent, accentFond, ok, warn, danger } from "../lib/theme.js";
+import { bdr, txt, mut, accent, accentFond, ok, warn, danger, bdrChamp } from "../lib/theme.js";
 import { rapprochementDouteux } from "../lib/model.js";
 
 // Ce qu'une revérification générale changerait, avant qu'elle ne change rien.
@@ -38,7 +38,7 @@ export default function NotesChoixSheet({ propositions, stopped, onAppliquer, on
           const v = !toutCoche;
           setCoches(Object.fromEntries(propositions.map(p => [p.id, v])));
         }}
-        style={{ background: "transparent", border: `1px solid ${bdr}`, color: mut, borderRadius: "var(--r-xs)", minHeight: "var(--tap-min)", padding: "0 10px", fontSize: "var(--t-legende)", cursor: "pointer", marginBottom: 8 }}
+        style={{ background: "transparent", border: `1px solid ${bdrChamp}`, color: mut, borderRadius: "var(--r-xs)", minHeight: "var(--tap-min)", padding: "0 10px", fontSize: "var(--t-legende)", cursor: "pointer", marginBottom: 8 }}
       >
         {toutCoche ? "Tout décocher" : "Tout cocher"}
       </button>

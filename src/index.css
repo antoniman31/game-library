@@ -27,7 +27,14 @@
   --bg: #000000;        /* fond de l'app et des accordéons */
   --hdr: #000000;       /* en-tête collant */
   --card: #0b0b12;      /* cartes, modales, champs de saisie */
-  --bdr: #23233d;       /* toutes les bordures */
+  --bdr: #23233d;       /* séparations : traits de carte, filets, poignées */
+  /* La bordure d'un champ de saisie ou d'un bouton fantôme n'est pas un filet
+     décoratif : c'est la seule chose qui dit où le contrôle commence. WCAG
+     1.4.11 demande 3:1 pour ça, et --bdr n'en donne que 1,3 sur son fond.
+     Deux jetons plutôt qu'un seul relevé : remonter --bdr à 3:1 aurait
+     quadrillé chaque carte de traits durs pour un gain nul, puisqu'une carte
+     se distingue déjà par son fond. */
+  --bdr-champ: #5a5a90; /* bordure d'un contrôle : 3,30:1 sur le fond */
   --txt: #e2e8f0;
   /* Éclairci depuis #64748b : le contraste tombait à 4,00:1 sur le fond et
      3,58:1 sur les cartes, pour du texte de 9 à 11 px. WCAG AA demande 4,5:1.
@@ -55,8 +62,6 @@
   --danger: #ef4444;
   --danger-doux: #ef444422;
   --danger-fond: #ef4444;
-  --platine: #a855f7;
-  --slate: #64748b;
 
   /* Encoches et barre de gestes. index.html déclare `viewport-fit=cover`, ce
      qui fait passer la page SOUS ces zones : sans ces marges, l'en-tête collant
@@ -82,6 +87,21 @@
   --tap: 48px;
   --tap-min: 44px;
   --ecart-tap: 8px;
+
+  /* Largeur maximale du contenu.
+
+     L'application n'en avait aucune : sur un écran de bureau, chaque onglet
+     s'étirait à 350 px, « Supprimer » se retrouvait à treize cents pixels de
+     « Modifier la fiche », et une description courait sur cent soixante
+     caractères par ligne là où l'œil en suit soixante-quinze au plus. Les
+     panneaux glissants, eux, étaient plafonnés depuis toujours — c'est le
+     corps qui manquait à l'appel.
+
+     720 px : la barre des cinq onglets y tient sans que chacun devienne une
+     bannière, et le texte courant y tourne autour de quatre-vingts
+     caractères, marges comprises. Le fond des barres collantes reste, lui,
+     pleine largeur ; seul leur contenu se centre. */
+  --large-lisible: 720px;
 
   /* Écart entre deux blocs. Il valait 12 px — exactement l'écart entre deux
      champs À L'INTÉRIEUR d'un bloc. Rien ne distinguait donc « ces éléments
@@ -123,6 +143,7 @@ html[data-theme="light"] {
   --hdr: #dde6f8;
   --card: #f0f4ff;
   --bdr: #d0d8f0;
+  --bdr-champ: #6d7ba0;       /* 3,36:1 sur l'en-tête, le plus clair des fonds */
   --txt: #1e2a4a;
   /* Assombri depuis #8090b0, qui ne donnait que 2,76:1 — nettement sous la
      limite, et c'est la couleur de la majorité du petit texte. Puis de

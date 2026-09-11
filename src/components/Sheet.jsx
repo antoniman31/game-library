@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef } from "react";
-import { card, bdr, txt } from "../lib/theme.js";
+import { card, bdr, txt, bdrChamp } from "../lib/theme.js";
 
 // Panneau glissant depuis le bas.
 //
@@ -93,7 +93,7 @@ export default function Sheet({ title, onClose, children }) {
             onClick={onClose}
             aria-label="Fermer"
             style={{
-              background: "transparent", border: `1px solid ${bdr}`, color: txt, borderRadius: "var(--r-sm)",
+              background: "transparent", border: `1px solid ${bdrChamp}`, color: txt, borderRadius: "var(--r-sm)",
               width: "var(--tap)", height: "var(--tap)", fontSize: "var(--t-titre)", cursor: "pointer", flexShrink: 0,
             }}
           >

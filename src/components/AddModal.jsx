@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
 import Sheet from "./Sheet.jsx";
-import { bg, card, bdr, txt, mut, accent, accentFond } from "../lib/theme.js";
+import { bg, card, bdr, bdrChamp, txt, mut, accent, accentFond } from "../lib/theme.js";
 import { PC, PLATFORMES_JEU, isBackCompatPlatform, normaliserGenres } from "../lib/model.js";
 import {
   rawgSearch, rawgDetail, wikiFrenchTitles, wikiArticleData, wikidataInfobox,
@@ -34,11 +34,20 @@ function AddModal({ onAdd, onClose }) {
   const [cover, setCover] = useState(null);
   const sgDebRef = useRef(null);
 
-  const inp = { background: bg, border: `1px solid ${bdr}`, borderRadius: "var(--r-sm)", color: txt, minHeight: "var(--tap-min)", padding: "8px 12px", fontSize: "var(--t-corps)", width: "100%", boxSizing: "border-box", fontFamily: "inherit" };
+  const inp = { background: bg, border: `1px solid ${bdrChamp}`, borderRadius: "var(--r-sm)", color: txt, minHeight: "var(--tap-min)", padding: "8px 12px", width: "100%", boxSizing: "border-box", fontFamily: "inherit" };
   // Les boutons de source faisaient 26 px de haut, sous le plancher de 44 :
   // ils sont plus anciens que les règles d'ergonomie du projet, et cette
   // fenêtre est le seul endroit qui ne les avait jamais reçues.
   const srcBtn = { background: "transparent", border: `1px solid ${accent}`, color: accent, borderRadius: "var(--r-sm)", minHeight: "var(--tap-min)", padding: "0 12px", fontSize: "var(--t-legende)", cursor: "pointer", fontFamily: "inherit" };
+
+  // Une suggestion à choisir : un vrai bouton, pas un <div onClick>. Au
+  // clavier, Tab sautait la liste entière et Entrée n'y faisait rien.
+  const ligneChoix = {
+    display: "flex", gap: "var(--ecart-tap)", width: "100%", alignItems: "center",
+    minHeight: "var(--tap-min)", padding: "7px 9px", textAlign: "left",
+    background: "transparent", border: "none", borderBottom: `1px solid ${bdr}`,
+    borderRadius: 0, cursor: "pointer", fontFamily: "inherit", fontSize: "var(--t-petit)",
+  };
 
   // Un libellé au-dessus de chaque champ, et pas seulement une invite : une
   // invite disparaît dès la première lettre tapée, et sur un menu déroulant ou
@@ -136,10 +145,10 @@ function AddModal({ onAdd, onClose }) {
           {sugg.length > 0 && (
             <div style={{ position: "absolute", top: "100%", left: 0, right: 0, background: card, border: `1px solid ${bdr}`, borderRadius: "var(--r-sm)", zIndex: 10, overflow: "hidden", boxShadow: "0 8px 24px #0008" }}>
               {sugg.map(s => (
-                <div key={s.id} className="gl-row" onClick={() => pick(s)} style={{ display: "flex", gap: 8, padding: "8px 10px", cursor: "pointer", borderBottom: `1px solid ${bdr}` }}>
+                <button key={s.id} type="button" className="gl-row" onClick={() => pick(s)} style={ligneChoix}>
                   {s.background_image && <img src={s.background_image} alt="" style={{ width: 34, height: 51, minWidth: 34, objectFit: "cover", borderRadius: "var(--r-xs)" }} />}
-                  <div><div style={{ color: txt, fontSize: "var(--t-petit)", fontWeight: 600 }}>{s.name}</div><div style={{ color: mut, fontSize: "var(--t-legende)" }}>{s.released}{s.metacritic ? ` · MC ${s.metacritic}` : ""}</div></div>
-                </div>
+                  <span style={{ minWidth: 0, textAlign: "left" }}><span style={{ display: "block", color: txt, fontSize: "var(--t-petit)", fontWeight: 600 }}>{s.name}</span><span style={{ display: "block", color: mut, fontSize: "var(--t-legende)" }}>{s.released}{s.metacritic ? ` · MC ${s.metacritic}` : ""}</span></span>
+                </button>
               ))}
             </div>
           )}
@@ -158,7 +167,7 @@ function AddModal({ onAdd, onClose }) {
         )}
 
         {/* Sources : Wikipédia + SteamGridDB */}
-        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 10 }}>
+        <div style={{ display: "flex", gap: "var(--ecart-tap)", flexWrap: "wrap", marginBottom: 10 }}>
           <button onClick={() => { setWikiOpen(o => !o); if (!wikiOpen && title.trim()) { setWikiDone(false); wikiQuery(title); } }} style={srcBtn}>🇫🇷 Wikipédia (titre + desc.)</button>
           <button onClick={() => { setSgOpen(o => !o); if (!sgOpen && title.trim()) { setSgDone(false); sgQuery(title); } }} style={srcBtn}>📦 Jaquette SteamGridDB</button>
         </div>
@@ -166,13 +175,13 @@ function AddModal({ onAdd, onClose }) {
         {wikiOpen && (
           <div style={{ background: card, border: `1px solid ${bdr}`, borderRadius: "var(--r-sm)", padding: "10px 12px", marginBottom: 10 }}>
             <div style={{ color: txt, fontSize: "var(--t-legende)", fontWeight: 600, marginBottom: 6 }}>Titre + description (Wikipédia)</div>
-            <input defaultValue={title} onChange={e => wikiQuery(e.target.value)} placeholder="Titre du jeu…" style={{ ...inp, fontSize: "var(--t-petit)", padding: "6px 8px" }} />
+            <input defaultValue={title} onChange={e => wikiQuery(e.target.value)} placeholder="Titre du jeu…" style={{ ...inp, padding: "6px 8px" }} />
             {wikiBusy && <div style={{ color: accent, fontSize: "var(--t-legende)", marginTop: 4 }}>Recherche…</div>}
             {!wikiBusy && wikiSugg.length > 0 && (
               <div style={{ marginTop: 6, background: bg, border: `1px solid ${bdr}`, borderRadius: "var(--r-sm)", maxHeight: 260, overflowY: "auto" }}>
                 {wikiSugg.map((s, i) => (
                   <div key={i} className="gl-row" style={{ display: "flex", gap: 8, padding: "7px 9px", borderBottom: `1px solid ${bdr}`, alignItems: "center" }}>
-                    <div onClick={() => wikiPick(s.title)} style={{ flex: 1, minWidth: 0, cursor: "pointer", color: txt, fontSize: "var(--t-petit)", fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.title}</div>
+                    <button type="button" onClick={() => wikiPick(s.title)} style={{ ...ligneChoix, flex: 1, borderBottom: "none", padding: 0, display: "block", color: txt, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.title}</button>
                     {s.url && <a href={s.url} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()} style={{ color: accent, fontSize: "var(--t-legende)", textDecoration: "none", flexShrink: 0 }}>↗</a>}
                   </div>
                 ))}
@@ -185,15 +194,19 @@ function AddModal({ onAdd, onClose }) {
         {sgOpen && (
           <div style={{ background: card, border: `1px solid ${bdr}`, borderRadius: "var(--r-sm)", padding: "10px 12px", marginBottom: 10 }}>
             <div style={{ color: txt, fontSize: "var(--t-legende)", fontWeight: 600, marginBottom: 6 }}>Jaquette SteamGridDB</div>
-            <input defaultValue={title} onChange={e => sgQuery(e.target.value)} placeholder="Titre du jeu…" style={{ ...inp, fontSize: "var(--t-petit)", padding: "6px 8px" }} />
+            <input defaultValue={title} onChange={e => sgQuery(e.target.value)} placeholder="Titre du jeu…" style={{ ...inp, padding: "6px 8px" }} />
             {sgBusy && <div style={{ color: accent, fontSize: "var(--t-legende)", marginTop: 6 }}>Recherche des jaquettes…</div>}
             {!sgBusy && sgGrids.length > 0 && (
               <>
                 {sgMatch && <div style={{ color: mut, fontSize: "var(--t-legende)", marginTop: 6 }}>Trouvé : <span style={{ color: txt, fontWeight: 600 }}>{sgMatch}</span></div>}
-                <div style={{ marginTop: 8, display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 6, maxHeight: 300, overflowY: "auto" }}>
+                <div style={{ marginTop: 8, display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "var(--ecart-tap)", maxHeight: 300, overflowY: "auto" }}>
                   {sgGrids.map((grid, i) => (
-                    <img key={i} src={grid.thumb} alt="" loading="lazy" onClick={() => { setCover(grid.url); setSgOpen(false); }} title="Choisir cette jaquette"
-                      style={{ width: "100%", aspectRatio: "2 / 3", objectFit: "cover", borderRadius: "var(--r-sm)", border: cover === grid.url ? `2px solid ${accent}` : `1px solid ${bdr}`, cursor: "pointer", display: "block" }} />
+                    <button key={i} type="button" onClick={() => { setCover(grid.url); setSgOpen(false); }}
+                      aria-label={`Choisir cette jaquette (${i + 1})`} aria-pressed={cover === grid.url}
+                      style={{ padding: 0, background: "transparent", borderRadius: "var(--r-sm)", border: cover === grid.url ? `2px solid ${accent}` : `1px solid ${bdr}`, cursor: "pointer", display: "block", overflow: "hidden" }}>
+                      <img src={grid.thumb} alt="" loading="lazy"
+                        style={{ width: "100%", aspectRatio: "2 / 3", objectFit: "cover", display: "block" }} />
+                    </button>
                   ))}
                 </div>
               </>
@@ -202,24 +215,27 @@ function AddModal({ onAdd, onClose }) {
           </div>
         )}
 
-        <div style={{ display: "flex", gap: 8 }}>
-          <Ligne label="Plateforme">
-            <select value={platform} onChange={e => setPlatform(e.target.value)} style={inp}>{PLATFORMES_JEU.map(p => <option key={p}>{p}</option>)}</select>
-          </Ligne>
-          {/* Un jeu PC est toujours démat : ce qui le distingue est la
-              boutique, et elle prend la place du format. */}
-          {platform === PC
-            ? (
-              <Ligne label="Boutique">
-                <input value={boutique} onChange={e => setBoutique(e.target.value)}
-                  placeholder="Steam, Epic, GOG…" style={inp} />
-              </Ligne>
-            ) : (
-              <Ligne label="Format">
-                <select value={fmt} onChange={e => setFmt(e.target.value)} style={inp}><option>physique</option><option>démat</option></select>
-              </Ligne>
-            )}
-        </div>
+        {/* Une colonne, pas deux. « Plateforme » et « Format » se partageaient
+            la ligne : sur 360 px chacun tombait à 160 px, et deux colonnes de
+            formulaire sur mobile font sauter des champs au regard, qui descend
+            la première colonne sans voir la seconde. Empilés, ils coûtent une
+            hauteur de champ et se lisent dans l'ordre où on les remplit. */}
+        <Ligne label="Plateforme">
+          <select value={platform} onChange={e => setPlatform(e.target.value)} style={inp}>{PLATFORMES_JEU.map(p => <option key={p}>{p}</option>)}</select>
+        </Ligne>
+        {/* Un jeu PC est toujours démat : ce qui le distingue est la
+            boutique, et elle prend la place du format. */}
+        {platform === PC
+          ? (
+            <Ligne label="Boutique">
+              <input value={boutique} onChange={e => setBoutique(e.target.value)}
+                placeholder="Steam, Epic, GOG…" style={inp} />
+            </Ligne>
+          ) : (
+            <Ligne label="Format">
+              <select value={fmt} onChange={e => setFmt(e.target.value)} style={inp}><option>physique</option><option>démat</option></select>
+            </Ligne>
+          )}
         <Ligne label="Ajouté le">
           <input type="date" value={date} onChange={e => setDate(e.target.value)} style={inp} />
         </Ligne>
@@ -227,8 +243,8 @@ function AddModal({ onAdd, onClose }) {
         {/* 40 px de haut : sous le plancher de 44, et pour les deux boutons qui
             terminent le geste. `padding: 10` fixait la hauteur à la taille du
             texte au lieu de la poser. */}
-        <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
-          <button onClick={onClose} style={{ flex: 1, minHeight: "var(--tap)", background: "transparent", border: `1px solid ${bdr}`, color: mut, borderRadius: "var(--r-sm)", padding: "0 12px", cursor: "pointer", fontSize: "var(--t-corps)", fontFamily: "inherit" }}>Annuler</button>
+        <div style={{ display: "flex", gap: "var(--ecart-tap)", marginTop: 4 }}>
+          <button onClick={onClose} style={{ flex: 1, minHeight: "var(--tap)", background: "transparent", border: `1px solid ${bdrChamp}`, color: mut, borderRadius: "var(--r-sm)", padding: "0 12px", cursor: "pointer", fontSize: "var(--t-corps)", fontFamily: "inherit" }}>Annuler</button>
           <button onClick={handleAdd} style={{ flex: 2, minHeight: "var(--tap)", background: accentFond, border: "none", color: "#fff", borderRadius: "var(--r-sm)", padding: "0 12px", cursor: "pointer", fontSize: "var(--t-corps)", fontWeight: 600, fontFamily: "inherit" }}>Ajouter</button>
         </div>
     </Sheet>

@@ -6,7 +6,12 @@
 export const bg = "var(--bg)";        // fond de l'app et des accordéons
 export const hdr = "var(--hdr)";      // en-tête collant
 export const card = "var(--card)";    // cartes, modales, champs
-export const bdr = "var(--bdr)";      // toutes les bordures
+export const bdr = "var(--bdr)";      // séparations : filets, traits de carte
+// La bordure qui EST le contour d'un contrôle — champ de saisie, bouton
+// fantôme, menu déroulant. `bdr` ne donne que 1,3:1 sur son fond : assez pour
+// un filet entre deux lignes, pas pour dire où commence un bouton, ce que WCAG
+// 1.4.11 chiffre à 3:1.
+export const bdrChamp = "var(--bdr-champ)";
 export const txt = "var(--txt)";
 export const mut = "var(--mut)";
 export const demat = "var(--demat)";  // fond du badge « démat »

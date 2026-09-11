@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { bdr, txt, mut, accent, accentFond, ok } from "../lib/theme.js";
+import { bdr, txt, mut, accent, accentFond, ok, bdrChamp } from "../lib/theme.js";
 import Sheet from "./Sheet.jsx";
 import { lirePlaynite, analyserImport, jeuxAImporter } from "../lib/playnite.js";
 
@@ -79,7 +79,7 @@ function PlayniteModal({ games, exclusions, onImport, onClose }) {
         </p>
       )}
 
-      <label style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "var(--tap)", border: `1px solid ${bdr}`, borderRadius: "var(--r-sm)", color: txt, fontSize: "var(--t-corps)", cursor: "pointer", marginBottom: 12, padding: "0 10px", textAlign: "center" }}>
+      <label style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "var(--tap)", border: `1px solid ${bdrChamp}`, borderRadius: "var(--r-sm)", color: txt, fontSize: "var(--t-corps)", cursor: "pointer", marginBottom: 12, padding: "0 10px", textAlign: "center" }}>
         {nomFichier || "Choisir un fichier…"}
         <input type="file" accept=".json,application/json" aria-label="Fichier d'export Playnite"
           onChange={e => lireFichier(e.target.files?.[0])}
@@ -95,7 +95,7 @@ function PlayniteModal({ games, exclusions, onImport, onClose }) {
             {avecJumelle > 0 && <><br />{avecJumelle} rempli(s) depuis une fiche déjà là</>}
           </div>
           {nouveaux.length > 0 && (
-            <button onClick={basculerTout} style={{ background: "transparent", border: `1px solid ${bdr}`, color: mut, borderRadius: "var(--r-xs)", minHeight: "var(--tap-min)", padding: "0 10px", fontSize: "var(--t-legende)", cursor: "pointer", marginBottom: 8 }}>
+            <button onClick={basculerTout} style={{ background: "transparent", border: `1px solid ${bdrChamp}`, color: mut, borderRadius: "var(--r-xs)", minHeight: "var(--tap-min)", padding: "0 10px", fontSize: "var(--t-legende)", cursor: "pointer", marginBottom: 8 }}>
               {toutCoche ? "Tout décocher" : "Tout cocher"}
             </button>
           )}
