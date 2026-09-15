@@ -1282,6 +1282,37 @@ test("la série se débarrasse du balisage et du nom du studio, dès la lecture"
   assert.equal(migrateGames([{ id: 2, title: "Y" }])[0].infobox, null);
 });
 
+test("une forme juridique seule n'est pas une série", () => {
+  // Playnite range « Plague Inc: Evolved » sous deux séries, « Plague Inc. » et
+  // « Inc. ». La seconde est la fin d'un nom d'entreprise dont le début s'est
+  // perdu : elle ne désigne rien, et n'a besoin d'aucun studio pour être
+  // écartée. La première reste, elle.
+  const info = (serie) => ({ developers: ["Ndemic Creations"], publishers: ["Ndemic Creations"],
+    releases: [], modes: [], series: serie, follows: "", followedBy: "", sources: ["playnite"] });
+  const jeu = (serie) => migrateGames([{ id: 1, title: "X", infobox: info(serie) }])[0].infobox.series;
+  assert.equal(jeu("Inc."), "");
+  assert.equal(jeu("Ltd"), "");
+  assert.equal(jeu("Plague Inc."), "Plague Inc.");
+});
+
+test("le sigle d'un studio n'est pas une série non plus", () => {
+  // « WB Games » et « Warner Bros. Games » désignent la même entreprise sans se
+  // ressembler : c'est leur dernier mot commun, qui est un suffixe de studio,
+  // plus les initiales de ce qui précède, qui les rapprochent.
+  const info = (serie, editeur) => ({ developers: [], publishers: [editeur], releases: [], modes: [],
+    series: serie, follows: "", followedBy: "", sources: ["playnite"] });
+  const jeu = (serie, editeur) => migrateGames([{ id: 1, title: "X", infobox: info(serie, editeur) }])[0].infobox.series;
+  assert.equal(jeu("WB Games", "Warner Bros. Games"), "");
+  assert.equal(jeu("EA Games", "Electronic Arts Games"), "");
+  // Les deux conditions sont nécessaires. Un suffixe partagé sans les
+  // initiales garde la série — sans quoi une vraie franchise disparaîtrait
+  // chez n'importe quel éditeur dont le nom finit par le même mot.
+  assert.equal(jeu("Hunger Games", "Extreme Games"), "Hunger Games");
+  // Et les vraies séries de cet éditeur-là ne bougent pas.
+  assert.equal(jeu("Wizarding World", "Warner Bros. Games"), "Wizarding World");
+  assert.equal(jeu("Harry Potter", "Warner Bros. Games"), "Harry Potter");
+});
+
 test("le filtre par note répond aussi à « lesquels n'en ont pas »", () => {
   const notee = { id: 1, title: "A", metacritic: 93 };
   const zero = { id: 2, title: "B", metacritic: 0 };

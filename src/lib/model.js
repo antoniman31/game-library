@@ -419,10 +419,58 @@ export const sansBalisageWiki = (s) => String(s || "").replace(/''+/g, "").repla
 // Une clé qui ignore la ponctuation ET les espaces : « AmplitudeStudios » et
 // « AMPLITUDE Studios » sont le même nom écrit deux fois.
 const cleNom = (v) => normTitle(v).replace(/ /g, "");
+
+// Les formes juridiques. Une série ne s'appelle jamais « Inc. » : c'est la fin
+// d'un nom d'entreprise dont le début s'est perdu en route. Playnite range
+// « Plague Inc: Evolved » sous deux séries, « Plague Inc. » et « Inc. », et
+// rien ne dit laquelle est la bonne — sauf que celle-ci n'en est pas une.
+//
+// La liste s'arrête aux formes juridiques, qui ne désignent jamais rien
+// d'autre. « Games », « Studios » ou « Entertainment » terminent des noms de
+// studio mais peuvent aussi porter une vraie franchise, et les écarter seuls
+// coûterait plus qu'ils ne rapportent.
+const FORMES_JURIDIQUES = new Set([
+  "inc", "ltd", "llc", "llp", "gmbh", "sa", "sarl", "sas", "co", "corp",
+  "corporation", "plc", "ab", "oy", "bv", "nv", "pty", "srl", "spa", "kk",
+]);
+
+// Les mots qui terminent un nom de studio. Ils ne suffisent pas à condamner
+// une série — c'est leur combinaison avec une abréviation qui le fait.
+const SUFFIXES_STUDIO = new Set([
+  "games", "studio", "studios", "entertainment", "interactive", "software",
+  "productions", "digital", "media", "works", "arts",
+]);
+
+// « WB Games » est-il le nom du studio « Warner Bros. Games » ?
+//
+// Les deux désignent la même entreprise sans se ressembler assez pour être
+// rapprochés caractère à caractère. Mais ils partagent leur dernier mot, qui
+// est un suffixe de studio, et ce qui précède est d'un côté les initiales de
+// l'autre : « WB » pour « Warner Bros. ». Cette double condition est ce qui
+// rend la règle sûre — un suffixe partagé seul écarterait « Hunger Games »
+// d'un éditeur nommé « X Games », des initiales seules écarteraient n'importe
+// quel sigle.
+function estAbreviationDe(serie, studio) {
+  const a = normTitle(serie).split(" ").filter(Boolean);
+  const b = normTitle(studio).split(" ").filter(Boolean);
+  if (a.length < 2 || b.length < 2) return false;
+  const suffixe = a[a.length - 1];
+  if (suffixe !== b[b.length - 1] || !SUFFIXES_STUDIO.has(suffixe)) return false;
+  // Le sigle est écrit collé (« wb ») ou espacé (« w b ») : on le compare aux
+  // initiales des mots qu'il remplace.
+  const sigle = a.slice(0, -1).join("");
+  const initiales = b.slice(0, -1).map(m => m[0]).join("");
+  return sigle.length > 1 && sigle === initiales;
+}
+
 export function estNomDeStudio(serie, info) {
   const cle = cleNom(serie);
   if (!cle) return false;
-  return [...(info?.developers || []), ...(info?.publishers || [])].some(x => cleNom(x) === cle);
+  // Une forme juridique seule n'est le nom de personne, studio compris : elle
+  // n'a pas besoin d'un studio à qui se comparer pour être écartée.
+  if (FORMES_JURIDIQUES.has(normTitle(serie).replace(/ /g, ""))) return true;
+  const studios = [...(info?.developers || []), ...(info?.publishers || [])];
+  return studios.some(x => cleNom(x) === cle || estAbreviationDe(serie, x));
 }
 
 const LISTES_INFO = ["developers", "publishers", "releases", "modes"];

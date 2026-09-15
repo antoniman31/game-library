@@ -1338,6 +1338,57 @@ croiser les deux.
 
 ---
 
+### Phase 38 — Deux fausses séries, et la réparation qui n'a demandé aucune retouche
+
+Deux fiches portaient une série qui n'en était pas une : « Inc. » sur *Plague
+Inc: Evolved* et « WB Games » sur *Hogwarts Legacy*. Antoni a demandé de les
+corriger dans ses fiches.
+
+Elles ne se corrigent pas dans ses fiches : sa bibliothèque vit sur son
+téléphone, et rien d'ici ne l'atteint. Mais le nettoyage des séries vit dans
+`migrateGames`, qui rejoue à chaque chargement sur ce qui sort du stockage —
+c'est ce qui avait déjà fait disparaître « AmplitudeStudios » des fiches
+importées avant la règle. Corriger la règle corrige donc les fiches, sans qu'on
+y touche et sans réimport.
+
+Restait à écrire la règle sans casser les vraies séries. Les deux cas ne se
+ressemblent pas.
+
+« Inc. » est une forme juridique seule. Playnite range *Plague Inc: Evolved*
+sous deux séries, « Plague Inc. » et « Inc. », et la seconde est la fin d'un nom
+d'entreprise dont le début s'est perdu. Aucune franchise ne s'appelle « Inc. » :
+elle s'écarte sans avoir besoin d'un studio à qui se comparer. La liste s'arrête
+aux formes juridiques — « Games », « Studios », « Entertainment » terminent des
+noms de studio mais peuvent porter une vraie franchise, et les écarter seuls
+coûterait plus qu'ils ne rapportent.
+
+« WB Games » est le sigle de l'éditeur « Warner Bros. Games ». Les deux
+désignent la même entreprise sans se ressembler assez pour être rapprochés
+caractère à caractère — c'est pourquoi la règle existante les manquait, et
+pourquoi j'avais d'abord annoncé le cas comme non corrigeable à bon compte. Il
+l'est, à deux conditions tenues ensemble : le même dernier mot, qui doit être un
+suffixe de studio, et des initiales qui correspondent — « WB » pour « Warner
+Bros. ». La double condition est ce qui rend la règle sûre. Le suffixe seul
+écarterait « Hunger Games » chez un éditeur nommé « X Games » ; les initiales
+seules, n'importe quel sigle.
+
+Vérifié sur la vraie bibliothèque, dans le navigateur, avec les 288 jeux : au
+chargement, les deux fiches perdent leur fausse série, plus aucune ne porte
+« Inc. », « Ltd » ou « WB Games », et les quatre autres séries que l'audit
+signalait — « Wizarding World », « Harry Potter », « Dungeons & Dragons »,
+« James Bond » — ne bougent pas. Elles sont légitimes ; Antoni n'a simplement
+qu'un seul jeu de chacune.
+
+Un détail qui n'était pas prévu et qui tombe bien : *Hogwarts Legacy* existe en
+trois exemplaires — Epic, Steam et une fiche sans boutique —, et seule celle de
+Steam portait « WB Games ». Vidée, elle retrouve « Wizarding World » par
+⚙️ → Outils → « Remplir depuis les autres éditions », qui la reprend de sa
+jumelle Epic. *Plague Inc: Evolved* n'a pas de jumelle : sa série reste vide, et
+« Plague Inc. » demande une saisie à la main. Mieux vaut une série absente
+qu'une série fausse.
+
+---
+
 ## 3. Architecture finale
 
 ```

@@ -265,6 +265,13 @@ Deux sous-onglets. Chaque bloc disparaît quand il n'a rien à dire.
 
 ## Fait récemment
 
+- **Deux fausses séries écartées à la lecture** : « Inc. », une forme juridique seule,
+  et « WB Games », le sigle de l'éditeur « Warner Bros. Games ». La règle vivant dans
+  `migrateGames`, les fiches déjà enregistrées se réparent au chargement suivant —
+  rien à corriger à la main. La fiche Steam de *Hogwarts Legacy* retrouve même
+  « Wizarding World » par ⚙️ → Outils → « Remplir depuis les autres éditions », qui la
+  reprend de sa jumelle Epic.
+
 - **Statistiques par univers** : côté PC, « Circulation » disparaît — un jeu Steam ne se
   prête pas — et avec elle le sélecteur de sous-onglets. Dans « Collection », la
   répartition par plateforme et le partage physique/démat, tous deux constants dans cet
@@ -345,18 +352,13 @@ choses à faire qui garde ce qui est fait finit par ne plus être lue.
 - **Cinq jeux console à saisir à la main** : FIFA 16, 17 et 18, Ultra Street Fighter II
   et Monopoly. Aucun import ne les apportera — il n'existe pas d'API de bibliothèque
   Nintendo, et l'historique xbl.io ne couvre pas les achats anciens.
-- **Deux séries à corriger sur leur fiche** : « Inc. » sur *Plague Inc: Evolved*, un
-  reliquat du premier import — le lecteur d'aujourd'hui répond « Plague Inc. » sur la
-  même entrée —, et « WB Games » sur *Hogwarts Legacy*, voir ci-dessous.
+- **Rendre sa série à *Plague Inc: Evolved*** si elle manque : la fiche en portait une
+  fausse — « Inc. » —, que la lecture écarte désormais, et elle n'a pas de jumelle d'où
+  la reprendre. « Plague Inc. » se saisit à la main sur la fiche ; c'est le seul des
+  deux cas qui ne se répare pas tout seul.
 
-**Le seul défaut de code connu et non corrigé :**
-
-- **« WB Games » passe pour une série.** Playnite la donne comme telle, et la règle qui
-  écarte les noms de studio compare au nom de l'éditeur, « Warner Bros. Games » : les
-  deux désignent la même entreprise sans se ressembler assez pour être rapprochés.
-  Rapprocher des noms abrégés écarterait de vraies séries au passage — une fiche
-  corrigée à la main coûte moins cher que la règle qui l'éviterait. Écrit ici pour
-  qu'on sache que c'est un choix et non un oubli.
+**Aucun défaut de code connu à ce jour.** « WB Games » pris pour une série était le
+dernier ; il est corrigé, et la règle est décrite dans « Fait récemment ».
 
 **Relais déployé** : `https://game-library-proxy.antoniman31.workers.dev` — à coller
 dans ⚙️ → Services sur chaque nouvel appareil.
