@@ -542,6 +542,15 @@ function ExportLudotheque()
   le titre contient — « Age of Mythology » plutôt qu'« Age of Empires », « Plague Inc. »
   plutôt qu'« Inc. ». Les deux premières règles vivent dans le modèle et sont rejouées
   à chaque chargement : les fiches déjà importées se nettoient seules.
+
+  Deux formes de nom de studio échappaient à la comparaison caractère à caractère et
+  ont été ajoutées. **Une forme juridique seule** — « Inc. », « Ltd », « GmbH » — est
+  la fin d'un nom d'entreprise dont le début s'est perdu : elle ne désigne rien et
+  n'a besoin d'aucun studio à qui se comparer. **Un sigle** — « WB Games » pour
+  « Warner Bros. Games » — demande deux conditions à la fois : le même dernier mot,
+  qui doit être un suffixe de studio, et des initiales qui correspondent. Les deux
+  ensemble, parce que le suffixe seul écarterait « Hunger Games » chez un éditeur
+  nommé « X Games », et les initiales seules n'importe quel sigle.
 - **Ce qui n'est pas repris** : les jaquettes (des fichiers sur le disque du PC,
   pas des URL — elles continuent de venir de RAWG), le temps de jeu (retiré du
   modèle) et le statut de complétion de Playnite.
