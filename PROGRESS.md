@@ -259,6 +259,12 @@ Deux sous-onglets. Chaque bloc disparaît quand il n'a rien à dire.
   best-effort, sans casser la fiche.
 - **Le classement Xbox One / Series X repose sur `addedDate`**, faute de date de
   sortie stockée séparément.
+- **La bibliothèque console n'est pas exhaustive, et c'est décidé.** Cinq jeux
+  possédés n'y figurent pas — FIFA 16, 17 et 18, Ultra Street Fighter II, Monopoly.
+  Aucun import ne peut les apporter (pas d'API Nintendo, et l'historique xbl.io ne
+  couvre pas les achats anciens), et Antoni a choisi de ne pas les saisir plutôt que de
+  garder une tâche ouverte indéfiniment. Les totaux affichés comptent donc ce qui est
+  enregistré, pas ce qui est possédé.
 - **La navigation est en haut de l'écran** : les quatre onglets et « + Ajouter »
   occupent la zone la plus difficile à atteindre d'une main. Une barre basse et un
   bouton flottant y répondraient — refonte de l'ossature, pas correctif.
@@ -344,9 +350,6 @@ choses à faire qui garde ce qui est fait finit par ne plus être lue.
 
 **Ce qui dépend d'Antoni, pas du code :**
 
-- **Cinq jeux console à saisir à la main** : FIFA 16, 17 et 18, Ultra Street Fighter II
-  et Monopoly. Aucun import ne les apportera — il n'existe pas d'API de bibliothèque
-  Nintendo, et l'historique xbl.io ne couvre pas les achats anciens.
 - **Rendre sa série à *Plague Inc: Evolved*** si elle manque : la fiche en portait une
   fausse — « Inc. » —, que la lecture écarte désormais, et elle n'a pas de jumelle d'où
   la reprendre. « Plague Inc. » se saisit à la main sur la fiche ; c'est le seul des
