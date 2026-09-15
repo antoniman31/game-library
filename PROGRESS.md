@@ -327,18 +327,44 @@ divergence entre deux copies d'une même liste était restée invisible des sema
 
 ## Prochaines étapes
 
-- **Déployer le Worker** (`cd worker && npx wrangler deploy`) : trois changements
-  l'attendent, dont le correctif d'écrasement silencieux. Rien ne le fait
-  automatiquement — un déploiement par GitHub Actions demanderait un secret
-  `CLOUDFLARE_API_TOKEN` dans le dépôt, ce qui n'a jamais été mis en place.
-- **Relais déployé** : `https://game-library-proxy.antoniman31.workers.dev`
-  — à coller dans ⚙️ sur chaque nouvel appareil.
-- Passer `npm run audit -- export.json` sur la vraie bibliothèque : le script n'a
-  jamais vu autre chose que des données de test.
-- Trancher le contraste du thème clair (voir Limites connues).
-- Tester la PWA sur le téléphone avec 288 jeux : temps d'ouverture, défilement en liste
-  et en grille, zoom du champ de recherche, bannière de stockage, rechargement hors
-  ligne. La mesure de pagination du README date de 155 jeux.
+Trois entrées de cette liste décrivaient un état révolu et ont été retirées plutôt
+que cochées : le déploiement du Worker à la main, alors que `worker.yml` s'en charge
+depuis que `CLOUDFLARE_API_TOKEN` est en place — la ligne le disait pendant que
+« Limites connues » disait l'inverse ; l'audit de données à passer sur la vraie
+bibliothèque, fait depuis ; et le contraste du thème clair, réglé par l'audit
+d'ergonomie, dont l'entrée renvoyait à une limite qui n'existe plus. Une liste de
+choses à faire qui garde ce qui est fait finit par ne plus être lue.
+
+**Ce qui dépend d'Antoni, pas du code :**
+
+- **Tester la PWA sur le téléphone avec 288 jeux** : temps d'ouverture, défilement en
+  liste et en grille, zoom du champ de recherche, bannière de stockage, rechargement
+  hors ligne. C'est la seule mesure qui ne peut pas se faire ici, et le chiffre de
+  pagination du README date de l'époque des 155 jeux (une seconde au démarrage sur un
+  vieux téléphone) — il a donc presque doublé sans être revérifié.
+- **Cinq jeux console à saisir à la main** : FIFA 16, 17 et 18, Ultra Street Fighter II
+  et Monopoly. Aucun import ne les apportera — il n'existe pas d'API de bibliothèque
+  Nintendo, et l'historique xbl.io ne couvre pas les achats anciens.
+- **Deux séries à corriger sur leur fiche** : « Inc. » sur *Plague Inc: Evolved*, un
+  reliquat du premier import — le lecteur d'aujourd'hui répond « Plague Inc. » sur la
+  même entrée —, et « WB Games » sur *Hogwarts Legacy*, voir ci-dessous.
+
+**Le seul défaut de code connu et non corrigé :**
+
+- **« WB Games » passe pour une série.** Playnite la donne comme telle, et la règle qui
+  écarte les noms de studio compare au nom de l'éditeur, « Warner Bros. Games » : les
+  deux désignent la même entreprise sans se ressembler assez pour être rapprochés.
+  Rapprocher des noms abrégés écarterait de vraies séries au passage — une fiche
+  corrigée à la main coûte moins cher que la règle qui l'éviterait. Écrit ici pour
+  qu'on sache que c'est un choix et non un oubli.
+
+**Relais déployé** : `https://game-library-proxy.antoniman31.workers.dev` — à coller
+dans ⚙️ → Services sur chaque nouvel appareil.
+
+**État des données au 15/09/2026**, mesuré sur le dernier export : 288 jeux, 157 console
+et 131 PC, aucune fiche sans jaquette, aucune sans note — 103 notées, le reste marqué
+« pas de note connue » —, aucune fiche PC sans boutique. `npm run audit` ne relève que
+six séries portées par un seul jeu, ce qui n'est pas un défaut.
 
 ## Structure
 
