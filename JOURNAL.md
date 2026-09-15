@@ -1526,6 +1526,7 @@ Documenter les impasses évite de les refaire.
 | **Dossier `docs/` commité** | Aurait fait entrer des artefacts de build dans le dépôt |
 | **Tri « Format »** | Ajouté sur demande, puis retiré : seul le *filtre* était voulu |
 | **Import Nintendo** | Voir ci-dessous |
+| **Compléter la bibliothèque console à la main** | Cinq jeux — FIFA 16, 17, 18, Ultra Street Fighter II, Monopoly — qu'aucun import ne peut apporter. Laissés absents plutôt que gardés en tâche ouverte : les totaux comptent ce qui est enregistré, pas ce qui est possédé |
 
 ### Le cas Nintendo
 
