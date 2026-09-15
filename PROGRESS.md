@@ -344,11 +344,6 @@ choses à faire qui garde ce qui est fait finit par ne plus être lue.
 
 **Ce qui dépend d'Antoni, pas du code :**
 
-- **Tester la PWA sur le téléphone avec 288 jeux** : temps d'ouverture, défilement en
-  liste et en grille, zoom du champ de recherche, bannière de stockage, rechargement
-  hors ligne. C'est la seule mesure qui ne peut pas se faire ici, et le chiffre de
-  pagination du README date de l'époque des 155 jeux (une seconde au démarrage sur un
-  vieux téléphone) — il a donc presque doublé sans être revérifié.
 - **Cinq jeux console à saisir à la main** : FIFA 16, 17 et 18, Ultra Street Fighter II
   et Monopoly. Aucun import ne les apportera — il n'existe pas d'API de bibliothèque
   Nintendo, et l'historique xbl.io ne couvre pas les achats anciens.
@@ -359,6 +354,13 @@ choses à faire qui garde ce qui est fait finit par ne plus être lue.
 
 **Aucun défaut de code connu à ce jour.** « WB Games » pris pour une série était le
 dernier ; il est corrigé, et la règle est décrite dans « Fait récemment ».
+
+**La PWA tourne bien sur téléphone avec 288 jeux** — testé par Antoni le 15/09/2026,
+sans réserve. Le chiffre du README (« une seconde au démarrage sur un vieux
+téléphone ») reste en revanche celui de l'époque des 155 jeux : la bibliothèque a
+presque doublé depuis, et ce nombre-là n'a pas été remesuré. Il est conservé pour ce
+qu'il est — l'ordre de grandeur qui a fait abandonner la pagination — et non comme une
+mesure à jour.
 
 **Relais déployé** : `https://game-library-proxy.antoniman31.workers.dev` — à coller
 dans ⚙️ → Services sur chaque nouvel appareil.

@@ -1258,7 +1258,11 @@ ensuite. `npx wrangler deploy` ne sert plus qu'à déployer sa propre copie.
   version construite, cela coûte 0,2 s de plus au démarrage sur une machine de
   bureau, 0,7 sur un téléphone récent et 1,1 sur un ancien. À bibliothèque
   doublée, la question se repose : les chiffres sont en commentaire dans
-  `App.jsx` pour qu'on n'ait pas à les redécouvrir.
+  `App.jsx` pour qu'on n'ait pas à les redécouvrir. Elle l'est depuis — 288 jeux
+  au 15/09/2026 —, et l'application reste fluide sur le téléphone d'Antoni,
+  lancement et défilement compris. Ces trois durées n'ont pas été remesurées pour
+  autant : elles disent pourquoi la pagination a été retirée, pas ce que coûte la
+  bibliothèque d'aujourd'hui.
 - **Les filtres ne survivent pas au lancement, délibérément.** La vue, le tri,
   son sens et le regroupement, si. Un réglage d'affichage change comment on
   regarde ; un filtre change ce qu'on voit, et un filtre qui survit au
