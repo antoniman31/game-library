@@ -1263,9 +1263,16 @@ regroupés dans [`src/lib/natif.js`](src/lib/natif.js) plutôt que dispersés :
   s'ouvre. L'export de secours de l'écran d'erreur passe par le même chemin,
   et c'est là que ça compte le plus : cet écran ne s'affiche que lorsque
   l'application est déjà tombée.
-- **Le bouton Retour.** Il quitterait l'application alors qu'un panneau est
-  ouvert par-dessus la liste. Il dit désormais la même chose qu'Échap :
-  referme ce qui est au premier plan.
+- **Le bouton Retour.** Il ne faisait **rien** — ni refermer, ni quitter. Sans
+  écouteur enregistré, Capacitor remonte l'historique de la WebView et, s'il
+  n'y en a pas, ne fait rien : l'activité ne se termine pas. Or une application
+  à une seule page n'a pas d'historique, et l'écouteur n'existait que pendant
+  qu'un panneau était ouvert. Le reste du temps, le bouton était mort. Il y en
+  a maintenant un seul, posé avant le premier rendu comme celui des liens, qui
+  tranche : s'il y a quelque chose au premier plan il le referme — la même
+  chose qu'Échap —, sinon il quitte. La pile de ce qui est au premier plan vit
+  dans [`src/lib/retour.js`](src/lib/retour.js), qui ne connaît ni Android ni
+  Capacitor : la décision se teste sans téléphone.
 - **Les liens sortants.** Un lien externe se chargerait *dans* la WebView, qui
   devient un navigateur sans barre d'adresse dont on ne ressort pas. Un seul
   écouteur, posé avant le premier rendu, les envoie au navigateur du système —

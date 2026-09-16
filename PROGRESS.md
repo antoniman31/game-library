@@ -379,10 +379,13 @@ fois, et en 1 727 ms depuis que `content-visibility` et le chargement paresseux 
 jaquettes sont posés. Le pire cas — effacer la recherche pour faire revenir toute la
 liste — passe de 880 à 711 ms.
 
-**Deux comportements de l'application Android restent non vérifiés**, faute d'appareil
-ici : le bouton Retour qui doit fermer un panneau au lieu de quitter, et ⚙️ → Exporter
-qui doit ouvrir le panneau de partage du système. Les deux sont écrits et relus, aucun
-n'a été vu fonctionner.
+**Les deux comportements Android ont été essayés par Antoni le 16/09/2026.** ⚙️ →
+Exporter ouvre bien le panneau de partage du système. Le bouton Retour, lui, ne faisait
+rien du tout : l'écouteur n'existait que pendant qu'un panneau était ouvert, et sans
+écouteur Capacitor remonte un historique de WebView qui, dans une application à une
+seule page, n'existe pas. Corrigé — un seul écouteur, qui referme ce qui est au premier
+plan ou quitte s'il n'y a rien. **Reste à essayer sur l'appareil**, comme le précédent :
+ici, rien ne permet d'appuyer sur Retour.
 
 **Relais déployé** : `https://game-library-proxy.antoniman31.workers.dev` — à coller
 dans ⚙️ → Services sur chaque nouvel appareil, application Android comprise.

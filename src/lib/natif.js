@@ -8,7 +8,8 @@
 // Les cinq :
 //   - enregistrer un fichier, parce qu'une WebView ignore `<a download>` ;
 //   - ouvrir un lien vers l'extérieur, parce qu'une WebView garde tout dedans ;
-//   - le bouton Retour d'Android, qui n'existe pas sur le web ;
+//   - le bouton Retour d'Android, qui n'existe pas sur le web, et le fait de
+//     pouvoir quitter ;
 //   - dire quelle version tourne, que les deux côtés numérotent autrement ;
 //   - accorder la barre d'état au thème, que `theme-color` ne sait pas faire ;
 //   - et `estNatif`, pour ce qui n'a de sens que d'un côté.
@@ -19,6 +20,7 @@ import { Share } from "@capacitor/share";
 import { Browser } from "@capacitor/browser";
 import { App as AppNatif } from "@capacitor/app";
 import { StatusBar, Style } from "@capacitor/status-bar";
+import { refermerLeDessus } from "./retour.js";
 
 export const estNatif = () => Capacitor.isNativePlatform();
 
@@ -105,18 +107,42 @@ export function installerLiensExternes() {
   return () => document.removeEventListener("click", surClic, true);
 }
 
-// Le bouton Retour d'Android.
+// Le bouton Retour d'Android, un seul écouteur pour toute l'application.
 //
-// Sans lui, il ferme l'application — y compris quand un panneau est ouvert
-// par-dessus la liste, alors que le geste veut visiblement dire « referme ça ».
-// Échap joue ce rôle au clavier depuis toujours ; c'est le même contrat.
+// Il ne faisait rien. Rien du tout : ni refermer, ni quitter. La raison est
+// dans le code de Capacitor —
 //
-// Rend une fonction de désinscription, comme un écouteur d'événement, pour que
-// l'appelant n'ait pas à connaître la forme de l'objet rendu par Capacitor.
-export function surRetour(quoi) {
+//     if (!hasListeners("backButton")) {
+//         if (webView.canGoBack()) { webView.goBack(); }
+//     }
+//
+// — c'est-à-dire : sans écouteur enregistré, il remonte l'historique de la
+// WebView, et s'il n'y en a pas, il ne se passe rien. L'activité ne se termine
+// pas. Or une application à une seule page n'a pas d'historique, et l'écouteur
+// n'existait que pendant qu'un panneau était ouvert. Le reste du temps — c'est
+//-à-dire presque tout le temps — le bouton était mort, et on ne pouvait pas
+// sortir de l'application autrement que par le geste d'accueil.
+//
+// L'écouteur est donc posé une fois pour toutes, comme celui des liens
+// sortants, et il tranche : s'il y a quelque chose au premier plan, il le
+// referme ; sinon il quitte. C'est ce que fait n'importe quelle application
+// Android, et c'est ce que le geste veut dire.
+//
+// La pile de ce qui est au premier plan vit dans `retour.js`, qui ne connaît ni
+// Android ni Capacitor : la décision se teste sans téléphone.
+export function installerRetour(quandRienAFermer) {
   if (!estNatif()) return () => {};
-  const promesse = AppNatif.addListener("backButton", quoi);
+  const promesse = AppNatif.addListener("backButton", () => {
+    if (!refermerLeDessus()) quandRienAFermer();
+  });
   return () => { promesse.then(h => h.remove()).catch(() => {}); };
+}
+
+// Quitter, pour de bon. `exitApp` termine l'activité ; sur le web il n'y a rien
+// à quitter, et fermer un onglet ne se fait pas depuis la page.
+export async function quitterApp() {
+  if (!estNatif()) return;
+  try { await AppNatif.exitApp(); } catch { /* rien à faire de plus */ }
 }
 
 // Quelle version tourne ici.

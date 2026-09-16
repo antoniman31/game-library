@@ -1682,6 +1682,42 @@ désactiver se décide en la sentant, pas en lisant un diff.
 
 ---
 
+### Phase 44 — Un bouton Retour qui ne faisait rien
+
+Antoni a essayé les deux comportements que personne n'avait vus fonctionner.
+L'export ouvre bien le panneau de partage. Le bouton Retour, lui, « ne fait
+rien » — et c'était exact au pied de la lettre : ni refermer, ni quitter.
+
+La raison est dans le code de Capacitor, pas dans le nôtre :
+
+    if (!hasListeners("backButton")) {
+        if (webView.canGoBack()) { webView.goBack(); }
+    }
+
+Sans écouteur enregistré, il remonte l'historique de la WebView ; s'il n'y en a
+pas, il ne se passe rien et l'activité ne se termine pas. Or une application à
+une seule page n'a pas d'historique, et notre écouteur n'était posé que pendant
+qu'un panneau était ouvert — c'est-à-dire presque jamais. Le reste du temps, le
+bouton était mort, et on ne pouvait plus sortir de l'application autrement que
+par le geste d'accueil.
+
+**Le défaut n'était pas dans la ligne écrite mais dans l'endroit où elle
+vivait.** Le panneau posait son propre écouteur, ce qui réglait le cas du
+panneau et laissait tout le reste sans réponse. Un seul écouteur, posé avant le
+premier rendu comme celui des liens sortants, tranche : quelque chose au premier
+plan, on le referme ; rien, on quitte.
+
+Une pile plutôt qu'un drapeau : un panneau peut en ouvrir un autre, et Retour
+doit alors les refermer un par un. Elle vit dans son propre module, qui ne
+connaît ni Android ni Capacitor — la décision qui compte, « fermer ou quitter »,
+se teste donc sans téléphone, et trois tests la couvrent.
+
+L'installation se fait dans `main.jsx` et non dans un effet de React : StrictMode
+monte les effets deux fois en développement, et deux écouteurs auraient quitté
+l'application au premier appui.
+
+---
+
 ## 3. Architecture finale
 
 ```
