@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef } from "react";
 import { card, bdr, txt, bdrChamp } from "../lib/theme.js";
-import { surRetour } from "../lib/natif.js";
+import { empilerRetour } from "../lib/retour.js";
 
 // Panneau glissant depuis le bas.
 //
@@ -50,10 +50,10 @@ export default function Sheet({ title, onClose, children }) {
     };
     document.addEventListener("keydown", surTouche);
     // Le bouton Retour d'Android dit la même chose qu'Échap : referme ce qui
-    // est ouvert par-dessus. Sans cette ligne il quitte l'application, alors
-    // qu'un panneau est visiblement au premier plan — le geste le plus naturel
-    // du système ferait perdre l'écran qu'on regardait.
-    const retirerRetour = surRetour(() => fermerRef.current());
+    // est ouvert par-dessus. Le panneau se déclare au premier plan plutôt que
+    // de poser son propre écouteur — il y en a un seul, dans `natif.js`, et
+    // c'est ce qui permet de distinguer « referme » de « quitte ».
+    const retirerRetour = empilerRetour(() => fermerRef.current());
     // Sur <html>, pas sur <body> : `min-height: 100vh` est posé sur les deux,
     // et c'est l'élément racine qui défile ici — `document.scrollingElement` le
     // confirme. Le verrou posé sur <body> ne bloquait donc rien du tout.
