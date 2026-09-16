@@ -373,11 +373,16 @@ choses à faire qui garde ce qui est fait finit par ne plus être lue.
 dernier ; il est corrigé, et la règle est décrite dans « Fait récemment ».
 
 **La PWA tourne bien sur téléphone avec 288 jeux** — testé par Antoni le 15/09/2026,
-sans réserve. Le chiffre du README (« une seconde au démarrage sur un vieux
-téléphone ») reste en revanche celui de l'époque des 155 jeux : la bibliothèque a
-presque doublé depuis, et ce nombre-là n'a pas été remesuré. Il est conservé pour ce
-qu'il est — l'ordre de grandeur qui a fait abandonner la pagination — et non comme une
-mesure à jour.
+sans réserve. Le chiffre du README a depuis été remesuré sur les 288 jeux réels, ce
+qu'il réclamait : la liste complète montait en 2 471 ms sur un processeur ralenti six
+fois, et en 1 727 ms depuis que `content-visibility` et le chargement paresseux des
+jaquettes sont posés. Le pire cas — effacer la recherche pour faire revenir toute la
+liste — passe de 880 à 711 ms.
+
+**Deux comportements de l'application Android restent non vérifiés**, faute d'appareil
+ici : le bouton Retour qui doit fermer un panneau au lieu de quitter, et ⚙️ → Exporter
+qui doit ouvrir le panneau de partage du système. Les deux sont écrits et relus, aucun
+n'a été vu fonctionner.
 
 **Relais déployé** : `https://game-library-proxy.antoniman31.workers.dev` — à coller
 dans ⚙️ → Services sur chaque nouvel appareil, application Android comprise.
