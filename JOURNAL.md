@@ -1636,6 +1636,52 @@ chemin, c'est une divergence qui attend son heure.
 
 ---
 
+### Phase 43 — Quatre chantiers menés sans rien demander
+
+« Fais tout ce que tu peux faire sans moi. » Quatre des sept entrées de la liste
+proposée ne demandaient personne. Les trois autres — vérifier le bouton Retour
+et le partage sur un vrai téléphone, passer en build release, rendre sa série à
+*Plague Inc.* — attendent, et c'est normal : elles demandent un appareil, un
+essai, ou une décision.
+
+**Le rendez-vous de la liste.** Le commentaire qui justifie la suppression de la
+pagination se terminait par « pour le jour où la bibliothèque aura doublé ».
+155 → 288 : le jour était venu, et le chiffre du README ne valait plus rien.
+Mesuré d'abord — 2 471 ms pour monter la liste complète, processeur ralenti six
+fois ; 880 ms pour le pire cas nommé par ce commentaire. Pas de bibliothèque de
+virtualisation, qui aurait coûté les en-têtes collants et la recherche du
+navigateur : `content-visibility: auto`, qui ne retire rien du document. Les
+89 px de hauteur estimée sont une mesure, pas un chiffre rond. Après : 1 727 et
+711 ms.
+
+**Le numéro de version.** `versionCode 1` pour toutes les constructions, parce
+que Capacitor l'engendre une fois et ne le touche plus. Pour Android comme pour
+qui les regarde, deux APK différents étaient la même chose. Le numéro
+d'exécution du workflow ne recule jamais et ne se répète pas ; le nom emporte en
+plus le commit, et ⚙️ affiche le tout.
+
+**Vingt-six écrans de démarrage pour un fond noir.** Les douze variantes sombres
+étaient les doubles exacts de leurs jumelles de jour : 350 Ko. Le script qui les
+retire compare chaque fichier avant de le supprimer — le jour où le sombre
+différera du clair, il survivra. Et une supposition de l'ancien commentaire —
+« sans splash sombre explicite, le système en invente un blanc » — a été
+vérifiée en le retirant pour voir : l'outil engendre bien un écran à lui, gris.
+Elle est devenue une mesure.
+
+**Des icônes claires sur un en-tête clair.** L'application met à jour
+`theme-color` depuis toujours, mais dans une WebView cette balise ne dit rien à
+la barre d'état. Téléphone en sombre et application en clair — un cas que les
+modes « Clair » et « Noir profond » rendent possible par construction —, le
+système dessinait des icônes claires sur l'en-tête clair.
+
+**Deux greffons proposés puis écartés**, et c'est le point qui compte. Le
+clavier : aucun champ masqué observé, et le manifeste laisse déjà Android
+redimensionner la WebView — ajouter un greffon pour un problème que personne n'a
+vu, c'est suivre une liste. Le retour haptique : une vibration qu'on ne peut pas
+désactiver se décide en la sentant, pas en lisant un diff.
+
+---
+
 ## 3. Architecture finale
 
 ```

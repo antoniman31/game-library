@@ -278,6 +278,36 @@ body {
   }
 }
 
+/* ── Fiches hors écran ────────────────────────────────────────────────────
+   La liste monte toutes les fiches d'un coup : la pagination « Charger 30 de
+   plus » a été retirée parce qu'un bouton valait moins que la bibliothèque
+   entière visible, et le commentaire qui porte cette décision dans App.jsx
+   garde les mesures d'alors — cent cinquante-cinq jeux.
+
+   `content-visibility: auto` ne change rien à ce choix : les fiches restent
+   dans le document, la recherche du navigateur les trouve, le défilement ne
+   saute pas. Le navigateur se contente de ne pas calculer la mise en page ni
+   le dessin de celles qui sont hors de l'écran, et de s'en occuper quand elles
+   approchent.
+
+   Quatre-vingt-neuf pixels n'est pas une estimation mais une mesure : c'est la
+   hauteur d'une fiche repliée, relevée sur les cent cinquante-sept fiches de
+   la vraie bibliothèque à 390 px de large et au-delà. Sous 390 px, les titres
+   passent sur deux lignes et la médiane monte à 112 — la barre de défilement
+   y démarre donc un peu courte et s'ajuste au premier passage.
+
+   Car `auto` devant la valeur dit précisément cela : retiens la dernière
+   hauteur réelle plutôt que de reprendre l'estimation. Sans ce mot-clé, une
+   fiche dépliée — plusieurs centaines de pixels — redeviendrait haute de
+   quatre-vingt-neuf dès qu'elle sortirait de l'écran, et la barre sauterait.
+
+   Le confinement que cela implique clipperait ce qui dépasse d'une fiche : il
+   n'y a rien, `overflow: hidden` est déjà posé dessus. */
+.gl-card {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 89px;
+}
+
 /* ── Survol ───────────────────────────────────────────────────────────────
    Ces effets étaient posés en JS (`onMouseEnter` / `onMouseLeave`). Sur un
    écran tactile, Chrome émule un survol au tap : l'effet se déclenchait au

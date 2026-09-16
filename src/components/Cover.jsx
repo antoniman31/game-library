@@ -24,7 +24,12 @@ function Cover({ src, title, size = 72 }) {
     <div style={{ ...box, background: bg, borderRadius: "var(--r-sm)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: isFull ? 40 : size * 0.4 }}>🎮</div>
   );
   const affichee = localRate ? src : sourceJaquette(src);
-  return <img src={affichee} alt={title}
+  // `lazy` et `async` : la liste monte deux cent quatre-vingt-huit fiches d'un
+  // coup, dont l'immense majorité hors écran. Sans ces deux attributs, le
+  // navigateur télécharge et surtout *décode* toutes leurs images au montage —
+  // et décoder coûte autant quand le fichier est sur l'appareil que quand il
+  // vient du réseau, puisque ce qui coûte est de transformer du PNG en pixels.
+  return <img src={affichee} alt={title} loading="lazy" decoding="async"
     onError={() => (affichee !== src ? setLocalRate(true) : setErr(true))}
     style={{ ...box, objectFit: "cover", borderRadius: "var(--r-sm)", display: "block" }} />;
 }

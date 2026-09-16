@@ -52,7 +52,15 @@ await Promise.all([
 
 // L'écran de démarrage, clair et sombre. L'application n'a qu'un fond noir au
 // lancement — c'est déjà ce que fait la PWA installée — donc les deux sont
-// identiques, et le dire explicitement évite que le système en invente un blanc.
+// identiques, et le dire explicitement évite que l'outil en invente un autre.
+//
+// Vérifié depuis, en retirant `splash-dark.png` pour voir : `capacitor-assets`
+// engendre alors un écran sombre à lui, d'un gris moyen, au lieu du noir.
+// Cette ligne n'est donc pas une précaution mais une correction.
+//
+// Les deux fichiers étant identiques, les dossiers `night` qu'ils produisent le
+// sont aussi, et `elaguer-android.mjs` les retire après coup — 350 Ko d'images
+// qu'Android irait chercher pour y trouver exactement la même chose.
 const splash = await sharp({ create: { width: SPLASH, height: SPLASH, channels: 3, background: NOIR } })
   .composite([{ input: src("icon-512.png"), gravity: "center" }])
   .png().toBuffer();

@@ -5,10 +5,12 @@
 // en `if (Capacitor…)` dans les composants. Le jour où une cinquième apparaît,
 // on sait où elle va.
 //
-// Les quatre :
+// Les cinq :
 //   - enregistrer un fichier, parce qu'une WebView ignore `<a download>` ;
 //   - ouvrir un lien vers l'extérieur, parce qu'une WebView garde tout dedans ;
 //   - le bouton Retour d'Android, qui n'existe pas sur le web ;
+//   - dire quelle version tourne, que les deux côtés numérotent autrement ;
+//   - accorder la barre d'état au thème, que `theme-color` ne sait pas faire ;
 //   - et `estNatif`, pour ce qui n'a de sens que d'un côté.
 
 import { Capacitor } from "@capacitor/core";
@@ -16,6 +18,7 @@ import { Filesystem, Directory, Encoding } from "@capacitor/filesystem";
 import { Share } from "@capacitor/share";
 import { Browser } from "@capacitor/browser";
 import { App as AppNatif } from "@capacitor/app";
+import { StatusBar, Style } from "@capacitor/status-bar";
 
 export const estNatif = () => Capacitor.isNativePlatform();
 
@@ -114,4 +117,52 @@ export function surRetour(quoi) {
   if (!estNatif()) return () => {};
   const promesse = AppNatif.addListener("backButton", quoi);
   return () => { promesse.then(h => h.remove()).catch(() => {}); };
+}
+
+// Quelle version tourne ici.
+//
+// Le site se met à jour tout seul, l'application s'installe à la main : dans
+// les deux cas on pouvait avoir une version devant les yeux sans aucun moyen de
+// savoir laquelle. Sur un APK qu'on installe à la main, c'est pire — rien ne le
+// dit, et le `versionCode` engendré par Capacitor vaut 1 pour toutes les
+// constructions, si bien qu'Android lui-même ne les distingue pas.
+//
+// Deux réponses, parce que les deux côtés numérotent autrement : l'application
+// donne le numéro de construction qu'Android connaît, le site donne le commit.
+// `__COMMIT__` est remplacé à la construction — hors de celle-ci, en test, il
+// n'existe pas, d'où la garde.
+export async function versionInstallee() {
+  const commit = typeof __COMMIT__ === "string" ? __COMMIT__ : "développement";
+  if (!estNatif()) return commit;
+  try {
+    const { build, version } = await AppNatif.getInfo();
+    return `${version} (construction ${build})`;
+  } catch {
+    return commit;
+  }
+}
+
+// La barre d'état du téléphone, accordée au thème de l'application.
+//
+// Sur le site, une balise `<meta name="theme-color">` suffit et l'application
+// la met déjà à jour à chaque changement de thème. Dans une WebView, cette
+// balise ne veut rien dire : la barre d'état appartient au système, pas à la
+// page.
+//
+// Ce n'est pas un détail d'esthétique. L'application a son propre réglage
+// clair/sombre, qui peut contredire celui du téléphone — c'est même la raison
+// d'être des modes « Clair » et « Noir profond ». Téléphone en sombre et
+// application en clair, le système dessinait des icônes claires sur l'en-tête
+// clair de l'application : illisibles.
+//
+// Seul le style est réglé, pas la couleur de fond. Depuis qu'Android impose le
+// bord à bord, la page est dessinée SOUS la barre d'état et c'est l'en-tête de
+// l'application qu'on y voit — il n'y a donc rien à peindre, seulement à dire
+// au système de quelle couleur faire ses icônes. `Style.Dark` veut dire « fond
+// sombre », donc icônes claires.
+export async function accorderBarreEtat(theme) {
+  if (!estNatif()) return;
+  try {
+    await StatusBar.setStyle({ style: theme === "dark" ? Style.Dark : Style.Light });
+  } catch { /* une barre d'état qu'on ne peut pas régler ne casse rien */ }
 }
