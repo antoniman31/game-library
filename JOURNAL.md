@@ -1566,24 +1566,41 @@ aucune signature ne pouvait plus se faire passer pour une mise à jour de
 celui-là. Une désinstallation était inévitable. Le travail consistait à ce
 qu'elle soit la dernière.
 
-**Le choix : ne rien ajouter à la configuration Gradle.** Le projet `android/`
-est engendré à chaque construction et n'entre pas dans le dépôt — y écrire un
-bloc `signingConfigs` aurait demandé de retoucher après coup un fichier produit
-par Capacitor, à chaque fois, en espérant que sa forme ne change pas. Mais la
-configuration de débogage d'Android lit déjà un chemin fixe,
-`~/.android/debug.keystore`, avec des mots de passe publics. Il suffit d'y
-déposer la bonne clé avant d'appeler Gradle : zéro ligne de configuration, et
-rien qui dépende de ce que Capacitor engendre.
+**Première tentative : ne rien ajouter à la configuration Gradle.** Le projet
+`android/` est engendré à chaque construction et n'entre pas dans le dépôt — y
+écrire un bloc `signingConfigs` demande de retoucher après coup un fichier
+produit par Capacitor. Or la configuration de débogage d'Android lit déjà un
+chemin fixe, `~/.android/debug.keystore`, avec des mots de passe publics. Y
+déposer la bonne clé avant d'appeler Gradle : zéro ligne de configuration.
 
-Le secret n'ajoute donc aucune confidentialité — les mots de passe de cette clé
-sont documentés par Android. Il empêche seulement un inconnu de signer un APK au
-nom de cette application.
+**Elle n'a pas marché**, et c'est le garde-fou qui l'a dit. La construction a
+réussi, l'étape qui dépose la clé n'a rien signalé, le secret était bien là — et
+l'APK est ressorti signé par une troisième clé, ni celle du premier APK ni
+celle qu'on venait de déposer. Cet emplacement « fixe » ne l'est pas : il se
+résout à partir de variables d'environnement propres à la machine, et sur un
+coureur GitHub il ne pointe pas là où le shell écrit avec `~`.
 
-Deux garde-fous, parce que les deux pannes possibles ne se verraient qu'une fois
-l'APK sur le téléphone. Si le secret manque, la construction s'arrête au lieu de
-retomber silencieusement sur une clé aléatoire. Et l'empreinte de l'APK produit
-est comparée à celle attendue, inscrite en clair dans le workflow : une
-empreinte de certificat est une identité publique, pas un secret.
+**Ce qui marche : écrire le chemin noir sur blanc.** Le magasin est déposé dans
+le répertoire temporaire de l'exécution et un bloc `signingConfigs` est ajouté
+au `build.gradle` engendré, avec son chemin absolu. C'est la retouche d'un
+fichier produit qu'on voulait éviter — mais c'est une addition en fin de
+fichier, pas une lecture de sa structure : sa forme peut changer sans que cela
+casse. Le détour par l'implicite aura coûté une construction ; l'explicite ne
+dépend de rien.
+
+Le secret n'ajoute aucune confidentialité — les mots de passe de cette clé sont
+documentés par Android. Il empêche seulement un inconnu de signer un APK au nom
+de cette application.
+
+**Trois vérifications, parce qu'aucune de ces pannes ne se verrait avant le
+téléphone.** Si le secret manque, la construction s'arrête au lieu de retomber
+sur une clé aléatoire. Le magasin est relu dès qu'il est écrit, ce qui
+distingue un secret mal collé d'un problème de configuration — la première
+version ne le faisait pas, et il a fallu lire les journaux pour savoir laquelle
+des deux pannes on regardait. Enfin l'empreinte de l'APK produit est comparée à
+celle attendue, inscrite en clair dans le workflow : une empreinte de
+certificat est une identité publique, pas un secret. C'est elle qui a rattrapé
+la première tentative.
 
 ---
 
