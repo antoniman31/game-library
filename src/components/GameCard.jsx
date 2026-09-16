@@ -3,7 +3,7 @@ import Cover from "./Cover.jsx";
 import InfoboxView from "./InfoboxView.jsx";
 import Sheet from "./Sheet.jsx";
 import { bg, card, bdr, bdrChamp, txt, mut, demat, accent, accentDoux, accentFond, okDoux, warnDoux, dangerDoux, ok, warn, warnFond, danger } from "../lib/theme.js";
-import { PC, PLATFORM_COLORS, BACK_COMPAT_PARENT, PLATFORMES_JEU, estUrlImage, estLienSur, normaliserGenres, joursDePret, pretEnRetard, brouillonDepuisJeu, validerEdition,
+import { PC, PLATFORM_COLORS, BACK_COMPAT_PARENT, PLATFORMES_JEU, estUrlImage, normaliserGenres, joursDePret, pretEnRetard, brouillonDepuisJeu, validerEdition,
   rendreJeu, preterJeu, annulerPret, dureeEntreeHistorique,
   fusionnerInfobox, infoboxDepuisRawg, libelleSources, CHAMPS_VIDABLES, viderChamps, jeuACompleter,
   libelleEdition } from "../lib/model.js";
@@ -55,7 +55,7 @@ const ligneChoix = {
 
 const boutonSource = { minHeight: "var(--tap-min)", padding: "0 12px", background: "transparent", border: `1px solid ${accent}`, color: accent, borderRadius: "var(--r-sm)", fontSize: "var(--t-legende)", cursor: "pointer" };
 
-function GameCard({ g, onEdit, onDelete, onEnrich, onSerie, autresEditions: autres = [], onAutreEdition, autoOpen, onOuverte }) {
+function GameCard({ g, onEdit, onDelete, onEnrich, onSerie, autresEditions: autres = [], onAutreEdition, autoOpen, onOuverte, titresPossedes }) {
   const [open, setOpen] = useState(!!autoOpen);
   const rootRef = useRef(null);
   // L'ouverture automatique n'a lieu qu'une fois : le marqueur est consommé
@@ -352,7 +352,7 @@ function GameCard({ g, onEdit, onDelete, onEnrich, onSerie, autresEditions: autr
               bouton ouvre directement la recherche. */}
           {g.infobox ? (
             <div style={{ marginBottom: 16 }}>
-              <InfoboxView info={g.infobox} onSerie={onSerie} />
+              <InfoboxView info={g.infobox} onSerie={onSerie} titresPossedes={titresPossedes} />
               {/* Deux sources remplissent ces lignes et ne décrivent pas la
                   même chose : la date que RAWG donne est celle de l'édition
                   possédée, celle de Wikidata celle du jeu d'origine. Sans cette
@@ -447,54 +447,29 @@ function GameCard({ g, onEdit, onDelete, onEnrich, onSerie, autresEditions: autr
             </div>
           )}
 
-          {/* Liens & contenu (accordéon) */}
+          {/* Liens & contenu (accordéon).
+
+              Il a porté trois champs de lien personnels — Soluce, Wiki, Ma
+              playlist YouTube. Sur les 288 fiches de la bibliothèque réelle,
+              les 864 champs étaient vides : pas un seul rempli depuis la
+              création du projet. Ils sont partis avec la zone de notes et le
+              tag, pour la même raison. Ne restent que les quatre recherches
+              engendrées depuis le titre, qui n'ont rien à saisir. */}
+          {/* 44 px de haut, pas 26. Ces quatre pastilles ont toujours été sous le
+              plancher que le reste de l'application respecte ; la vérification
+              d'ergonomie ne les voyait pas, parce qu'elle ne mesure que ce qui
+              est à l'écran au moment du contrôle et qu'elles se trouvaient
+              plus bas. Retirer les trois champs de lien les a fait remonter, et
+              elle les a vues. */}
           {acc("links", "🔗 Liens & contenu", (
-            <>
-              <div style={{ display: "flex", gap: "var(--ecart-tap)", flexWrap: "wrap", marginBottom: 8 }}>
-                <a href={`https://www.youtube.com/results?search_query=${encodeURIComponent(g.title + " official trailer")}`} target="_blank" rel="noreferrer" style={{ background: dangerDoux, border: `1px solid ${danger}`, color: danger, borderRadius: "var(--r-xs)", padding: "3px 8px", fontSize: "var(--t-legende)", textDecoration: "none" }}>▶ Trailer</a>
-                <a href={`https://www.youtube.com/results?search_query=${encodeURIComponent(g.title + " gameplay français")}`} target="_blank" rel="noreferrer" style={{ background: dangerDoux, border: `1px solid ${danger}`, color: danger, borderRadius: "var(--r-xs)", padding: "3px 8px", fontSize: "var(--t-legende)", textDecoration: "none" }}>▶ Gameplay FR</a>
-                <a href={`https://www.jeuxvideo.com/recherche/?q=${encodeURIComponent(g.title)}`} target="_blank" rel="noreferrer" style={{ background: accentDoux, border: `1px solid ${accent}`, color: accent, borderRadius: "var(--r-xs)", padding: "3px 8px", fontSize: "var(--t-legende)", textDecoration: "none" }}>JVC</a>
-                <a href={`https://www.ign.com/search?q=${encodeURIComponent(g.title)}`} target="_blank" rel="noreferrer" style={{ background: accentDoux, border: `1px solid ${accent}`, color: accent, borderRadius: "var(--r-xs)", padding: "3px 8px", fontSize: "var(--t-legende)", textDecoration: "none" }}>IGN</a>
+              <div style={{ display: "flex", gap: "var(--ecart-tap)", flexWrap: "wrap" }}>
+                <a href={`https://www.youtube.com/results?search_query=${encodeURIComponent(g.title + " official trailer")}`} target="_blank" rel="noreferrer" style={{ background: dangerDoux, border: `1px solid ${danger}`, color: danger, borderRadius: "var(--r-xs)", padding: "0 10px", fontSize: "var(--t-legende)", textDecoration: "none", display: "inline-flex", alignItems: "center", minHeight: "var(--tap-min)" }}>▶ Trailer</a>
+                <a href={`https://www.youtube.com/results?search_query=${encodeURIComponent(g.title + " gameplay français")}`} target="_blank" rel="noreferrer" style={{ background: dangerDoux, border: `1px solid ${danger}`, color: danger, borderRadius: "var(--r-xs)", padding: "0 10px", fontSize: "var(--t-legende)", textDecoration: "none", display: "inline-flex", alignItems: "center", minHeight: "var(--tap-min)" }}>▶ Gameplay FR</a>
+                <a href={`https://www.jeuxvideo.com/recherche/?q=${encodeURIComponent(g.title)}`} target="_blank" rel="noreferrer" style={{ background: accentDoux, border: `1px solid ${accent}`, color: accent, borderRadius: "var(--r-xs)", padding: "0 10px", fontSize: "var(--t-legende)", textDecoration: "none", display: "inline-flex", alignItems: "center", minHeight: "var(--tap-min)" }}>JVC</a>
+                <a href={`https://www.ign.com/search?q=${encodeURIComponent(g.title)}`} target="_blank" rel="noreferrer" style={{ background: accentDoux, border: `1px solid ${accent}`, color: accent, borderRadius: "var(--r-xs)", padding: "0 10px", fontSize: "var(--t-legende)", textDecoration: "none", display: "inline-flex", alignItems: "center", minHeight: "var(--tap-min)" }}>IGN</a>
               </div>
-              {[0,1,2].map(i => (
-                <label key={i} style={{ display: "block", marginBottom: 6 }}>
-                  <span style={{ display: "block", color: mut, fontSize: "var(--t-legende)", marginBottom: 2 }}>{["Soluce","Wiki","Ma playlist YouTube"][i]}</span>
-                  <input value={g.myLinks[i] || ""} onChange={e => { const l = [...g.myLinks]; l[i] = e.target.value; onEdit(g.id, "myLinks", l); }}
-                    placeholder="https://…"
-                    style={{ display: "block", width: "100%", minHeight: "var(--tap-min)", background: "transparent", border: `1px solid ${bdrChamp}`, borderRadius: "var(--r-sm)", color: txt, padding: "0 8px", fontFamily: "inherit", boxSizing: "border-box" }} />
-                </label>
-              ))}
-              {/* Le filtrage a lieu à l'import ; il a lieu ici aussi. Une
-                  bibliothèque enregistrée avant ce filtre peut encore contenir
-                  un lien qui n'en est pas un, et c'est ici qu'il deviendrait
-                  cliquable. Il reste affiché, en texte : cacher la valeur
-                  empêcherait de comprendre pourquoi le lien ne fonctionne
-                  plus. */}
-              {g.myLinks.filter(Boolean).map((url, i) => {
-                const style = { display: "block", fontSize: "var(--t-legende)", marginBottom: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" };
-                return estLienSur(url)
-                  ? <a key={i} href={url} target="_blank" rel="noreferrer" style={{ ...style, color: accent }}>{url}</a>
-                  : <span key={i} title="Seuls les liens http:// et https:// sont ouverts" style={{ ...style, color: mut }}>⚠️ {url}</span>;
-              })}
-            </>
           ))}
 
-          {/* Notes (accordéon) */}
-          {acc("notes", "📝 Notes", (
-            <>
-              <textarea value={g.tips || ""} onChange={e => onEdit(g.id, "tips", e.target.value)} placeholder="Notes & tips perso…" rows={2} style={{ width: "100%", background: "transparent", border: `1px solid ${bdrChamp}`, borderRadius: "var(--r-sm)", color: txt, padding: "8px", fontFamily: "inherit", resize: "vertical", boxSizing: "border-box" }} />
-              {/* La recherche interrogeait déjà `g.tag`, mais rien ne permettait
-                  de l'écrire : chercher par tag ne pouvait par construction rien
-                  trouver. */}
-              <div style={{ display: "flex", gap: "var(--ecart-tap)", alignItems: "center", marginTop: 6 }}>
-                <span style={{ color: mut, fontSize: "var(--t-legende)", flexShrink: 0 }}>Tag :</span>
-                <input value={g.tag || ""} onChange={e => onEdit(g.id, "tag", e.target.value)}
-                  placeholder="coop, à revendre, prêt à Paul…"
-                  aria-label="Tag libre, utilisable dans la recherche"
-                  style={{ flex: 1, minWidth: 0, minHeight: "var(--tap-min)", background: "transparent", border: `1px solid ${bdrChamp}`, borderRadius: "var(--r-sm)", color: txt, padding: "0 8px", fontFamily: "inherit" }} />
-              </div>
-            </>
-          ))}
           {/* Re-association RAWG */}
           {rawgOpen && (
             <Sheet title="Ré-associer depuis RAWG" onClose={() => setRawgOpen(false)}>

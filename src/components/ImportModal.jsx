@@ -74,7 +74,6 @@ function ImportModal({ games, onImportGames, onClose }) {
         id: Date.now() + i, title: t.name, platform, format: "démat", addedDate,
         genre: [], style: "", lentA: null, lentDate: null,
         cover: t.image || null, metacritic: null,
-        myLinks: ["", "", ""], tips: "", tag: "",
         backCompat: isBackCompatPlatform(platform), infobox: null,
       });
       setProgress(i + 1);

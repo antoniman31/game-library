@@ -412,8 +412,13 @@ function Collection({ games, jour, estPC }) {
 // plus un choix, c'est un bouton qui ne fait rien. `vue` n'est pas remis à
 // zéro pour autant : en revenant sur Console, on retrouve l'onglet qu'on y
 // regardait.
-export default function StatsView({ games, univers }) {
+//
+// Même raisonnement pour une bibliothèque qui n'a jamais rien prêté : toutes
+// les tuiles de « Circulation » y valent zéro, et une page de zéros n'apprend
+// rien qu'un onglet absent ne dise mieux. Le premier prêt la fait revenir.
+export default function StatsView({ games, univers, aPrete }) {
   const estPC = univers === "pc";
+  const sansCirculation = estPC || !aPrete;
   const [vue, setVue] = useState("circulation");
   // Les chiffres suivent la bibliothèque d'eux-mêmes : tout est recalculé dès
   // que `games` change. Ce qui se fige, c'est la date — les jours de prêt
@@ -427,12 +432,12 @@ export default function StatsView({ games, univers }) {
 
   return (
     <div>
-      {!estPC && (
+      {!sansCirculation && (
         <SousOnglets valeur={vue} onChange={setVue}
           options={[["circulation", "Circulation"], ["collection", "Collection"]]} />
       )}
 
-      {vue === "circulation" && !estPC
+      {vue === "circulation" && !sansCirculation
         ? <Circulation games={games} jour={jour} />
         : <Collection games={games} jour={jour} estPC={estPC} />}
 

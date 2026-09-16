@@ -369,6 +369,13 @@ choses à faire qui garde ce qui est fait finit par ne plus être lue.
   la reprendre. « Plague Inc. » se saisit à la main sur la fiche ; c'est le seul des
   deux cas qui ne se répare pas tout seul.
 
+**Trois mesures faites sur la bibliothèque réelle et suivies d'effet.** Dix-neuf
+titres cités par les fiches — épisode précédent ou suivant — étaient absents de la
+bibliothèque sans que rien ne le dise : la fiche le mentionne désormais. Trois champs
+n'avaient jamais été remplis une seule fois — 864 champs de lien vides, zéro note
+perso, un seul tag posé par un import — et sont retirés. Et l'onglet « Prêts »
+n'avait jamais servi : il n'apparaît plus qu'à partir du premier prêt.
+
 **Aucun défaut de code connu à ce jour.** « WB Games » pris pour une série était le
 dernier ; il est corrigé, et la règle est décrite dans « Fait récemment ».
 

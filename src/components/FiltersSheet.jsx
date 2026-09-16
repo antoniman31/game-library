@@ -98,7 +98,7 @@ const Aide = ({ children }) => (
 const GENRES_VISIBLES = 6;
 
 export default function FiltersSheet({
-  univers, boutiques, boutiqueFil, setBoutiqueFil,
+  univers, aPrete, boutiques, boutiqueFil, setBoutiqueFil,
   plat, setPlat, avecRetro, setAvecRetro, nbRetro, nbNatifs,
   pretFil, setPretFil, fmtFil, setFmtFil,
   genreFil, setGenreFil, modeFil, setModeFil, genres, sansMode,
@@ -242,8 +242,12 @@ export default function FiltersSheet({
 
       {/* Le groupe Statut a laissé la place au seul état que l'application
           suit encore : le jeu est-il ici, ou chez quelqu'un ? Un jeu PC ne
-          part chez personne : ni le prêt ni le format n'ont d'objet. */}
-      {!estPC && (
+          part chez personne : ni le prêt ni le format n'ont d'objet.
+
+          Et tant qu'aucun prêt n'a jamais eu lieu, la question ne se pose pas
+          davantage : les deux choix donneraient l'un la liste vide, l'autre la
+          liste entière. */}
+      {!estPC && aPrete && (
         <Groupe label="Prêt" resume={libelle(PRETS, pretFil)} actif={pretFil !== "tous"}
           ouvert={ouvert === "pret"} onBascule={bascule("pret")}>
           <Puces options={PRETS} value={pretFil} onChange={setPretFil}

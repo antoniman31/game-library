@@ -144,6 +144,14 @@ filtres change avec l'univers — Boutique remplace Plateforme, Prêt et Format
 disparaissent — les statistiques suivent l'univers et le disent en titre, et
 « Prêts » quitte la barre d'onglets côté PC : un jeu Steam ne se prête pas.
 
+**Et tant qu'aucun prêt n'a jamais eu lieu, l'onglet n'est pas là non plus.**
+Mesuré sur la bibliothèque réelle : zéro prêt en cours, zéro dans l'historique,
+sur 288 jeux dont 89 physiques — un onglet sur quatre pour une fonctionnalité
+qui n'a jamais servi. Prêter reste à portée, le bouton est sur la fiche du jeu,
+et le premier prêt fait apparaître l'onglet, le groupe « Prêt » du panneau de
+filtres et la vue « Circulation » des statistiques. L'onglet qu'on regarde ne
+s'évapore pas sous le doigt : il reste tant qu'il est sélectionné.
+
 **Un jeu possédé des deux côtés se signale tout seul.** Deux fiches dont les
 titres sont identiques une fois normalisés sont le même jeu : la fiche console
 affiche « Aussi sur PC · Steam », la fiche PC « Aussi sur Xbox Series X », et
@@ -848,7 +856,9 @@ Un jeu est un objet simple, persisté dans `localStorage` sous la clé `gl_v2` :
   cover, metacritic,
   lentA, lentDate, lentRetourPrevu,  // prêt en cours, date de retour convenue
   pretsPasses: [{ a, du, au, prevu }],   // historique, borné à 20 par jeu
-  myLinks: ["", "", ""], tips, tag,
+                                     // `myLinks`, `tips` et `tag` ont vécu ici.
+                                     // 864 champs de lien vides, 0 note, un
+                                     // seul tag posé par un import : retirés.
   backCompat, bcV,                   // rétrocompatibilité + version de migration
   boutique,                          // PC uniquement : Steam, GOG, Epic…
   refBoutique,                       // identifiant chez la boutique (import Playnite)

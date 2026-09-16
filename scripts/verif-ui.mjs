@@ -283,6 +283,19 @@ for (const [largeur, theme] of ECRANS) {
       await page.getByRole("button", { name: "Aucun", exact: true }).click();
       await page.getByRole("button", { name: /^Voir \d+ jeu/ }).click();
     }],
+    // L'onglet « Prêts » n'existe plus tant que rien n'a jamais été prêté : la
+    // promenade doit donc prêter pour l'atteindre, et c'est tant mieux — elle
+    // traverse maintenant le chemin réel, de la fiche à l'onglet, au lieu de
+    // supposer un onglet toujours là.
+    ["un prêt, pour faire exister l'onglet", async () => {
+      await page.keyboard.press("Escape");
+      await page.locator(".gl-card").first().click();
+      await page.getByRole("button", { name: /Prêter ce jeu/ }).first().click();
+      await page.getByLabel(/Nom de la personne/).fill("Vérification");
+      await page.getByRole("button", { name: /^Prêter$/ }).click();
+      await page.waitForTimeout(250);
+      await page.locator(".gl-card").first().click();   // on referme la fiche
+    }],
     ["Prêts", async () => { await page.getByRole("button", { name: /^Prêts/ }).click(); }],
     // L'univers PC : d'autres filtres, d'autres pastilles, un onglet en moins.
     ["PC", async () => { await page.getByRole("button", { name: /^PC$/ }).click(); }],
@@ -338,14 +351,16 @@ for (const [largeur, theme] of ECRANS) {
     // faisaient 27 px.
     // On revient d'abord dans la bibliothèque : les étapes précédentes
     // s'arrêtaient dans les Réglages, où il n'y a pas de fiche à déplier.
-    ["fiche · liens et notes", async () => {
+    ["fiche · liens", async () => {
       await page.keyboard.press("Escape");
       await page.getByRole("button", { name: /^Console$/ }).click();
       if (!(await page.getByRole("button", { name: /Liens & contenu/ }).count())) {
         await page.locator(".gl-card").first().click();
       }
       await page.getByRole("button", { name: /Liens & contenu/ }).first().click();
-      await page.getByRole("button", { name: /Notes/ }).first().click();
+      // L'accordéon « Notes » ouvrait la marche ici. Il portait la zone de
+      // notes perso et le tag, deux champs que personne n'a jamais remplis et
+      // qui sont partis avec les trois liens personnels.
     }],
     // Les trois panneaux de source d'une fiche, chacun avec son champ de
     // recherche — trois champs de 32 px, pour l'endroit où le doigt se pose en

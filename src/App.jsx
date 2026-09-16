@@ -930,9 +930,35 @@ export default function App() {
     setImportChoix(null);
   };
 
+  // Cette bibliothèque a-t-elle jamais prêté ?
+  //
+  // L'onglet « Prêts », son filtre et la vue « Circulation » des Stats
+  // supposent un usage qui n'a peut-être jamais eu lieu : sur la bibliothèque
+  // réelle, zéro prêt en cours et zéro dans l'historique, sur 288 jeux dont 89
+  // physiques. Un onglet sur quatre pour une fonctionnalité qui n'a jamais
+  // servi, c'est de la place et de l'attention prises à ce qui sert.
+  //
+  // L'historique compte autant que le prêt en cours : avoir rendu le dernier
+  // jeu ne fait pas disparaître le fait qu'on prête.
+  const aPrete = useMemo(() => games.some(g => g.lentA || g.pretsPasses?.length), [games]);
+  // Déclaré ici et non plus bas près de `lentGames` : `pretFilEffectif` le lit
+  // juste en dessous, et un `const` lu avant sa ligne fait tomber toute
+  // l'application sur son garde-fou d'erreurs — la même zone morte temporelle
+  // qui avait déjà valu un écran blanc à ce projet.
+
+  // Un filtre qu'on ne voit plus ne doit plus filtrer. Le panneau cache le
+  // groupe « Prêt » côté PC, et désormais aussi tant qu'aucun prêt n'a eu lieu ;
+  // le laisser agir dans son dos donnerait une liste vide sans rien à décocher
+  // pour en sortir. Le réglage est conservé, pas effacé : revenir côté console,
+  // ou prêter un jeu, le retrouve tel qu'on l'avait laissé.
+  const pretFilEffectif = univers === "pc" || !aPrete ? "tous" : pretFil;
+
   const filtered = useMemo(() => {
-    // Recherche insensible à la casse et aux accents (S1), sur titre + genre + tag
-    // uniquement : la description (style) est exclue pour éviter les faux positifs.
+    // Recherche insensible à la casse et aux accents (S1), sur titre et genre
+    // uniquement : la description (style) est exclue pour éviter les faux
+    // positifs. Elle interrogeait aussi le tag, parti avec les deux autres
+    // champs que personne ne remplissait — le seul qu'il ait jamais porté était
+    // `eshop-import`, posé par un import.
     const q = normTitle(search);
     let list = games.filter(g => {
       // L'univers d'abord : il ne se combine avec rien, il décide de quelle
@@ -940,11 +966,10 @@ export default function App() {
       if (!jeuDansUnivers(g, univers)) return false;
       const searchMatch = !q
         || normTitle(g.title).includes(q)
-        || g.genre.some(x => normTitle(x).includes(q))
-        || normTitle(g.tag).includes(q);
+        || g.genre.some(x => normTitle(x).includes(q));
       const platMatch = jeuSurPlateforme(g, plat, avecRetro);
-      const pretMatch = pretFil === "tous" ? true
-        : pretFil === "prêtés" ? !!g.lentA
+      const pretMatch = pretFilEffectif === "tous" ? true
+        : pretFilEffectif === "prêtés" ? !!g.lentA
         : !g.lentA;
       return searchMatch
         && platMatch
@@ -986,7 +1011,7 @@ export default function App() {
       if (kb == null) return -1;
       return compare(ka, kb) * sortDir;
     });
-  }, [games, univers, search, plat, avecRetro, pretFil, fmtFil, genreFil, modeFil, noteFil, completFil, serieFil,
+  }, [games, univers, search, plat, avecRetro, pretFilEffectif, fmtFil, genreFil, modeFil, noteFil, completFil, serieFil,
     boutiqueFil, sort, sortDir, graine]);
 
   // La bibliothèque de l'univers courant. Tout ce qui se dérive de « toute la
@@ -994,6 +1019,13 @@ export default function App() {
   // l'en-tête — s'en tient à celle-là : proposer un filtre « Steam » sur
   // l'onglet Console ne rendrait jamais rien.
   const jeuxUnivers = useMemo(() => games.filter(g => jeuDansUnivers(g, univers)), [games, univers]);
+  // Les titres possédés, normalisés une fois pour toute la liste : chaque fiche
+  // s'en sert pour dire si l'épisode qu'elle cite est là ou non, et le
+  // reconstruire par fiche coûterait deux cent quatre-vingt-huit parcours de la
+  // bibliothèque pour un seul affichage. Toute la bibliothèque, pas seulement
+  // l'univers affiché : un jeu qu'on a sur PC compte quand on regarde une fiche
+  // console.
+  const titresPossedes = useMemo(() => new Set(games.map(g => normTitle(g.title)).filter(Boolean)), [games]);
 
   // Les doublons se retirent APRÈS le filtrage et le tri : la carte gardée est
   // la plus complète, pas la première rencontrée, et ce choix ne doit pas
@@ -1023,7 +1055,7 @@ export default function App() {
   const sauvegarde = etatSauvegarde({ ...sync, proxy: keys.proxy });
   const sauvegardeAlerte = sauvegarde.configuree && sauvegarde.niveau !== "fraiche";
 
-  const filtresActifs = compterFiltres({ plat, pretFil, fmtFil, genreFil, modeFil, noteFil, completFil, serieFil, boutiqueFil });
+  const filtresActifs = compterFiltres({ plat, pretFil: pretFilEffectif, fmtFil, genreFil, modeFil, noteFil, completFil, serieFil, boutiqueFil });
   // Dérivés de tout l'univers courant, pas de la liste filtrée : sinon les
   // options disparaîtraient au fur et à mesure qu'on s'en sert.
   const genres = useMemo(() => genresPresents(jeuxUnivers), [jeuxUnivers]);
@@ -1109,7 +1141,7 @@ export default function App() {
     return (
       <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
         {liste.map(g => <GameCard key={g.id} g={g} onEdit={edit} onDelete={deleteGame} onEnrich={enrichGame}
-          onSerie={setSerieFil}
+          onSerie={setSerieFil} titresPossedes={titresPossedes}
           autresEditions={autresEditions(g, games)} onAutreEdition={ouvrirAutreEdition}
           autoOpen={g.id === lastAddedId || g.id === focusId} onOuverte={consommerOuverture} />)}
       </div>
@@ -1245,10 +1277,16 @@ export default function App() {
             « Prêts » disparaît côté PC. Un jeu Steam ne se prête pas, et un
             onglet qui ne mène qu'à un écran vide est pire qu'un onglet absent.
             Le prix est que la barre change sous le doigt en basculant
-            d'univers : c'est un choix, pas un oubli. */}
+            d'univers : c'est un choix, pas un oubli.
+
+            Il disparaît aussi tant qu'aucun prêt n'a jamais eu lieu, pour la
+            même raison. Prêter reste à portée — le bouton est sur la fiche du
+            jeu —, et le premier prêt fait apparaître l'onglet. La condition
+            garde `tab !== "loans"` : l'onglet qu'on regarde ne s'évapore pas
+            sous le doigt parce qu'on vient d'y rendre le dernier jeu. */}
         <div style={{ display: "flex", gap: "var(--ecart-tap)", marginBottom: estBibliotheque ? 10 : 0 }}>
           {[["console","Console"],["pc","PC"],
-            ...(univers === "pc" && tab !== "loans" ? [] : [["loans",`Prêts${lentGames.length ? ` (${lentGames.length})` : ""}`]]),
+            ...((univers === "pc" || !aPrete) && tab !== "loans" ? [] : [["loans",`Prêts${lentGames.length ? ` (${lentGames.length})` : ""}`]]),
             ["stats","Stats"],["settings","⚙️"]].map(([k,l]) => (
             // Le dernier onglet n'a qu'un émoji pour libellé : un lecteur
             // d'écran annonçait « engrenage », ce qui ne dit pas où l'on va.
@@ -1456,7 +1494,7 @@ export default function App() {
             <div style={{ color: mut, fontSize: "var(--t-petit)", marginBottom: 12 }}>
               Statistiques de ta bibliothèque {univers === "pc" ? "PC" : "console"} — {jeuxUnivers.length} jeu{jeuxUnivers.length > 1 ? "x" : ""}
             </div>
-            <StatsView games={jeuxUnivers} univers={univers} />
+            <StatsView games={jeuxUnivers} univers={univers} aPrete={aPrete} />
           </>
         )}
       </div>
@@ -1498,7 +1536,7 @@ export default function App() {
       {showImport && <ImportModal games={games} onImportGames={importGames} onClose={() => setShowImport(false)} />}
       {showPlaynite && <PlayniteModal games={games} exclusions={exclusions} onImport={importerPlaynite} onClose={() => setShowPlaynite(false)} />}
       {showFilters && (
-        <FiltersSheet
+        <FiltersSheet aPrete={aPrete}
           univers={univers}
           boutiques={boutiques} boutiqueFil={boutiqueFil} setBoutiqueFil={setBoutiqueFil}
           plat={plat} setPlat={setPlat}

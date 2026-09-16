@@ -90,7 +90,6 @@ test("une entrée devient une fiche PC, démat, avec sa boutique et sa provenanc
   assert.deepEqual(jeu.infobox.sources, ["playnite"]);
   // Les champs que le reste de l'application lit sans précaution sont posés.
   assert.deepEqual(jeu.pretsPasses, []);
-  assert.deepEqual(jeu.myLinks, ["", "", ""]);
 });
 
 test("une entrée sans rien à dire n'invente pas d'infobox", () => {

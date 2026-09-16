@@ -1,4 +1,5 @@
 import { txt, mut, bdr, accent } from "../lib/theme.js";
+import { episodesCites } from "../lib/model.js";
 
 // Infos structurées venues de Wikidata : développeur, éditeur, sorties, mode,
 // série.
@@ -8,15 +9,32 @@ import { txt, mut, bdr, accent } from "../lib/theme.js";
 // référence qu'on lit une fois criait plus fort que le texte qu'on veut lire.
 // Elle est désormais rendue en lignes séparées par des filets, sans cadre :
 // elle informe sans peser.
-export default function InfoboxView({ info, onSerie }) {
+export default function InfoboxView({ info, onSerie, titresPossedes }) {
   if (!info) return null;
 
   const rel = info.releases?.length
     ? info.releases.map(r => (r.platform ? `${r.date} (${r.platform})` : r.date)).join(" · ")
     : null;
-  const serieExtra = [info.follows && `après ${info.follows}`, info.followedBy && `puis ${info.followedBy}`]
-    .filter(Boolean).join(", ");
-  const serie = info.series ? info.series + (serieExtra ? ` (${serieExtra})` : "") : null;
+
+  // Les épisodes tiennent leur propre ligne, et non plus une parenthèse
+  // accrochée à la série. Deux raisons : une fiche peut citer un épisode sans
+  // appartenir à une série nommée — la parenthèse disparaissait alors avec la
+  // ligne « Série », et la donnée stockée n'était jamais affichée —, et il faut
+  // de la place pour dire ce que la bibliothèque a ou n'a pas.
+  const { precedent, suivant } = episodesCites({ infobox: info }, titresPossedes);
+  const nomEpisode = (e, mot) => (
+    <span key={mot}>
+      {mot} {e.titre}
+      {/* Discret, et au conditionnel de fait : un jeu possédé sous un autre
+          titre que celui cité serait annoncé absent à tort. */}
+      {!e.possede && titresPossedes && (
+        <span style={{ color: mut }}> · absent de ta bibliothèque</span>
+      )}
+    </span>
+  );
+  const episodes = [precedent && nomEpisode(precedent, "après"), suivant && nomEpisode(suivant, "puis")]
+    .filter(Boolean)
+    .flatMap((el, i) => (i ? [<span key={`sep${i}`}>, </span>, el] : [el]));
 
   // La série est le seul champ de ce bloc qui désigne d'autres jeux de la
   // bibliothèque : la rendre touchable évite de retaper « Halo » dans la
@@ -25,18 +43,15 @@ export default function InfoboxView({ info, onSerie }) {
   // tiennent pas dans un panneau.
   const valeurSerie = onSerie && info.series
     ? (
-      <>
-        <button onClick={() => onSerie(info.series)}
-          title={`Voir les jeux de la série ${info.series}`}
-          style={{
-            background: "transparent", border: "none", padding: 0, minHeight: "var(--tap-min)",
-            color: accent, fontSize: "var(--t-petit)", fontFamily: "inherit",
-            cursor: "pointer", textAlign: "left", textDecoration: "underline",
-          }}>{info.series}</button>
-        {serieExtra ? ` (${serieExtra})` : ""}
-      </>
+      <button onClick={() => onSerie(info.series)}
+        title={`Voir les jeux de la série ${info.series}`}
+        style={{
+          background: "transparent", border: "none", padding: 0, minHeight: "var(--tap-min)",
+          color: accent, fontSize: "var(--t-petit)", fontFamily: "inherit",
+          cursor: "pointer", textAlign: "left", textDecoration: "underline",
+        }}>{info.series}</button>
     )
-    : serie;
+    : info.series || null;
 
   const lignes = [
     ["Développeur", info.developers?.join(", ")],
@@ -44,6 +59,7 @@ export default function InfoboxView({ info, onSerie }) {
     ["Sortie", rel],
     ["Mode", info.modes?.join(", ")],
     ["Série", info.series ? valeurSerie : null],
+    ["Épisodes", episodes.length ? <>{episodes}</> : null],
   ].filter(([, v]) => v);
 
   if (!lignes.length) return null;

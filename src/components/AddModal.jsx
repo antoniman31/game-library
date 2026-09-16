@@ -126,7 +126,6 @@ function AddModal({ onAdd, onClose }) {
       lentA: null, lentDate: null,
       cover: cover || rawg?.background_image || null,
       metacritic: rawg?.metacritic || null,
-      myLinks: ["","",""], tips: "", tag: "",
       backCompat: isBackCompatPlatform(platform), infobox: wikiInfo || null,
     });
   };
