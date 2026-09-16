@@ -5,10 +5,11 @@
 // en `if (Capacitor…)` dans les composants. Le jour où une cinquième apparaît,
 // on sait où elle va.
 //
-// Les quatre :
+// Les cinq :
 //   - enregistrer un fichier, parce qu'une WebView ignore `<a download>` ;
 //   - ouvrir un lien vers l'extérieur, parce qu'une WebView garde tout dedans ;
 //   - le bouton Retour d'Android, qui n'existe pas sur le web ;
+//   - dire quelle version tourne, que les deux côtés numérotent autrement ;
 //   - et `estNatif`, pour ce qui n'a de sens que d'un côté.
 
 import { Capacitor } from "@capacitor/core";
@@ -114,4 +115,27 @@ export function surRetour(quoi) {
   if (!estNatif()) return () => {};
   const promesse = AppNatif.addListener("backButton", quoi);
   return () => { promesse.then(h => h.remove()).catch(() => {}); };
+}
+
+// Quelle version tourne ici.
+//
+// Le site se met à jour tout seul, l'application s'installe à la main : dans
+// les deux cas on pouvait avoir une version devant les yeux sans aucun moyen de
+// savoir laquelle. Sur un APK qu'on installe à la main, c'est pire — rien ne le
+// dit, et le `versionCode` engendré par Capacitor vaut 1 pour toutes les
+// constructions, si bien qu'Android lui-même ne les distingue pas.
+//
+// Deux réponses, parce que les deux côtés numérotent autrement : l'application
+// donne le numéro de construction qu'Android connaît, le site donne le commit.
+// `__COMMIT__` est remplacé à la construction — hors de celle-ci, en test, il
+// n'existe pas, d'où la garde.
+export async function versionInstallee() {
+  const commit = typeof __COMMIT__ === "string" ? __COMMIT__ : "développement";
+  if (!estNatif()) return commit;
+  try {
+    const { build, version } = await AppNatif.getInfo();
+    return `${version} (construction ${build})`;
+  } catch {
+    return commit;
+  }
 }

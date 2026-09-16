@@ -61,6 +61,37 @@ jobs:
       - name: Fabriquer le projet Android
         run: npm run android
 
+      # Toutes les constructions s'annonçaient comme la version 1.
+      #
+      # Capacitor engendre `versionCode 1` et ne le touche plus jamais. Android
+      # s'en sert pour comparer deux APK, et le Play Store refuse un numéro qui
+      # n'augmente pas : deux APK différents étaient donc, pour le système comme
+      # pour qui les regarde, la même chose. Le numéro d'exécution du workflow
+      # ne recule jamais et ne se répète pas — c'est exactement ce qu'on
+      # demande à un `versionCode`.
+      #
+      # Le nom, lui, porte aussi le commit : c'est ce qui permet de remonter
+      # d'un APK installé au code qui l'a produit. Il s'affiche dans ⚙️.
+      #
+      # Ajouté au projet engendré, pour la même raison que le bloc de signature
+      # plus bas : `android/` n'entre pas dans le dépôt. Un second bloc
+      # `defaultConfig` ne remplace pas le premier, il le complète — et la
+      # dernière valeur écrite l'emporte.
+      - name: Numéroter la construction
+        run: |
+          set -euo pipefail
+          cat >> android/app/build.gradle <<GRADLE
+
+          // Ajouté par .github/workflows/android.yml, étape « Numéroter la
+          // construction ». Sans cela, tous les APK s'appellent version 1.
+          android {
+              defaultConfig {
+                  versionCode ${{ github.run_number }}
+                  versionName "1.0.${{ github.run_number }}+${GITHUB_SHA:0:7}"
+              }
+          }
+          GRADLE
+
       # Android n'identifie pas une application par son nom mais par la clé
       # qui l'a signée. Deux APK signés par deux clés différentes sont deux
       # applications étrangères l'une à l'autre : la seconde refuse de

@@ -1,6 +1,21 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
+import { execSync } from 'node:child_process'
+
+// De quelle version s'agit-il ?
+//
+// Le site se déploie tout seul et l'application s'installe à la main : dans les
+// deux cas, la question « laquelle ai-je devant moi » n'avait pas de réponse.
+// Le commit est ce qui l'identifie sans ambiguïté, et il est connu au moment de
+// la construction, pas à l'exécution.
+//
+// Une construction hors dépôt — une archive téléchargée — n'a pas de commit :
+// elle s'annonce alors comme telle plutôt que de faire échouer le build.
+const commit = (() => {
+  try { return execSync('git rev-parse --short HEAD').toString().trim(); }
+  catch { return 'hors dépôt'; }
+})();
 
 // SteamGridDB et xbl.io n'exposent pas de CORS. En production, l'application passe
 // par le relais Cloudflare (voir worker/), dont l'URL se règle dans l'onglet ⚙️.
@@ -25,6 +40,7 @@ export default defineConfig(({ mode }) => {
   const pourAndroid = mode === 'android';
   return {
   base: pourAndroid ? './' : '/game-library/',
+  define: { __COMMIT__: JSON.stringify(commit) },
   plugins: [
     react(),
     !pourAndroid && VitePWA({

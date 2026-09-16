@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { card, bdr, bdrChamp, txt, mut, accent, accentDoux, accentFond, ok, warn, danger } from "../lib/theme.js";
 import { MODES, LIBELLES, ICONES } from "../lib/apparence.js";
 import { pertesDeReglages, messageDePerte, messageCodeSync, CONSEQUENCES } from "../lib/garde-fous.js";
@@ -6,6 +6,7 @@ import { etatSauvegarde, texteAgeSauvegarde } from "../lib/preferences.js";
 import ChampProtege from "./ChampProtege.jsx";
 import SousOnglets from "./SousOnglets.jsx";
 import PanneauOutils from "./PanneauOutils.jsx";
+import { versionInstallee } from "../lib/natif.js";
 
 // Les réglages, refaits.
 //
@@ -117,6 +118,15 @@ export default function SettingsView({
   const ageSauvegarde = etatSauvegarde({ ...sync, proxy: keys.proxy });
 
   const [onglet, setOnglet] = useState("sauvegarde");
+  // Quelle version tourne. La question n'avait pas de réponse : le site se met
+  // à jour tout seul, l'application s'installe à la main, et ni l'un ni l'autre
+  // ne le disait nulle part. C'est ici qu'on la cherche quand quelque chose ne
+  // se comporte pas comme prévu, donc c'est ici qu'elle s'affiche.
+  const [version, setVersion] = useState("");
+  useEffect(() => { let vivant = true;
+    versionInstallee().then(v => vivant && setVersion(v)).catch(() => {});
+    return () => { vivant = false; };
+  }, []);
   const [enregistre, setEnregistre] = useState(false);
   // Le code de synchronisation ne s'écrit qu'à la validation : sinon effacer
   // le champ pour le retaper efface la valeur au premier caractère supprimé.
@@ -315,6 +325,14 @@ export default function SettingsView({
             {enregistre && <span role="status" style={{ color: ok, fontSize: "var(--t-legende)" }}>Enregistré ✓</span>}
           </div>
         </Section>
+      )}
+
+      {/* Discret et en dernier : cela ne se règle pas, cela se lit quand on en
+          a besoin. */}
+      {version && (
+        <div style={{ marginTop: "var(--ecart-bloc)", color: mut, fontSize: "var(--t-legende)", textAlign: "center" }}>
+          Version {version}
+        </div>
       )}
     </div>
   );
