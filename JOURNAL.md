@@ -1389,6 +1389,97 @@ qu'une série fausse.
 
 ---
 
+### Phase 39 — La même application, dans un APK
+
+Antoni veut son application sur son téléphone, avec les fichiers dedans. Deux
+routes existaient. La TWA n'embarque rien : elle ouvre le site en plein écran,
+garde l'origine et donc le relais intact, et se met à jour toute seule — c'est
+ce que je recommandais. Il a tranché pour l'autre : une vraie application
+autonome. Capacitor, donc, et ce chapitre dit ce que ce choix coûte, parce
+qu'il coûte quelque chose.
+
+La partie facile d'abord. Deux constructions au lieu d'une, et elles ne
+diffèrent que par deux choses : la base des chemins, `./` au lieu de
+`/game-library/`, et l'absence de service worker. Ce dernier n'a rien à mettre
+en cache puisque tout est déjà dans l'APK, et la bannière « Nouvelle version »
+qu'il déclenche n'aurait rien à annoncer — les mises à jour arrivent par un
+nouvel APK. Tout le reste du code est commun, et c'est précisément ce qui
+empêche le site et l'application de diverger.
+
+La partie qui se paie, ce sont les endroits où une WebView n'est pas un
+navigateur. Ils se sont trouvés en cherchant, pas en devinant : une recherche
+des `<a download>`, des `target="_blank"` et des schémas non-web dans le code.
+
+Le plus grave était l'export. Une WebView Android ignore purement et simplement
+l'attribut `download` : le bouton « ⬆ Exporter » n'aurait rien fait, sans
+message, et l'export de secours de l'écran d'erreur non plus. Or l'export est
+la seule copie de la bibliothèque qui sorte de l'appareil, et dans une
+application installée le stockage local est tout ce qu'il y a. Un défaut
+silencieux sur la sauvegarde, découvert le jour où on en a besoin. Le fichier
+est donc vraiment écrit, puis le panneau de partage du système s'ouvre pour que
+l'utilisateur décide où il va.
+
+Ensuite le bouton Retour, qui aurait quitté l'application alors qu'un panneau
+est visiblement au premier plan. Échap joue ce rôle au clavier depuis la phase
+des panneaux glissants ; c'est le même contrat, et il tenait en trois lignes
+dans `Sheet.jsx`.
+
+Puis les liens sortants — huit, vers YouTube, jeuxvideo.com, IGN, Wikipédia,
+les liens personnels d'une fiche et le « obtenir ↗ » des Réglages. Dans une
+WebView ils se chargent *dedans*, et l'application devient un navigateur sans
+barre d'adresse dont on ne ressort pas. Les retoucher un par un aurait laissé
+le neuvième se glisser hors de la règle : un seul écouteur en phase de capture,
+posé avant le premier rendu, les couvre tous, y compris ceux qui n'existent pas
+encore. Les schémas qui ne sont pas du web, comme le `sms:` de relance d'un
+emprunteur, continuent d'aller au système, qui sait déjà quoi en faire.
+
+Les quatre vivent dans `src/lib/natif.js`, nommés, plutôt qu'en `if` dispersés
+dans les composants. Le jour où une cinquième différence apparaît, on sait où
+elle va.
+
+Le relais gagne une origine. Capacitor sert les fichiers depuis une origine
+locale et non depuis le site : sans elle, l'application installée perdait d'un
+coup les jaquettes SteamGridDB, l'import Xbox, les notes Steam et la
+synchronisation. Quatre pannes sans rapport apparent pour une ligne manquante —
+d'où un test qui vérifie cette origine précise, et un commentaire qui dit ce
+que cette liste protège vraiment. Ce n'est pas une barrière de sécurité : un
+appel hors navigateur l'ignore complètement. Elle empêche un site tiers
+d'utiliser le relais depuis le navigateur d'un visiteur, et ce qui protège la
+sauvegarde reste le code de synchronisation.
+
+Les icônes ne sont pas dessinées mais dérivées. Android veut une icône
+adaptative à deux couches, que le système recadre en rond ou en carré selon le
+téléphone ; livrer une seule image carrée donne une icône rognée de travers sur
+la moitié des lanceurs. L'avant-plan existait déjà — le `maskable` de la PWA est
+exactement une image qui garde ses marges de sécurité — et le fond est le noir
+de l'application. Un script les fabrique depuis `public/`.
+
+Ni `android/` ni `assets/` n'entrent dans le dépôt. Le projet a pour règle
+qu'aucun fichier engendré n'y entre, ce qui avait déjà fait écarter un dossier
+`docs/` commité pour GitHub Pages ; cinquante fichiers de Gradle que personne
+ne relit ne méritent pas d'exception. Ils sont engendrés à la construction, par
+un workflow qui tourne à la demande plutôt qu'à chaque push — un APK que
+personne ne télécharge coûte cinq minutes de machine pour rien.
+
+Vérifié autrement que par la compilation : le paquet destiné à l'APK a été
+servi à la racine comme la WebView le sert, et ouvert dans un navigateur — 94
+jeux affichés, aucun 404, aucun service worker, aucune erreur. Et l'export du
+site a été rejoué en cliquant vraiment sur le bouton, parce que je l'avais
+réécrit pour les deux côtés : le fichier se télécharge toujours, avec ses 94
+jeux.
+
+Deux choses qu'il faut savoir et qui ne sont pas des défauts. L'application
+démarre vide : son stockage n'est pas celui de la PWA installée dans Chrome, et
+la bibliothèque se récupère par la synchronisation ou par un import. Et le site
+et l'application deviennent deux bibliothèques distinctes, ce qui fait passer la
+synchronisation d'optionnelle à nécessaire dès qu'on utilise les deux.
+
+Au passage, `playwright` a été déclaré en dépendance de développement. Il ne
+l'était pas, alors que `npm run verif:ui` en dépend : sur un clone neuf, la
+commande documentée échouait.
+
+---
+
 ## 3. Architecture finale
 
 ```

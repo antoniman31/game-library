@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.jsx'
 import ErrorBoundary from './components/ErrorBoundary.jsx'
+import { installerLiensExternes } from './lib/natif.js'
 
 // Erreurs hors rendu (gestionnaires d'événements, promesses, code asynchrone) :
 // le garde-fou React ne les voit pas, et sur Chrome mobile il n'y a pas de
@@ -24,6 +25,13 @@ window.addEventListener("error", e => {
 window.addEventListener("unhandledrejection", e => {
   bandeauErreur(`PROMESSE REJETÉE : ${e.reason?.message || e.reason}`)
 })
+
+// Dans l'application Android, un lien externe se chargerait DANS la WebView,
+// qui devient alors un navigateur sans barre d'adresse dont on ne ressort pas.
+// Posé ici, avant le premier rendu, l'écouteur couvre tous les liens de
+// l'application — y compris ceux qu'on ajoutera plus tard. Sur le web, la
+// fonction ne fait rien.
+installerLiensExternes()
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>

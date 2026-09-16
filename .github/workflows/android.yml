@@ -1,0 +1,77 @@
+name: Application Android
+
+# L'APK ne se construit pas à chaque push.
+#
+# Le site se déploie tout seul parce qu'il n'y a rien à décider : il y a une
+# seule version en ligne, et c'est la dernière. Une application, non — elle
+# s'installe à la main, et construire un APK que personne ne télécharge coûte
+# cinq minutes de machine pour rien. Il se déclenche donc à la demande, ou sur
+# une étiquette de version quand on voudra en garder une trace.
+on:
+  workflow_dispatch:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+jobs:
+  apk:
+    name: Construire l'APK
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # Le SDK Android est déjà sur le runner ; seul le JDK demande un choix.
+      # Temurin 21, parce que c'est ce que réclame le greffon Android de
+      # Gradle 8 utilisé par Capacitor 8.
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - run: npm ci
+
+      # Les vérifications du dépôt tournent avant de fabriquer quoi que ce
+      # soit : un APK qui embarque du code non testé n'a pas d'intérêt, et sa
+      # panne se découvrirait sur le téléphone plutôt que dans la CI.
+      - name: Vérifier
+        run: |
+          npm run lint
+          npm test
+
+      # `npm run android` enchaîne tout : la variante de build sans service
+      # worker, les icônes engendrées depuis public/, le projet Android et la
+      # synchronisation des greffons. Rien de ce qu'elle produit n'est dans le
+      # dépôt — c'est la règle du projet, et c'est ce qui garantit que cette
+      # construction part toujours des mêmes sources.
+      - name: Fabriquer le projet Android
+        run: npm run android
+
+      # APK de débogage : installable tel quel, signé par la clé de débogage
+      # d'Android, aucun secret à créer. C'est ce qu'il faut pour installer
+      # l'application sur son propre téléphone aujourd'hui.
+      #
+      # Ce n'est PAS ce qu'il faudra pour le Play Store, qui exige une version
+      # signée par une clé qu'on garde. Le jour venu, on ajoute un magasin de
+      # clés en secret et on passe à `assembleRelease` : le reste du workflow
+      # ne bouge pas. En attendant, sachons ce que ça coûte — un APK de
+      # débogage est marqué `debuggable`, ce qui laisse un appareil branché en
+      # USB lire les données de l'application. Sur son propre téléphone, c'est
+      # acceptable ; pour distribuer, non.
+      - name: Construire l'APK
+        run: ./gradlew assembleDebug --no-daemon
+        working-directory: android
+
+      - name: Déposer l'APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: game-library-apk
+          path: android/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+          retention-days: 30

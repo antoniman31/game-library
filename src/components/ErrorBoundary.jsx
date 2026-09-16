@@ -1,4 +1,5 @@
 import { Component } from "react";
+import { enregistrerFichier } from "../lib/natif.js";
 
 // Filet de sécurité autour de toute l'application.
 //
@@ -25,15 +26,16 @@ export default class ErrorBoundary extends Component {
     console.error("Erreur de rendu :", erreur, infos);
   }
 
-  exporter = () => {
+  // L'export de secours passe par le même chemin que l'export ordinaire, et
+  // pour la même raison : dans l'application Android, le lien invisible qu'on
+  // clique ne fait rien. C'est ici que ça comptait le plus — cet écran ne
+  // s'affiche que quand l'application est déjà tombée, et ce bouton est alors
+  // le seul moyen de sortir la bibliothèque.
+  exporter = async () => {
     try {
       const brut = localStorage.getItem("gl_v2") || "[]";
-      const url = URL.createObjectURL(new Blob([brut], { type: "application/json" }));
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `game-library-secours-${new Date().toISOString().slice(0, 10)}.json`;
-      a.click();
-      URL.revokeObjectURL(url);
+      const nom = `game-library-secours-${new Date().toISOString().slice(0, 10)}.json`;
+      await enregistrerFichier(nom, brut);
     } catch (e) {
       console.error("Export de secours impossible :", e);
     }

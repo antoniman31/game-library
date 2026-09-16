@@ -33,6 +33,15 @@ const test = (nom, ok, detail) => { if (!ok) echecs++; dire(nom, ok, detail); };
 // Origine
 let r = await appel("GET", "/sync", { origin: "https://evil.example", code: CODE });
 test("origine non listée refusée", r.status === 403);
+// L'application Android sert ses fichiers depuis une origine locale, pas depuis
+// le site : sans elle dans la liste, l'app installée perd la synchronisation,
+// les jaquettes, l'import Xbox et les notes Steam d'un seul coup — et le
+// symptôme serait quatre pannes sans rapport apparent.
+r = await appel("GET", "/sync", { origin: "https://localhost", code: CODE });
+test("origine de l'application Android acceptée", r.status !== 403,
+  `statut ${r.status}`);
+test("en-tête CORS renvoyé à l'application Android",
+  r.headers.get("Access-Control-Allow-Origin") === "https://localhost");
 
 // Code
 r = await appel("GET", "/sync");

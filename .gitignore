@@ -25,3 +25,9 @@ dist-ssr
 
 # Config locale de Claude Code (par machine)
 .claude/settings.local.json
+
+# Projet Android et images d'icônes : engendrés par `npm run android` depuis
+# public/ et capacitor.config.json. Le dépôt n'accueille aucun fichier produit —
+# c'est la règle qui avait déjà fait écarter un dossier docs/ commité.
+android
+assets

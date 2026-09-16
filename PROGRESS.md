@@ -271,6 +271,13 @@ Deux sous-onglets. Chaque bloc disparaît quand il n'a rien à dire.
 
 ## Fait récemment
 
+- **Application Android** : la même application empaquetée par Capacitor, fichiers
+  embarqués, construite à la demande par `.github/workflows/android.yml` et déposée en
+  artefact. Quatre comportements qu'une WebView ne partage pas avec un navigateur sont
+  traités dans `src/lib/natif.js` — l'export, qui ne faisait rien et sans message ; le
+  bouton Retour ; les liens sortants ; les icônes adaptatives. Le site ne bouge pas :
+  `--mode android` ne change que la base des chemins et retire le service worker.
+
 - **Deux fausses séries écartées à la lecture** : « Inc. », une forme juridique seule,
   et « WB Games », le sigle de l'éditeur « Warner Bros. Games ». La règle vivant dans
   `migrateGames`, les fiches déjà enregistrées se réparent au chargement suivant —
@@ -366,7 +373,11 @@ qu'il est — l'ordre de grandeur qui a fait abandonner la pagination — et non
 mesure à jour.
 
 **Relais déployé** : `https://game-library-proxy.antoniman31.workers.dev` — à coller
-dans ⚙️ → Services sur chaque nouvel appareil.
+dans ⚙️ → Services sur chaque nouvel appareil, application Android comprise.
+
+**L'application Android démarre vide.** Son stockage n'est pas celui de la PWA installée
+dans Chrome : la bibliothèque ne s'y transporte pas toute seule. On la récupère par
+⚙️ → Sauvegarde → Récupérer avec le code de synchronisation, ou en important un export.
 
 **État des données au 15/09/2026**, mesuré sur le dernier export : 288 jeux, 157 console
 et 131 PC, aucune fiche sans jaquette, aucune sans note — 103 notées, le reste marqué
