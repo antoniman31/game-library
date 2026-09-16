@@ -10,6 +10,7 @@
 //   - ouvrir un lien vers l'extérieur, parce qu'une WebView garde tout dedans ;
 //   - le bouton Retour d'Android, qui n'existe pas sur le web ;
 //   - dire quelle version tourne, que les deux côtés numérotent autrement ;
+//   - accorder la barre d'état au thème, que `theme-color` ne sait pas faire ;
 //   - et `estNatif`, pour ce qui n'a de sens que d'un côté.
 
 import { Capacitor } from "@capacitor/core";
@@ -17,6 +18,7 @@ import { Filesystem, Directory, Encoding } from "@capacitor/filesystem";
 import { Share } from "@capacitor/share";
 import { Browser } from "@capacitor/browser";
 import { App as AppNatif } from "@capacitor/app";
+import { StatusBar, Style } from "@capacitor/status-bar";
 
 export const estNatif = () => Capacitor.isNativePlatform();
 
@@ -138,4 +140,29 @@ export async function versionInstallee() {
   } catch {
     return commit;
   }
+}
+
+// La barre d'état du téléphone, accordée au thème de l'application.
+//
+// Sur le site, une balise `<meta name="theme-color">` suffit et l'application
+// la met déjà à jour à chaque changement de thème. Dans une WebView, cette
+// balise ne veut rien dire : la barre d'état appartient au système, pas à la
+// page.
+//
+// Ce n'est pas un détail d'esthétique. L'application a son propre réglage
+// clair/sombre, qui peut contredire celui du téléphone — c'est même la raison
+// d'être des modes « Clair » et « Noir profond ». Téléphone en sombre et
+// application en clair, le système dessinait des icônes claires sur l'en-tête
+// clair de l'application : illisibles.
+//
+// Seul le style est réglé, pas la couleur de fond. Depuis qu'Android impose le
+// bord à bord, la page est dessinée SOUS la barre d'état et c'est l'en-tête de
+// l'application qu'on y voit — il n'y a donc rien à peindre, seulement à dire
+// au système de quelle couleur faire ses icônes. `Style.Dark` veut dire « fond
+// sombre », donc icônes claires.
+export async function accorderBarreEtat(theme) {
+  if (!estNatif()) return;
+  try {
+    await StatusBar.setStyle({ style: theme === "dark" ? Style.Dark : Style.Light });
+  } catch { /* une barre d'état qu'on ne peut pas régler ne casse rien */ }
 }

@@ -14,7 +14,7 @@ import PlayniteModal from "./components/PlayniteModal.jsx";
 import NotesChoixSheet from "./components/NotesChoixSheet.jsx";
 
 import { hdr, card, bdr, bdrChamp, txt, mut, accent, accentDoux, accentFond, warnDoux, dangerDoux, ok, warn, warnFond, danger } from "./lib/theme.js";
-import { enregistrerFichier, estNatif } from "./lib/natif.js";
+import { enregistrerFichier, estNatif, accorderBarreEtat } from "./lib/natif.js";
 import { descendreJaquettes, menageJaquettes, aDescendre } from "./lib/jaquettes.js";
 import { GAMES_INIT } from "./lib/seed.js";
 import { jeuDansUnivers, boutiquesPresentes, jeuDeLaBoutique, autresEditions,
@@ -237,6 +237,9 @@ export default function App() {
     // La barre d'état du téléphone suit le fond, sinon le bleu du manifeste
     // coiffe une application noire.
     document.querySelector('meta[name="theme-color"]')?.setAttribute("content", COULEUR_BARRE[theme]);
+    // La même intention, redite au système : dans une WebView, `theme-color`
+    // ne dit rien à la barre d'état.
+    accorderBarreEtat(theme);
   }, [theme]);
   useEffect(() => { ecrire("gl_theme", modeTheme); }, [modeTheme]);
   useEffect(() => { ecrire("gl_exclusions", JSON.stringify(exclusions)); }, [exclusions]);

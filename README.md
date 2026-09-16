@@ -1252,7 +1252,7 @@ mises à jour arrivent par un nouvel APK. C'est tout le contenu de
 `--mode android`, et c'est ce qui garantit que le site ne peut pas dériver de
 l'application.
 
-**Quatre comportements qu'une WebView ne partage pas avec un navigateur**, tous
+**Six comportements qu'une WebView ne partage pas avec un navigateur**, tous
 regroupés dans [`src/lib/natif.js`](src/lib/natif.js) plutôt que dispersés :
 
 - **L'export.** Une WebView Android ignore purement et simplement l'attribut
@@ -1272,12 +1272,27 @@ regroupés dans [`src/lib/natif.js`](src/lib/natif.js) plutôt que dispersés :
   y compris ceux qu'on ajoutera plus tard, ce qu'une retouche des huit liens
   existants n'aurait pas garanti. Les schémas qui ne sont pas du web, comme le
   `sms:` de relance d'un emprunteur, continuent d'aller au système.
+- **La barre d'état.** Sur le site, une balise `<meta name="theme-color">`
+  suffit ; dans une WebView elle ne veut rien dire, la barre appartient au
+  système. Ce n'est pas qu'esthétique : l'application a son propre réglage
+  clair/sombre, qui peut contredire celui du téléphone — téléphone en sombre et
+  application en clair, le système dessinait des icônes claires sur un en-tête
+  clair. Seul le style est réglé, pas la couleur : depuis qu'Android impose le
+  bord à bord, c'est l'en-tête de l'application qu'on voit derrière la barre.
+- **La version affichée.** Le site se met à jour tout seul, l'application
+  s'installe à la main, et ni l'un ni l'autre ne disait ce qu'il était.
+  ⚙️ l'affiche : le numéro de construction qu'Android connaît côté application,
+  le commit côté site.
 - **Les icônes.** Android veut une icône adaptative à deux couches, que le
   système recadre selon le téléphone. Elles ne sont pas dessinées mais
   dérivées : l'avant-plan est le `maskable` de la PWA, dont les marges de
   sécurité existent précisément pour ça, et le fond est le noir de
   l'application. [`scripts/icones-android.mjs`](scripts/icones-android.mjs) les
-  fabrique depuis `public/`.
+  fabrique depuis `public/`, et
+  [`scripts/elaguer-android.mjs`](scripts/elaguer-android.mjs) retire ensuite
+  les douze dossiers d'écran de démarrage sombres, doubles exacts de leurs
+  jumeaux de jour — 350 Ko. Chaque fichier est comparé avant d'être retiré :
+  le jour où le sombre différera du clair, il survivra.
 
 **Le relais a une origine de plus.** Capacitor sert les fichiers depuis une
 origine locale et non depuis le site : sans `https://localhost` dans la liste
