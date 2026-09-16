@@ -1018,7 +1018,11 @@ fournit directement un texte français rédigé, sans quota ni découpage.
   panneaux glissants. La liste a longtemps été paginée par 30, jusqu'à ce que la
   mesure montre que tout monter d'un coup ne coûte qu'une seconde de plus au
   démarrage sur un vieux téléphone : le bouton « Charger 30 de plus » a disparu
-  et la bibliothèque s'affiche entière. Les cibles principales, longtemps à 44 px « pour ne pas faire
+  et la bibliothèque s'affiche entière. La bibliothèque a depuis presque doublé,
+  et la mesure a été refaite sur les 288 jeux réels : `content-visibility: auto`
+  sur les fiches et `loading="lazy"` sur les jaquettes ramènent la liste complète
+  de 2 471 à 1 727 ms sur un processeur ralenti six fois, et le pire cas — effacer
+  la recherche pour faire revenir toute la liste — de 880 à 711 ms. Les cibles principales, longtemps à 44 px « pour ne pas faire
   exploser la densité », sont passées à 48 — le chiffre de Material — après
   qu'un audit a montré que le compromis avait été fait avec nous-mêmes et non
   avec l'utilisateur. Les commandes secondaires restent à 44 : c'est le plancher
