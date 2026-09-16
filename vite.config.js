@@ -9,11 +9,25 @@ import { VitePWA } from 'vite-plugin-pwa'
 // Worker : il RELAIE simplement la requête. Il ne contient aucune clé — celle-ci
 // est envoyée par le client dans l'en-tête Authorization / X-Authorization,
 // exactement comme vers le Worker.
-export default defineConfig({
-  base: '/game-library/',
+// Deux cibles, une seule application.
+//
+// Le site vit dans un sous-dossier de GitHub Pages et se met à jour par son
+// service worker. L'application Android sert les mêmes fichiers depuis la
+// racine de sa WebView, et n'a rien à mettre en cache puisqu'ils sont déjà
+// dans l'APK — son service worker n'aurait rien à faire, et la bannière
+// « Nouvelle version » qu'il déclenche rien à annoncer, les mises à jour
+// arrivant par un nouvel APK.
+//
+// `--mode android` est donc la seule différence entre les deux constructions :
+// la base des chemins, et l'absence de PWA. Tout le reste du code est commun,
+// et c'est la raison pour laquelle le site ne peut pas dériver de l'app.
+export default defineConfig(({ mode }) => {
+  const pourAndroid = mode === 'android';
+  return {
+  base: pourAndroid ? './' : '/game-library/',
   plugins: [
     react(),
-    VitePWA({
+    !pourAndroid && VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg'],
       manifest: {
@@ -69,7 +83,7 @@ export default defineConfig({
         ],
       },
     }),
-  ],
+  ].filter(Boolean),
   server: {
     proxy: {
       '/sgdb': {
@@ -84,4 +98,5 @@ export default defineConfig({
       },
     },
   },
+  };
 })

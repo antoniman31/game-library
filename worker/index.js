@@ -18,6 +18,17 @@
 
 const ORIGINES = [
   "https://antoniman31.github.io",
+  // L'application Android. Capacitor sert les fichiers de l'APK depuis une
+  // origine locale, et non depuis le site : sans cette ligne, l'application
+  // installée perd d'un coup les jaquettes SteamGridDB, l'import Xbox, les
+  // notes Steam et la synchronisation — les quatre passent par ici.
+  //
+  // Cette liste n'est pas une barrière de sécurité, et il vaut mieux l'écrire
+  // que le sous-entendre : un appel hors navigateur l'ignore complètement.
+  // Elle empêche un site tiers d'utiliser le relais depuis le navigateur d'un
+  // visiteur. Ce qui protège vraiment la sauvegarde, c'est le code de
+  // synchronisation.
+  "https://localhost",
   "http://localhost:5173",
   "http://127.0.0.1:5173",
 ];

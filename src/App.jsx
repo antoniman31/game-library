@@ -14,6 +14,7 @@ import PlayniteModal from "./components/PlayniteModal.jsx";
 import NotesChoixSheet from "./components/NotesChoixSheet.jsx";
 
 import { hdr, card, bdr, bdrChamp, txt, mut, accent, accentDoux, accentFond, warnDoux, dangerDoux, ok, warn, warnFond, danger } from "./lib/theme.js";
+import { enregistrerFichier, estNatif } from "./lib/natif.js";
 import { GAMES_INIT } from "./lib/seed.js";
 import { jeuDansUnivers, boutiquesPresentes, jeuDeLaBoutique, autresEditions,
   migrateGames, compterFiltres, FILTRES, validerJeuxImportes, pretEnRetard, jeuxSansScore, normaliserGenres,
@@ -834,12 +835,25 @@ export default function App() {
     setSyncEtat({ type: "ok", texte: `${jeux.length} jeu${jeux.length > 1 ? "x" : ""} récupéré${jeux.length > 1 ? "s" : ""}.` });
   };
 
-  const exportJSON = () => {
-    const blob = new Blob([JSON.stringify(games, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url; a.download = `game-library-${new Date().toISOString().slice(0, 10)}.json`;
-    a.click(); URL.revokeObjectURL(url);
+  // L'export, qui ne marche pas de la même façon des deux côtés.
+  //
+  // Sur le site, un lien invisible qu'on clique. Dans l'application Android,
+  // une WebView ignore l'attribut `download` : le clic ne faisait rien, et rien
+  // ne le disait. `enregistrerFichier` écrit vraiment le fichier puis ouvre le
+  // panneau de partage du système. L'appel devient asynchrone et peut échouer —
+  // une écriture sur disque, ça se rate — donc il le dit.
+  const exportJSON = async () => {
+    const nom = `game-library-${new Date().toISOString().slice(0, 10)}.json`;
+    try {
+      const r = await enregistrerFichier(nom, JSON.stringify(games, null, 2));
+      // Sur le site le téléchargement se voit tout seul ; dans l'app, refuser
+      // le partage laisse le fichier écrit sans que rien ne l'indique.
+      if (estNatif()) {
+        setAvis(r.partage ? "Sauvegarde envoyée." : "Sauvegarde écrite, mais pas partagée.");
+      }
+    } catch {
+      setAvis("Impossible d'écrire la sauvegarde.");
+    }
   };
   const importJSON = (e) => {
     const file = e.target.files?.[0];

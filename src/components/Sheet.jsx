@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef } from "react";
 import { card, bdr, txt, bdrChamp } from "../lib/theme.js";
+import { surRetour } from "../lib/natif.js";
 
 // Panneau glissant depuis le bas.
 //
@@ -48,6 +49,11 @@ export default function Sheet({ title, onClose, children }) {
       else if (!e.shiftKey && courant === dernier) { e.preventDefault(); premier.focus(); }
     };
     document.addEventListener("keydown", surTouche);
+    // Le bouton Retour d'Android dit la même chose qu'Échap : referme ce qui
+    // est ouvert par-dessus. Sans cette ligne il quitte l'application, alors
+    // qu'un panneau est visiblement au premier plan — le geste le plus naturel
+    // du système ferait perdre l'écran qu'on regardait.
+    const retirerRetour = surRetour(() => fermerRef.current());
     // Sur <html>, pas sur <body> : `min-height: 100vh` est posé sur les deux,
     // et c'est l'élément racine qui défile ici — `document.scrollingElement` le
     // confirme. Le verrou posé sur <body> ne bloquait donc rien du tout.
@@ -56,6 +62,7 @@ export default function Sheet({ title, onClose, children }) {
     racine.style.overflow = "hidden";
     return () => {
       document.removeEventListener("keydown", surTouche);
+      retirerRetour();
       racine.style.overflow = avant;
       // Refermer doit ramener là d'où l'on vient, sinon le focus repart au
       // début du document et il faut retraverser toute la page.

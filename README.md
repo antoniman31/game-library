@@ -25,6 +25,7 @@ fois de relais CORS et de sauvegarde entre appareils.
 - [Architecture et choix techniques](#architecture-et-choix-techniques)
 - [Développement](#développement)
 - [Déploiement](#déploiement)
+- [L'application Android](#lapplication-android)
 - [Limites connues](#limites-connues)
 
 ---
@@ -1221,6 +1222,86 @@ production, et l'oubli n'était visible nulle part.
 [`.github/workflows/worker.yml`](.github/workflows/worker.yml) s'en charge
 désormais dès que `worker/**` change sur `main` — tests d'abord, déploiement
 ensuite. `npx wrangler deploy` ne sert plus qu'à déployer sa propre copie.
+
+---
+
+## L'application Android
+
+La même application, empaquetée dans un APK par Capacitor : les fichiers sont
+dans l'application, rien ne dépend du site en ligne.
+
+```bash
+npm run android        # build Android + icônes + projet natif
+```
+
+Puis, avec le SDK Android : `cd android && ./gradlew assembleDebug`. En
+pratique on ne le fait pas à la main —
+[`.github/workflows/android.yml`](.github/workflows/android.yml) le construit
+sur demande (onglet Actions → « Application Android » → Run workflow) et dépose
+l'APK en artefact téléchargeable.
+
+**Ce qui diffère du site, et rien d'autre.** Les fichiers sont servis depuis la
+racine de la WebView et non depuis `/game-library/`, et le service worker est
+retiré : il n'a rien à mettre en cache puisque tout est déjà dans l'APK, et la
+bannière « Nouvelle version » qu'il déclenche n'aurait rien à annoncer — les
+mises à jour arrivent par un nouvel APK. C'est tout le contenu de
+`--mode android`, et c'est ce qui garantit que le site ne peut pas dériver de
+l'application.
+
+**Quatre comportements qu'une WebView ne partage pas avec un navigateur**, tous
+regroupés dans [`src/lib/natif.js`](src/lib/natif.js) plutôt que dispersés :
+
+- **L'export.** Une WebView Android ignore purement et simplement l'attribut
+  `download` : le bouton ne faisait rien, et rien ne le disait. C'était le
+  défaut le plus grave du passage en application — l'export est la seule copie
+  de la bibliothèque qui sorte de l'appareil, et il aurait échoué en silence.
+  Le fichier est donc vraiment écrit, puis le panneau de partage du système
+  s'ouvre. L'export de secours de l'écran d'erreur passe par le même chemin,
+  et c'est là que ça compte le plus : cet écran ne s'affiche que lorsque
+  l'application est déjà tombée.
+- **Le bouton Retour.** Il quitterait l'application alors qu'un panneau est
+  ouvert par-dessus la liste. Il dit désormais la même chose qu'Échap :
+  referme ce qui est au premier plan.
+- **Les liens sortants.** Un lien externe se chargerait *dans* la WebView, qui
+  devient un navigateur sans barre d'adresse dont on ne ressort pas. Un seul
+  écouteur, posé avant le premier rendu, les envoie au navigateur du système —
+  y compris ceux qu'on ajoutera plus tard, ce qu'une retouche des huit liens
+  existants n'aurait pas garanti. Les schémas qui ne sont pas du web, comme le
+  `sms:` de relance d'un emprunteur, continuent d'aller au système.
+- **Les icônes.** Android veut une icône adaptative à deux couches, que le
+  système recadre selon le téléphone. Elles ne sont pas dessinées mais
+  dérivées : l'avant-plan est le `maskable` de la PWA, dont les marges de
+  sécurité existent précisément pour ça, et le fond est le noir de
+  l'application. [`scripts/icones-android.mjs`](scripts/icones-android.mjs) les
+  fabrique depuis `public/`.
+
+**Le relais a une origine de plus.** Capacitor sert les fichiers depuis une
+origine locale et non depuis le site : sans `https://localhost` dans la liste
+du Worker, l'application installée perdrait d'un coup les jaquettes
+SteamGridDB, l'import Xbox, les notes Steam et la synchronisation — quatre
+pannes sans rapport apparent. Cette liste n'est pas une barrière de sécurité,
+et mieux vaut l'écrire que le sous-entendre : un appel hors navigateur
+l'ignore complètement. Elle empêche un site tiers d'utiliser le relais depuis
+le navigateur d'un visiteur ; ce qui protège la sauvegarde, c'est le code de
+synchronisation.
+
+**Ni `android/` ni `assets/` ne sont dans le dépôt.** Les deux sont engendrés
+par `npm run android` depuis `public/` et `capacitor.config.json`. Le projet
+n'accueille aucun fichier produit — c'est la règle qui avait déjà fait écarter
+un dossier `docs/` commité pour GitHub Pages — et cinquante fichiers de Gradle
+que personne ne relit ne feraient pas exception.
+
+**Le site et l'application sont deux bibliothèques distinctes.** Même code,
+mais chacune son stockage : un jeu ajouté dans l'application n'apparaît pas sur
+le site tant qu'on n'a pas fait ⚙️ → Envoyer d'un côté et Récupérer de l'autre.
+La synchronisation passe d'optionnelle à nécessaire dès qu'on utilise les deux.
+
+**L'APK produit est un APK de débogage**, signé par la clé de débogage
+d'Android : installable tel quel, aucun secret à créer. Ce n'est pas ce qu'il
+faudra pour le Play Store, qui exige une version signée par une clé qu'on
+garde — et un APK de débogage est marqué `debuggable`, ce qui laisse un
+appareil branché en USB lire les données de l'application. Sur son propre
+téléphone c'est acceptable ; pour distribuer, non.
 
 ---
 

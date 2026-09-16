@@ -1,0 +1,11 @@
+{
+  "appId": "io.github.antoniman31.gamelibrary",
+  "appName": "Game Library",
+  "webDir": "dist",
+  "android": {
+    "backgroundColor": "#000000"
+  },
+  "server": {
+    "androidScheme": "https"
+  }
+}
