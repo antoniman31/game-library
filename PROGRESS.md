@@ -271,6 +271,13 @@ Deux sous-onglets. Chaque bloc disparaît quand il n'a rien à dire.
 
 ## Fait récemment
 
+- **Tout ce qui peut être local l'est.** Les jaquettes se descendent sur l'appareil
+  (⚙️ → Outils), sans toucher au champ `cover` : l'URL reste la référence pour l'export
+  et la synchronisation, un index à part retient le fichier. Les polices sont embarquées
+  dans le build au lieu de venir de Google Fonts — 88 Ko, sous-ensemble latin seul,
+  vérifié comme couvrant œ et les guillemets français. Le reste était déjà local : la
+  bibliothèque entière, ses infobox, ses prêts, ses préférences.
+
 - **Application Android** : la même application empaquetée par Capacitor, fichiers
   embarqués, construite à la demande par `.github/workflows/android.yml` et déposée en
   artefact. Quatre comportements qu'une WebView ne partage pas avec un navigateur sont

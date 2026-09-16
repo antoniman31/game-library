@@ -1480,6 +1480,71 @@ commande documentée échouait.
 
 ---
 
+### Phase 40 — Ce qui peut vivre sur le téléphone y vit
+
+Antoni demande de regarder tout ce qui peut être gardé en local. La réponse
+tient en deux trous, dont un que j'avais creusé la veille.
+
+L'inventaire d'abord, parce qu'il est rassurant : la bibliothèque entière est
+déjà sur l'appareil. Quatre cent vingt-quatre kilo-octets — titres, genres,
+notes, descriptions, infobox, prêts et leur historique, tags, liens
+personnels — plus les préférences, le thème, la liste des écartés, le code de
+synchronisation et les clés. Tout ce que l'enrichissement a rapporté est
+*stocké*, jamais redemandé. Une fois une fiche remplie, le réseau ne sert plus
+qu'à deux choses.
+
+La première est les jaquettes, et c'est le trou que j'avais fait. Une jaquette
+est une URL ; sur le site, le service worker les garde soixante jours et on les
+revoit hors ligne. En retirant ce service worker de la version Android — à
+raison, il n'avait rien à mettre en cache puisque les fichiers sont dans
+l'APK — j'ai emporté ce cache avec lui. L'application retéléchargeait donc les
+deux cent quatre-vingt-huit images à chaque lancement et n'affichait que des
+cadres vides sans réseau. Le site était devenu meilleur que l'application sur
+le seul point où l'application devait gagner, et je l'avais annoncé comme sans
+conséquence.
+
+Le choix qui compte dans la correction n'est pas de descendre les images, c'est
+de ne pas toucher au champ `cover`. L'URL reste la référence : c'est elle qui
+part dans l'export et la synchronisation, elle que lit le site, elle qu'un
+autre appareil saura redescendre. Écrire un chemin de fichier local à la place
+aurait rendu l'export illisible partout ailleurs — un export qui ne s'importe
+nulle part n'est pas une sauvegarde. L'index qui associe une URL à son fichier
+vit donc à part, dans sa propre clé, exactement comme les clés d'API et le code
+de synchronisation vivent hors de `gl_v2` et pour la même raison.
+
+Deux détails qui font la différence à l'usage. L'opération écrit dans l'index à
+chaque image plutôt qu'à la fin : interrompue à la centième, elle garde les
+quatre-vingt-dix-neuf premières et reprend où elle s'est arrêtée. Et
+l'affichage retombe sur l'URL si le fichier local a disparu — le système peut
+nettoyer un stockage —, en réutilisant le `onError` qui existait déjà pour les
+URL mortes.
+
+Le second trou était les polices. Inter et Press Start 2P venaient de Google
+Fonts et ne figuraient dans aucun build : hors ligne, le titre perdait sa police
+pixel et tout le texte retombait sur celle du système. Celui-là valait pour le
+site aussi, il s'y voyait seulement moins. Seul le sous-ensemble `latin` est
+embarqué, et « vérifié plutôt que supposé » a eu un sens littéral ici : plutôt
+que de parier sur ce que contient un sous-ensemble, j'ai ouvert les deux
+fichiers et regardé la table de caractères — œ, Œ, les guillemets français, le
+tiret cadratin et l'apostrophe typographique y sont tous. Les règles
+`@font-face` sont écrites à la main plutôt qu'importées du paquet : les siennes
+déclarent un repli `.woff` à côté du `.woff2`, que Vite embarquait et qu'aucun
+navigateur ne demandera jamais — cent dix kilo-octets de poids mort. Le paquet
+construit est passé de 684 à 580 kilo-octets avec les polices dedans.
+
+Ce qui reste en ligne, et doit le rester : chercher une jaquette, compléter une
+note, actualiser une description, importer Xbox, synchroniser. Ce sont des
+interrogations, pas de l'affichage.
+
+Le bouton n'apparaît que dans l'application. Sur le site, le service worker
+fait déjà le travail, et proposer d'« enregistrer » y serait un bouton qui ne
+répare rien — vérifié dans le navigateur, avec la vraie bibliothèque : les cent
+cinquante-sept jaquettes de l'univers console s'affichent, les adresses
+demandées sont les URL d'origine inchangées, et le groupe « Garder sur
+l'appareil » n'existe pas.
+
+---
+
 ## 3. Architecture finale
 
 ```
