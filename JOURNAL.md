@@ -1604,6 +1604,38 @@ la première tentative.
 
 ---
 
+### Phase 42 — Deux cent soixante-quatre échecs sur deux cent soixante-quatre
+
+L'APK enfin installable, « Enregistrer les jaquettes sur l'appareil » a rendu
+« 0 enregistrée sur 264 · 264 échecs ». Une panne totale et silencieuse.
+
+L'explication la plus évidente — une autorisation de stockage qu'Android
+n'aurait pas demandée — était fausse : les fichiers vont dans le dossier privé
+de l'application, auquel elle accède sans rien demander à personne. Un échec
+sur deux cent soixante-quatre aurait été un réseau capricieux ; deux cent
+soixante-quatre sur deux cent soixante-quatre, c'est du déterminisme, donc du
+code.
+
+Il a fallu descendre dans le greffon lui-même. `Filesystem.downloadFile` accepte
+une option `recursive` et la documentation la décrit ; son implémentation
+Android — la voie héritée que le greffon garde par compatibilité — ne la lit
+nulle part. Elle crée le dossier racine, puis ouvre en écriture un fichier situé
+dans un sous-dossier qui n'existe pas. Chaque image, la même exception.
+
+La correction tient en trois lignes : créer le dossier avant la boucle. Ce
+qu'elle apprend vaut plus — **une option acceptée n'est pas une option
+appliquée**, et rien dans la signature ne le disait.
+
+Deux autres choses ont changé pendant l'enquête. Le premier motif d'échec est
+désormais retenu et affiché : « 264 échecs » n'apprend rien à personne, alors
+qu'« aucun fichier de ce type » aurait pointé le dossier manquant tout de suite.
+Et le ménage supprimait un chemin absolu là où la suppression en attend un
+relatif à un dossier nommé : la descente et le ménage passent maintenant par le
+même calcul, avec un test qui le vérifie — deux constructions parallèles du même
+chemin, c'est une divergence qui attend son heure.
+
+---
+
 ## 3. Architecture finale
 
 ```

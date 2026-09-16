@@ -544,7 +544,7 @@ export default function App() {
     const { retirees } = await menageJaquettes(games);
     setDescenteEnCours(false);
     setAvis(`${r.descendues} jaquette(s) enregistrée(s) sur ${r.total}`
-      + (r.echouees ? ` · ${r.echouees} échec(s)` : "")
+      + (r.echouees ? ` · ${r.echouees} échec(s)${r.motif ? ` (${r.motif})` : ""}` : "")
       + (retirees ? ` · ${retirees} devenue(s) inutile(s), retirée(s)` : "")
       + (descenteCancelRef.current ? " · arrêté" : "") + ".");
   };

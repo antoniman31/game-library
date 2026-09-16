@@ -14,7 +14,7 @@ globalThis.localStorage = {
   removeItem(k) { this._.delete(k); },
 };
 
-const { nomFichier, lireIndex, aDescendre } = await import("./jaquettes.js");
+const { nomFichier, lireIndex, aDescendre, cheminLocal } = await import("./jaquettes.js");
 
 test("un nom de fichier est stable, distinct et garde l'extension", () => {
   const a = "https://cdn2.steamgriddb.com/grid/abc.png";
@@ -57,4 +57,16 @@ test("on ne descend ni deux fois la même image, ni ce qui est déjà là", () =
     ["https://media.rawg.io/a.jpg"]);
   assert.deepEqual(aDescendre([], {}), []);
   assert.deepEqual(aDescendre(null, {}), []);
+});
+
+test("descente et ménage désignent le même fichier", () => {
+  // La descente écrit dans ce chemin, le ménage supprime ce chemin. Les deux
+  // le tenaient d'un calcul séparé : l'un des deux pouvait changer sans que
+  // rien ne le dise, et le ménage aurait supprimé à côté — ou rien du tout.
+  const url = "https://cdn2.steamgriddb.com/grid/abc.png";
+  assert.equal(cheminLocal(url), `jaquettes/${nomFichier(url)}`);
+  assert.equal(cheminLocal(url), cheminLocal(url));
+  // Le chemin est relatif : c'est ce que la suppression attend, avec le
+  // dossier nommé à part. Une adresse absolue ici ne serait pas comprise.
+  assert.doesNotMatch(cheminLocal(url), /^[/]/);
 });
