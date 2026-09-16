@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "build:android": "vite build --mode android",
-    "android": "npm run build:android && node scripts/icones-android.mjs && npx cap add android && npx capacitor-assets generate --android && npx cap sync android",
+    "android": "npm run build:android && node scripts/icones-android.mjs && npx cap add android && npx capacitor-assets generate --android && node scripts/elaguer-android.mjs && npx cap sync android",
     "lint": "oxlint",
     "preview": "vite preview",
     "test:worker": "node worker/test.mjs",
