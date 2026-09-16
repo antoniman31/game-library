@@ -19,6 +19,14 @@ jobs:
   apk:
     name: Construire l'APK
     runs-on: ubuntu-latest
+
+    # L'empreinte SHA-256 du certificat de signature. Ce n'est pas un secret :
+    # c'est l'identité publique de la clé, celle qu'Android compare pour savoir
+    # si un APK est une mise à jour du précédent ou une autre application. Les
+    # deux étapes qui la vérifient lisent la même valeur.
+    env:
+      EMPREINTE_ATTENDUE: 289733c366177417b0881f5a290476b14f814a5c7d94ce3c28309ba6b16be08f
+
     steps:
       - uses: actions/checkout@v4
 
@@ -60,17 +68,22 @@ jobs:
       # désinstaller — donc d'effacer la bibliothèque, qui ne vit nulle part
       # ailleurs sur l'appareil.
       #
-      # Or Gradle, faute de clé de débogage, en fabrique une à la volée. Sur
-      # une machine de CI neuve à chaque exécution, cela veut dire une clé
-      # neuve à chaque APK. C'est ce qui s'est produit entre les deux premières
-      # constructions, et ce que cette étape corrige : la clé est fixée une
-      # fois pour toutes et déposée là où Gradle la cherche.
+      # Faute de clé, Gradle en fabrique une à la volée ; sur une machine de CI
+      # neuve à chaque exécution, cela veut dire une clé neuve à chaque APK.
+      #
+      # La clé est déclarée explicitement plutôt que déposée dans
+      # `~/.android/debug.keystore` en espérant que Gradle l'y trouve : essayé,
+      # et l'APK est ressorti signé par autre chose. Cet emplacement implicite
+      # se résout à partir de variables d'environnement propres à la machine ;
+      # un chemin écrit noir sur blanc ne dépend de rien. Le bloc s'ajoute au
+      # projet engendré par Capacitor, qui n'entre pas dans le dépôt — c'est
+      # pourquoi il vit ici et non dans un fichier versionné.
       #
       # Le secret ne protège rien de plus que la clé de débogage standard, dont
-      # les mots de passe sont publics — il évite seulement qu'un inconnu signe
-      # un APK au nom de cette application. S'il manque, on s'arrête : sans
-      # cela on retomberait silencieusement sur une clé aléatoire, et la panne
-      # ne se découvrirait qu'au moment de l'installation, sur le téléphone.
+      # les mots de passe sont publics : il évite seulement qu'un inconnu signe
+      # un APK au nom de cette application. S'il manque, on s'arrête — sans
+      # cela on retomberait sur une clé aléatoire, et la panne ne se
+      # découvrirait qu'au moment de l'installation, sur le téléphone.
       - name: Poser la clé de signature
         env:
           CLE: ${{ secrets.ANDROID_DEBUG_KEYSTORE }}
@@ -79,8 +92,41 @@ jobs:
             echo "::error::Le secret ANDROID_DEBUG_KEYSTORE est absent. Sans lui, Gradle signerait l'APK avec une clé aléatoire et la mise à jour serait refusée par le téléphone."
             exit 1
           fi
-          mkdir -p ~/.android
-          printf '%s' "$CLE" | base64 -d > ~/.android/debug.keystore
+
+          magasin="$RUNNER_TEMP/signature.keystore"
+          printf '%s' "$CLE" | base64 -d > "$magasin"
+
+          # Le magasin est relu tout de suite : un secret tronqué au
+          # copier-coller donnerait un fichier illisible, et la panne ne se
+          # verrait qu'au bout de la chaîne. Autant l'apprendre ici, où le
+          # message peut dire quoi corriger.
+          empreinte=$(keytool -list -v -keystore "$magasin" -storepass android 2>/dev/null \
+            | sed -n 's/.*SHA256: *//p' | head -1 | tr -d ':' | tr 'A-F' 'a-f')
+          echo "Magasin : $(stat -c%s "$magasin") octets, empreinte ${empreinte:-illisible}"
+          if [ "$empreinte" != "$EMPREINTE_ATTENDUE" ]; then
+            echo "::error::Le magasin déposé n'est pas celui attendu (secret tronqué ou mal collé ?). Attendu $EMPREINTE_ATTENDUE, lu ${empreinte:-rien}."
+            exit 1
+          fi
+
+          # `signingConfigs.debug` existe déjà, et `buildTypes.debug` s'en sert
+          # déjà : ce bloc ne fait que lui donner la bonne clé.
+          cat >> android/app/build.gradle <<GRADLE
+
+          // Ajouté par .github/workflows/android.yml, étape « Poser la clé de
+          // signature ». Sans cela, Gradle signerait avec une clé fabriquée à
+          // la volée, différente à chaque construction, et l'APK ne pourrait
+          // pas se poser par-dessus le précédent.
+          android {
+              signingConfigs {
+                  debug {
+                      storeFile file("$magasin")
+                      storePassword "android"
+                      keyAlias "androiddebugkey"
+                      keyPassword "android"
+                  }
+              }
+          }
+          GRADLE
 
       # L'APK reste un APK de débogage : installable tel quel, aucune autre
       # configuration à écrire. Ce n'est PAS ce qu'il faudra pour le Play
@@ -99,12 +145,11 @@ jobs:
       - name: Vérifier la signature
         run: |
           set -euo pipefail
-          attendue=289733c366177417b0881f5a290476b14f814a5c7d94ce3c28309ba6b16be08f
           apksigner=$(ls -d "$ANDROID_HOME"/build-tools/*/apksigner | sort -V | tail -1)
           obtenue=$("$apksigner" verify --print-certs android/app/build/outputs/apk/debug/app-debug.apk \
             | sed -n 's/.*certificate SHA-256 digest: *//p' | head -1)
           echo "Empreinte : $obtenue"
-          if [ "$obtenue" != "$attendue" ]; then
+          if [ "$obtenue" != "$EMPREINTE_ATTENDUE" ]; then
             echo "::error::L'APK est signé par une autre clé que celle attendue ; il ne s'installerait pas par-dessus la version précédente."
             exit 1
           fi

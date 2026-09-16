@@ -1335,11 +1335,17 @@ signée : deux APK signés différemment sont deux applications étrangères, et
 seconde ne s'installe pas par-dessus la première. Laissée à elle-même, la CI
 fabrique une clé neuve à chaque exécution — chaque APK aurait alors exigé une
 désinstallation, donc la perte de la bibliothèque locale. La clé vit dans le
-secret `ANDROID_DEBUG_KEYSTORE` (le magasin encodé en base64), le workflow la
-dépose dans `~/.android/debug.keystore` là où Gradle la cherche, et vérifie
-après coup que l'APK porte bien l'empreinte attendue plutôt que de le supposer.
-Si le secret manque, la construction s'arrête : une clé aléatoire ne se
-remarquerait qu'au moment de l'installation.
+secret `ANDROID_DEBUG_KEYSTORE` (le magasin encodé en base64) ; le workflow
+l'écrit sur le disque de la machine et **la déclare explicitement** dans le
+projet engendré par Capacitor. Le dépôt dans `~/.android/debug.keystore`, où
+Gradle est censé la chercher, a été essayé et n'a pas fonctionné : cet
+emplacement se résout à partir de variables d'environnement propres à la
+machine, un chemin écrit noir sur blanc ne dépend de rien.
+
+Trois vérifications plutôt que trois suppositions : si le secret manque la
+construction s'arrête, le magasin est relu dès qu'il est écrit — un
+copier-coller tronqué se voit là et non sur le téléphone — et l'empreinte de
+l'APK produit est comparée à celle attendue.
 
 En recréer une, si le secret est perdu — au prix d'une dernière désinstallation,
 et en remplaçant l'empreinte inscrite dans le workflow par celle qu'affiche
