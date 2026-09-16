@@ -29,7 +29,7 @@ const jeu = (p = {}) => ({
   id: ++n, title: `Jeu ${n}`, platform: "Xbox Series X", format: "physique",
   addedDate: "2024-01-01", genre: ["Action"], style: "Une description.",
   cover: "https://exemple.fr/j.jpg", metacritic: 80,
-  myLinks: ["", "", ""], tips: "", tag: "", lentA: null, lentDate: null, pretsPasses: [],
+  lentA: null, lentDate: null, pretsPasses: [],
   ...p,
 });
 
@@ -98,12 +98,10 @@ test("les défauts graves sont classés comme tels", () => {
     jeu({ id: 7, title: "Premier" }),
     jeu({ id: 7, title: "Même identifiant" }),
     jeu({ title: "Année impossible", addedDate: "0001-01-01" }),
-    jeu({ title: "Lien piégé", myLinks: ["javascript:alert(1)", "", ""] }),
   ]);
   const graves = r.constats.filter(c => c.gravite === "grave").map(c => c.categorie);
   assert.ok(graves.includes("id en double"), JSON.stringify(graves));
   assert.ok(graves.includes("année d'ajout invraisemblable"), JSON.stringify(graves));
-  assert.ok(graves.includes("lien non ouvrable"), JSON.stringify(graves));
   assert.equal(r.parGravite.grave, graves.length);
 });
 

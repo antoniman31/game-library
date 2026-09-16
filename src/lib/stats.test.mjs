@@ -14,7 +14,7 @@ const jeu = (p = {}) => ({
   id: 1, title: "Jeu", platform: "Xbox Series X", format: "physique",
   addedDate: "2022-01-01", genre: [], style: "", cover: null, metacritic: null,
   lentA: null, lentDate: null, lentRetourPrevu: null, pretsPasses: [],
-  myLinks: ["", "", ""], tips: "", tag: "", infobox: null, ...p,
+  infobox: null, ...p,
 });
 const ilYA = (jours) => new Date(Date.now() - jours * 86400000).toISOString().slice(0, 10);
 

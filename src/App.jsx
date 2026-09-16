@@ -931,8 +931,11 @@ export default function App() {
   };
 
   const filtered = useMemo(() => {
-    // Recherche insensible à la casse et aux accents (S1), sur titre + genre + tag
-    // uniquement : la description (style) est exclue pour éviter les faux positifs.
+    // Recherche insensible à la casse et aux accents (S1), sur titre et genre
+    // uniquement : la description (style) est exclue pour éviter les faux
+    // positifs. Elle interrogeait aussi le tag, parti avec les deux autres
+    // champs que personne ne remplissait — le seul qu'il ait jamais porté était
+    // `eshop-import`, posé par un import.
     const q = normTitle(search);
     let list = games.filter(g => {
       // L'univers d'abord : il ne se combine avec rien, il décide de quelle
@@ -940,8 +943,7 @@ export default function App() {
       if (!jeuDansUnivers(g, univers)) return false;
       const searchMatch = !q
         || normTitle(g.title).includes(q)
-        || g.genre.some(x => normTitle(x).includes(q))
-        || normTitle(g.tag).includes(q);
+        || g.genre.some(x => normTitle(x).includes(q));
       const platMatch = jeuSurPlateforme(g, plat, avecRetro);
       const pretMatch = pretFil === "tous" ? true
         : pretFil === "prêtés" ? !!g.lentA

@@ -338,14 +338,16 @@ for (const [largeur, theme] of ECRANS) {
     // faisaient 27 px.
     // On revient d'abord dans la bibliothèque : les étapes précédentes
     // s'arrêtaient dans les Réglages, où il n'y a pas de fiche à déplier.
-    ["fiche · liens et notes", async () => {
+    ["fiche · liens", async () => {
       await page.keyboard.press("Escape");
       await page.getByRole("button", { name: /^Console$/ }).click();
       if (!(await page.getByRole("button", { name: /Liens & contenu/ }).count())) {
         await page.locator(".gl-card").first().click();
       }
       await page.getByRole("button", { name: /Liens & contenu/ }).first().click();
-      await page.getByRole("button", { name: /Notes/ }).first().click();
+      // L'accordéon « Notes » ouvrait la marche ici. Il portait la zone de
+      // notes perso et le tag, deux champs que personne n'a jamais remplis et
+      // qui sont partis avec les trois liens personnels.
     }],
     // Les trois panneaux de source d'une fiche, chacun avec son champ de
     // recherche — trois champs de 32 px, pour l'endroit où le doigt se pose en

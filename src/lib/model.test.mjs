@@ -18,7 +18,7 @@ import {
   normTitle, rapprochementDouteux, jeuxSansScore, jeuxNoteDeclareeAbsente, noteChangee, SANS_NOTE, CHAMPS_A_COMPLETER,
   rendreJeu, preterJeu, annulerPret, supprimerEntreeHistorique, dureeEntreeHistorique, MAX_HISTORIQUE_PRET, aujourdhuiISO,
   BACK_COMPAT, XBOX_SERIES_CUTOFF, PRET_LONG_JOURS, PLATFORMES_JEU,
-  estDatePlausible, estLienSur, ANNEE_MIN, ANNEES_A_VENIR, normaliserGenres,
+  estDatePlausible, ANNEE_MIN, ANNEES_A_VENIR, normaliserGenres,
   modesDuJeu, jeuALeMode, genresPresents, MODES_JEU, jeuSurPlateforme, compterRetro,
   jeuPasseSeuil, jeuACompleter, completudeManquante, compterFichesIncompletes,
   dateDeSortie, serieDuJeu, empreinteMelange,
@@ -33,7 +33,7 @@ import { ecouterMiseAJour } from "./maj.js";
 const jeu = (p = {}) => ({
   id: 1, title: "Jeu", platform: "Xbox Series X", format: "physique",
   addedDate: "2022-01-01", genre: [], style: "", lentA: null, lentDate: null,
-  myLinks: ["", "", ""], tips: "", tag: "", ...p,
+  ...p,
 });
 
 const ilYA = (jours) => new Date(Date.now() - jours * 86400000).toISOString().slice(0, 10);
@@ -96,11 +96,10 @@ test("les entrées sans titre exploitable sont comptées, pas avalées", () => {
 
 test("les champs de mauvais type sont normalisés au lieu de casser le rendu", () => {
   const [g] = validerJeuxImportes([{
-    id: 2, title: "X", genre: "action", myLinks: null, tips: 42,
+    id: 2, title: "X", genre: "action", style: 42,
   }]).jeux;
   assert.deepEqual(g.genre, []);
-  assert.deepEqual(g.myLinks, ["", "", ""]);
-  assert.equal(g.tips, "");
+  assert.equal(g.style, "");
 });
 
 test("deux jeux ne peuvent pas repartir avec le même identifiant", () => {
@@ -232,7 +231,7 @@ test("un fichier sain traverse la validation sans être touché", () => {
     addedDate: "2024-05-01", genre: ["FPS"], style: "Un jeu de tir.", cover: "https://x/y.jpg",
     metacritic: 87, lentA: "Paul", lentDate: "2024-06-01", lentRetourPrevu: "2024-07-01",
     pretsPasses: [{ a: "Léa", du: "2024-01-01", au: "2024-01-05" }],
-    myLinks: ["", "", ""], tips: "", tag: "", infobox: null, backCompat: false,
+    infobox: null, backCompat: false,
   };
   const { jeux, rejetes, corriges } = validerJeuxImportes([propre]);
   assert.equal(rejetes, 0);
@@ -571,36 +570,42 @@ test("une date de prêt illisible ne produit plus de NaN", () => {
 });
 
 test("la migration garantit les tableaux que le rendu déréference", () => {
-  // `g.genre.some(...)` et `g.myLinks[i]` sont lus sans précaution à chaque
-  // rendu : absents d'un enregistrement écrit par une version ancienne, ils
-  // faisaient tomber l'application entière sur son garde-fou d'erreurs.
+  // `g.genre.some(...)` est lu sans précaution à chaque rendu : absent d'un
+  // enregistrement écrit par une version ancienne, il faisait tomber
+  // l'application entière sur son garde-fou d'erreurs.
   const [g] = migrateGames([{ title: "Vieux jeu", platform: "Xbox One" }]);
   assert.deepEqual(g.genre, []);
-  assert.deepEqual(g.myLinks, ["", "", ""]);
   assert.deepEqual(g.pretsPasses, []);
   // Ce qui est déjà correct n'est pas écrasé.
-  const [h] = migrateGames([{ title: "T", genre: ["Action"], myLinks: ["https://a", "", ""] }]);
+  const [h] = migrateGames([{ title: "T", genre: ["Action"] }]);
   assert.deepEqual(h.genre, ["Action"]);
-  assert.equal(h.myLinks[0], "https://a");
 });
 
-test("seuls les liens http(s) entrent dans une fiche", () => {
-  // Un lien de fiche finit dans un href : `javascript:` s'exécuterait dans
-  // l'application, avec accès au stockage — donc aux clés et au code de
-  // synchronisation.
-  assert.equal(estLienSur("https://exemple.fr"), true);
-  assert.equal(estLienSur("http://exemple.fr"), true);
-  assert.equal(estLienSur("  https://exemple.fr  "), true);
-  assert.equal(estLienSur("javascript:alert(1)"), false);
-  assert.equal(estLienSur("JavaScript:alert(1)"), false);
-  assert.equal(estLienSur("data:text/html,<script>"), false);
-  assert.equal(estLienSur(""), false);
-  assert.equal(estLienSur(null), false);
+test("les champs retirés ne survivent pas au chargement", () => {
+  // Trois champs que personne n'a jamais remplis — 864 champs de lien vides,
+  // zéro note, un seul tag posé par un import. Une fiche écrite par une version
+  // antérieure les porte encore ; elle se nettoie au premier chargement, comme
+  // l'ont fait le temps de jeu et la progression avant eux.
+  const [g] = migrateGames([{
+    title: "Vieille fiche", platform: "Xbox One",
+    myLinks: ["https://a", "", ""], tips: "des notes", tag: "eshop-import",
+    status: "fini", playedMinutes: 120,
+  }]);
+  for (const champ of ["myLinks", "tips", "tag", "status", "playedMinutes"]) {
+    assert.ok(!(champ in g), `${champ} aurait dû disparaître`);
+  }
+  assert.equal(g.title, "Vieille fiche", "le reste de la fiche est intact");
+});
 
+test("un fichier importé n'apporte pas les champs retirés", () => {
   const { jeux } = validerJeuxImportes([
-    { id: 1, title: "T", myLinks: ["javascript:alert(1)", "https://ok.fr", 42] },
+    { id: 1, title: "T", myLinks: ["javascript:alert(1)", "https://ok.fr", 42], tips: "x", tag: "y" },
   ]);
-  assert.deepEqual(jeux[0].myLinks, ["", "https://ok.fr", ""]);
+  // Ils n'entrent pas du tout, plutôt que d'entrer filtrés : c'est ce qui rend
+  // sans objet la règle d'audit qui traquait les `javascript:` dans ces liens.
+  for (const champ of ["myLinks", "tips", "tag"]) {
+    assert.ok(!(champ in jeux[0]), `${champ} aurait dû être ignoré`);
+  }
 });
 
 

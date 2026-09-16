@@ -25,7 +25,7 @@
 
 import { readFileSync } from "node:fs";
 import { migrateGames, normTitle, dureeEntreeHistorique, PRET_LONG_JOURS,
-  estDateISO, estDatePlausible, estLienSur, ANNEE_MIN, PLATFORMES_JEU } from "../src/lib/model.js";
+  estDateISO, estDatePlausible, ANNEE_MIN, PLATFORMES_JEU } from "../src/lib/model.js";
 
 const args = process.argv.slice(2);
 const fichier = args.find(a => !a.startsWith("--"));
@@ -128,18 +128,6 @@ for (const g of jeux) {
       `« ${g.title} » : ${g.addedDate} (attendu : ${ANNEE_MIN} ou après)`, "grave");
   } else if (g.addedDate > aujourdhui) {
     signaler("date d'ajout à venir", `« ${g.title} » : ${g.addedDate}`);
-  }
-}
-
-// ── Liens de fiche ─────────────────────────────────────────────────────────
-// Un lien de fiche finit dans un `href`. Tout ce qui n'est pas http(s) en est
-// un aussi — `javascript:` le premier — et s'exécuterait dans l'application,
-// avec accès au stockage donc aux clés et au code de synchronisation.
-for (const g of jeux) {
-  for (const lien of g.myLinks || []) {
-    if (lien && !estLienSur(lien)) {
-      signaler("lien non ouvrable", `« ${g.title} » : ${JSON.stringify(lien)}`, "grave");
-    }
   }
 }
 

@@ -65,7 +65,16 @@ export const BACK_COMPAT_PARENT = Object.fromEntries(Object.entries(BACK_COMPAT)
 // (exception au cas par cas) survit donc aux rechargements.
 // Champs devenus sans objet : la progression et le temps de jeu, que la console
 // tient déjà, plus `note` et `progression` qui n'ont jamais été ni écrits ni lus.
-const CHAMPS_RETIRES = ["status", "playedMinutes", "manualMinutes", "sessions", "hltb", "note", "progression"];
+//
+// Trois de plus, retirés pour une raison différente : ils étaient écrits,
+// lisibles, éditables — et vides. Mesuré sur la bibliothèque réelle de 288
+// fiches : `myLinks` valait `["","",""]` partout, soit 864 champs de lien dont
+// pas un seul rempli ; `tips`, la zone « Notes & tips perso », 0 sur 288 ; et
+// `tag` ne portait qu'une valeur, `eshop-import`, posée par un import et par
+// personne. Un champ que personne ne remplit ne répond à aucune question qu'on
+// se pose — il occupe l'écran de l'édition, l'export et la synchronisation.
+const CHAMPS_RETIRES = ["status", "playedMinutes", "manualMinutes", "sessions", "hltb", "note", "progression",
+  "myLinks", "tips", "tag"];
 
 export const XBOX_SERIES_CUTOFF = "2020-11-10";
 export const BACK_COMPAT_VERSION = 2;
@@ -103,14 +112,12 @@ export function migrateGames(list) {
     // champs répondent à des questions de console.
     if (ng.platform === PC) { ng.format = "démat"; ng.backCompat = false; }
     if (!Array.isArray(ng.pretsPasses)) ng.pretsPasses = [];
-    // `genre` et `myLinks` sont lus sans précaution à chaque rendu de la liste
-    // (`g.genre.some(...)`, `g.myLinks[i]`) : absents d'un enregistrement écrit
-    // par une version ancienne, ils font échouer le premier rendu et
-    // l'application entière tombe sur son garde-fou d'erreurs. Cette fonction
-    // existe pour rendre sûr ce qui vient du stockage ; elle le fait déjà pour
-    // trois champs, elle le fait pour ces deux-là aussi.
+    // `genre` est lu sans précaution à chaque rendu de la liste
+    // (`g.genre.some(...)`) : absent d'un enregistrement écrit par une version
+    // ancienne, il fait échouer le premier rendu et l'application entière tombe
+    // sur son garde-fou d'erreurs. Cette fonction existe pour rendre sûr ce qui
+    // vient du stockage.
     ng.genre = normaliserGenres(ng.genre);
-    if (!Array.isArray(ng.myLinks)) ng.myLinks = ["", "", ""];
     // Sept champs devenus sans objet : la progression et le temps de jeu, que
     // la console tient déjà, plus `note` et `progression` qui n'ont jamais été
     // ni écrits ni lus. Les garder ferait croire à des fonctions inexistantes,
@@ -1082,7 +1089,7 @@ const JEU_VIDE = {
   platform: "Xbox Series X", format: "physique", genre: [], style: "",
   lentA: null, lentDate: null, lentRetourPrevu: null, pretsPasses: [],
   cover: null, metacritic: null, boutique: "", refBoutique: "",
-  myLinks: ["", "", ""], tips: "", tag: "", infobox: null,
+  infobox: null,
 };
 
 const estTexte = (v) => typeof v === "string";
@@ -1112,14 +1119,6 @@ export function estDatePlausible(v, aujourdhui = aujourdhuiISO()) {
   const an = Number(v.slice(0, 4));
   return an >= ANNEE_MIN && an <= Number(aujourdhui.slice(0, 4)) + ANNEES_A_VENIR;
 }
-
-// Un lien que l'on peut poser dans un href. `javascript:` en est un aussi, et
-// React ne filtre rien : un fichier importé, ou une sauvegarde récupérée avec
-// un code partagé, suffirait à placer dans une fiche un lien qui s'exécute
-// dans l'application — avec accès au stockage, donc aux clés et au code de
-// synchronisation.
-const LIEN_SUR = /^https?:\/\//i;
-export const estLienSur = (u) => LIEN_SUR.test(String(u || "").trim());
 
 // Une entrée d'historique venue d'un fichier : un nom et deux dates réelles.
 const estEntreePret = (e) => !!e && typeof e === "object"
@@ -1204,15 +1203,7 @@ export function validerJeuxImportes(data) {
       id,
       title: brut.title.trim(),
       genre: normaliserGenres(brut.genre),
-      // Un lien de fiche finit dans un `href`. Tout ce qui n'est pas http(s) est
-      // écarté à l'entrée plutôt que filtré à l'affichage : le stockage ne doit
-      // pas contenir ce qu'on refusera de rendre.
-      myLinks: Array.isArray(brut.myLinks)
-        ? [0, 1, 2].map(i => (estLienSur(brut.myLinks[i]) ? brut.myLinks[i].trim() : ""))
-        : ["", "", ""],
       style: estTexte(brut.style) ? brut.style : "",
-      tips: estTexte(brut.tips) ? brut.tips : "",
-      tag: estTexte(brut.tag) ? brut.tag : "",
     });
     // `backCompat: undefined` doit disparaître pour que la migration le décide.
     if (champs.backCompat === undefined) delete jeux[jeux.length - 1].backCompat;
