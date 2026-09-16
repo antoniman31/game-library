@@ -15,6 +15,7 @@ import NotesChoixSheet from "./components/NotesChoixSheet.jsx";
 
 import { hdr, card, bdr, bdrChamp, txt, mut, accent, accentDoux, accentFond, warnDoux, dangerDoux, ok, warn, warnFond, danger } from "./lib/theme.js";
 import { enregistrerFichier, estNatif } from "./lib/natif.js";
+import { descendreJaquettes, menageJaquettes, aDescendre } from "./lib/jaquettes.js";
 import { GAMES_INIT } from "./lib/seed.js";
 import { jeuDansUnivers, boutiquesPresentes, jeuDeLaBoutique, autresEditions,
   migrateGames, compterFiltres, FILTRES, validerJeuxImportes, pretEnRetard, jeuxSansScore, normaliserGenres,
@@ -152,6 +153,12 @@ export default function App() {
   const [notesChoix, setNotesChoix] = useState(null);
   const [jaquettesEnCours, setJaquettesEnCours] = useState(false);
   const [jaquettesProg, setJaquettesProg] = useState(0);
+  // La descente des jaquettes sur l'appareil, distincte du rattrapage : l'une
+  // cherche des images qui manquent, l'autre range celles qu'on a déjà.
+  const [descenteEnCours, setDescenteEnCours] = useState(false);
+  const [descenteProg, setDescenteProg] = useState(0);
+  const [descenteTotal, setDescenteTotal] = useState(0);
+  const descenteCancelRef = useRef(false);
   const [jaquettesTotal, setJaquettesTotal] = useState(0);
   const jaquettesCancelRef = useRef(false);
   // Compte rendu d'une action ponctuelle, en bas d'écran, jusqu'à ce qu'on le
@@ -509,6 +516,39 @@ export default function App() {
       + (jaquettesCancelRef.current ? " · arrêté" : "") + ".");
   };
   const annulerJaquettes = () => { jaquettesCancelRef.current = true; };
+
+  // Descendre les jaquettes dans le stockage de l'application.
+  //
+  // Sans elle, l'application retélécharge les images à chaque lancement et
+  // n'affiche que des cadres vides sans réseau : le service worker qui les
+  // gardait en cache sur le site n'existe pas dans l'APK. Les fiches ne
+  // changent pas — c'est un index à côté qui retient quelle URL a été
+  // descendue, pour que l'export et la synchronisation restent lisibles
+  // ailleurs que sur ce téléphone.
+  const descendreLesJaquettes = async () => {
+    if (descenteEnCours) return;
+    if (!estNatif()) { setAvis("Réservé à l'application : le site garde déjà les jaquettes en cache."); return; }
+    const reste = aDescendre(games);
+    if (!reste.length) { setAvis("Toutes les jaquettes sont déjà sur l'appareil."); return; }
+
+    descenteCancelRef.current = false;
+    setDescenteEnCours(true);
+    setDescenteProg(0);
+    setDescenteTotal(reste.length);
+    const r = await descendreJaquettes(games, {
+      onProgress: (fait) => setDescenteProg(fait),
+      doitArreter: () => descenteCancelRef.current,
+    });
+    // Le ménage suit la descente : une fiche supprimée ou dont la jaquette a
+    // changé laisse un fichier que plus rien ne réclame.
+    const { retirees } = await menageJaquettes(games);
+    setDescenteEnCours(false);
+    setAvis(`${r.descendues} jaquette(s) enregistrée(s) sur ${r.total}`
+      + (r.echouees ? ` · ${r.echouees} échec(s)` : "")
+      + (retirees ? ` · ${retirees} devenue(s) inutile(s), retirée(s)` : "")
+      + (descenteCancelRef.current ? " · arrêté" : "") + ".");
+  };
+  const annulerDescente = () => { descenteCancelRef.current = true; };
   // Le bilan laisse retirer une note issue d'un mauvais rapprochement.
   const retirerScore = useCallback((id) => {
     setGames(gs => gs.map(g => g.id === id ? { ...g, metacritic: null } : g));
@@ -1389,6 +1429,11 @@ export default function App() {
               onRattraperJaquettes: rattraperJaquettes,
               jaquettesEnCours, jaquettesProg, jaquettesTotal,
               onAnnulerJaquettes: annulerJaquettes,
+              onDescendreJaquettes: descendreLesJaquettes,
+              descenteEnCours, descenteProg, descenteTotal,
+              onAnnulerDescente: annulerDescente,
+              jaquettesADescendre: estNatif() ? aDescendre(games).length : 0,
+              surAppareil: estNatif(),
               jaquettesManquantes: games.filter(g => !g.cover).length,
               onCompleterScores: completerScores,
               scoresEnCours, scoresProg, scoresTotal,

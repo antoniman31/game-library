@@ -1,4 +1,57 @@
 /* ──────────────────────────────────────────────────────────────────────────
+   Les polices, embarquées plutôt que chargées.
+
+   Inter et Press Start 2P venaient de Google Fonts, par le réseau. Sur un site
+   c'est invisible ; dans une application installée, c'est une dépendance au
+   réseau pour afficher du texte — hors ligne, le titre perdait sa police pixel
+   et tout le reste retombait sur celle du système. Elles ne figuraient dans
+   aucun build, donc le service worker du site ne les mettait pas en cache non
+   plus : la panne existait des deux côtés, elle se voyait seulement moins.
+
+   Seul le sous-ensemble `latin` est pris. Vérifié plutôt que supposé : il
+   contient œ, les guillemets français, le tiret cadratin et l'apostrophe
+   typographique — tout ce que l'interface écrit. Les sous-ensembles cyrillique,
+   grec et vietnamien seraient partis dans l'APK sans jamais servir.
+
+   Trois graisses pour Inter, et trois seulement : 400, 600 et 700 sont les
+   seules que le code utilise.
+
+   Les règles sont écrites ici plutôt qu'importées des feuilles du paquet : les
+   siennes déclarent un repli en `.woff` à côté du `.woff2`, que Vite embarque
+   et qu'aucun navigateur ne demandera jamais — cent dix kilo-octets de poids
+   mort dans l'APK. Quatre règles explicites coûtent moins cher qu'un import
+   qui traîne ce qu'on ne veut pas.
+   ────────────────────────────────────────────────────────────────────────── */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('@fontsource/inter/files/inter-latin-400-normal.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('@fontsource/inter/files/inter-latin-600-normal.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('@fontsource/inter/files/inter-latin-700-normal.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Press Start 2P';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('@fontsource/press-start-2p/files/press-start-2p-latin-400-normal.woff2') format('woff2');
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
    Jetons de thème.
 
    Avant, chaque composant recevait une prop `dark` et recalculait ses couleurs

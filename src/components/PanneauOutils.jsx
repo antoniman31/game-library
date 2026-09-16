@@ -71,6 +71,7 @@ export default function PanneauOutils({
   onCompleterScores, scoresEnCours, scoresProg, scoresTotal, onAnnulerScores, scoresManquants, notesDeclarees,
   onCompleterEditions, editionsCompletables,
   onRattraperJaquettes, jaquettesEnCours, jaquettesProg, jaquettesTotal, onAnnulerJaquettes, jaquettesManquantes,
+  onDescendreJaquettes, descenteEnCours, descenteProg, descenteTotal, onAnnulerDescente, jaquettesADescendre, surAppareil,
 }) {
   return (
     <div>
@@ -150,6 +151,33 @@ export default function PanneauOutils({
           />
         )}
       </Groupe>
+
+      {/* Une seule action de ce groupe, et elle n'existe que dans l'application.
+          Sur le site, le service worker garde déjà les jaquettes soixante
+          jours : proposer de les « enregistrer » y serait un bouton qui ne
+          répare rien. */}
+      {surAppareil && (
+        <Groupe titre="Garder sur l'appareil">
+          {descenteEnCours ? (
+            <Action
+              icone="⏳"
+              titre={`Enregistrement des jaquettes… ${descenteProg}/${descenteTotal}`}
+              detail="Toucher pour arrêter — ce qui est déjà descendu est gardé"
+              onClick={onAnnulerDescente}
+              destructif
+            />
+          ) : (
+            <Action
+              icone="💾"
+              titre="Enregistrer les jaquettes sur l'appareil"
+              detail={jaquettesADescendre > 0
+                ? `${jaquettesADescendre} image${jaquettesADescendre > 1 ? "s" : ""} à descendre · l'application les affichera sans réseau`
+                : "Toutes les jaquettes sont déjà là"}
+              onClick={onDescendreJaquettes}
+            />
+          )}
+        </Groupe>
+      )}
 
       {/* Les deux imports, enfin côte à côte. Rien n'est écrit avant d'avoir
           vu la liste, dans un cas comme dans l'autre. */}

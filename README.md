@@ -1291,6 +1291,33 @@ n'accueille aucun fichier produit — c'est la règle qui avait déjà fait éca
 un dossier `docs/` commité pour GitHub Pages — et cinquante fichiers de Gradle
 que personne ne relit ne feraient pas exception.
 
+**Les jaquettes sont gardées sur l'appareil.** Une jaquette est une URL —
+SteamGridDB, RAWG, Microsoft. Sur le site, le service worker les met en cache
+soixante jours ; dans l'application il n'existe pas, si bien qu'elle les
+retéléchargeait à chaque lancement et n'affichait que des cadres vides sans
+réseau. Le site était devenu meilleur que l'application sur le seul point où
+l'application devait gagner. ⚙️ → Outils → **« Enregistrer les jaquettes sur
+l'appareil »** les descend une fois dans son stockage privé.
+
+Le champ `cover` de la fiche n'est pas touché, et c'est le choix qui compte :
+l'URL reste la référence — c'est elle qui part dans l'export et la
+synchronisation, c'est elle que lit le site, c'est elle qu'un autre appareil
+saura redescendre. Un chemin de fichier local ne veut rien dire ailleurs que
+sur ce téléphone-ci. L'index qui associe une URL à son fichier vit donc à part,
+dans `gl_jaquettes`, comme les clés et le code de synchronisation. L'opération
+s'interrompt sans rien perdre : chaque image descendue est notée aussitôt, et
+la reprise repart où elle s'était arrêtée. Un ménage suit, qui retire les
+fichiers dont plus aucune fiche ne veut.
+
+**Les polices sont embarquées.** Inter et Press Start 2P venaient de Google
+Fonts, par le réseau, et ne figuraient dans aucun build : hors ligne, le titre
+perdait sa police pixel et le reste retombait sur celle du système — des deux
+côtés, le site compris. Seul le sous-ensemble `latin` est pris, vérifié plutôt
+que supposé : il contient œ, les guillemets français, le tiret cadratin et
+l'apostrophe typographique. Quatre fichiers, 88 Ko, et les règles `@font-face`
+sont écrites à la main parce que celles du paquet traînent un repli `.woff` que
+personne ne demandera jamais.
+
 **Le site et l'application sont deux bibliothèques distinctes.** Même code,
 mais chacune son stockage : un jeu ajouté dans l'application n'apparaît pas sur
 le site tant qu'on n'a pas fait ⚙️ → Envoyer d'un côté et Récupérer de l'autre.
