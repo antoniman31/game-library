@@ -53,20 +53,61 @@ jobs:
       - name: Fabriquer le projet Android
         run: npm run android
 
-      # APK de débogage : installable tel quel, signé par la clé de débogage
-      # d'Android, aucun secret à créer. C'est ce qu'il faut pour installer
-      # l'application sur son propre téléphone aujourd'hui.
+      # Android n'identifie pas une application par son nom mais par la clé
+      # qui l'a signée. Deux APK signés par deux clés différentes sont deux
+      # applications étrangères l'une à l'autre : la seconde refuse de
+      # s'installer par-dessus la première, et la seule issue est de
+      # désinstaller — donc d'effacer la bibliothèque, qui ne vit nulle part
+      # ailleurs sur l'appareil.
       #
-      # Ce n'est PAS ce qu'il faudra pour le Play Store, qui exige une version
-      # signée par une clé qu'on garde. Le jour venu, on ajoute un magasin de
-      # clés en secret et on passe à `assembleRelease` : le reste du workflow
-      # ne bouge pas. En attendant, sachons ce que ça coûte — un APK de
-      # débogage est marqué `debuggable`, ce qui laisse un appareil branché en
+      # Or Gradle, faute de clé de débogage, en fabrique une à la volée. Sur
+      # une machine de CI neuve à chaque exécution, cela veut dire une clé
+      # neuve à chaque APK. C'est ce qui s'est produit entre les deux premières
+      # constructions, et ce que cette étape corrige : la clé est fixée une
+      # fois pour toutes et déposée là où Gradle la cherche.
+      #
+      # Le secret ne protège rien de plus que la clé de débogage standard, dont
+      # les mots de passe sont publics — il évite seulement qu'un inconnu signe
+      # un APK au nom de cette application. S'il manque, on s'arrête : sans
+      # cela on retomberait silencieusement sur une clé aléatoire, et la panne
+      # ne se découvrirait qu'au moment de l'installation, sur le téléphone.
+      - name: Poser la clé de signature
+        env:
+          CLE: ${{ secrets.ANDROID_DEBUG_KEYSTORE }}
+        run: |
+          if [ -z "$CLE" ]; then
+            echo "::error::Le secret ANDROID_DEBUG_KEYSTORE est absent. Sans lui, Gradle signerait l'APK avec une clé aléatoire et la mise à jour serait refusée par le téléphone."
+            exit 1
+          fi
+          mkdir -p ~/.android
+          printf '%s' "$CLE" | base64 -d > ~/.android/debug.keystore
+
+      # L'APK reste un APK de débogage : installable tel quel, aucune autre
+      # configuration à écrire. Ce n'est PAS ce qu'il faudra pour le Play
+      # Store, qui exige une version signée par une clé de publication et non
+      # marquée `debuggable` — un APK de débogage laisse un appareil branché en
       # USB lire les données de l'application. Sur son propre téléphone, c'est
       # acceptable ; pour distribuer, non.
       - name: Construire l'APK
         run: ./gradlew assembleDebug --no-daemon
         working-directory: android
+
+      # Vérifier plutôt que supposer : si l'APK sortait signé par une autre clé
+      # que celle qu'on vient de poser, il ne s'installerait pas par-dessus le
+      # précédent et on ne l'apprendrait que sur le téléphone. L'empreinte
+      # ci-dessous est publique — c'est l'identité de la clé, pas la clé.
+      - name: Vérifier la signature
+        run: |
+          set -euo pipefail
+          attendue=289733c366177417b0881f5a290476b14f814a5c7d94ce3c28309ba6b16be08f
+          apksigner=$(ls -d "$ANDROID_HOME"/build-tools/*/apksigner | sort -V | tail -1)
+          obtenue=$("$apksigner" verify --print-certs android/app/build/outputs/apk/debug/app-debug.apk \
+            | sed -n 's/.*certificate SHA-256 digest: *//p' | head -1)
+          echo "Empreinte : $obtenue"
+          if [ "$obtenue" != "$attendue" ]; then
+            echo "::error::L'APK est signé par une autre clé que celle attendue ; il ne s'installerait pas par-dessus la version précédente."
+            exit 1
+          fi
 
       - name: Déposer l'APK
         uses: actions/upload-artifact@v4

@@ -1323,12 +1323,38 @@ mais chacune son stockage : un jeu ajouté dans l'application n'apparaît pas su
 le site tant qu'on n'a pas fait ⚙️ → Envoyer d'un côté et Récupérer de l'autre.
 La synchronisation passe d'optionnelle à nécessaire dès qu'on utilise les deux.
 
-**L'APK produit est un APK de débogage**, signé par la clé de débogage
-d'Android : installable tel quel, aucun secret à créer. Ce n'est pas ce qu'il
-faudra pour le Play Store, qui exige une version signée par une clé qu'on
-garde — et un APK de débogage est marqué `debuggable`, ce qui laisse un
+**L'APK produit est un APK de débogage** : installable tel quel. Ce n'est pas
+ce qu'il faudra pour le Play Store, qui exige une version signée par une clé de
+publication — et un APK de débogage est marqué `debuggable`, ce qui laisse un
 appareil branché en USB lire les données de l'application. Sur son propre
 téléphone c'est acceptable ; pour distribuer, non.
+
+**La clé de signature est fixe, et c'est ce qui permet les mises à jour.**
+Android n'identifie pas une application par son nom mais par la clé qui l'a
+signée : deux APK signés différemment sont deux applications étrangères, et la
+seconde ne s'installe pas par-dessus la première. Laissée à elle-même, la CI
+fabrique une clé neuve à chaque exécution — chaque APK aurait alors exigé une
+désinstallation, donc la perte de la bibliothèque locale. La clé vit dans le
+secret `ANDROID_DEBUG_KEYSTORE` (le magasin encodé en base64), le workflow la
+dépose dans `~/.android/debug.keystore` là où Gradle la cherche, et vérifie
+après coup que l'APK porte bien l'empreinte attendue plutôt que de le supposer.
+Si le secret manque, la construction s'arrête : une clé aléatoire ne se
+remarquerait qu'au moment de l'installation.
+
+En recréer une, si le secret est perdu — au prix d'une dernière désinstallation,
+et en remplaçant l'empreinte inscrite dans le workflow par celle qu'affiche
+`keytool -list -v` :
+
+```sh
+keytool -genkeypair -v -keystore debug.keystore -storetype PKCS12 \
+  -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10950 \
+  -storepass android -keypass android -dname "CN=Android Debug,O=Android,C=US"
+base64 -w0 debug.keystore   # à coller dans le secret
+```
+
+Les mots de passe sont ceux, publics, de la clé de débogage d'Android : le
+secret n'ajoute pas de confidentialité, il empêche seulement un inconnu de
+signer un APK au nom de cette application.
 
 ---
 
