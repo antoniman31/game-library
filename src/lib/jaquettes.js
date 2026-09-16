@@ -42,7 +42,16 @@ export function nomFichier(url) {
   return `${(h >>> 0).toString(36)}.${ext}`;
 }
 
-// L'index : URL d'origine → nom du fichier descendu.
+// Où l'image se range, relativement au dossier privé de l'application.
+//
+// La descente et le ménage passent par ce même calcul plutôt que par deux
+// constructions parallèles : le jour où l'une change, l'autre suit, au lieu de
+// supprimer à côté sans rien dire.
+export function cheminLocal(url) {
+  return `${DOSSIER}/${nomFichier(url)}`;
+}
+
+// L'index : URL d'origine → chemin du fichier descendu.
 export function lireIndex() {
   try {
     const brut = JSON.parse(localStorage.getItem(CLE) || "{}");
@@ -97,27 +106,38 @@ export async function descendreJaquettes(jeux, { onProgress, doitArreter } = {})
 
   const index = lireIndex();
   const liste = aDescendre(jeux, index);
-  let descendues = 0, echouees = 0;
+  let descendues = 0, echouees = 0, motif = "";
+
+  // Le dossier est créé d'abord, et ce n'est pas une précaution de style.
+  // `downloadFile` accepte bien une option `recursive`, mais son implémentation
+  // Android — la voie héritée que ce greffon garde par compatibilité — ne la
+  // lit nulle part : elle ne crée que le dossier racine, puis ouvre le fichier
+  // dans un sous-dossier qui n'existe pas. Sans cette ligne, les deux cent
+  // soixante-quatre images échouent, toutes, avec la même erreur.
+  try {
+    await Filesystem.mkdir({ path: DOSSIER, directory: Directory.Data, recursive: true });
+  } catch { /* il existe déjà, c'est le cas normal dès la deuxième fois */ }
 
   for (const [i, url] of liste.entries()) {
     if (doitArreter?.()) break;
     try {
       const { path } = await Filesystem.downloadFile({
         url,
-        path: `${DOSSIER}/${nomFichier(url)}`,
+        path: cheminLocal(url),
         directory: Directory.Data,
-        recursive: true,
       });
       if (path) { index[url] = path; ecrireIndex(index); descendues++; }
-      else echouees++;
-    } catch {
+      else { echouees++; motif ||= "chemin vide"; }
+    } catch (e) {
       // Une jaquette qui ne descend pas n'est pas une panne : l'URL reste, et
-      // l'image s'affichera quand le réseau sera là.
+      // l'image s'affichera quand le réseau sera là. Mais le premier motif est
+      // retenu — « 264 échecs » sans rien d'autre n'apprend rien à personne.
       echouees++;
+      motif ||= String(e?.message || e || "").slice(0, 120);
     }
     onProgress?.(i + 1, liste.length);
   }
-  return { descendues, echouees, total: liste.length };
+  return { descendues, echouees, total: liste.length, motif };
 }
 
 // Les fichiers dont plus aucune fiche ne veut.
@@ -131,7 +151,12 @@ export async function menageJaquettes(jeux) {
   let retirees = 0;
   for (const url of Object.keys(index)) {
     if (vivantes.has(url)) continue;
-    try { await Filesystem.deleteFile({ path: index[url] }); } catch { /* déjà partie */ }
+    // Le chemin est recalculé plutôt que relu dans l'index : celui-ci retient
+    // l'adresse absolue rendue par la descente, alors que la suppression
+    // attend un chemin relatif à un dossier nommé.
+    try {
+      await Filesystem.deleteFile({ path: cheminLocal(url), directory: Directory.Data });
+    } catch { /* déjà partie */ }
     delete index[url];
     retirees++;
   }
