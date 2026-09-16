@@ -994,6 +994,13 @@ export default function App() {
   // l'en-tête — s'en tient à celle-là : proposer un filtre « Steam » sur
   // l'onglet Console ne rendrait jamais rien.
   const jeuxUnivers = useMemo(() => games.filter(g => jeuDansUnivers(g, univers)), [games, univers]);
+  // Les titres possédés, normalisés une fois pour toute la liste : chaque fiche
+  // s'en sert pour dire si l'épisode qu'elle cite est là ou non, et le
+  // reconstruire par fiche coûterait deux cent quatre-vingt-huit parcours de la
+  // bibliothèque pour un seul affichage. Toute la bibliothèque, pas seulement
+  // l'univers affiché : un jeu qu'on a sur PC compte quand on regarde une fiche
+  // console.
+  const titresPossedes = useMemo(() => new Set(games.map(g => normTitle(g.title)).filter(Boolean)), [games]);
 
   // Les doublons se retirent APRÈS le filtrage et le tri : la carte gardée est
   // la plus complète, pas la première rencontrée, et ce choix ne doit pas
@@ -1109,7 +1116,7 @@ export default function App() {
     return (
       <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
         {liste.map(g => <GameCard key={g.id} g={g} onEdit={edit} onDelete={deleteGame} onEnrich={enrichGame}
-          onSerie={setSerieFil}
+          onSerie={setSerieFil} titresPossedes={titresPossedes}
           autresEditions={autresEditions(g, games)} onAutreEdition={ouvrirAutreEdition}
           autoOpen={g.id === lastAddedId || g.id === focusId} onOuverte={consommerOuverture} />)}
       </div>

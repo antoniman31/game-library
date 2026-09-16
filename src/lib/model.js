@@ -688,6 +688,38 @@ export function appidSteam(jeu, games) {
 // — la date d'ajout, la plateforme, la boutique, le format, les prêts, les
 // liens et les notes personnelles. Et la règle habituelle vaut ici comme
 // ailleurs : on ne remplit que le vide, on n'écrase jamais.
+// Les épisodes qu'une fiche cite, et ce que la bibliothèque en a.
+//
+// Chaque fiche sait déjà nommer l'épisode qui la précède et celui qui la suit —
+// Wikidata le donne, la fiche le stocke, l'infobox le récite. Personne ne
+// rapprochait jamais ces noms de ce qui est réellement possédé. Or sur la
+// bibliothèque d'aujourd'hui, dix-neuf titres cités par les fiches n'y sont
+// pas : Halo 2, Gears of War 2, Red Dead Redemption.
+//
+// L'égalité est stricte, sur le titre normalisé, et ce n'est pas un détail :
+// une comparaison par inclusion conclurait qu'on possède *Red Dead Redemption*
+// parce qu'on a *Red Dead Redemption 2*, ce qui est exactement le contraire de
+// ce qu'on cherche à dire.
+//
+// La limite, qu'il vaut mieux écrire que découvrir : un jeu possédé sous un
+// autre titre que celui cité — l'anglais contre le français — sera annoncé
+// absent à tort. C'est pourquoi la fiche le mentionne discrètement au lieu de
+// l'affirmer, et pourquoi il n'y a pas de compteur qui en ferait une corvée.
+//
+// Reçoit l'ensemble des titres possédés, déjà normalisés : construit une fois
+// pour la liste entière plutôt qu'une fois par fiche.
+export function episodesCites(jeu, titresPossedes) {
+  const cite = (brut) => {
+    const titre = String(brut || "").trim();
+    if (!titre) return null;
+    return { titre, possede: !!titresPossedes?.has(normTitle(titre)) };
+  };
+  return {
+    precedent: cite(jeu?.infobox?.follows),
+    suivant: cite(jeu?.infobox?.followedBy),
+  };
+}
+
 export const CHAMPS_PARTAGES = [
   ["cover", "jaquette"],
   ["style", "description"],

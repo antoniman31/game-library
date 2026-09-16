@@ -26,7 +26,7 @@ import {
   viderChamps, CHAMPS_VIDABLES, FILTRES, FILTRES_VIDES,
   PC, estPC, universDuJeu, jeuDansUnivers, boutiquesPresentes, jeuDeLaBoutique,
   completerDepuisEditions, editionsDuJeu, titreDeTri, masquerDoublons, appidSteam,
-  autresEditions, libelleEdition,
+  autresEditions, libelleEdition, episodesCites,
 } from "./model.js";
 import { ecouterMiseAJour } from "./maj.js";
 
@@ -1353,4 +1353,33 @@ test("une source qui confirme la note en place ne propose rien", () => {
   assert.equal(noteChangee(0, 0), false);
   assert.equal(noteChangee(null, 0), true);
   assert.equal(noteChangee(0, 82), true);
+});
+
+test("un épisode cité est dit absent seulement s'il l'est vraiment", () => {
+  const possedes = new Set(["halo", "red dead redemption 2"].map(normTitle));
+  const halo3 = { infobox: { follows: "Halo 2", followedBy: "Halo" } };
+  const { precedent, suivant } = episodesCites(halo3, possedes);
+  assert.equal(precedent.titre, "Halo 2");
+  assert.equal(precedent.possede, false);
+  assert.equal(suivant.possede, true);
+
+  // Le cas qui condamne la comparaison par inclusion : posséder le 2 ne veut
+  // pas dire posséder le 1, et c'est exactement ce qu'on cherche à dire.
+  const rdr2 = { infobox: { follows: "Red Dead Redemption" } };
+  assert.equal(episodesCites(rdr2, possedes).precedent.possede, false);
+
+  // L'accent et la casse ne font pas un jeu de plus.
+  const accents = new Set([normTitle("Pokémon Écarlate")]);
+  assert.equal(episodesCites({ infobox: { follows: "POKEMON ECARLATE" } }, accents).precedent.possede, true);
+});
+
+test("une fiche sans épisode cité ne dit rien du tout", () => {
+  const vide = new Set();
+  assert.deepEqual(episodesCites({ infobox: { follows: "", followedBy: "  " } }, vide),
+    { precedent: null, suivant: null });
+  assert.deepEqual(episodesCites({}, vide), { precedent: null, suivant: null });
+  assert.deepEqual(episodesCites(null, vide), { precedent: null, suivant: null });
+  // Sans ensemble de titres — la prévisualisation Wikidata d'une fiche en cours
+  // d'enrichissement —, on ne prétend pas savoir ce qui manque.
+  assert.equal(episodesCites({ infobox: { follows: "Halo 2" } }, undefined).precedent.possede, false);
 });

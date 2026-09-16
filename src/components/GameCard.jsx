@@ -55,7 +55,7 @@ const ligneChoix = {
 
 const boutonSource = { minHeight: "var(--tap-min)", padding: "0 12px", background: "transparent", border: `1px solid ${accent}`, color: accent, borderRadius: "var(--r-sm)", fontSize: "var(--t-legende)", cursor: "pointer" };
 
-function GameCard({ g, onEdit, onDelete, onEnrich, onSerie, autresEditions: autres = [], onAutreEdition, autoOpen, onOuverte }) {
+function GameCard({ g, onEdit, onDelete, onEnrich, onSerie, autresEditions: autres = [], onAutreEdition, autoOpen, onOuverte, titresPossedes }) {
   const [open, setOpen] = useState(!!autoOpen);
   const rootRef = useRef(null);
   // L'ouverture automatique n'a lieu qu'une fois : le marqueur est consommé
@@ -352,7 +352,7 @@ function GameCard({ g, onEdit, onDelete, onEnrich, onSerie, autresEditions: autr
               bouton ouvre directement la recherche. */}
           {g.infobox ? (
             <div style={{ marginBottom: 16 }}>
-              <InfoboxView info={g.infobox} onSerie={onSerie} />
+              <InfoboxView info={g.infobox} onSerie={onSerie} titresPossedes={titresPossedes} />
               {/* Deux sources remplissent ces lignes et ne décrivent pas la
                   même chose : la date que RAWG donne est celle de l'édition
                   possédée, celle de Wikidata celle du jeu d'origine. Sans cette
