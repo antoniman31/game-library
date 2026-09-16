@@ -283,6 +283,19 @@ for (const [largeur, theme] of ECRANS) {
       await page.getByRole("button", { name: "Aucun", exact: true }).click();
       await page.getByRole("button", { name: /^Voir \d+ jeu/ }).click();
     }],
+    // L'onglet « Prêts » n'existe plus tant que rien n'a jamais été prêté : la
+    // promenade doit donc prêter pour l'atteindre, et c'est tant mieux — elle
+    // traverse maintenant le chemin réel, de la fiche à l'onglet, au lieu de
+    // supposer un onglet toujours là.
+    ["un prêt, pour faire exister l'onglet", async () => {
+      await page.keyboard.press("Escape");
+      await page.locator(".gl-card").first().click();
+      await page.getByRole("button", { name: /Prêter ce jeu/ }).first().click();
+      await page.getByLabel(/Nom de la personne/).fill("Vérification");
+      await page.getByRole("button", { name: /^Prêter$/ }).click();
+      await page.waitForTimeout(250);
+      await page.locator(".gl-card").first().click();   // on referme la fiche
+    }],
     ["Prêts", async () => { await page.getByRole("button", { name: /^Prêts/ }).click(); }],
     // L'univers PC : d'autres filtres, d'autres pastilles, un onglet en moins.
     ["PC", async () => { await page.getByRole("button", { name: /^PC$/ }).click(); }],

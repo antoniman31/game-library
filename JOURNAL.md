@@ -1718,6 +1718,46 @@ l'application au premier appui.
 
 ---
 
+### Phase 45 — Ce que la bibliothèque disait d'elle-même
+
+Trois chantiers, une seule méthode : lire l'export réel au lieu d'imaginer ce
+qui manque.
+
+**Dix-neuf épisodes absents.** Chaque fiche stocke l'épisode qui la précède et
+celui qui la suit ; personne ne rapprochait ces noms de ce qui est possédé. Le
+rapprochement donne Halo 2, Gears of War 2, Red Dead Redemption, Max Payne 2 —
+dix-neuf titres que les fiches nomment et que la bibliothèque n'a pas.
+L'égalité est stricte : une comparaison par inclusion conclurait qu'on possède
+*Red Dead Redemption* parce qu'on a *Red Dead Redemption 2*. Les épisodes
+gagnent leur propre ligne, ce qui répare un silence au passage — une fiche sans
+série nommée voyait sa parenthèse disparaître avec la ligne « Série », donnée
+stockée et jamais affichée.
+
+**Trois champs jamais remplis.** `myLinks` valait `["","",""]` sur les 288
+fiches : 864 champs de lien, pas un seul rempli depuis la création du projet.
+`tips`, 0 sur 288. `tag`, une seule valeur en circulation, `eshop-import`, posée
+par un import qui n'existe plus. Ils partent par le mécanisme qui avait déjà
+emporté le temps de jeu, donc les fiches se nettoient au chargement. Une garde
+part avec eux : `estLienSur` et la règle d'audit « lien non ouvrable »
+protégeaient le seul endroit où une chaîne saisie devenait un `href`.
+
+**Un onglet sur quatre qui n'avait jamais servi.** Zéro prêt en cours, zéro dans
+l'historique, sur 89 jeux physiques. L'onglet, son filtre et la vue
+« Circulation » n'apparaissent plus qu'à partir du premier prêt — la règle qui
+les faisait déjà disparaître côté PC, prolongée. Prêter reste sur la fiche.
+
+**Deux défauts trouvés en chemin, et c'est ce qui rend l'exercice utile.** Le
+premier : retirer les champs a fait remonter dans le cadre quatre pastilles de
+liens hautes de 26 px contre un plancher de 44 — la vérification d'ergonomie ne
+mesure que ce qui est à l'écran, et elles s'étaient toujours trouvées plus bas.
+Elles étaient dans cet état depuis toujours. Le second : j'ai déclaré `aPrete`
+cent lignes après son premier usage, et l'application entière est tombée sur son
+garde-fou d'erreurs — exactement la zone morte temporelle déjà consignée dans
+« Bugs notables ». Elle a été trouvée en ouvrant l'application, pas en relisant
+le diff.
+
+---
+
 ## 3. Architecture finale
 
 ```
