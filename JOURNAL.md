@@ -1545,6 +1545,48 @@ l'appareil » n'existe pas.
 
 ---
 
+### Phase 41 — La clé qui manquait, et l'APK qui refusait de se mettre à jour
+
+Le second APK a refusé de s'installer par-dessus le premier. « Application non
+installée », sans autre explication.
+
+Rien à voir avec le téléphone ni avec la construction, qui était verte : Android
+n'identifie pas une application par son nom mais par la clé qui l'a signée. Deux
+APK signés par deux clés différentes sont deux applications étrangères l'une à
+l'autre, et la seconde ne remplace pas la première. Or le workflow ne fixait
+aucune clé — et Gradle, faute de clé de débogage, en fabrique une à la volée.
+Sur une machine de CI neuve à chaque exécution, cela veut dire une clé neuve à
+chaque APK. J'avais annoncé le contraire à l'installation : « même signature de
+débogage, tes données restent ». C'était faux, et la seule issue a été de
+désinstaller — donc d'effacer la bibliothèque locale, que seuls l'export et la
+synchronisation ont sauvée.
+
+La clé du premier APK était perdue avec la machine qui l'avait fabriquée :
+aucune signature ne pouvait plus se faire passer pour une mise à jour de
+celui-là. Une désinstallation était inévitable. Le travail consistait à ce
+qu'elle soit la dernière.
+
+**Le choix : ne rien ajouter à la configuration Gradle.** Le projet `android/`
+est engendré à chaque construction et n'entre pas dans le dépôt — y écrire un
+bloc `signingConfigs` aurait demandé de retoucher après coup un fichier produit
+par Capacitor, à chaque fois, en espérant que sa forme ne change pas. Mais la
+configuration de débogage d'Android lit déjà un chemin fixe,
+`~/.android/debug.keystore`, avec des mots de passe publics. Il suffit d'y
+déposer la bonne clé avant d'appeler Gradle : zéro ligne de configuration, et
+rien qui dépende de ce que Capacitor engendre.
+
+Le secret n'ajoute donc aucune confidentialité — les mots de passe de cette clé
+sont documentés par Android. Il empêche seulement un inconnu de signer un APK au
+nom de cette application.
+
+Deux garde-fous, parce que les deux pannes possibles ne se verraient qu'une fois
+l'APK sur le téléphone. Si le secret manque, la construction s'arrête au lieu de
+retomber silencieusement sur une clé aléatoire. Et l'empreinte de l'APK produit
+est comparée à celle attendue, inscrite en clair dans le workflow : une
+empreinte de certificat est une identité publique, pas un secret.
+
+---
+
 ## 3. Architecture finale
 
 ```
