@@ -1156,6 +1156,36 @@ entrer), **⚪ pour information** (un champ vide, à combler quand on veut). Un
 rapport à plat mettait « 60 jeux sans jaquette » au même rang qu'« identifiant
 en double » : il fallait tout relire pour trouver ce qui compte.
 
+### Retrouver une date d'ajout écrasée
+
+```bash
+node scripts/dates-suspectes.mjs ma-sauvegarde.json                     # rapport
+node scripts/dates-suspectes.mjs ma-sauvegarde.json --corriger sortie.json
+```
+
+Choisir une suggestion RAWG écrivait la **date de sortie** du jeu dans
+« Ajouté le ». Corrigé, mais les fiches créées avant le correctif portent
+encore une date fausse — et `addedDate` trie « récemment ajoutés » et départage
+Xbox One de Series X.
+
+La date n'est pas perdue : **l'identifiant d'un jeu est l'instant de sa
+création** (`id: Date.now()`, à l'ajout comme aux imports). La vérité était dans
+la fiche depuis le début, personne ne l'avait lue.
+
+Trois niveaux de certitude, parce qu'un écart peut être légitime — qui saisit à
+la main la date d'achat d'un jeu acheté l'an dernier crée exactement le même
+écart qu'un défaut. **Certain** : la date d'ajout est une date de sortie
+inscrite dans la fiche, ce qui est la signature du défaut et pas une
+coïncidence. **Probable** : elle précède de plus d'un an la création de la
+fiche. **Possible** : écart plus court, à juger à la main.
+
+`--corriger` n'écrit jamais sur le fichier d'entrée, refuse une sortie qui lui
+est identique, ne remet que les niveaux « certain » et « probable », et rend
+une copie qui ne diffère de l'entrée que par ces dates — pas par les champs que
+la migration aurait complétés au passage.
+
+### Ce que l'audit signale
+
 Prend un export JSON et signale : doublons de titre sur une même plateforme,
 identifiants réutilisés, champs vides (jaquette, genre, description, note),
 valeurs impossibles (plateforme inconnue, format inventé, note hors bornes,
@@ -1196,6 +1226,7 @@ import, beaucoup moins.
 │   └── README.md
 ├── scripts/
 │   ├── audit.mjs                  Audit des données d'un export (pas un test)
+│   ├── dates-suspectes.mjs        Retrouve une date d'ajout écrasée (pas un test)
 │   ├── audit.test.mjs             …mais l'audit, lui, est testé
 │   └── verif-ui.mjs               Mesure les écrans rendus : cibles, tailles, débordements
 ├── public/                        Icônes PWA (192/512, any + maskable), favicon
