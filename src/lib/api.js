@@ -299,3 +299,39 @@ export async function rawgFirstResult(title) {
 // Y a-t-il une clé RAWG configurée ? Évite de lancer une salve d'appels voués
 // à échouer au premier démarrage.
 export const hasRawgKey = () => !!API_KEYS.rawg;
+
+// ── Du code-barres au titre ────────────────────────────────────────────────
+//
+// UPCitemdb ouvre un point d'entrée d'essai sans clé, cent appels par jour et
+// par adresse. C'est exactement le bon outil pour une expérience : rien à
+// configurer, rien à saisir dans les réglages, rien à jeter si ça ne marche
+// pas. Si ça marche, on discutera d'une clé.
+//
+// Comme les trois autres, il n'expose pas de CORS — il ne peut donc exister
+// que dans l'application, où l'appel part du code natif.
+//
+// Le doute porte sur la couverture, pas sur la technique : une base de
+// produits vit du commerce en ligne, et une boîte européenne d'un jeu de 2019
+// n'y est pas forcément. C'est ce que l'expérience doit trancher, et c'est
+// pourquoi l'échec est rendu avec sa raison plutôt qu'en silence.
+const BASE_PRODUITS = "https://api.upcitemdb.com/prod/trial/lookup";
+
+export async function produitParCodeBarres(ean) {
+  if (!estNatif()) return { ok: false, raison: "indisponible" };
+  const code = String(ean || "").trim();
+  if (!/^\d{8,13}$/.test(code)) return { ok: false, raison: "code" };
+
+  try {
+    const r = await CapacitorHttp.get({ url: `${BASE_PRODUITS}?upc=${encodeURIComponent(code)}`, headers: {} });
+    // Cent appels par jour : le quota atteint se dit, il ne se confond pas
+    // avec un produit introuvable.
+    if (r.status === 429) return { ok: false, raison: "quota" };
+    if (r.status < 200 || r.status >= 300) return { ok: false, raison: "reseau", statut: r.status };
+
+    const d = typeof r.data === "string" ? JSON.parse(r.data) : r.data;
+    const titre = (d?.items || []).map(x => String(x?.title || "").trim()).find(Boolean);
+    return titre ? { ok: true, libelle: titre } : { ok: false, raison: "inconnu" };
+  } catch (e) {
+    return { ok: false, raison: "reseau", detail: String(e?.message || e) };
+  }
+}
