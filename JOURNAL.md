@@ -1838,6 +1838,49 @@ dessus répond. Un test le couvre.
 
 ---
 
+### Phase 48 — La navigation descend, et un garde-fou gagne sa place
+
+Refusée deux fois, acceptée à la troisième — après trois maquettes construites
+et rendues avec la vraie bibliothèque plutôt que dessinées. Antoni a choisi la
+troisième : les quatre onglets en bas, l'engrenage qui reste en haut avec sa
+pastille, et « + Ajouter » en bouton rond flottant.
+
+**L'engrenage ne descend pas, et c'est un choix.** En cinquième entrée d'une
+barre à quatre, il aurait été plus étroit que les autres — donc moins important
+en apparence, alors qu'il ne l'est pas. Il garde dans l'en-tête la taille des
+autres commandes, et sa pastille de sauvegarde avec.
+
+**Le bouton flottant a produit un vrai défaut, et la mesure l'a attrapé.** Posé
+au-dessus de la barre, il tombait exactement sur le « Annuler » du bandeau de
+suppression : le point central du bouton renvoyait « Annuler ». C'est le pire
+endroit possible pour une collision, puisque l'une des deux commandes rattrape
+la perte d'un jeu.
+
+**Trois tentatives, et ce que chacune a appris.** Le monter de soixante-seize
+pixels : suffisant pour un bandeau d'une ligne, pas pour deux — la vérification
+d'ergonomie l'a dit à la seconde tentative. Mesurer la hauteur du bandeau à
+l'exécution : correct, mais un bandeau vit au-dessus des panneaux modaux et le
+bouton en dessous, les deux ne peuvent donc pas partager un conteneur, et l'un
+devrait observer la taille de l'autre pour trois secondes d'affichage.
+L'effacer : le bandeau est transitoire et réclame précisément l'attention que le
+bouton détournerait. C'est celle-là.
+
+**La règle qui l'a trouvé a dû être réécrite deux fois, et c'est l'histoire la
+plus instructive de cette phase.** Première version : le point central d'une
+commande flottante renvoie-t-il une AUTRE commande flottante ? Elle marchait sur
+le cas réel, et restait muette dans la promenade. Deuxième cause : elle ne se
+déclenchait qu'au recouvrement complet, alors qu'un chevauchement partiel est
+déjà un défaut — comparer les rectangles, pas interroger un point. Troisième
+cause, une fois la règle bonne : la promenade supprimait « Watch Dogs », dont le
+bandeau est trop étroit pour atteindre le bouton. Elle supprime désormais le jeu
+au titre le plus long de la bibliothèque de démarrage, et la règle crie aux
+trois largeurs d'écran quand on réintroduit le défaut.
+
+Une règle qu'on n'a pas vue échouer ne protège rien. Celle-ci a été vérifiée
+dans les deux sens, sur le cas qui l'a fait écrire.
+
+---
+
 ## 3. Architecture finale
 
 ```

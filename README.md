@@ -231,6 +231,15 @@ bibliothèque vide sans qu'on comprenne pourquoi.
   parcourir cent cinquante titres au pouce) et grille ; regroupement facultatif par
   plateforme, série ou genre, avec des en-têtes de section. Le regroupement ne change
   pas l'ordre : les sections apparaissent dans celui que le tri leur donne.
+- **La navigation est en bas.** Les quatre onglets vivaient en haut, dans la zone que
+  la cartographie du pouce désigne comme la plus difficile à atteindre à une main,
+  alors que ce sont les commandes les plus touchées. L'engrenage, lui, ne descend pas :
+  il reste dans l'en-tête avec sa pastille de sauvegarde, plutôt que d'être la cinquième
+  entrée étriquée d'une barre à quatre. « + Ajouter » devient un bouton rond flottant —
+  il recouvre un coin de la liste, c'est le prix connu de ce motif, et il **s'efface
+  tant qu'un bandeau occupe la même bande** : sans cela il se posait exactement sur le
+  « Annuler » d'une suppression. La hauteur de la barre est un jeton, `--barre-basse`,
+  parce que trois autres endroits doivent s'en écarter.
 - **Toucher un jeu ouvre sa fiche dans un panneau, depuis n'importe quelle vue.**
   La grille et la vue compacte ne savaient pas afficher un détail : elles basculaient
   la liste entière pour aller le chercher, et on perdait la vue qu'on avait choisie

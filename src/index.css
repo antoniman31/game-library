@@ -119,6 +119,12 @@
   /* Encoches et barre de gestes. index.html déclare `viewport-fit=cover`, ce
      qui fait passer la page SOUS ces zones : sans ces marges, l'en-tête collant
      et les panneaux du bas s'y glissent. */
+  /* Hauteur de la barre de navigation basse : 8 px de marge, une cible de
+     48 px, 8 px de marge. Elle est déclarée ici parce que trois autres endroits
+     doivent s'en écarter — le bas de la liste, le bouton d'ajout flottant et
+     les bandeaux d'annulation — et qu'un chiffre recopié trois fois finit par
+     ne plus être le même. */
+  --barre-basse: 64px;
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --safe-left: env(safe-area-inset-left, 0px);

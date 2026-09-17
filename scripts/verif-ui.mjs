@@ -92,6 +92,50 @@ const mesurer = () => ({
   // fausse. Le défaut n'a de symptôme qu'à l'usage — on ne peut plus faire
   // défiler —, d'où cette règle, qui nomme la cause plutôt que d'attendre un
   // effet.
+  // Deux commandes flottantes qui se disputent les mêmes pixels.
+  //
+  // Le bouton d'ajout et le bandeau d'annulation d'une suppression occupaient
+  // la même bande au-dessus de la barre de navigation : le « + » tombait
+  // exactement sur le « Annuler », et c'est le pire endroit possible pour une
+  // collision, puisque l'une des deux commandes rattrape la perte d'un jeu.
+  //
+  // La règle des 8 px ne le voyait pas, et pour une bonne raison : elle écarte
+  // les cibles recouvertes, parce qu'un bouton caché sous un panneau n'est pas
+  // confondable. Recouvert par un PANNEAU, non ; recouvert par une autre
+  // commande flottante, si — là, ce n'est pas une superposition voulue, c'est
+  // une collision.
+  //
+  // La comparaison porte sur les rectangles et non sur ce que renvoie le point
+  // central : un chevauchement partiel est déjà un défaut, et la première
+  // version de cette règle — qui interrogeait le centre — ne se déclenchait
+  // qu'au recouvrement complet. Elle est restée muette sur le cas même qui l'a
+  // fait écrire, à deux largeurs d'écran sur trois.
+  //
+  // Les panneaux modaux sont exclus : ils recouvrent volontairement.
+  recouvertes: (() => {
+    const flottante = (el) => {
+      if (el.closest('[role="dialog"]')) return false;
+      for (let n = el; n && n !== document.documentElement; n = n.parentElement) {
+        if (getComputedStyle(n).position === "fixed") return true;
+      }
+      return false;
+    };
+    const nom = (el) => (el.innerText || el.getAttribute("aria-label") || el.tagName).trim().slice(0, 24);
+    const cibles = [...document.querySelectorAll('button, a[href], [role="button"]')]
+      .filter(flottante)
+      .map(el => [el, el.getBoundingClientRect()])
+      .filter(([, r]) => r.width > 1 && r.height > 1 && r.bottom > 0 && r.top < innerHeight);
+    const sortie = [];
+    for (let i = 0; i < cibles.length; i++) {
+      for (let j = i + 1; j < cibles.length; j++) {
+        const [ea, a] = cibles[i], [eb, b] = cibles[j];
+        if (ea.contains(eb) || eb.contains(ea)) continue;
+        if (a.right <= b.left || a.left >= b.right || a.bottom <= b.top || a.top >= b.bottom) continue;
+        sortie.push(`${nom(ea)} — chevauche ${nom(eb)}`);
+      }
+    }
+    return [...new Set(sortie)];
+  })(),
   confines: [...document.querySelectorAll("*")]
     .filter(el => getComputedStyle(el).position === "fixed")
     .map(el => {
@@ -444,16 +488,24 @@ for (const [largeur, theme] of ECRANS) {
     // longtemps. Celui de suppression se fabrique : on supprime un jeu, et on
     // l'annule aussitôt par le bandeau lui-même — ce qui mesure les deux.
     ["bandeau de suppression", async () => {
-      await page.keyboard.press("Escape");
-      if (!(await page.getByRole("button", { name: /^Supprimer$/ }).count())) {
-        await page.locator(".gl-card").first().click();
-      }
+      await revenirALaListe();
+      // Le jeu au titre le plus long de la bibliothèque de démarrage, et c'est
+      // délibéré : la largeur du bandeau est celle de son texte, et c'est elle
+      // qui décide s'il vient recouvrir le bouton d'ajout flottant. Supprimer
+      // « Watch Dogs » donnait un bandeau trop étroit pour l'atteindre — la
+      // règle de chevauchement restait muette sur le cas même qui l'a fait
+      // écrire, aux trois largeurs d'écran de cette promenade.
+      await page.getByLabel("Rechercher").fill("Tears of the Kingdom");
+      await page.waitForTimeout(250);
+      await page.locator(".gl-card").first().click();
+      await page.waitForTimeout(250);
       await page.getByRole("button", { name: /^Supprimer$/ }).first().click();
       await page.waitForTimeout(300);
     }],
     ["retour du jeu supprimé", async () => {
       const annuler = page.getByRole("button", { name: "Annuler" }).last();
       if (await annuler.count()) await annuler.click();
+      await page.getByLabel("Rechercher").fill("");
       await page.waitForTimeout(200);
     }],
     // Trois écrans que la promenade ne visitait pas, et où trois défauts ont
@@ -464,7 +516,7 @@ for (const [largeur, theme] of ECRANS) {
       await page.keyboard.press("Escape");
       await revenirALaListe();
       await page.getByRole("button", { name: /^Console$/ }).click();
-      await page.getByRole("button", { name: "+ Ajouter" }).click();
+      await page.getByRole("button", { name: "Ajouter un jeu" }).click();
     }],
     ["édition à la main", async () => {
       await page.keyboard.press("Escape");
@@ -518,6 +570,7 @@ for (const [largeur, theme] of ECRANS) {
     const ou = `${largeur}px ${theme} · ${nom}`;
     if (r.debordement) signaler(ou, "la page déborde horizontalement", []);
     if (r.confines.length) signaler(ou, `${r.confines.length} élément(s) fixe(s) enfermé(s) dans un ancêtre`, r.confines);
+    if (r.recouvertes.length) signaler(ou, `${r.recouvertes.length} commande(s) flottante(s) qui se chevauchent`, r.recouvertes);
     if (r.cibles.length) signaler(ou, `${r.cibles.length} cible(s) sous ${PLANCHER_HAUTEUR}×${PLANCHER_LARGEUR} px`, r.cibles);
     if (r.textes.length) signaler(ou, `texte sous ${PLANCHER_TEXTE} px`, r.textes);
     if (r.champs.length) signaler(ou, `champ sous ${PLANCHER_CHAMP} px (zoom iOS)`, r.champs.map(t => `${t}px`));

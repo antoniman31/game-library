@@ -75,7 +75,7 @@ const btnHdr = {
 // le bouton du bandeau tombait dans la bande où le balayage du système passe
 // avant l'application.
 const bandeauBas = {
-  position: "fixed", bottom: "calc(20px + var(--safe-bottom))", left: "50%",
+  position: "fixed", bottom: "calc(var(--barre-basse) + 12px + var(--safe-bottom))", left: "50%",
   transform: "translateX(-50%)", width: "max-content",
   maxWidth: "calc(100vw - 24px)", display: "flex", alignItems: "center",
   background: card, borderRadius: "var(--r-md)", padding: "8px 10px 8px 14px",
@@ -1028,6 +1028,9 @@ export default function App() {
   // console.
   // Le jeu dont le détail est affiché, relu dans la bibliothèque à chaque rendu
   // plutôt que recopié : une modification faite DANS le panneau doit s'y voir.
+  // Un bandeau occupe-t-il la bande juste au-dessus de la barre basse ?
+  // Le bouton d'ajout s'en écarte : voir sa déclaration plus bas.
+  const bandeauAffiche = !!(majDispo || avis || deleted);
   const jeuOuvert = useMemo(() => games.find(g => g.id === ficheOuverte) || null,
     [games, ficheOuverte]);
   const titresPossedes = useMemo(() => new Set(games.map(g => normTitle(g.title)).filter(Boolean)), [games]);
@@ -1203,6 +1206,21 @@ export default function App() {
               avec lui, sans perte : les bandeaux du dessous annoncent la même
               progression avec de quoi l'arrêter, et sur tous les onglets. */}
           <div style={{ display: "flex", gap: "var(--ecart-tap)", alignItems: "center", flexShrink: 0 }}>
+            {/* L'engrenage ne descend pas avec les onglets : il garde ici sa
+                pastille de sauvegarde, et reste de la taille des autres
+                commandes de l'en-tête plutôt que d'être la cinquième entrée
+                étriquée d'une barre à quatre. */}
+            <button onClick={() => allerVers("settings")} aria-pressed={tab === "settings"}
+              aria-label={sauvegardeAlerte ? "Réglages — sauvegarde à faire" : "Réglages"}
+              style={{ ...btnHdr, position: "relative",
+                background: tab === "settings" ? accentFond : "transparent",
+                color: tab === "settings" ? "#fff" : txt }}>
+              ⚙️
+              {sauvegardeAlerte && <span aria-hidden="true" style={{
+                position: "absolute", top: 4, right: 4, width: 8, height: 8,
+                borderRadius: "50%", background: warn,
+              }} />}
+            </button>
             <button onClick={() => setModeTheme(modeSuivant)}
               aria-label={`Thème : ${LIBELLES[modeTheme]}`} title={`Thème : ${LIBELLES[modeTheme]}`}
               style={{ ...btnHdr, color: txt }}>
@@ -1216,10 +1234,6 @@ export default function App() {
                 📤
               </button>
             )}
-            <button onClick={() => setShowAdd(true)}
-              style={{ ...btnHdr, background: accentFond, border: "none", color: "#fff", fontSize: "var(--t-corps)", fontWeight: 600 }}>
-              + Ajouter
-            </button>
           </div>
         </div>
 
@@ -1286,38 +1300,7 @@ export default function App() {
             jeu —, et le premier prêt fait apparaître l'onglet. La condition
             garde `tab !== "loans"` : l'onglet qu'on regarde ne s'évapore pas
             sous le doigt parce qu'on vient d'y rendre le dernier jeu. */}
-        <div style={{ display: "flex", gap: "var(--ecart-tap)", marginBottom: estBibliotheque ? 10 : 0 }}>
-          {[["console","Console"],["pc","PC"],
-            ...((univers === "pc" || !aPrete) && tab !== "loans" ? [] : [["loans",`Prêts${lentGames.length ? ` (${lentGames.length})` : ""}`]]),
-            ["stats","Stats"],["settings","⚙️"]].map(([k,l]) => (
-            // Le dernier onglet n'a qu'un émoji pour libellé : un lecteur
-            // d'écran annonçait « engrenage », ce qui ne dit pas où l'on va.
-            <button key={k} onClick={() => allerVers(k)} aria-pressed={tab === k}
-              aria-label={k === "settings"
-                ? (sauvegardeAlerte ? "Réglages — sauvegarde à faire" : "Réglages")
-                : undefined}
-              style={{
-                position: "relative",
-                flex: k === "settings" ? "0 0 auto" : 1, minWidth: k === "settings" ? "var(--tap)" : 0,
-                minHeight: "var(--tap)", background: tab===k ? accentFond : "transparent",
-                border: `1px solid ${tab===k ? accentFond : bdrChamp}`, color: tab===k ? "#fff" : mut,
-                borderRadius: "var(--r-md)", padding: "0 2px", fontSize: "var(--t-petit)", fontWeight: tab===k ? 600 : 400,
-                cursor: "pointer", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
-              }}>
-              {l}
-              {/* La synchronisation est manuelle, et c'est bien ainsi. Mais une
-                  sauvegarde qu'on oublie de faire n'existe pas, et son âge ne
-                  se lisait que dans un panneau qu'on n'ouvre jamais. Une pastille
-                  sur l'engrenage, rien de plus : pas de bannière à écarter. */}
-              {k === "settings" && sauvegardeAlerte && (
-                <span aria-hidden="true" style={{
-                  position: "absolute", top: 8, right: 8, width: 8, height: 8,
-                  borderRadius: "50%", background: warn,
-                }} />
-              )}
-            </button>
-          ))}
-        </div>
+
 
         {/* Recherche, tri et accès aux filtres sur une seule ligne. Les quatre
             rangées de puces qui occupaient cette place sont dans le panneau
@@ -1370,7 +1353,7 @@ export default function App() {
       </div>
 
       {/* Body */}
-      <div style={{ maxWidth: "var(--large-lisible)", margin: "0 auto", padding:"14px calc(14px + var(--safe-right)) calc(60px + var(--safe-bottom)) calc(14px + var(--safe-left))" }}>
+      <div style={{ maxWidth: "var(--large-lisible)", margin: "0 auto", padding:"14px calc(14px + var(--safe-right)) calc(60px + var(--barre-basse) + var(--safe-bottom)) calc(14px + var(--safe-left))" }}>
         {estBibliotheque && (affichee.length === 0 ? emptyState : (
           <>
           {sections.map(({ titre, jeux }) => (
@@ -1624,6 +1607,78 @@ export default function App() {
           <span style={{ color:txt, fontSize: "var(--t-corps)", minWidth:0 }}>🗑 « {deleted.game.title} » supprimé</span>
           <button onClick={undoDelete} style={btnBandeau(accent)}>Annuler</button>
         </div>
+      )}
+      {/* La navigation, en bas.
+
+          Les quatre onglets vivaient en haut, dans la zone que la cartographie
+          du pouce désigne comme la plus difficile à atteindre à une main. Ils
+          sont ce qu'on touche le plus souvent : ils descendent.
+
+          L'engrenage ne descend pas — il reste dans l'en-tête, où il garde sa
+          pastille de sauvegarde. Le mettre ici en aurait fait une cinquième
+          entrée plus étroite que les autres, donc moins importante en
+          apparence, alors qu'elle ne l'est pas.
+
+          La hauteur est un jeton, `--barre-basse` : trois autres endroits
+          doivent s'en écarter, et un chiffre recopié trois fois finit par ne
+          plus être le même. */}
+      <nav aria-label="Navigation principale"
+        style={{ position: "fixed", left: 0, right: 0, bottom: 0, zIndex: 90,
+          background: hdr, borderTop: `1px solid ${bdr}`,
+          padding: "8px calc(14px + var(--safe-right)) calc(8px + var(--safe-bottom)) calc(14px + var(--safe-left))" }}>
+        <div style={{ display: "flex", gap: "var(--ecart-tap)", maxWidth: "var(--large-lisible)", margin: "0 auto" }}>
+          {[["console","Console"],["pc","PC"],
+            ...((univers === "pc" || !aPrete) && tab !== "loans" ? [] : [["loans",`Prêts${lentGames.length ? ` (${lentGames.length})` : ""}`]]),
+            ["stats","Stats"]].map(([k,l]) => (
+            // Le dernier onglet n'a qu'un émoji pour libellé : un lecteur
+            // d'écran annonçait « engrenage », ce qui ne dit pas où l'on va.
+            <button key={k} onClick={() => allerVers(k)} aria-pressed={tab === k}
+              style={{
+                position: "relative",
+                flex: 1, minWidth: 0,
+                minHeight: "var(--tap)", background: tab===k ? accentFond : "transparent",
+                border: `1px solid ${tab===k ? accentFond : bdrChamp}`, color: tab===k ? "#fff" : mut,
+                borderRadius: "var(--r-md)", padding: "0 2px", fontSize: "var(--t-petit)", fontWeight: tab===k ? 600 : 400,
+                cursor: "pointer", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
+              }}>
+              {l}
+            </button>
+          ))}
+        </div>
+      </nav>
+      {/* Ajouter un jeu, à portée de pouce.
+
+          Le bouton était dans l'en-tête, en haut à droite — le coin le plus
+          loin du pouce sur un téléphone tenu d'une main. Il recouvre un coin de
+          la liste, ce qui est le prix connu de ce motif ; il se place au-dessus
+          de la barre basse, pas dedans, pour ne pas se confondre avec une
+          destination. */}
+      {/* Il s'efface tant qu'un bandeau occupe la même bande.
+
+          Mesuré : sans cela, le « + » se posait exactement sur le « Annuler »
+          d'une suppression — le point central du bouton renvoyait « Annuler » —
+          et c'est le pire endroit possible pour une collision, puisque l'une
+          des deux commandes rattrape la perte d'un jeu.
+
+          Le monter plutôt que l'effacer a été essayé et abandonné : la hauteur
+          d'un bandeau est celle de son texte, et soixante-seize pixels
+          suffisaient à une ligne mais pas à deux — la vérification d'ergonomie
+          l'a dit tout de suite. Le mesurer à l'exécution marcherait, mais un
+          bandeau vit au-dessus des panneaux modaux et le bouton en dessous :
+          les deux ne peuvent pas partager un conteneur, donc l'un devrait
+          observer la taille de l'autre pour trois secondes d'affichage.
+
+          Il s'efface, donc. Le bandeau est transitoire et réclame précisément
+          l'attention que le bouton détournerait. */}
+      {!bandeauAffiche && (
+      <button onClick={() => setShowAdd(true)} aria-label="Ajouter un jeu"
+        style={{ position: "fixed", zIndex: 95,
+          right: "calc(16px + var(--safe-right))",
+          bottom: "calc(var(--barre-basse) + 16px + var(--safe-bottom))",
+          width: "var(--tap)", height: "var(--tap)", borderRadius: "50%",
+          background: accentFond, border: "none", color: "#fff",
+          fontSize: "var(--t-chiffre)", lineHeight: 1, cursor: "pointer",
+          boxShadow: "0 6px 20px rgba(0,0,0,0.45)" }}>+</button>
       )}
     </div>
   );
