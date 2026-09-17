@@ -265,7 +265,20 @@ for (const [largeur, theme] of ECRANS) {
   await page.evaluate(t => localStorage.setItem("gl_theme", t), theme);
   await page.reload({ waitUntil: "networkidle" });
 
-  // Chaque onglet, puis un panneau, puis une fiche dépliée : les défauts de
+  // Revenir à la liste, quelle que soit la profondeur.
+  //
+  // Échap ne ferme plus que le panneau du dessus — c'est la règle depuis que le
+  // détail d'une fiche est lui-même un panneau et peut en porter un autre. Un
+  // seul appui laissait donc la fiche ouverte par-dessus la liste, et les
+  // commandes de l'en-tête restaient visibles mais inatteignables.
+  const revenirALaListe = async () => {
+    for (let i = 0; i < 5 && (await page.getByRole("dialog").count()); i++) {
+      await page.keyboard.press("Escape");
+      await page.waitForTimeout(120);
+    }
+  };
+
+  // Chaque onglet, puis un panneau, puis une fiche ouverte : les défauts de
   // taille se cachent dans ce qui n'est pas affiché au premier écran.
   const etapes = [
     ["Console", async () => {}],
@@ -290,7 +303,9 @@ for (const [largeur, theme] of ECRANS) {
       await page.keyboard.press("Escape");
       await page.getByRole("button", { name: /^Trier/ }).click();
     }],
-    ["fiche dépliée", async () => { await page.keyboard.press("Escape"); await page.locator(".gl-card").first().click(); }],
+    // « Dépliée » du temps où le détail vivait sous la ligne. Il s'ouvre
+    // désormais dans un panneau, quelle que soit la vue d'où l'on part.
+    ["fiche ouverte", async () => { await revenirALaListe(); await page.locator(".gl-card").first().click(); }],
     ["feuille de vidage", async () => {
       await page.getByRole("button", { name: /Modifier la fiche/ }).first().click();
       await page.getByRole("button", { name: /^🧹 Vider/ }).first().click();
@@ -298,7 +313,7 @@ for (const [largeur, theme] of ECRANS) {
     ["vue compacte", async () => {
       // La feuille de vidage couvre l'écran : sans cette fermeture, « Filtres »
       // resterait parfaitement visible et parfaitement inatteignable.
-      await page.keyboard.press("Escape");
+      await revenirALaListe();
       await page.getByRole("button", { name: /^Filtres/ }).click();
       await page.getByRole("button", { name: "≡ Compacte" }).click();
       await page.getByRole("button", { name: /^Voir \d+ jeu/ }).click();
@@ -319,21 +334,20 @@ for (const [largeur, theme] of ECRANS) {
     // traverse maintenant le chemin réel, de la fiche à l'onglet, au lieu de
     // supposer un onglet toujours là.
     ["un prêt, pour faire exister l'onglet", async () => {
-      await page.keyboard.press("Escape");
+      await revenirALaListe();
       await page.locator(".gl-card").first().click();
       await page.getByRole("button", { name: /Prêter ce jeu/ }).first().click();
       await page.getByLabel(/Nom de la personne/).fill("Vérification");
       await page.getByRole("button", { name: /^Prêter$/ }).click();
       await page.waitForTimeout(250);
-      await page.locator(".gl-card").first().click();   // on referme la fiche
+      await page.keyboard.press("Escape");              // on referme la fiche
     }],
     ["Prêts", async () => {
       // Depuis que les panneaux sont rendus à la racine du document, un panneau
       // resté ouvert couvre vraiment la barre d'onglets — avant, confiné dans
       // sa fiche, il la laissait cliquable. La promenade s'appuyait sans le
       // savoir sur cette géométrie fausse.
-      await page.keyboard.press("Escape");
-      await page.waitForTimeout(150);
+      await revenirALaListe();
       await page.getByRole("button", { name: /^Prêts/ }).click();
     }],
     // L'univers PC : d'autres filtres, d'autres pastilles, un onglet en moins.
@@ -358,7 +372,7 @@ for (const [largeur, theme] of ECRANS) {
     }],
     ["Stats", async () => { await page.getByRole("button", { name: "Stats" }).click(); }],
     ["Stats · Collection", async () => { await page.getByRole("button", { name: "Collection" }).click(); }],
-    ["Réglages", async () => { await page.keyboard.press("Escape"); await page.getByRole("button", { name: "Réglages" }).click(); }],
+    ["Réglages", async () => { await revenirALaListe(); await page.getByRole("button", { name: "Réglages" }).click(); }],
     // Les trois sous-onglets. « Outils » est celui où vivent désormais les
     // opérations longues et les deux imports, et c'est un onglet de plus à
     // tenir sur 360 px : trois boutons en `flex: 1` y tombent à 105 px, et
@@ -391,7 +405,7 @@ for (const [largeur, theme] of ECRANS) {
     // On revient d'abord dans la bibliothèque : les étapes précédentes
     // s'arrêtaient dans les Réglages, où il n'y a pas de fiche à déplier.
     ["fiche · liens", async () => {
-      await page.keyboard.press("Escape");
+      await revenirALaListe();
       await page.getByRole("button", { name: /^Console$/ }).click();
       if (!(await page.getByRole("button", { name: /Liens & contenu/ }).count())) {
         await page.locator(".gl-card").first().click();
@@ -448,7 +462,7 @@ for (const [largeur, theme] of ECRANS) {
     // Un garde-fou ne protège que ce qu'il regarde.
     ["Ajouter un jeu", async () => {
       await page.keyboard.press("Escape");
-      await page.keyboard.press("Escape");
+      await revenirALaListe();
       await page.getByRole("button", { name: /^Console$/ }).click();
       await page.getByRole("button", { name: "+ Ajouter" }).click();
     }],
@@ -490,9 +504,9 @@ for (const [largeur, theme] of ECRANS) {
       // une recherche au lieu d'un jeu.
       await page.locator("label").filter({ hasText: /^Titre/ }).locator("input").fill(jumeau);
       await page.getByRole("button", { name: "Enregistrer" }).click();
-      // Enregistrer referme la feuille ET la carte : sans la rouvrir, ni la
-      // mention ni le bouton de repli ne sont à l'écran au moment de mesurer.
-      await page.locator(".gl-card").first().click();
+      // Enregistrer referme la feuille d'édition ; le panneau de la fiche, lui,
+      // reste ouvert derrière — la mention « aussi sur » et le bouton de repli
+      // sont donc déjà à l'écran, et rouvrir quoi que ce soit les cacherait.
       await page.waitForTimeout(200);
     }],
   ];

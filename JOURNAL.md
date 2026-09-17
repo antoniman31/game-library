@@ -1795,6 +1795,49 @@ confiné. Corrigé, il la couvre — comme il l'a toujours fallu.
 
 ---
 
+### Phase 47 — La fiche s'ouvre là où on est
+
+« Quand je suis en vue grille et que je veux accéder au détail d'une fiche, ça
+me repasse automatiquement en vue liste. »
+
+Le diagnostic était juste, et la cause structurelle : le détail vivait *dans* le
+composant de la ligne, replié en dessous. La grille et la vue compacte ne
+savaient donc pas l'afficher — elles n'avaient d'autre moyen que de basculer la
+liste entière pour aller le chercher, détruisant la vue choisie et sa position.
+
+`GameCard` faisait 771 lignes et contenait deux choses distinctes : trente
+lignes de ligne repliée, et quatre cent quatre-vingt-dix de détail. Séparées en
+`LigneJeu` et `FicheDetail`, le détail devient un panneau que les trois vues
+ouvrent de la même façon.
+
+**Ce que j'avais annoncé et qui ne s'est pas produit.** J'attendais un gain au
+démarrage : les 288 lignes montaient chacune vingt-huit `useState` et quatre
+`useRef` — la machinerie des cinq panneaux d'édition — pour afficher une
+jaquette et un titre. Mesuré avant et après sur la vraie bibliothèque,
+processeur ralenti six fois : 1 727 ms contre 1 770. Rien, à la variance près.
+Le coût du montage n'était pas là. En revanche le pire cas — effacer la
+recherche pour faire revenir toute la liste — passe de 711 à 558 ms, un
+cinquième de moins. J'avais dit que je mesurerais plutôt que d'annoncer ; la
+mesure dit non sur le démarrage, et c'est ce qui est écrit.
+
+**Une heure perdue sur un défaut qui n'existait pas.** Le défilement semblait
+sauter de 2 000 à 1 184 px à l'ouverture d'une fiche. J'ai écarté
+`content-visibility`, le verrou de défilement, la mise au point du panneau,
+puis ajouté au panneau de quoi mémoriser et rendre la position — qui ne
+marchait pas. La cause était mon banc d'essai : Playwright centre l'élément
+visé avant de cliquer. En déclenchant le clic depuis la page, la position ne
+bouge pas d'un pixel. La machinerie ajoutée a été retirée : on ne garde pas un
+correctif pour un défaut qui n'existe pas.
+
+**Un vrai défaut, celui-là, né de l'imbrication.** Le détail étant devenu un
+panneau, ouvrir « RAWG » par-dessus en fait deux. Or chaque panneau posait son
+propre écouteur d'Échap sur le document : une touche les fermait tous les deux.
+Le bouton Retour, lui, n'avait pas ce défaut — il passe par la pile écrite
+l'avant-veille. Échap y passe désormais aussi, avec la même règle : seul le
+dessus répond. Un test le couvre.
+
+---
+
 ## 3. Architecture finale
 
 ```
