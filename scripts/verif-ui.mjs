@@ -518,6 +518,36 @@ for (const [largeur, theme] of ECRANS) {
       await page.getByRole("button", { name: /^Console$/ }).click();
       await page.getByRole("button", { name: "Ajouter un jeu" }).click();
     }],
+    // Taper dans un champ, et vérifier qu'on peut encore taper.
+    //
+    // Ce n'est pas une mesure de géométrie comme le reste de ce script, et
+    // c'est assumé : le défaut qu'elle attrape ne se voit sur aucune capture.
+    // `Ligne`, le petit libellé au-dessus de chaque champ, était déclaré dans
+    // le corps d'AddModal — donc recréé à chaque rendu, donc le champ était
+    // détruit et refabriqué à chaque frappe. Sur un téléphone, perdre le focus
+    // ferme le clavier : une lettre, le clavier disparaît, la suivante n'arrive
+    // nulle part. Ajouter un jeu à la main était impossible, et rien dans la
+    // CI ne le disait.
+    //
+    // Deux caractères suffisent : le premier révèle le remontage, le second
+    // prouve qu'il n'a rien avalé.
+    ["le clavier tient pendant la frappe", async () => {
+      const champ = page.getByPlaceholder("Titre du jeu").first();
+      await champ.click();
+      await page.keyboard.type("Ze");
+      await page.waitForTimeout(150);
+
+      const garde = await page.evaluate(() => document.activeElement?.placeholder === "Titre du jeu");
+      const valeur = await champ.inputValue();
+      if (!garde || valeur !== "Ze") {
+        signaler("Ajouter un jeu", "le champ perd le focus pendant la frappe", [
+          `focus conservé : ${garde ? "oui" : "non"} — valeur lue : « ${valeur} », attendue « Ze »`,
+          "Sur un téléphone, c'est le clavier qui se ferme à chaque lettre.",
+          "Cause habituelle : un composant déclaré dans le corps d'un autre, donc recréé à chaque rendu.",
+        ]);
+      }
+      await champ.fill("");
+    }],
     ["édition à la main", async () => {
       await page.keyboard.press("Escape");
       // La fiche peut déjà être dépliée : la rouvrir la refermerait.

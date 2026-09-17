@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import Sheet from "./Sheet.jsx";
 import { bg, card, bdr, bdrChamp, txt, mut, accent, accentFond } from "../lib/theme.js";
-import { PC, PLATFORMES_JEU, isBackCompatPlatform, normaliserGenres } from "../lib/model.js";
+import { PC, PLATFORMES_JEU, isBackCompatPlatform, normaliserGenres, fusionnerInfobox, infoboxDepuisRawg } from "../lib/model.js";
 import {
   rawgSearch, rawgDetail, wikiFrenchTitles, wikiArticleData, wikidataInfobox,
   sgdbSearch, sgdbGrids, produitParCodeBarres,
@@ -9,12 +9,45 @@ import {
 import { scannerCodeBarres, scanPossible } from "../lib/natif.js";
 import { eanValide, titreDepuisProduit } from "../lib/codebarres.js";
 
+// Un libellé au-dessus de chaque champ, et pas seulement une invite : une
+// invite disparaît dès la première lettre tapée, et sur un menu déroulant ou
+// un champ de date il n'y en a même pas — rien ne disait ce qu'on choisissait.
+//
+// DÉCLARÉ ICI, ET C'EST LE SUJET DE TOUT CE COMMENTAIRE.
+//
+// Tant que ce composant vivait dans le corps d'AddModal, il était recréé à
+// chaque rendu. React compare les composants par identité de fonction : une
+// fonction neuve est un composant neuf, donc il démontait le sous-arbre et le
+// remontait. Le champ de saisie était détruit et refabriqué à chaque frappe, et
+// un champ neuf n'a pas le focus.
+//
+// Sur un ordinateur, ça se voyait mal. Sur un téléphone, perdre le focus ferme
+// le clavier : on tapait une lettre, le clavier disparaissait, et la lettre
+// suivante n'arrivait nulle part. Ajouter un jeu à la main était devenu
+// impossible.
+//
+// Une fonction déclarée au niveau du module garde la même identité pour
+// toujours. C'est tout le correctif.
+const Ligne = ({ label, aide, children }) => (
+  <label style={{ display: "block", marginBottom: 10 }}>
+    <span style={{ display: "block", color: mut, fontSize: "var(--t-legende)", marginBottom: 4 }}>
+      {label}{aide ? <span style={{ opacity: 0.75 }}> · {aide}</span> : null}
+    </span>
+    {children}
+  </label>
+);
+
 function AddModal({ onAdd, onClose }) {
   const [title, setTitle] = useState("");
   const [platform, setPlatform] = useState("Xbox Series X");
   const [fmt, setFmt] = useState("physique");
   const [boutique, setBoutique] = useState("");
-  const [date, setDate] = useState("");
+  // « Ajouté le » commence à aujourd'hui, et se voit.
+  //
+  // Le champ était vide, et `handleAdd` retombait sur la date du jour en
+  // silence : correct, mais rien à l'écran ne le disait — un champ vide invite
+  // à le remplir alors qu'il n'y a rien à remplir.
+  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [loading, setLoading] = useState(false);
   const [sugg, setSugg] = useState([]);
   const [rawg, setRawg] = useState(null);
@@ -58,17 +91,6 @@ function AddModal({ onAdd, onClose }) {
     borderRadius: 0, cursor: "pointer", fontFamily: "inherit", fontSize: "var(--t-petit)",
   };
 
-  // Un libellé au-dessus de chaque champ, et pas seulement une invite : une
-  // invite disparaît dès la première lettre tapée, et sur un menu déroulant ou
-  // un champ de date il n'y en a même pas — rien ne disait ce qu'on choisissait.
-  const Ligne = ({ label, aide, children }) => (
-    <label style={{ display: "block", marginBottom: 10 }}>
-      <span style={{ display: "block", color: mut, fontSize: "var(--t-legende)", marginBottom: 4 }}>
-        {label}{aide ? <span style={{ opacity: 0.75 }}> · {aide}</span> : null}
-      </span>
-      {children}
-    </label>
-  );
 
   const search = async (q) => setSugg(await rawgSearch(q));
 
@@ -113,7 +135,16 @@ function AddModal({ onAdd, onClose }) {
     const d = await rawgDetail(game.id);
     if (d) {
       setRawg(d);
-      if (d.released) setDate(d.released);
+      // La date de sortie de RAWG n'atterrit PLUS dans « Ajouté le ».
+      //
+      // Elle y atterrissait, et ce n'était pas qu'un défaut d'affichage :
+      // `addedDate` sert à trier « récemment ajoutés » et à départager Xbox One
+      // de Series X. Ajouter Halo 5 aujourd'hui l'enregistrait comme ajouté en
+      // 2015 — tout en bas de la liste, et sur la mauvaise console.
+      //
+      // Elle n'est pas perdue pour autant : elle part dans l'infobox, où
+      // `dateDeSortie()` va déjà la chercher. Le champ existait, la valeur
+      // était simplement rangée dans le mauvais.
       if (!cover && d.background_image) setCover(d.background_image);
     }
     setLoading(false);
@@ -169,7 +200,12 @@ function AddModal({ onAdd, onClose }) {
       lentA: null, lentDate: null,
       cover: cover || rawg?.background_image || null,
       metacritic: rawg?.metacritic || null,
-      backCompat: isBackCompatPlatform(platform), infobox: wikiInfo || null,
+      backCompat: isBackCompatPlatform(platform),
+      // Wikidata d'abord, RAWG pour ce qui manque : `fusionnerInfobox`
+      // complète sans écraser, et la source encyclopédique vaut mieux que
+      // celle d'un catalogue. C'est déjà ainsi que la fiche se complète après
+      // coup ; l'ajout faisait exception et jetait tout ce que RAWG savait.
+      infobox: fusionnerInfobox(wikiInfo, infoboxDepuisRawg(rawg), "rawg"),
     });
   };
 
