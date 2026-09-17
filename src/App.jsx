@@ -1186,14 +1186,6 @@ export default function App() {
         {liste.map(g => (
           <div key={g.id} className="gl-tile" style={{ background:card, border:`1px solid ${bdr}`, borderRadius: "var(--r-md)", overflow:"hidden", cursor:"pointer" }}
             onClick={() => setFicheOuverte(g.id)}>
-            {/* La console, deux fois, et c'est délibéré — pour le moment.
-                Posée sur la jaquette elle se repère d'un coup d'œil sans lire,
-                mais elle mange un coin de l'illustration. Écrite sous le
-                titre elle ne recouvre rien, mais elle coûte une ligne dans
-                chaque vignette. Les deux cohabitent le temps de les voir en
-                vrai sur la bibliothèque réelle ; celle qui gagne restera
-                seule. Garder les deux serait redondant, et une redondance
-                qu'on oublie de trancher devient un défaut. */}
             <div style={{ position:"relative" }}>
               <Cover src={g.cover} title={g.title} size="100%" />
               {/* Sur la jaquette, et nulle part ailleurs.
