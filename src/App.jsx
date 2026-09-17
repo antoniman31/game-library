@@ -24,6 +24,7 @@ import { jeuDansUnivers, boutiquesPresentes, jeuDeLaBoutique, autresEditions,
   joursDePret, jeuPasseSeuil, jeuxNoteDeclareeAbsente, jeuACompleter, completudeManquante, dateDeSortie, serieDuJeu,
   empreinteMelange, compterFichesIncompletes, completerDepuisEditions, titreDeTri, rapprochementDouteux,
   masquerDoublons, appidSteam, noteChangee, jeuDeLaGeneration, plateformesPresentes, nomCourt,
+  BACK_COMPAT_PARENT,
   generationDe, nomFamille,
   PLATFORM_COLORS } from "./lib/model.js";
 import { lire, ecrire, surEchecStockage } from "./lib/storage.js";
@@ -1195,16 +1196,42 @@ export default function App() {
                 qu'on oublie de trancher devient un défaut. */}
             <div style={{ position:"relative" }}>
               <Cover src={g.cover} title={g.title} size="100%" />
-              <span style={{
-                position:"absolute", left:5, bottom:5,
-                background:PLATFORM_COLORS[g.platform] || accentFond, color:"#fff",
-                fontSize:"var(--t-legende)", fontWeight:700, lineHeight:1.4,
-                borderRadius:"var(--r-xs)", padding:"1px 5px",
-                // Une jaquette claire sous une pastille claire ne se lirait
-                // plus : le liseré la détache de n'importe quelle image.
-                boxShadow:"0 0 0 1px #0006",
-                maxWidth:"calc(100% - 10px)", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap",
-              }}>{nomCourt(g.platform)}</span>
+              {/* Empilées en bas à gauche plutôt qu'en ligne sous le titre :
+                  « Xbox One · 🔄 Series X · MC 84 » dépasse largement les
+                  120 px d'une vignette, et une information tronquée ne vaut
+                  pas mieux qu'une information absente. Sur la jaquette, elles
+                  ne coûtent aucune hauteur. */}
+              <div style={{
+                position:"absolute", left:5, bottom:5, maxWidth:"calc(100% - 10px)",
+                display:"flex", flexDirection:"column", alignItems:"flex-start", gap:3,
+              }}>
+                {/* La rétrocompatibilité au-dessus, parce qu'elle qualifie la
+                    plateforme écrite en dessous : on lit « Xbox One, aussi
+                    jouable sur Series X », dans cet ordre.
+                    Fond sombre fixe et texte blanc plutôt que le vert du
+                    thème : ce dernier vaut #127034 en clair, illisible sur du
+                    sombre, et la pastille doit rester opaque pour ne pas
+                    dépendre de la jaquette. Le 🔄 porte le sens, comme dans
+                    la liste. */}
+                {BACK_COMPAT_PARENT[g.platform] && g.backCompat && (
+                  <span title={`Rétrocompatible ${BACK_COMPAT_PARENT[g.platform]}`} style={{
+                    background:"#111827", color:"#fff",
+                    fontSize:"var(--t-legende)", fontWeight:600, lineHeight:1.4,
+                    borderRadius:"var(--r-xs)", padding:"1px 5px",
+                    boxShadow:"0 0 0 1px #0006",
+                    maxWidth:"100%", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap",
+                  }}>🔄 {nomCourt(BACK_COMPAT_PARENT[g.platform])}</span>
+                )}
+                <span style={{
+                  background:PLATFORM_COLORS[g.platform] || accentFond, color:"#fff",
+                  fontSize:"var(--t-legende)", fontWeight:700, lineHeight:1.4,
+                  borderRadius:"var(--r-xs)", padding:"1px 5px",
+                  // Une jaquette claire sous une pastille claire ne se lirait
+                  // plus : le liseré la détache de n'importe quelle image.
+                  boxShadow:"0 0 0 1px #0006",
+                  maxWidth:"100%", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap",
+                }}>{nomCourt(g.platform)}</span>
+              </div>
             </div>
             <div style={{ height:3, background:g.lentA ? warnFond : "transparent" }} />
             <div style={{ padding:"6px 7px" }}>

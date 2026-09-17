@@ -446,6 +446,23 @@ for (const [largeur, theme] of ECRANS) {
           `${muettes.length} sur ${vignettes.length} — par exemple « ${muettes[0]} »`,
         ]);
       }
+
+      // La rétrocompatibilité aussi, et elle demande sa propre vérification :
+      // c'est une pastille CONDITIONNELLE, donc son absence ne se distingue
+      // pas d'un jeu qui n'est simplement pas rétrocompatible. Sans compter
+      // combien la bibliothèque en contient, on ne saurait pas si zéro
+      // pastille est un défaut ou une vérité.
+      const attendus = await page.evaluate(() => {
+        const compat = { "Xbox One": "Series X", "Switch 1": "Switch 2" };
+        return JSON.parse(localStorage.getItem("gl_v2") || "[]")
+          .filter(g => g.backCompat && compat[g.platform]).length;
+      });
+      const marquees = vignettes.filter(t => /🔄/.test(t)).length;
+      if (attendus > 0 && marquees === 0) {
+        signaler("vue grille", "la rétrocompatibilité ne s'affiche pas", [
+          `${attendus} jeu(x) rétrocompatibles dans la bibliothèque, aucune pastille 🔄 sur les ${vignettes.length} premières vignettes`,
+        ]);
+      }
     }],
     ["retour en liste", async () => {
       await page.getByRole("button", { name: /^Filtres/ }).click();
