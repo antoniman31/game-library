@@ -23,7 +23,8 @@ import { jeuDansUnivers, boutiquesPresentes, jeuDeLaBoutique, autresEditions,
   jeuALeMode, jeuSurPlateforme, compterRetro, genresPresents, dureeEntreeHistorique, supprimerEntreeHistorique,
   joursDePret, jeuPasseSeuil, jeuxNoteDeclareeAbsente, jeuACompleter, completudeManquante, dateDeSortie, serieDuJeu,
   empreinteMelange, compterFichesIncompletes, completerDepuisEditions, titreDeTri, rapprochementDouteux,
-  masquerDoublons, appidSteam, noteChangee,
+  masquerDoublons, appidSteam, noteChangee, jeuDeLaGeneration, plateformesPresentes, nomCourt,
+  generationDe, nomFamille,
   PLATFORM_COLORS } from "./lib/model.js";
 import { lire, ecrire, surEchecStockage } from "./lib/storage.js";
 import { chargerSync, enregistrerSync, genererCode, envoyer, recuperer } from "./lib/sync.js";
@@ -110,7 +111,16 @@ export default function App() {
   const [genreFil, setGenreFil] = useState("tous");
   // Vrai par défaut : c'est le comportement d'avant, et celui qu'on veut quand
   // on cherche quoi lancer ce soir plutôt qu'à faire l'inventaire.
-  const [avecRetro, setAvecRetro] = useState(true);
+  //
+  // Nommé en toutes lettres depuis que les consoles rétro existent : ceci
+  // concerne les jeux d'une machine jouables sur la suivante, `genFil` juste
+  // en dessous concerne l'âge de la machine elle-même. Deux « rétro » dans le
+  // même panneau, dont un abrégé, c'était une confusion qui attendait.
+  const [avecRetrocompatibles, setAvecRetrocompatibles] = useState(true);
+  // Toutes générations au lancement : un filtre qui survit au démarrage, c'est
+  // une bibliothèque amputée sans qu'on sache pourquoi — la règle que ce
+  // projet s'est donnée quand les filtres ont cessé d'être persistés.
+  const [genFil, setGenFil] = useState("tous");
   const [noteFil, setNoteFil] = useState("tous");
   // Ce qu'il reste à remplir. L'onglet Stats savait le compter sans qu'on
   // puisse y aller : un constat sans porte de sortie.
@@ -619,7 +629,7 @@ export default function App() {
   // vérifiée contre `FILTRES` par un test : un filtre ajouté sans son
   // effacement fait échouer la CI au lieu de faire disparaître un jeu.
   const SETTEURS_FILTRE = {
-    plat: setPlat, pretFil: setPretFil, fmtFil: setFmtFil, genreFil: setGenreFil,
+    plat: setPlat, genFil: setGenFil, pretFil: setPretFil, fmtFil: setFmtFil, genreFil: setGenreFil,
     modeFil: setModeFil, noteFil: setNoteFil, completFil: setCompletFil, serieFil: setSerieFil,
     boutiqueFil: setBoutiqueFil,
   };
@@ -628,7 +638,7 @@ export default function App() {
   // de plateforme : elle revient à son état ouvert avec lui.
   const reinitialiserFiltres = () => {
     for (const f of FILTRES) SETTEURS_FILTRE[f]("tous");
-    setAvecRetro(true);
+    setAvecRetrocompatibles(true);
   };
 
   // Changer d'univers remet les filtres à zéro. « Xbox One » et « Steam » ne
@@ -993,12 +1003,13 @@ export default function App() {
       const searchMatch = !q
         || normTitle(g.title).includes(q)
         || g.genre.some(x => normTitle(x).includes(q));
-      const platMatch = jeuSurPlateforme(g, plat, avecRetro);
+      const platMatch = jeuSurPlateforme(g, plat, avecRetrocompatibles);
       const pretMatch = pretFilEffectif === "tous" ? true
         : pretFilEffectif === "prêtés" ? !!g.lentA
         : !g.lentA;
       return searchMatch
         && platMatch
+        && jeuDeLaGeneration(g, genFil)
         && (fmtFil === "tous" || g.format === fmtFil)
         // Le genre est une liste : un jeu retenu en porte au moins un.
         && (genreFil === "tous" || (g.genre || []).includes(genreFil))
@@ -1037,7 +1048,7 @@ export default function App() {
       if (kb == null) return -1;
       return compare(ka, kb) * sortDir;
     });
-  }, [games, univers, search, plat, avecRetro, pretFilEffectif, fmtFil, genreFil, modeFil, noteFil, completFil, serieFil,
+  }, [games, univers, search, plat, avecRetrocompatibles, genFil, pretFilEffectif, fmtFil, genreFil, modeFil, noteFil, completFil, serieFil,
     boutiqueFil, sort, sortDir, graine]);
 
   // La bibliothèque de l'univers courant. Tout ce qui se dérive de « toute la
@@ -1109,7 +1120,7 @@ export default function App() {
     if (!accorde) setAvis("Android refuse les notifications à cette application. Ça se rouvre dans les réglages du téléphone.");
   }, []);
 
-  const filtresActifs = compterFiltres({ plat, pretFil: pretFilEffectif, fmtFil, genreFil, modeFil, noteFil, completFil, serieFil, boutiqueFil });
+  const filtresActifs = compterFiltres({ plat, genFil, pretFil: pretFilEffectif, fmtFil, genreFil, modeFil, noteFil, completFil, serieFil, boutiqueFil });
   // Dérivés de tout l'univers courant, pas de la liste filtrée : sinon les
   // options disparaîtraient au fur et à mesure qu'on s'en sert.
   const genres = useMemo(() => genresPresents(jeuxUnivers), [jeuxUnivers]);
@@ -1140,7 +1151,17 @@ export default function App() {
   // chiffres pour le jour où la bibliothèque aura doublé.
   const sections = useMemo(() => {
     if (groupePar === "aucun") return [{ titre: null, jeux: affichee }];
-    const cle = (g) => (groupePar === "plateforme" ? g.platform
+    // Regrouper par génération ou par famille, et pourquoi les deux existent.
+    //
+    // « Par plateforme » suffisait à quatre consoles. À vingt-neuf, il produit
+    // des sections d'un seul jeu : un intitulé plus haut que son contenu, et
+    // une liste qu'on ne parcourt plus. « Par famille » rassemble ce qui se
+    // range ensemble dans une étagère, « par génération » sépare ce qu'on
+    // branche de ce qu'on ressort — ce sont deux façons réelles de regarder une
+    // collection, pas deux variantes de la même.
+    const cle = (g) => (groupePar === "generation" ? (generationDe(g.platform) === "retro" ? "Rétro" : "Actuelles")
+      : groupePar === "famille" ? (nomFamille(g.platform) || "Autres")
+      : groupePar === "plateforme" ? g.platform
       : groupePar === "boutique" ? (String(g.boutique || "").trim() || "Sans boutique")
       : groupePar === "serie" ? (serieDuJeu(g) || "Sans série")
       : (g.genre?.[0] || "Sans genre"));
@@ -1168,7 +1189,17 @@ export default function App() {
             <div style={{ height:3, background:g.lentA ? warnFond : "transparent" }} />
             <div style={{ padding:"6px 7px" }}>
               <div style={{ color:txt, fontSize: "var(--t-legende)", fontWeight:600, lineHeight:1.3, overflow:"hidden", display:"-webkit-box", WebkitLineClamp:2, WebkitBoxOrient:"vertical" }}>{g.title}</div>
-              {g.metacritic && <div style={{ color:g.metacritic>=80?ok:warn, fontSize: "var(--t-legende)", marginTop:2 }}>MC {g.metacritic}</div>}
+              {/* La console, que la grille ne disait pas.
+                  La vue liste porte une pastille colorée, la vue compacte un
+                  point : la grille, elle, ne montrait que la jaquette et le
+                  titre — et une jaquette ne dit pas sur quelle machine le jeu
+                  tourne. Sous le titre plutôt que sur l'illustration : rien
+                  n'est recouvert, et avec vingt-neuf plateformes la couleur
+                  seule ne suffirait plus de toute façon. */}
+              <div style={{ display:"flex", gap:6, alignItems:"baseline", marginTop:2, fontSize:"var(--t-legende)" }}>
+                <span style={{ color:mut, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{nomCourt(g.platform)}</span>
+                {g.metacritic && <span style={{ color:g.metacritic>=80?ok:warn, flexShrink:0 }}>MC {g.metacritic}</span>}
+              </div>
             </div>
           </div>
         ))}
@@ -1592,7 +1623,9 @@ export default function App() {
           univers={univers}
           boutiques={boutiques} boutiqueFil={boutiqueFil} setBoutiqueFil={setBoutiqueFil}
           plat={plat} setPlat={setPlat}
-          avecRetro={avecRetro} setAvecRetro={setAvecRetro} nbRetro={nbRetro} nbNatifs={nbNatifs}
+          avecRetrocompatibles={avecRetrocompatibles} setAvecRetrocompatibles={setAvecRetrocompatibles}
+          nbRetro={nbRetro} nbNatifs={nbNatifs}
+          genFil={genFil} setGenFil={setGenFil} plateformes={plateformesPresentes(games, univers)}
           pretFil={pretFil} setPretFil={setPretFil}
           fmtFil={fmtFil} setFmtFil={setFmtFil}
           genreFil={genreFil} setGenreFil={setGenreFil}

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import Sheet from "./Sheet.jsx";
 import { card, bdr, txt, mut, accent, accentDoux, warn, bdrChamp } from "../lib/theme.js";
-import { PLATFORMS, BACK_COMPAT, SEUILS_NOTE, SANS_NOTE, CHAMPS_A_COMPLETER, compterFiltres } from "../lib/model.js";
+import { BACK_COMPAT, SEUILS_NOTE, SANS_NOTE, CHAMPS_A_COMPLETER, compterFiltres, nomCourt, generationDe, familleDe } from "../lib/model.js";
 
 const ACCENT = accent;
 
@@ -99,7 +99,8 @@ const GENRES_VISIBLES = 6;
 
 export default function FiltersSheet({
   univers, aPrete, boutiques, boutiqueFil, setBoutiqueFil,
-  plat, setPlat, avecRetro, setAvecRetro, nbRetro, nbNatifs,
+  plat, setPlat, avecRetrocompatibles, setAvecRetrocompatibles, nbRetro, nbNatifs,
+  genFil, setGenFil, plateformes,
   pretFil, setPretFil, fmtFil, setFmtFil,
   genreFil, setGenreFil, modeFil, setModeFil, genres, sansMode,
   noteFil, setNoteFil, completFil, setCompletFil, aCompleter, fichesIncompletes,
@@ -108,7 +109,7 @@ export default function FiltersSheet({
 }) {
   // Tous les filtres, sans exception : oublier les nouveaux ici laisserait
   // « Réinitialiser » grisé alors qu'il y a bien quelque chose à réinitialiser.
-  const actifs = compterFiltres({ plat, pretFil, fmtFil, genreFil, modeFil, noteFil, completFil, serieFil, boutiqueFil });
+  const actifs = compterFiltres({ plat, genFil, pretFil, fmtFil, genreFil, modeFil, noteFil, completFil, serieFil, boutiqueFil });
   const [ouvert, setOuvert] = useState(null);
   // Le panneau ne montre pas la même chose selon l'univers. Une machine, un
   // format et un prêt ne veulent rien dire d'un jeu Steam ; une boutique ne
@@ -142,14 +143,41 @@ export default function FiltersSheet({
     ...aCompleter,
     ...(choisiComble ? [[completFil, CHAMPS_A_COMPLETER.find(([c]) => c === completFil)?.[1] || completFil, 0]] : []),
   ];
+  // Déclarés AVANT ce qui les lit, et ce n'est pas une préférence de style :
+  // `GROUPES` juste en dessous les consulte, et un `const` lu avant sa ligne
+  // de déclaration lève une exception. Toute l'application tombe alors sur son
+  // garde-fou d'erreur avec un message minifié illisible — c'est arrivé ici
+  // même, et c'est le genre de panne qu'on ne relie pas à sa cause.
+  const generationsPresentes = new Set((plateformes || []).map(generationDe));
+  const famillesPresentes = new Set((plateformes || []).map(familleDe).filter(Boolean));
+
   // Regrouper par plateforme n'a rien à dire d'une bibliothèque où tout est
   // sur la même machine : côté PC, c'est la boutique qui sépare.
+  // « Par génération » et « par famille » n'apparaissent que si la
+  // bibliothèque contient de quoi les remplir : proposer de séparer l'actuel
+  // du rétro à qui n'a que de l'actuel, c'est proposer une section vide.
   const GROUPES = [["aucun", "Aucun"],
-    estPC ? ["boutique", "Boutique"] : ["plateforme", "Plateforme"],
+    ...(estPC ? [["boutique", "Boutique"]] : [["plateforme", "Plateforme"]]),
+    ...(!estPC && generationsPresentes.size > 1 ? [["generation", "Génération"]] : []),
+    ...(!estPC && famillesPresentes.size > 1 ? [["famille", "Famille"]] : []),
     ["serie", "Série"], ["genre", "Genre"]];
   const PRETS = [["tous", "Tous"], ["chez moi", "🏠 Chez moi"], ["prêtés", "📤 Prêtés"]];
   const FORMATS = [["tous", "Tous"], ["physique", "Physique"], ["démat", "Démat"]];
-  const PLATEFORMES = PLATFORMS.map(p => [p, p === "tous" ? "Toutes" : p]);
+  // Ce que la bibliothèque contient, pas ce que la table connaît.
+  //
+  // Vingt-neuf plateformes existent ; en proposer vingt-neuf à qui en possède
+  // quatre, c'est vingt-cinq lignes qui ne rendront jamais un seul jeu. La
+  // liste arrive déjà filtrée par App, comme celle des boutiques et des
+  // genres. Le nom court, parce qu'une puce n'a pas la place de « Game Boy
+  // Advance ».
+  const PLATEFORMES = [["tous", "Toutes"], ...(plateformes || []).map(p => [p, nomCourt(p)])];
+
+  // La génération n'apparaît que s'il y a quelque chose à séparer.
+  //
+  // Sur une bibliothèque entièrement récente, ce filtre ne pourrait rien faire
+  // d'autre que la vider : trois boutons dont deux inutiles. Il apparaît le
+  // jour où une console rétro entre dans la bibliothèque, et pas avant.
+  const GENS = [["tous", "Toutes"], ["actuelle", "Actuelles"], ["retro", "Rétro"]];
 
   const libelle = (options, valeur) => options.find(o => o[0] === valeur)?.[1] || valeur;
   const enfant = BACK_COMPAT[plat];
@@ -207,11 +235,28 @@ export default function FiltersSheet({
       {/* Le résumé dit « seul » quand la case est décochée : c'est tout
           l'intérêt d'une ligne repliée que d'annoncer ce qu'elle fait, et un
           filtre plus étroit que la normale doit se voir sans être ouvert. */}
+      {/* La génération avant la plateforme, parce qu'elle la restreint.
+          « Rétro » puis « Mega Drive » se lit dans cet ordre ; l'inverse
+          demanderait de choisir une machine avant de savoir laquelle est
+          proposée. Deux mots proches et deux sens différents cohabitent ici :
+          cette rangée parle de l'âge de la machine, la case à cocher plus bas
+          parle de jeux d'une machine jouables sur la suivante. */}
+      {!estPC && generationsPresentes.size > 1 && (
+        <Groupe label="Génération" actif={genFil !== "tous"}
+          resume={libelle(GENS, genFil)}
+          ouvert={ouvert === "gen"} onBascule={bascule("gen")}>
+          <Puces options={GENS} value={genFil} onChange={setGenFil} />
+        </Groupe>
+      )}
+
       {!estPC && (
       <Groupe label="Plateforme" actif={plat !== "tous"}
-        resume={libelle(PLATEFORMES, plat) + (enfant && !avecRetro ? " seul" : "")}
+        resume={libelle(PLATEFORMES, plat) + (enfant && !avecRetrocompatibles ? " seul" : "")}
         ouvert={ouvert === "plat"} onBascule={bascule("plat")}>
-        <Puces options={PLATEFORMES} value={plat} onChange={setPlat} />
+        {/* La liste suit la génération choisie : demander « Rétro » puis se
+            voir proposer la Series X n'aurait aucun sens. */}
+        <Puces options={PLATEFORMES.filter(([id]) => id === "tous" || genFil === "tous" || generationDe(id) === genFil)}
+          value={plat} onChange={setPlat} />
         {/* La question ne se pose que pour une console qui en accueille une
             autre : « Xbox One » ou « Switch 1 » n'ont rien à hériter. */}
         {enfant && (
@@ -219,7 +264,7 @@ export default function FiltersSheet({
             display: "flex", gap: 10, alignItems: "flex-start", cursor: "pointer",
             minHeight: "var(--tap-min)", marginTop: 12, paddingTop: 12, borderTop: `1px solid ${bdr}`,
           }}>
-            <input type="checkbox" checked={avecRetro} onChange={e => setAvecRetro(e.target.checked)}
+            <input type="checkbox" checked={avecRetrocompatibles} onChange={e => setAvecRetrocompatibles(e.target.checked)}
               style={{ marginTop: 3, width: 18, height: 18, accentColor: ACCENT, flexShrink: 0 }} />
             {/* Le libellé ne nomme plus la console héritée : il est le même
                 pour la Xbox et pour la Switch, donc il se reconnaît d'une
