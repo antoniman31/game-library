@@ -1,17 +1,20 @@
 // Ce que l'application fait autrement quand elle est une app Android.
 //
-// Le reste du code ne sait pas où il tourne, et c'est voulu : les quatre
-// différences entre le site et l'APK vivent ici, nommées, plutôt que dispersées
-// en `if (Capacitor…)` dans les composants. Le jour où une cinquième apparaît,
-// on sait où elle va.
+// Le reste du code ne sait pas où il tourne, et c'est voulu : les différences
+// entre le site et l'APK vivent ici, nommées, plutôt que dispersées en
+// `if (Capacitor…)` dans les composants. Le jour où une nouvelle apparaît, on
+// sait où elle va.
 //
-// Les cinq :
+// Elles sont huit :
 //   - enregistrer un fichier, parce qu'une WebView ignore `<a download>` ;
 //   - ouvrir un lien vers l'extérieur, parce qu'une WebView garde tout dedans ;
 //   - le bouton Retour d'Android, qui n'existe pas sur le web, et le fait de
 //     pouvoir quitter ;
 //   - dire quelle version tourne, que les deux côtés numérotent autrement ;
 //   - accorder la barre d'état au thème, que `theme-color` ne sait pas faire ;
+//   - recevoir un fichier ouvert depuis une autre application ;
+//   - rappeler une sauvegarde en retard quand personne ne regarde l'écran ;
+//   - lire le code-barres d'une boîte, qu'un navigateur ne sait pas faire ;
 //   - et `estNatif`, pour ce qui n'a de sens que d'un côté.
 
 import { Capacitor } from "@capacitor/core";
@@ -20,7 +23,10 @@ import { Share } from "@capacitor/share";
 import { Browser } from "@capacitor/browser";
 import { App as AppNatif } from "@capacitor/app";
 import { StatusBar, Style } from "@capacitor/status-bar";
+import { LocalNotifications } from "@capacitor/local-notifications";
+import { BarcodeScanner, BarcodeFormat } from "@capacitor-mlkit/barcode-scanning";
 import { refermerLeDessus } from "./retour.js";
+import { prochainRappel, rappelAReplanifier } from "./rappel.js";
 
 export const estNatif = () => Capacitor.isNativePlatform();
 
@@ -191,4 +197,158 @@ export async function accorderBarreEtat(theme) {
   try {
     await StatusBar.setStyle({ style: theme === "dark" ? Style.Dark : Style.Light });
   } catch { /* une barre d'état qu'on ne peut pas régler ne casse rien */ }
+}
+
+// Un fichier qu'une autre application nous confie.
+//
+// Sur le web, importer une sauvegarde passe forcément par un sélecteur de
+// fichiers : la page ne peut pas être une destination. Une application
+// installée, si — elle se déclare capable d'ouvrir du JSON, et apparaît dans le
+// « Ouvrir avec » du gestionnaire de fichiers, de Drive ou d'une pièce jointe.
+//
+// C'est ACTION_VIEW et non ACTION_SEND, et la nuance mérite d'être écrite :
+// Capacitor ne fait remonter au JavaScript que les intentions VIEW, celles qui
+// portent une adresse. « Partager vers Game Library » demanderait du Java dans
+// le projet engendré. « Ouvrir avec » couvre les chemins réels — un fichier
+// qu'on a reçu ou qu'on est allé chercher — sans rien ajouter.
+//
+// Deux cas, et le second est celui qu'on oublie : l'application est déjà
+// ouverte (`appUrlOpen`), ou elle démarre à cause du fichier
+// (`getLaunchUrl`) — un écouteur posé après coup ne verrait jamais le second.
+export function surFichierRecu(quoi) {
+  if (!estNatif()) return () => {};
+
+  const lire = async (url) => {
+    if (!url) return;
+    try {
+      const { data } = await Filesystem.readFile({ path: url, encoding: Encoding.UTF8 });
+      quoi(typeof data === "string" ? data : "", url);
+    } catch (e) {
+      quoi(null, url, String(e?.message || e));
+    }
+  };
+
+  AppNatif.getLaunchUrl().then(r => lire(r?.url)).catch(() => {});
+  const promesse = AppNatif.addListener("appUrlOpen", e => lire(e?.url));
+  return () => { promesse.then(h => h.remove()).catch(() => {}); };
+}
+
+// ── Le rappel de sauvegarde ────────────────────────────────────────────────
+//
+// Tout ce que l'application sait dire aujourd'hui, elle le dit à l'écran :
+// une pastille sur ⚙️, une ligne orange dans les réglages. Les deux supposent
+// qu'on ouvre l'application — or c'est quand on cesse de l'ouvrir qu'une
+// sauvegarde vieillit sans que personne le sache. Une notification est la
+// seule chose ici capable de s'adresser à quelqu'un qui n'est pas devant.
+//
+// `quand` vient de `prochainRappel()` dans rappel.js ; ce fichier ne décide
+// de rien, il exécute.
+
+// Un identifiant fixe, et c'est important : replanifier avec le même
+// identifiant remplace l'ancien rendez-vous. Avec un identifiant tiré au sort,
+// chaque ouverture de l'application empilerait un rappel de plus, et il en
+// arriverait dix.
+const ID_RAPPEL = 1;
+
+// La permission ne se demande pas au lancement.
+//
+// Une application qui réclame le droit de notifier avant d'avoir rien montré
+// se fait refuser, et sur Android un refus est définitif : la seule issue
+// devient les réglages du système. On ne la demande donc qu'au moment où
+// quelqu'un a explicitement demandé le rappel.
+export async function demanderRappels() {
+  if (!estNatif()) return false;
+  try {
+    const { display } = await LocalNotifications.checkPermissions();
+    if (display === "granted") return true;
+    if (display === "denied") return false;
+    const r = await LocalNotifications.requestPermissions();
+    return r.display === "granted";
+  } catch { return false; }
+}
+
+// Mettre le rappel en accord avec l'état réel.
+//
+// Appelée à chaque changement de la sauvegarde et à chaque ouverture : elle
+// annule s'il n'y a plus rien à rappeler, et ne replanifie que si la date de
+// sauvegarde a bougé. Sans cette dernière condition, ouvrir l'application
+// repousserait le rappel au lendemain — celui qui ouvre tous les jours ne
+// serait jamais prévenu, c'est-à-dire exactement l'inverse du but.
+export async function accorderRappelSauvegarde({ actif, configuree, majLe }) {
+  if (!estNatif()) return null;
+
+  try {
+    const enAttente = (await LocalNotifications.getPending()).notifications
+      ?.find(n => n.id === ID_RAPPEL) || null;
+
+    const quand = actif ? prochainRappel({ configuree, majLe }) : null;
+    if (quand === null) {
+      if (enAttente) await LocalNotifications.cancel({ notifications: [{ id: ID_RAPPEL }] });
+      return null;
+    }
+
+    const pour = majLe || "";
+    if (!rappelAReplanifier({ enAttente: enAttente && { pour: enAttente.extra?.pour }, pour })) {
+      return enAttente.schedule?.at ? new Date(enAttente.schedule.at).getTime() : quand;
+    }
+
+    await LocalNotifications.schedule({
+      notifications: [{
+        id: ID_RAPPEL,
+        title: "Sauvegarde en retard",
+        // Le texte dit ce qui est en jeu, pas ce qu'il faut faire : « pense à
+        // sauvegarder » se balaie sans lire. Ce qu'on retient, c'est que des
+        // ajouts n'existent qu'ici.
+        body: "Tes derniers ajouts n'existent que sur ce téléphone. Ouvre Game Library et envoie la sauvegarde.",
+        schedule: { at: new Date(quand), allowWhileIdle: true },
+        extra: { pour },
+      }],
+    });
+    return quand;
+  } catch {
+    // Un rappel qu'on n'a pas pu poser ne casse rien : la pastille et la ligne
+    // orange sont toujours là.
+    return null;
+  }
+}
+
+// ── Lire le code-barres d'une boîte ────────────────────────────────────────
+//
+// `scan()` passe par le lecteur de Google Play Services : l'interface, la
+// caméra et le modèle sont fournis par le système. C'est le seul chemin qui ne
+// demande pas la permission caméra — l'application ne voit jamais l'image,
+// seulement le code lu. Sur un appareil sans Play Services, il n'y a rien à
+// faire, et le bouton ne s'affiche pas.
+//
+// Le module se télécharge à la première utilisation. On le demande donc avant
+// de scanner, sinon le premier scan de la vie de l'application échoue sans
+// rien dire, et c'est le seul qu'on juge.
+export async function scannerCodeBarres() {
+  if (!estNatif()) return { ok: false, erreur: "Le scan n'existe que dans l'application." };
+
+  try {
+    const { available } = await BarcodeScanner.isGoogleBarcodeScannerModuleAvailable();
+    if (!available) {
+      await BarcodeScanner.installGoogleBarcodeScannerModule();
+      return { ok: false, erreur: "Le lecteur de codes-barres s'installe. Réessaie dans un instant." };
+    }
+
+    const { barcodes } = await BarcodeScanner.scan({
+      formats: [BarcodeFormat.Ean13, BarcodeFormat.Ean8, BarcodeFormat.UpcA, BarcodeFormat.UpcE],
+    });
+    const code = barcodes?.[0]?.rawValue || barcodes?.[0]?.displayValue || "";
+    // Annuler est un geste délibéré, pas une panne : pas de message.
+    if (!code) return { ok: false, erreur: null };
+    return { ok: true, code };
+  } catch (e) {
+    return { ok: false, erreur: String(e?.message || e) };
+  }
+}
+
+// Le scan est-il possible ici ? Un bouton qui n'a aucune chance de marcher ne
+// doit pas s'afficher.
+export async function scanPossible() {
+  if (!estNatif()) return false;
+  try { return (await BarcodeScanner.isSupported()).supported === true; }
+  catch { return false; }
 }

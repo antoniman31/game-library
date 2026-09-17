@@ -15,7 +15,7 @@ import PlayniteModal from "./components/PlayniteModal.jsx";
 import NotesChoixSheet from "./components/NotesChoixSheet.jsx";
 
 import { hdr, card, bdr, bdrChamp, txt, mut, accent, accentDoux, accentFond, warnDoux, dangerDoux, ok, warn, warnFond, danger } from "./lib/theme.js";
-import { enregistrerFichier, estNatif, accorderBarreEtat } from "./lib/natif.js";
+import { enregistrerFichier, estNatif, accorderBarreEtat, surFichierRecu, demanderRappels, accorderRappelSauvegarde } from "./lib/natif.js";
 import { descendreJaquettes, menageJaquettes, aDescendre } from "./lib/jaquettes.js";
 import { GAMES_INIT } from "./lib/seed.js";
 import { jeuDansUnivers, boutiquesPresentes, jeuDeLaBoutique, autresEditions,
@@ -209,6 +209,10 @@ export default function App() {
   const [importChoix, setImportChoix] = useState(null);
   const [majDispo, setMajDispo] = useState(false);
   const [sync, setSync] = useState(() => chargerSync());
+  // Le rappel de sauvegarde, éteint par défaut : une application qui réclame
+  // le droit de notifier avant d'avoir rien montré se fait refuser, et sur
+  // Android un refus est définitif.
+  const [rappelActif, setRappelActif] = useState(() => lire("gl_rappel") === "1");
   const [syncEtat, setSyncEtat] = useState(null);   // { type: "ok" | "ko" | "…", texte }
   const undoRef = useRef(null);
 
@@ -899,30 +903,51 @@ export default function App() {
       setAvis("Impossible d'écrire la sauvegarde.");
     }
   };
+  // Un texte JSON, d'où qu'il vienne.
+  //
+  // Le contenu arrive par deux chemins — le sélecteur de fichiers, et un
+  // fichier qu'Android nous confie — et rien de ce qui suit ne dépend du
+  // chemin. Le séparer évite le défaut classique : un second point d'entrée
+  // qui valide « presque » comme le premier, et laisse passer ce que l'autre
+  // rejette.
+  const ouvrirTexteImporte = useCallback((texte) => {
+    let data;
+    try { data = JSON.parse(texte); }
+    catch { alert("Ce fichier n'est pas du JSON valide."); return; }
+
+    const { jeux, rejetes, corriges } = validerJeuxImportes(data);
+    if (!jeux) { alert("Ce fichier ne contient pas une liste de jeux."); return; }
+    if (!jeux.length) { alert(`Aucun jeu exploitable dans ce fichier${rejetes ? ` (${rejetes} entrée(s) ignorée(s))` : ""}.`); return; }
+
+    // La question se posait dans un confirm() : « OK = REMPLACER, Annuler =
+    // FUSIONNER ». Or Annuler veut dire « ne rien faire » partout ailleurs,
+    // et Échap ferme sur Annuler — on croyait sortir de la boîte, on
+    // déclenchait une fusion. Deux actions distinctes ne tiennent pas dans un
+    // bouton binaire : elles ont chacune la leur, et annuler n'importe rien.
+    setImportChoix({ jeux, rejetes, corriges });
+  }, []);
+
   const importJSON = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = () => {
-      let data;
-      try { data = JSON.parse(reader.result); }
-      catch { alert("Ce fichier n'est pas du JSON valide."); return; }
-
-      const { jeux, rejetes, corriges } = validerJeuxImportes(data);
-      if (!jeux) { alert("Ce fichier ne contient pas une liste de jeux."); return; }
-      if (!jeux.length) { alert(`Aucun jeu exploitable dans ce fichier${rejetes ? ` (${rejetes} entrée(s) ignorée(s))` : ""}.`); return; }
-
-      // La question se posait dans un confirm() : « OK = REMPLACER, Annuler =
-      // FUSIONNER ». Or Annuler veut dire « ne rien faire » partout ailleurs,
-      // et Échap ferme sur Annuler — on croyait sortir de la boîte, on
-      // déclenchait une fusion. Deux actions distinctes ne tiennent pas dans un
-      // bouton binaire : elles ont chacune la leur, et annuler n'importe rien.
-      setImportChoix({ jeux, rejetes, corriges });
-    };
+    reader.onload = () => ouvrirTexteImporte(reader.result);
     reader.onerror = () => alert("Lecture du fichier impossible.");
     reader.readAsText(file);
     e.target.value = "";
   };
+
+  // Le fichier qu'une autre application nous ouvre.
+  //
+  // L'écouteur est posé une fois pour toutes : il doit être là avant que
+  // `getLaunchUrl` réponde, sans quoi un démarrage causé par un fichier —
+  // le cas le plus courant — passerait inaperçu. Le panneau de choix qui
+  // s'ouvre ensuite est exactement celui du sélecteur de fichiers : on ne
+  // remplace jamais une bibliothèque sans que quelqu'un l'ait demandé.
+  useEffect(() => surFichierRecu((texte, url, erreur) => {
+    if (texte === null) { setAvis(`Fichier illisible : ${erreur || url}`); return; }
+    ouvrirTexteImporte(texte);
+  }), [ouvrirTexteImporte]);
 
   const remplacerParImport = () => { setGames(importChoix.jeux); setImportChoix(null); };
   const fusionnerImport = () => {
@@ -1062,6 +1087,27 @@ export default function App() {
   // Le relais ne voyage jamais dans la sauvegarde : il vit avec les clés.
   const sauvegarde = etatSauvegarde({ ...sync, proxy: keys.proxy });
   const sauvegardeAlerte = sauvegarde.configuree && sauvegarde.niveau !== "fraiche";
+
+  // Le rappel suit l'état réel de la sauvegarde.
+  //
+  // Il se remet en accord à chaque changement — synchronisation envoyée, code
+  // effacé, rappel éteint — et non à chaque ouverture : `accorderRappelSauvegarde`
+  // ne replanifie que si la date de sauvegarde a bougé, faute de quoi ouvrir
+  // l'application tous les jours repousserait indéfiniment le rappel.
+  useEffect(() => {
+    accorderRappelSauvegarde({ actif: rappelActif, configuree: sauvegarde.configuree, majLe: sync.majLe });
+  }, [rappelActif, sauvegarde.configuree, sync.majLe]);
+
+  // Allumer demande la permission ; l'éteindre ne demande rien. Si le système
+  // refuse, l'interrupteur revient de lui-même à « éteint » : un interrupteur
+  // allumé qui ne notifie pas est pire que pas d'interrupteur du tout.
+  const basculerRappel = useCallback(async (veut) => {
+    if (!veut) { setRappelActif(false); ecrire("gl_rappel", "0"); return; }
+    const accorde = await demanderRappels();
+    setRappelActif(accorde);
+    ecrire("gl_rappel", accorde ? "1" : "0");
+    if (!accorde) setAvis("Android refuse les notifications à cette application. Ça se rouvre dans les réglages du téléphone.");
+  }, []);
 
   const filtresActifs = compterFiltres({ plat, pretFil: pretFilEffectif, fmtFil, genreFil, modeFil, noteFil, completFil, serieFil, boutiqueFil });
   // Dérivés de tout l'univers courant, pas de la liste filtrée : sinon les
@@ -1437,6 +1483,7 @@ export default function App() {
             appliquerCles={{ actuelles: loadKeys(), appliquer: setApiKeys }}
             testerCle={testerCle} etatCles={keyTest}
             sync={sync} majSync={majSync} genererCode={genererCode}
+            rappelActif={rappelActif} onBasculerRappel={basculerRappel}
             syncEtat={syncEtat} setSyncEtat={setSyncEtat}
             onEnvoyer={() => envoyerAuCloud()} onRecuperer={recupererDuCloud}
             onExporter={exportJSON} onImporter={importJSON}

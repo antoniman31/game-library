@@ -2,11 +2,11 @@ import { useEffect, useRef, useState } from "react";
 import { card, bdr, bdrChamp, txt, mut, accent, accentDoux, accentFond, ok, warn, danger } from "../lib/theme.js";
 import { MODES, LIBELLES, ICONES } from "../lib/apparence.js";
 import { pertesDeReglages, messageDePerte, messageCodeSync, CONSEQUENCES } from "../lib/garde-fous.js";
-import { etatSauvegarde, texteAgeSauvegarde } from "../lib/preferences.js";
+import { etatSauvegarde, texteAgeSauvegarde, JOURS_SAUVEGARDE_VIEILLE } from "../lib/preferences.js";
 import ChampProtege from "./ChampProtege.jsx";
 import SousOnglets from "./SousOnglets.jsx";
 import PanneauOutils from "./PanneauOutils.jsx";
-import { versionInstallee } from "../lib/natif.js";
+import { versionInstallee, estNatif } from "../lib/natif.js";
 
 // Les réglages, refaits.
 //
@@ -109,6 +109,7 @@ export default function SettingsView({
   modeTheme, setModeTheme,
   keys, setKeys, appliquerCles, testerCle, etatCles,
   sync, majSync, genererCode, syncEtat, setSyncEtat, onEnvoyer, onRecuperer,
+  rappelActif, onBasculerRappel,
   onExporter, onImporter,
   onPlaynite, exclusions, onViderExclusions,
   outils,
@@ -256,6 +257,26 @@ export default function SettingsView({
             c'est s'il faut envoyer maintenant. L'âge se lit en clair, et
             au-delà d'une semaine il passe en orange — la synchronisation reste
             manuelle, mais son retard cesse d'être invisible. */}
+        {/* Le rappel ne s'offre que là où il existe : sur le site, rien ne
+            peut parler à qui a fermé l'onglet, et un interrupteur sans effet
+            est un mensonge. Il vit sous l'âge de la sauvegarde parce que c'est
+            là qu'on comprend à quoi il sert. */}
+        {ageSauvegarde.configuree && estNatif() && (
+          <label style={{ display: "flex", gap: "var(--ecart-tap)", alignItems: "flex-start", marginTop: 12, minHeight: "var(--tap-min)", cursor: "pointer" }}>
+            <input type="checkbox" checked={!!rappelActif}
+              onChange={e => onBasculerRappel?.(e.target.checked)}
+              style={{ marginTop: 2, width: 16, height: 16, accentColor: ACCENT, flexShrink: 0 }} />
+            <span>
+              <span style={{ color: txt, fontSize: "var(--t-petit)", fontWeight: 600 }}>Me prévenir si la sauvegarde prend du retard</span>
+              <span style={{ display: "block", color: mut, fontSize: "var(--t-legende)", lineHeight: 1.5, marginTop: 2 }}>
+                Une notification le matin, {JOURS_SAUVEGARDE_VIEILLE} jours après la dernière sauvegarde envoyée.
+                La pastille sur ⚙️ ne sert à rien tant qu'on n'ouvre pas l'application — et c'est précisément
+                quand on ne l'ouvre plus qu'une sauvegarde vieillit sans que personne le sache.
+              </span>
+            </span>
+          </label>
+        )}
+
         {ageSauvegarde.configuree && syncEtat?.type !== "…" && (
               <div style={{
                 color: ageSauvegarde.niveau === "fraiche" ? mut : warn,
@@ -310,7 +331,9 @@ export default function SettingsView({
 
           <div style={{ marginBottom: 12 }}>
             <EnTeteChamp nom="Relais CORS"
-              quoi="Worker Cloudflare, requis en ligne pour SteamGridDB, l'import Xbox et la synchronisation. À laisser vide en développement local." />
+              quoi={estNatif()
+                ? "Worker Cloudflare. Dans l'application, il ne sert plus qu'à la synchronisation : SteamGridDB, l'import Xbox et Steam sont appelés directement, la règle CORS étant une règle de navigateur. Inutile si tu ne synchronises pas."
+                : "Worker Cloudflare, requis en ligne pour SteamGridDB, l'import Xbox et la synchronisation. À laisser vide en développement local."} />
             <ChampProtege
               valeur={keys.proxy} enClair placeholder="https://mon-worker.workers.dev"
               ariaLabel="Adresse du relais"

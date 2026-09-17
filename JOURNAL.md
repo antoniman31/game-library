@@ -1881,12 +1881,96 @@ dans les deux sens, sur le cas qui l'a fait écrire.
 
 ---
 
+### Phase 49 — Cinq choses qu'une page web ne peut pas faire
+
+Une liste numérotée, cinq « oui » et un « laisse tomber ». Le fil conducteur
+n'est pas la nouveauté : c'est ce qu'une application installée peut faire et
+qu'un onglet de navigateur ne peut pas, par construction.
+
+**Recevoir un fichier.** Une page ne peut pas être une destination : importer
+une sauvegarde passait forcément par un sélecteur de fichiers. Une application
+se déclare capable d'ouvrir du JSON et apparaît dans le « Ouvrir avec » du
+gestionnaire de fichiers, de Drive, d'une pièce jointe.
+
+Deux filtres, pas un. Le premier croit le type annoncé. Le second existe parce
+qu'une sauvegarde passée par Drive ou par un message ressort souvent en
+`application/octet-stream` : on retombe alors sur l'extension. Le premier seul
+n'aurait servi à rien dans le cas le plus fréquent.
+
+C'est « Ouvrir avec » et non « Partager vers », et la lecture du code du greffon
+l'a tranché avant qu'on l'écrive : `if (!Intent.ACTION_VIEW.equals(action) ||
+url == null) return;`. Déclarer ACTION_SEND aurait fait apparaître
+l'application dans le panneau de partage, où elle n'aurait rien reçu — pire que
+de ne pas y être.
+
+**Parler à quelqu'un qui n'est pas devant l'écran.** La pastille sur ⚙️ et la
+ligne orange disent déjà qu'une sauvegarde vieillit, à condition qu'on ouvre
+l'application. Or c'est quand on cesse de l'ouvrir qu'elle vieillit.
+
+La règle qui compte n'est pas « sept jours », c'est celle qui décide de ne rien
+faire : le rappel ne se replanifie que si la date de sauvegarde a bougé. Sans
+elle, chaque ouverture aurait repoussé le rendez-vous au lendemain matin, et
+celui qui ouvre tous les jours n'aurait jamais été prévenu — l'inverse exact du
+but. Éteint par défaut, et la permission demandée seulement quand on l'allume :
+sur Android, un refus est définitif.
+
+**Se passer du relais.** Trois services ne renvoient pas d'en-tête CORS, et le
+Worker du projet ne fait rien d'autre que redemander la même chose depuis un
+endroit où la règle ne s'applique pas. Cette règle est une règle de navigateur :
+l'application installée appelle la source directement.
+
+J'y étais opposé, et j'avais tort sur la portée plutôt que sur le fond. Mon
+objection tenait : `/sync` n'est pas un relais mais un espace de stockage, et
+qui synchronise garde son Worker. Ce que j'avais sous-estimé, c'est le gain pour
+qui ne synchronise pas — l'application lui devient utilisable sans aucun
+serveur. La table des cibles existe désormais des deux côtés, et une
+vérification de cohérence les compare : un service déplacé côté Worker
+marcherait encore sur le site et casserait dans l'application seule.
+
+**Lire un code-barres.** Une expérience, et écrite comme telle. Trois maillons —
+la caméra lit un EAN, une base de produits rend un libellé, la recherche
+existante cherche ce libellé — et c'est le deuxième qui décide de tout. Rien ne
+garantit qu'une boîte européenne d'un jeu de 2019 figure dans une base dont la
+raison d'être est le commerce en ligne.
+
+D'où la forme : chaque maillon dit où il a cassé. « Code mal lu », « pas dans la
+base », « quota atteint » n'appellent pas les mêmes suites. La clé de contrôle
+de l'EAN est vérifiée avant tout appel — sans elle, un chiffre de travers
+ressortirait comme un produit introuvable et on aurait cherché le défaut du
+mauvais côté.
+
+Le nettoyage du libellé reste timide et c'est délibéré : il enlève l'emballage,
+jamais le jeu. « Remastered » et « Definitive Edition » sont des fiches
+distinctes, pas des variantes de boîte.
+
+**Ne plus être une construction de débogage.** L'APK était marqué `debuggable` :
+n'importe quel appareil branché en USB pouvait lire les données. Sans le lecteur
+de codes-barres, l'absence de réduction de code n'aurait pas pesé lourd ; avec
+CameraX et ML Kit, la plus grande part de l'APK n'est jamais appelée.
+
+Deux pièges, tous deux invisibles jusqu'au téléphone. `proguardFiles` complète
+la liste au lieu de la remplacer, et le gabarit référence `proguard-android.txt`
+qui contient `-dontoptimize` : ajouter la variante « optimize » à côté ne
+l'aurait pas activée. Et R8 en mode complet supprime les annotations que plus
+rien ne référence, puis en déduit que `getPluginAnnotation()` ne peut rendre que
+null — l'application démarre, et chaque permission demandée lève une exception,
+uniquement en publication.
+
+Même clé de signature que les APK précédents : celui-ci doit se poser
+par-dessus, ce qu'une autre clé rendrait impossible sans désinstaller, donc sans
+effacer la bibliothèque.
+
+---
+
 ## 3. Architecture finale
 
 ```
 ├── .github/workflows/deploy.yml   Build Vite + publication GitHub Pages (aucun secret)
+├── .github/workflows/android.yml  APK Capacitor, signé par une clé en secret
 ├── worker/                        Relais CORS + sauvegarde KV (aucun secret) + sa doc
 ├── scripts/audit.mjs              Audit des données d'un export (pas un test)
+├── scripts/manifeste-android.mjs  Retouches au manifeste engendré (testées)
+├── scripts/publication-android.mjs  Réglage R8 du projet engendré (testé)
 ├── public/                        Icônes PWA 192/512 (any + maskable), favicon
 ├── src/App.jsx                    Ossature : état global, en-tête, onglets
 ├── src/lib/                       Modules purs, testables sans navigateur
@@ -2080,10 +2164,11 @@ mesure avec le simple en-tête `X-Authorization` de xbl.io.
   et le pattern VAPID est éprouvé dans un autre projet de l'auteur. Écarté : cela
   suppose un backend qui pousse, donc envoyer la liste des prêts à un serveur pour un
   gain quasi nul.
-- **Navigation en bas d'écran** — les quatre onglets et le bouton « + Ajouter » sont en
-  haut, dans la zone que la cartographie du pouce désigne comme la plus difficile à
-  atteindre à une main. Une barre basse et un bouton flottant y répondraient ; c'est une
-  refonte de l'ossature, pas un correctif.
+- **Le scan de code-barres est une expérience non tranchée** — la chaîne technique est
+  écrite et testée, mais la question qu'elle pose reste ouverte : une boîte européenne
+  d'un jeu de quelques années figure-t-elle dans une base de produits dont la raison
+  d'être est le commerce en ligne ? Trois boîtes scannées suffiront à le dire. Si la
+  réponse est non, ce n'est pas le code qu'il faudra corriger, c'est la source.
 - **Parcours SteamGridDB de bout en bout en ligne** — validé par le bouton « Tester »,
   mais le choix d'une jaquette depuis une fiche n'a pas été rejoué en production.
 - **Import Nintendo** — voir section 6. La bibliothèque Switch a finalement été

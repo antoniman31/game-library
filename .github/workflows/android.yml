@@ -9,6 +9,12 @@ name: Application Android
 # une étiquette de version quand on voudra en garder une trace.
 on:
   workflow_dispatch:
+    inputs:
+      variante:
+        description: "Publication (réduite, non débogable) ou débogage (inspectable depuis un PC)"
+        type: choice
+        default: publication
+        options: [publication, debogage]
   push:
     tags: ['v*']
 
@@ -24,8 +30,20 @@ jobs:
     # c'est l'identité publique de la clé, celle qu'Android compare pour savoir
     # si un APK est une mise à jour du précédent ou une autre application. Les
     # deux étapes qui la vérifient lisent la même valeur.
+    #
+    # VARIANTE décide de ce qui sort. La publication est le défaut : R8 retire
+    # le code inatteignable — devenu la majorité de l'APK depuis que le lecteur
+    # de codes-barres amène CameraX et ML Kit avec lui — et l'APK n'est plus
+    # marqué `debuggable`, ce qui laissait n'importe quel appareil branché en
+    # USB lire les données de l'application.
+    #
+    # Le débogage reste à un choix de distance, et ce n'est pas du luxe : c'est
+    # la seule construction dont on peut inspecter la WebView depuis un PC. Le
+    # jour où quelque chose ne marche que sur le téléphone, c'est par là qu'on
+    # regarde.
     env:
       EMPREINTE_ATTENDUE: 289733c366177417b0881f5a290476b14f814a5c7d94ce3c28309ba6b16be08f
+      VARIANTE: ${{ inputs.variante || 'publication' }}
 
     steps:
       - uses: actions/checkout@v4
@@ -159,15 +177,33 @@ jobs:
           }
           GRADLE
 
-      # L'APK reste un APK de débogage : installable tel quel, aucune autre
-      # configuration à écrire. Ce n'est PAS ce qu'il faudra pour le Play
-      # Store, qui exige une version signée par une clé de publication et non
-      # marquée `debuggable` — un APK de débogage laisse un appareil branché en
-      # USB lire les données de l'application. Sur son propre téléphone, c'est
-      # acceptable ; pour distribuer, non.
+      # La construction de publication est signée par le même magasin que le
+      # débogage, et c'est voulu : l'APK doit se poser par-dessus le précédent,
+      # ce qu'une autre clé rendrait impossible sans désinstaller — donc sans
+      # effacer la bibliothèque.
+      #
+      # Ce n'est donc PAS ce qu'exige le Play Store, qui veut une clé de
+      # publication. Celle-là se fabriquera sur la machine de son propriétaire,
+      # et ne traversera aucune conversation.
       - name: Construire l'APK
-        run: ./gradlew assembleDebug --no-daemon
+        run: |
+          set -euo pipefail
+          if [ "$VARIANTE" = "publication" ]; then
+            ./gradlew assembleRelease --no-daemon
+          else
+            ./gradlew assembleDebug --no-daemon
+          fi
         working-directory: android
+
+      # Où l'APK est sorti, et sa taille — la seule mesure qui dise si la
+      # réduction a servi à quelque chose.
+      - name: Situer l'APK
+        run: |
+          set -euo pipefail
+          dossier=$([ "$VARIANTE" = "publication" ] && echo release || echo debug)
+          apk=$(ls android/app/build/outputs/apk/"$dossier"/*.apk | head -1)
+          echo "APK=$apk" >> "$GITHUB_ENV"
+          echo "APK : $apk — $(( $(stat -c%s "$apk") / 1024 )) Ko"
 
       # Vérifier plutôt que supposer : si l'APK sortait signé par une autre clé
       # que celle qu'on vient de poser, il ne s'installerait pas par-dessus le
@@ -177,7 +213,7 @@ jobs:
         run: |
           set -euo pipefail
           apksigner=$(ls -d "$ANDROID_HOME"/build-tools/*/apksigner | sort -V | tail -1)
-          obtenue=$("$apksigner" verify --print-certs android/app/build/outputs/apk/debug/app-debug.apk \
+          obtenue=$("$apksigner" verify --print-certs "$APK" \
             | sed -n 's/.*certificate SHA-256 digest: *//p' | head -1)
           echo "Empreinte : $obtenue"
           if [ "$obtenue" != "$EMPREINTE_ATTENDUE" ]; then
@@ -189,6 +225,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: game-library-apk
-          path: android/app/build/outputs/apk/debug/*.apk
+          path: ${{ env.APK }}
           if-no-files-found: error
           retention-days: 30

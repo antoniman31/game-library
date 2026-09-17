@@ -141,3 +141,24 @@ test("chaque filtre a de quoi être éteint dans App.jsx", async () => {
     assert.ok(FILTRES.includes(n), `« ${n} » est effacé mais n'est pas un filtre connu`);
   }
 });
+
+// Troisième duplication, arrivée avec l'application native : la table qui dit
+// où va chaque chemin relayé existe dans le Worker et dans `relais.js`. Le
+// Worker la garde parce que le site en dépend toujours ; l'application la
+// double parce qu'elle appelle la source directement.
+//
+// La dérive serait particulièrement sournoise : un service déplacé côté Worker
+// continuerait de marcher sur le site, et échouerait dans l'application seule,
+// sans que rien ne relie la panne au changement.
+test("l'application vise les mêmes sources que le Worker", async () => {
+  const { CIBLES } = await import("./relais.js");
+  const worker = lire("../../worker/index.js");
+
+  const bloc = worker.match(/const CIBLES = \{([\s\S]*?)\n\};/);
+  assert.ok(bloc, "le Worker devrait déclarer une table CIBLES");
+
+  const duWorker = Object.fromEntries(
+    [...bloc[1].matchAll(/"(\/[a-z]+)":\s*"([^"]+)"/g)].map(m => [m[1], m[2]]));
+
+  assert.deepEqual(CIBLES, duWorker);
+});

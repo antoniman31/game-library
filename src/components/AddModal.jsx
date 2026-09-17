@@ -1,11 +1,13 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import Sheet from "./Sheet.jsx";
 import { bg, card, bdr, bdrChamp, txt, mut, accent, accentFond } from "../lib/theme.js";
 import { PC, PLATFORMES_JEU, isBackCompatPlatform, normaliserGenres } from "../lib/model.js";
 import {
   rawgSearch, rawgDetail, wikiFrenchTitles, wikiArticleData, wikidataInfobox,
-  sgdbSearch, sgdbGrids,
+  sgdbSearch, sgdbGrids, produitParCodeBarres,
 } from "../lib/api.js";
+import { scannerCodeBarres, scanPossible } from "../lib/natif.js";
+import { eanValide, titreDepuisProduit } from "../lib/codebarres.js";
 
 function AddModal({ onAdd, onClose }) {
   const [title, setTitle] = useState("");
@@ -32,6 +34,13 @@ function AddModal({ onAdd, onClose }) {
   const [sgDone, setSgDone] = useState(false);
   const [sgMatch, setSgMatch] = useState(null);
   const [cover, setCover] = useState(null);
+
+  // Le scan de code-barres est une expérience, et son intérêt se mesure sur
+  // les trois premières boîtes. Il ne s'affiche que là où il peut marcher —
+  // un bouton sans aucune chance d'aboutir ne vaut pas mieux que rien.
+  const [scanDispo, setScanDispo] = useState(false);
+  const [scanEtat, setScanEtat] = useState(null); // { texte } pendant, ou { texte, brut } après
+  useEffect(() => { let vivant = true; scanPossible().then(d => vivant && setScanDispo(d)); return () => { vivant = false; }; }, []);
   const sgDebRef = useRef(null);
 
   const inp = { background: bg, border: `1px solid ${bdrChamp}`, borderRadius: "var(--r-sm)", color: txt, minHeight: "var(--tap-min)", padding: "8px 12px", width: "100%", boxSizing: "border-box", fontFamily: "inherit" };
@@ -62,6 +71,40 @@ function AddModal({ onAdd, onClose }) {
   );
 
   const search = async (q) => setSugg(await rawgSearch(q));
+
+  // Scanner, chercher le produit, nettoyer son libellé, lancer la recherche
+  // habituelle. Chaque maillon dit où il a cassé : « code illisible », « pas
+  // dans la base », « quota atteint » n'appellent pas les mêmes suites, et
+  // « ça n'a pas marché » n'apprendrait rien de l'expérience.
+  const scanner = async () => {
+    setScanEtat(null);
+    const lu = await scannerCodeBarres();
+    if (!lu.ok) { if (lu.erreur) setScanEtat({ texte: lu.erreur }); return; }
+    if (lu.code.length === 13 && !eanValide(lu.code)) {
+      setScanEtat({ texte: `Code mal lu (${lu.code}). Réessaie en tenant le téléphone plus stable.` });
+      return;
+    }
+
+    setScanEtat({ texte: `Code ${lu.code} — recherche du produit…` });
+    const p = await produitParCodeBarres(lu.code);
+    if (!p.ok) {
+      setScanEtat({ texte: {
+        inconnu: `Le code ${lu.code} n'est dans aucune base de produits. Tape le titre à la main.`,
+        quota: "Cent recherches par jour, et c'est fait pour aujourd'hui.",
+        code: `Code ${lu.code} inexploitable.`,
+      }[p.raison] || `La base de produits n'a pas répondu${p.statut ? ` (${p.statut})` : ""}.` });
+      return;
+    }
+
+    const { titre, plateforme, brut } = titreDepuisProduit(p.libelle);
+    setTitle(titre);
+    if (plateforme) setPlatform(plateforme);
+    // Le libellé d'origine reste affiché : quand la recherche ne trouve rien,
+    // c'est lui qui dit si le nettoyage a trop coupé ou si la base s'est
+    // trompée de produit.
+    setScanEtat({ texte: `Trouvé : ${brut}`, brut });
+    search(titre);
+  };
 
   const pick = async (game) => {
     setTitle(game.name);
@@ -140,6 +183,16 @@ function AddModal({ onAdd, onClose }) {
           <Ligne label="Titre" aide="obligatoire">
           <input value={title} onChange={e => { setTitle(e.target.value); clearTimeout(debRef.current); debRef.current = setTimeout(() => search(e.target.value), 350); }} placeholder="Titre du jeu" style={inp} />
           </Ligne>
+          {scanDispo && (
+            <button type="button" onClick={scanner} style={{ ...srcBtn, width: "100%", marginBottom: 6 }}>
+              Scanner le code-barres de la boîte
+            </button>
+          )}
+          {scanEtat && (
+            <div role="status" style={{ color: mut, fontSize: "var(--t-legende)", lineHeight: 1.5, marginBottom: 6 }}>
+              {scanEtat.texte}
+            </div>
+          )}
           {loading && <div style={{ color: accent, fontSize: "var(--t-legende)", marginTop: 3 }}>Recherche RAWG…</div>}
           {sugg.length > 0 && (
             <div style={{ position: "absolute", top: "100%", left: 0, right: 0, background: card, border: `1px solid ${bdr}`, borderRadius: "var(--r-sm)", zIndex: 10, overflow: "hidden", boxShadow: "0 8px 24px #0008" }}>
