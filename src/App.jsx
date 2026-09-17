@@ -15,7 +15,7 @@ import PlayniteModal from "./components/PlayniteModal.jsx";
 import NotesChoixSheet from "./components/NotesChoixSheet.jsx";
 
 import { hdr, card, bdr, bdrChamp, txt, mut, accent, accentDoux, accentFond, warnDoux, dangerDoux, ok, warn, warnFond, danger } from "./lib/theme.js";
-import { enregistrerFichier, estNatif, accorderBarreEtat } from "./lib/natif.js";
+import { enregistrerFichier, estNatif, accorderBarreEtat, surFichierRecu } from "./lib/natif.js";
 import { descendreJaquettes, menageJaquettes, aDescendre } from "./lib/jaquettes.js";
 import { GAMES_INIT } from "./lib/seed.js";
 import { jeuDansUnivers, boutiquesPresentes, jeuDeLaBoutique, autresEditions,
@@ -899,30 +899,51 @@ export default function App() {
       setAvis("Impossible d'écrire la sauvegarde.");
     }
   };
+  // Un texte JSON, d'où qu'il vienne.
+  //
+  // Le contenu arrive par deux chemins — le sélecteur de fichiers, et un
+  // fichier qu'Android nous confie — et rien de ce qui suit ne dépend du
+  // chemin. Le séparer évite le défaut classique : un second point d'entrée
+  // qui valide « presque » comme le premier, et laisse passer ce que l'autre
+  // rejette.
+  const ouvrirTexteImporte = useCallback((texte) => {
+    let data;
+    try { data = JSON.parse(texte); }
+    catch { alert("Ce fichier n'est pas du JSON valide."); return; }
+
+    const { jeux, rejetes, corriges } = validerJeuxImportes(data);
+    if (!jeux) { alert("Ce fichier ne contient pas une liste de jeux."); return; }
+    if (!jeux.length) { alert(`Aucun jeu exploitable dans ce fichier${rejetes ? ` (${rejetes} entrée(s) ignorée(s))` : ""}.`); return; }
+
+    // La question se posait dans un confirm() : « OK = REMPLACER, Annuler =
+    // FUSIONNER ». Or Annuler veut dire « ne rien faire » partout ailleurs,
+    // et Échap ferme sur Annuler — on croyait sortir de la boîte, on
+    // déclenchait une fusion. Deux actions distinctes ne tiennent pas dans un
+    // bouton binaire : elles ont chacune la leur, et annuler n'importe rien.
+    setImportChoix({ jeux, rejetes, corriges });
+  }, []);
+
   const importJSON = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = () => {
-      let data;
-      try { data = JSON.parse(reader.result); }
-      catch { alert("Ce fichier n'est pas du JSON valide."); return; }
-
-      const { jeux, rejetes, corriges } = validerJeuxImportes(data);
-      if (!jeux) { alert("Ce fichier ne contient pas une liste de jeux."); return; }
-      if (!jeux.length) { alert(`Aucun jeu exploitable dans ce fichier${rejetes ? ` (${rejetes} entrée(s) ignorée(s))` : ""}.`); return; }
-
-      // La question se posait dans un confirm() : « OK = REMPLACER, Annuler =
-      // FUSIONNER ». Or Annuler veut dire « ne rien faire » partout ailleurs,
-      // et Échap ferme sur Annuler — on croyait sortir de la boîte, on
-      // déclenchait une fusion. Deux actions distinctes ne tiennent pas dans un
-      // bouton binaire : elles ont chacune la leur, et annuler n'importe rien.
-      setImportChoix({ jeux, rejetes, corriges });
-    };
+    reader.onload = () => ouvrirTexteImporte(reader.result);
     reader.onerror = () => alert("Lecture du fichier impossible.");
     reader.readAsText(file);
     e.target.value = "";
   };
+
+  // Le fichier qu'une autre application nous ouvre.
+  //
+  // L'écouteur est posé une fois pour toutes : il doit être là avant que
+  // `getLaunchUrl` réponde, sans quoi un démarrage causé par un fichier —
+  // le cas le plus courant — passerait inaperçu. Le panneau de choix qui
+  // s'ouvre ensuite est exactement celui du sélecteur de fichiers : on ne
+  // remplace jamais une bibliothèque sans que quelqu'un l'ait demandé.
+  useEffect(() => surFichierRecu((texte, url, erreur) => {
+    if (texte === null) { setAvis(`Fichier illisible : ${erreur || url}`); return; }
+    ouvrirTexteImporte(texte);
+  }), [ouvrirTexteImporte]);
 
   const remplacerParImport = () => { setGames(importChoix.jeux); setImportChoix(null); };
   const fusionnerImport = () => {

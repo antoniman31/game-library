@@ -12,6 +12,7 @@
 //     pouvoir quitter ;
 //   - dire quelle version tourne, que les deux côtés numérotent autrement ;
 //   - accorder la barre d'état au thème, que `theme-color` ne sait pas faire ;
+//   - recevoir un fichier ouvert depuis une autre application ;
 //   - et `estNatif`, pour ce qui n'a de sens que d'un côté.
 
 import { Capacitor } from "@capacitor/core";
@@ -191,4 +192,38 @@ export async function accorderBarreEtat(theme) {
   try {
     await StatusBar.setStyle({ style: theme === "dark" ? Style.Dark : Style.Light });
   } catch { /* une barre d'état qu'on ne peut pas régler ne casse rien */ }
+}
+
+// Un fichier qu'une autre application nous confie.
+//
+// Sur le web, importer une sauvegarde passe forcément par un sélecteur de
+// fichiers : la page ne peut pas être une destination. Une application
+// installée, si — elle se déclare capable d'ouvrir du JSON, et apparaît dans le
+// « Ouvrir avec » du gestionnaire de fichiers, de Drive ou d'une pièce jointe.
+//
+// C'est ACTION_VIEW et non ACTION_SEND, et la nuance mérite d'être écrite :
+// Capacitor ne fait remonter au JavaScript que les intentions VIEW, celles qui
+// portent une adresse. « Partager vers Game Library » demanderait du Java dans
+// le projet engendré. « Ouvrir avec » couvre les chemins réels — un fichier
+// qu'on a reçu ou qu'on est allé chercher — sans rien ajouter.
+//
+// Deux cas, et le second est celui qu'on oublie : l'application est déjà
+// ouverte (`appUrlOpen`), ou elle démarre à cause du fichier
+// (`getLaunchUrl`) — un écouteur posé après coup ne verrait jamais le second.
+export function surFichierRecu(quoi) {
+  if (!estNatif()) return () => {};
+
+  const lire = async (url) => {
+    if (!url) return;
+    try {
+      const { data } = await Filesystem.readFile({ path: url, encoding: Encoding.UTF8 });
+      quoi(typeof data === "string" ? data : "", url);
+    } catch (e) {
+      quoi(null, url, String(e?.message || e));
+    }
+  };
+
+  AppNatif.getLaunchUrl().then(r => lire(r?.url)).catch(() => {});
+  const promesse = AppNatif.addListener("appUrlOpen", e => lire(e?.url));
+  return () => { promesse.then(h => h.remove()).catch(() => {}); };
 }
