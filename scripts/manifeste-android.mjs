@@ -1,4 +1,10 @@
-// Rendre l'application capable de recevoir un fichier.
+// Les deux retouches au manifeste engendré.
+//
+// Capacitor engendre `android/`, qui n'entre pas dans le dépôt : ce qu'on veut
+// y ajouter se réapplique à chaque construction, ou n'existe pas. Deux choses,
+// pour deux raisons opposées — une capacité qui manque, une permission de trop.
+//
+// ── Ouvrir un fichier ──
 //
 // Sur le web, importer une sauvegarde passe forcément par un sélecteur de
 // fichiers : une page ne peut pas être une destination. Une application
@@ -7,10 +13,8 @@
 // propose jamais Game Library, alors que c'est la seule application au monde
 // qui sache quoi en faire.
 //
-// Pourquoi un script plutôt qu'un fichier versionné : `android/` est engendré
-// par Capacitor et n'entre pas dans le dépôt. Pourquoi un script plutôt qu'un
-// `sed` dans le workflow : celui-ci se teste, et la construction locale en
-// profite aussi.
+// Pourquoi un script plutôt qu'un `sed` dans le workflow : celui-ci se teste,
+// et la construction locale en profite aussi.
 //
 // C'est ACTION_VIEW (« Ouvrir avec ») et non ACTION_SEND (« Partager vers ») :
 // le greffon App de Capacitor ne fait remonter au JavaScript que les intentions
@@ -23,7 +27,7 @@
 import { readFileSync, writeFileSync } from "node:fs";
 
 const MANIFESTE = "android/app/src/main/AndroidManifest.xml";
-const MARQUE = "ouvrir-fichiers-android.mjs";
+const MARQUE = "manifeste-android.mjs";
 
 // Deux filtres, parce qu'un seul ne suffit jamais en pratique.
 //
@@ -55,7 +59,33 @@ export const FILTRES = `            <!-- Ajouté par scripts/${MARQUE} : sans ce
 
 `;
 
-export function declarerOuvertureFichiers(xml) {
+// Une permission dont on n'a pas besoin.
+//
+// Le greffon de notifications déclare SCHEDULE_EXACT_ALARM pour tout le monde,
+// et cette déclaration se propage à l'APK au moment de la fusion des
+// manifestes. Elle coûte deux choses : une entrée « Alarmes et rappels » dans
+// les réglages du téléphone, et un refus au Play Store — Google la réserve aux
+// réveils et aux agendas, ce qu'une bibliothèque de jeux n'est pas.
+//
+// On ne perd rien : le greffon retombe tout seul sur une alarme approximative,
+// et un rappel de sauvegarde qui arrive à 10h09 plutôt qu'à 10h00 remplit
+// exactement le même office.
+const ALARME_EXACTE = "android.permission.SCHEDULE_EXACT_ALARM";
+
+function retirerAlarmeExacte(xml) {
+  if (xml.includes(`"${ALARME_EXACTE}" tools:node="remove"`)) return xml;
+
+  const avecOutils = xml.includes('xmlns:tools=')
+    ? xml
+    : xml.replace("<manifest ", '<manifest xmlns:tools="http://schemas.android.com/tools" ');
+
+  return avecOutils.replace("</manifest>",
+    `    <!-- Ajouté par scripts/${MARQUE} : le greffon de notifications la\n`
+    + `         déclare pour tout le monde, et nous n'en avons pas l'usage. -->\n`
+    + `    <uses-permission android:name="${ALARME_EXACTE}" tools:node="remove" />\n</manifest>`);
+}
+
+export function ajusterManifeste(xml) {
   if (xml.includes(MARQUE)) return xml;
 
   const fin = xml.indexOf("</activity>");
@@ -65,16 +95,16 @@ export function declarerOuvertureFichiers(xml) {
   // insérer devant elle laisserait son indentation collée à notre premier
   // filtre.
   const ligne = xml.lastIndexOf("\n", fin) + 1;
-  return xml.slice(0, ligne) + FILTRES + xml.slice(ligne);
+  return retirerAlarmeExacte(xml.slice(0, ligne) + FILTRES + xml.slice(ligne));
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
   const avant = readFileSync(MANIFESTE, "utf8");
-  const apres = declarerOuvertureFichiers(avant);
+  const apres = ajusterManifeste(avant);
   if (avant === apres) {
     console.log("Manifeste : filtres déjà présents.");
   } else {
     writeFileSync(MANIFESTE, apres);
-    console.log("Manifeste : l'application peut désormais ouvrir un fichier .json.");
+    console.log("Manifeste : ouverture des .json déclarée, alarme exacte retirée.");
   }
 }

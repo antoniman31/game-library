@@ -15,7 +15,7 @@ import PlayniteModal from "./components/PlayniteModal.jsx";
 import NotesChoixSheet from "./components/NotesChoixSheet.jsx";
 
 import { hdr, card, bdr, bdrChamp, txt, mut, accent, accentDoux, accentFond, warnDoux, dangerDoux, ok, warn, warnFond, danger } from "./lib/theme.js";
-import { enregistrerFichier, estNatif, accorderBarreEtat, surFichierRecu } from "./lib/natif.js";
+import { enregistrerFichier, estNatif, accorderBarreEtat, surFichierRecu, demanderRappels, accorderRappelSauvegarde } from "./lib/natif.js";
 import { descendreJaquettes, menageJaquettes, aDescendre } from "./lib/jaquettes.js";
 import { GAMES_INIT } from "./lib/seed.js";
 import { jeuDansUnivers, boutiquesPresentes, jeuDeLaBoutique, autresEditions,
@@ -209,6 +209,10 @@ export default function App() {
   const [importChoix, setImportChoix] = useState(null);
   const [majDispo, setMajDispo] = useState(false);
   const [sync, setSync] = useState(() => chargerSync());
+  // Le rappel de sauvegarde, éteint par défaut : une application qui réclame
+  // le droit de notifier avant d'avoir rien montré se fait refuser, et sur
+  // Android un refus est définitif.
+  const [rappelActif, setRappelActif] = useState(() => lire("gl_rappel") === "1");
   const [syncEtat, setSyncEtat] = useState(null);   // { type: "ok" | "ko" | "…", texte }
   const undoRef = useRef(null);
 
@@ -1084,6 +1088,27 @@ export default function App() {
   const sauvegarde = etatSauvegarde({ ...sync, proxy: keys.proxy });
   const sauvegardeAlerte = sauvegarde.configuree && sauvegarde.niveau !== "fraiche";
 
+  // Le rappel suit l'état réel de la sauvegarde.
+  //
+  // Il se remet en accord à chaque changement — synchronisation envoyée, code
+  // effacé, rappel éteint — et non à chaque ouverture : `accorderRappelSauvegarde`
+  // ne replanifie que si la date de sauvegarde a bougé, faute de quoi ouvrir
+  // l'application tous les jours repousserait indéfiniment le rappel.
+  useEffect(() => {
+    accorderRappelSauvegarde({ actif: rappelActif, configuree: sauvegarde.configuree, majLe: sync.majLe });
+  }, [rappelActif, sauvegarde.configuree, sync.majLe]);
+
+  // Allumer demande la permission ; l'éteindre ne demande rien. Si le système
+  // refuse, l'interrupteur revient de lui-même à « éteint » : un interrupteur
+  // allumé qui ne notifie pas est pire que pas d'interrupteur du tout.
+  const basculerRappel = useCallback(async (veut) => {
+    if (!veut) { setRappelActif(false); ecrire("gl_rappel", "0"); return; }
+    const accorde = await demanderRappels();
+    setRappelActif(accorde);
+    ecrire("gl_rappel", accorde ? "1" : "0");
+    if (!accorde) setAvis("Android refuse les notifications à cette application. Ça se rouvre dans les réglages du téléphone.");
+  }, []);
+
   const filtresActifs = compterFiltres({ plat, pretFil: pretFilEffectif, fmtFil, genreFil, modeFil, noteFil, completFil, serieFil, boutiqueFil });
   // Dérivés de tout l'univers courant, pas de la liste filtrée : sinon les
   // options disparaîtraient au fur et à mesure qu'on s'en sert.
@@ -1458,6 +1483,7 @@ export default function App() {
             appliquerCles={{ actuelles: loadKeys(), appliquer: setApiKeys }}
             testerCle={testerCle} etatCles={keyTest}
             sync={sync} majSync={majSync} genererCode={genererCode}
+            rappelActif={rappelActif} onBasculerRappel={basculerRappel}
             syncEtat={syncEtat} setSyncEtat={setSyncEtat}
             onEnvoyer={() => envoyerAuCloud()} onRecuperer={recupererDuCloud}
             onExporter={exportJSON} onImporter={importJSON}

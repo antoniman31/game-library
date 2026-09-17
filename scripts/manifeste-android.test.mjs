@@ -6,7 +6,7 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { declarerOuvertureFichiers } from "./ouvrir-fichiers-android.mjs";
+import { ajusterManifeste } from "./manifeste-android.mjs";
 
 const GABARIT = `<?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
@@ -27,7 +27,7 @@ const GABARIT = `<?xml version="1.0" encoding="utf-8"?>
 `;
 
 test("l'application se déclare capable d'ouvrir du JSON", () => {
-  const sortie = declarerOuvertureFichiers(GABARIT);
+  const sortie = ajusterManifeste(GABARIT);
   assert.match(sortie, /android.intent.action.VIEW/);
   assert.match(sortie, /android:mimeType="application\/json"/);
   // La sauvegarde ressort souvent en octet-stream : le repli par extension
@@ -36,21 +36,29 @@ test("l'application se déclare capable d'ouvrir du JSON", () => {
 });
 
 test("le lanceur reste le lanceur", () => {
-  const sortie = declarerOuvertureFichiers(GABARIT);
+  const sortie = ajusterManifeste(GABARIT);
   assert.equal((sortie.match(/android.intent.category.LAUNCHER/g) || []).length, 1);
   assert.equal((sortie.match(/action.MAIN/g) || []).length, 1);
 });
 
 test("les filtres s'insèrent dans l'activité, pas après", () => {
-  const sortie = declarerOuvertureFichiers(GABARIT);
+  const sortie = ajusterManifeste(GABARIT);
   assert.ok(sortie.indexOf("action.VIEW") < sortie.indexOf("</activity>"));
 });
 
 test("deux passages ne font pas quatre filtres", () => {
-  const une = declarerOuvertureFichiers(GABARIT);
-  assert.equal(declarerOuvertureFichiers(une), une);
+  const une = ajusterManifeste(GABARIT);
+  assert.equal(ajusterManifeste(une), une);
 });
 
 test("un gabarit méconnaissable s'arrête ici", () => {
-  assert.throws(() => declarerOuvertureFichiers("<manifest></manifest>"), /gabarit Capacitor a changé/);
+  assert.throws(() => ajusterManifeste("<manifest></manifest>"), /gabarit Capacitor a changé/);
+});
+
+test("l'alarme exacte est retirée", () => {
+  const sortie = ajusterManifeste(GABARIT);
+  assert.match(sortie, /xmlns:tools=/);
+  assert.match(sortie, /SCHEDULE_EXACT_ALARM" tools:node="remove"/);
+  // Le retrait se place hors de <application>, comme toute permission.
+  assert.ok(sortie.indexOf("SCHEDULE_EXACT_ALARM") > sortie.indexOf("</application>"));
 });
