@@ -24,6 +24,7 @@ import { jeuDansUnivers, boutiquesPresentes, jeuDeLaBoutique, autresEditions,
   joursDePret, jeuPasseSeuil, jeuxNoteDeclareeAbsente, jeuACompleter, completudeManquante, dateDeSortie, serieDuJeu,
   empreinteMelange, compterFichesIncompletes, completerDepuisEditions, titreDeTri, rapprochementDouteux,
   masquerDoublons, appidSteam, noteChangee, jeuDeLaGeneration, plateformesPresentes, nomCourt,
+  BACK_COMPAT_PARENT,
   generationDe, nomFamille,
   PLATFORM_COLORS } from "./lib/model.js";
 import { lire, ecrire, surEchecStockage } from "./lib/storage.js";
@@ -1185,41 +1186,50 @@ export default function App() {
         {liste.map(g => (
           <div key={g.id} className="gl-tile" style={{ background:card, border:`1px solid ${bdr}`, borderRadius: "var(--r-md)", overflow:"hidden", cursor:"pointer" }}
             onClick={() => setFicheOuverte(g.id)}>
-            {/* La console, deux fois, et c'est délibéré — pour le moment.
-                Posée sur la jaquette elle se repère d'un coup d'œil sans lire,
-                mais elle mange un coin de l'illustration. Écrite sous le
-                titre elle ne recouvre rien, mais elle coûte une ligne dans
-                chaque vignette. Les deux cohabitent le temps de les voir en
-                vrai sur la bibliothèque réelle ; celle qui gagne restera
-                seule. Garder les deux serait redondant, et une redondance
-                qu'on oublie de trancher devient un défaut. */}
             <div style={{ position:"relative" }}>
               <Cover src={g.cover} title={g.title} size="100%" />
-              <span style={{
-                position:"absolute", left:5, bottom:5,
-                background:PLATFORM_COLORS[g.platform] || accentFond, color:"#fff",
-                fontSize:"var(--t-legende)", fontWeight:700, lineHeight:1.4,
-                borderRadius:"var(--r-xs)", padding:"1px 5px",
-                // Une jaquette claire sous une pastille claire ne se lirait
-                // plus : le liseré la détache de n'importe quelle image.
-                boxShadow:"0 0 0 1px #0006",
-                maxWidth:"calc(100% - 10px)", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap",
-              }}>{nomCourt(g.platform)}</span>
+              {/* Sur la jaquette, et nulle part ailleurs.
+                  Les deux emplacements ont cohabité le temps d'être vus en
+                  vrai : celui-ci gagne, et la ligne sous le titre a disparu.
+                  « Xbox One · 🔄 Series X · MC 84 » ne tenait de toute façon
+                  pas dans 120 px, et une information tronquée ne vaut pas
+                  mieux qu'une information absente.
+                  Ici, les pastilles ne coûtent aucune hauteur de vignette. */}
+              <div style={{
+                position:"absolute", left:5, bottom:5, maxWidth:"calc(100% - 10px)",
+                display:"flex", flexDirection:"column", alignItems:"flex-start", gap:3,
+              }}>
+                <span style={{
+                  background:PLATFORM_COLORS[g.platform] || accentFond, color:"#fff",
+                  fontSize:"var(--t-legende)", fontWeight:700, lineHeight:1.4,
+                  borderRadius:"var(--r-xs)", padding:"1px 5px",
+                  // Une jaquette claire sous une pastille claire ne se lirait
+                  // plus : le liseré la détache de n'importe quelle image.
+                  boxShadow:"0 0 0 1px #0006",
+                  maxWidth:"100%", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap",
+                }}>{nomCourt(g.platform)}</span>
+                {/* La rétrocompatibilité en dessous : la machine qu'on possède
+                    d'abord, ce qu'elle permet en plus ensuite.
+                    Fond sombre fixe et texte blanc plutôt que le vert du
+                    thème : ce dernier vaut #127034 en clair, illisible sur du
+                    sombre, et la pastille doit rester opaque pour ne pas
+                    dépendre de la jaquette. Le 🔄 porte le sens, comme dans
+                    la liste. */}
+                {BACK_COMPAT_PARENT[g.platform] && g.backCompat && (
+                  <span title={`Rétrocompatible ${BACK_COMPAT_PARENT[g.platform]}`} style={{
+                    background:"#111827", color:"#fff",
+                    fontSize:"var(--t-legende)", fontWeight:600, lineHeight:1.4,
+                    borderRadius:"var(--r-xs)", padding:"1px 5px",
+                    boxShadow:"0 0 0 1px #0006",
+                    maxWidth:"100%", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap",
+                  }}>🔄 {nomCourt(BACK_COMPAT_PARENT[g.platform])}</span>
+                )}
+              </div>
             </div>
             <div style={{ height:3, background:g.lentA ? warnFond : "transparent" }} />
             <div style={{ padding:"6px 7px" }}>
               <div style={{ color:txt, fontSize: "var(--t-legende)", fontWeight:600, lineHeight:1.3, overflow:"hidden", display:"-webkit-box", WebkitLineClamp:2, WebkitBoxOrient:"vertical" }}>{g.title}</div>
-              {/* La console, que la grille ne disait pas.
-                  La vue liste porte une pastille colorée, la vue compacte un
-                  point : la grille, elle, ne montrait que la jaquette et le
-                  titre — et une jaquette ne dit pas sur quelle machine le jeu
-                  tourne. Sous le titre plutôt que sur l'illustration : rien
-                  n'est recouvert, et avec vingt-neuf plateformes la couleur
-                  seule ne suffirait plus de toute façon. */}
-              <div style={{ display:"flex", gap:6, alignItems:"baseline", marginTop:2, fontSize:"var(--t-legende)" }}>
-                <span style={{ color:mut, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{nomCourt(g.platform)}</span>
-                {g.metacritic && <span style={{ color:g.metacritic>=80?ok:warn, flexShrink:0 }}>MC {g.metacritic}</span>}
-              </div>
+              {g.metacritic && <div style={{ color:g.metacritic>=80?ok:warn, fontSize: "var(--t-legende)", marginTop:2 }}>MC {g.metacritic}</div>}
             </div>
           </div>
         ))}
