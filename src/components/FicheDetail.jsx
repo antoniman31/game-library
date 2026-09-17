@@ -3,7 +3,7 @@ import Cover from "./Cover.jsx";
 import InfoboxView from "./InfoboxView.jsx";
 import Sheet from "./Sheet.jsx";
 import { bg, card, bdr, bdrChamp, txt, mut, accent, accentDoux, accentFond, okDoux, warnDoux, dangerDoux, ok, warn, danger } from "../lib/theme.js";
-import { PC, BACK_COMPAT_PARENT, PLATFORMES_JEU, estUrlImage, normaliserGenres, joursDePret, pretEnRetard, brouillonDepuisJeu, validerEdition,
+import { PC, BACK_COMPAT_PARENT, plateformesGroupees, estUrlImage, normaliserGenres, joursDePret, pretEnRetard, brouillonDepuisJeu, validerEdition,
   rendreJeu, preterJeu, annulerPret, dureeEntreeHistorique,
   fusionnerInfobox, infoboxDepuisRawg, libelleSources, CHAMPS_VIDABLES, viderChamps, jeuACompleter,
   libelleEdition } from "../lib/model.js";
@@ -644,7 +644,9 @@ function FicheDetail({ g, onEdit, onDelete, onEnrich, onSerie, autresEditions: a
 
           {ligneEdition("Plateforme", "platform", (
             <select value={brouillon.platform} onChange={e => champ("platform", e.target.value)} style={{ ...champStyle("platform"), minHeight: "var(--tap-min)" }}>
-              {PLATFORMES_JEU.map(p => <option key={p} value={p}>{p}</option>)}
+              {plateformesGroupees().map(([nom, liste]) => (
+                <optgroup key={nom} label={nom}>{liste.map(p => <option key={p.id} value={p.id}>{p.id}</option>)}</optgroup>
+              ))}
             </select>
           ))}
 

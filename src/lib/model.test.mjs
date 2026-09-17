@@ -1388,3 +1388,109 @@ test("une fiche sans épisode cité ne dit rien du tout", () => {
   // d'enrichissement —, on ne prétend pas savoir ce qui manque.
   assert.equal(episodesCites({ infobox: { follows: "Halo 2" } }, undefined).precedent.possede, false);
 });
+
+// ── La table des plateformes ───────────────────────────────────────────────
+//
+// Vingt-neuf plateformes, dont vingt-deux qu'aucune fiche ne portait hier. Ce
+// que ces vérifications protègent n'est pas la liste elle-même — une faute de
+// frappe dans « Dreamcast » se voit — mais les deux ou trois endroits où elle
+// touche du code qui existait avant elle.
+
+test("les quatre plateformes d'origine gardent leur identifiant", async () => {
+  const { PLATFORMES_JEU, PC } = await import("./model.js");
+  // Le jour où l'un de ces identifiants change, les 288 fiches existantes
+  // portent une plateforme inconnue. Aucune migration ne les rattraperait :
+  // c'est la valeur stockée telle quelle.
+  for (const id of ["Xbox Series X", "Xbox One", "Switch 2", "Switch 1", PC]) {
+    assert.ok(PLATFORMES_JEU.includes(id), id);
+  }
+});
+
+test("la console de 2001 ne s'appelle pas « Xbox »", async () => {
+  const { PLATFORMES_JEU, migrateGames } = await import("./model.js");
+  // `migrateGames` convertit encore l'ancien identifiant « Xbox » en Xbox One
+  // ou Series X selon la date. Nommer ainsi la console de 2001 ferait basculer
+  // en silence une vraie Xbox de 2001 vers une Xbox One.
+  assert.ok(!PLATFORMES_JEU.includes("Xbox"), "« Xbox » est l'ancien format, pas une plateforme");
+  assert.ok(PLATFORMES_JEU.includes("Xbox originale"));
+
+  const [migre] = migrateGames([{ id: 1, title: "Halo", platform: "Xbox originale", addedDate: "2003-01-01" }]);
+  assert.equal(migre.platform, "Xbox originale", "la console de 2001 ne doit pas devenir une Xbox One");
+});
+
+test("la Switch 1 est de la génération actuelle", async () => {
+  const { generationDe } = await import("./model.js");
+  // 2017, même génération que la PS4 : contre-intuitif, et c'est justement
+  // pour ça que ça se vérifie.
+  assert.equal(generationDe("Switch 1"), "actuelle");
+  assert.equal(generationDe("PS4"), "actuelle");
+  assert.equal(generationDe("Xbox One"), "actuelle");
+  assert.equal(generationDe("Xbox 360"), "retro");
+  assert.equal(generationDe("PlayStation 3"), "retro");
+  assert.equal(generationDe("Wii U"), "retro");
+});
+
+test("une plateforme inconnue ne casse rien", async () => {
+  const { generationDe, nomCourt, familleDe, jeuDeLaGeneration } = await import("./model.js");
+  // Une fiche importée d'ailleurs garde son nom et se range en actuelle :
+  // mieux vaut une fiche lisible qu'une fiche vide.
+  assert.equal(nomCourt("Amiga 500"), "Amiga 500");
+  assert.equal(generationDe("Amiga 500"), "actuelle");
+  assert.equal(familleDe("Amiga 500"), null);
+  assert.equal(jeuDeLaGeneration({ platform: "Amiga 500" }, "actuelle"), true);
+  assert.equal(nomCourt(null), "");
+});
+
+test("le filtre génération sépare sans rien perdre", async () => {
+  const { jeuDeLaGeneration } = await import("./model.js");
+  const jeux = [{ platform: "Switch 1" }, { platform: "NES" }, { platform: "Xbox 360" }];
+  assert.equal(jeux.filter(g => jeuDeLaGeneration(g, "tous")).length, 3);
+  assert.equal(jeux.filter(g => jeuDeLaGeneration(g, "actuelle")).length, 1);
+  assert.equal(jeux.filter(g => jeuDeLaGeneration(g, "retro")).length, 2);
+});
+
+test("le filtre ne propose que les plateformes possédées", async () => {
+  const { plateformesPresentes } = await import("./model.js");
+  const jeux = [
+    { platform: "Switch 1" }, { platform: "Switch 1" }, { platform: "NES" },
+    { platform: "PC" }, { platform: "Amiga 500" },
+  ];
+  // Vingt-neuf existent ; quatre sont possédées côté console, et l'ordre est
+  // celui de la table — pas celui du nombre de jeux, pour qu'un filtre de
+  // collectionneur reste au même endroit d'une fois sur l'autre.
+  assert.deepEqual(plateformesPresentes(jeux, "console"), ["Switch 1", "NES", "Amiga 500"]);
+  assert.deepEqual(plateformesPresentes(jeux, "pc"), ["PC"]);
+  assert.deepEqual(plateformesPresentes([], "console"), []);
+});
+
+test("chaque plateforme a une couleur, et aucune n'est orpheline", async () => {
+  const { PLATEFORMES, PLATFORM_COLORS, FAMILLES, GENERATIONS } = await import("./model.js");
+  for (const p of PLATEFORMES) {
+    assert.match(p.couleur, /^#[0-9a-f]{6}$/i, p.id);
+    assert.equal(PLATFORM_COLORS[p.id], p.couleur, p.id);
+    assert.ok(FAMILLES[p.famille], `${p.id} : famille « ${p.famille} » inconnue`);
+    assert.ok(GENERATIONS.includes(p.generation), `${p.id} : génération « ${p.generation} » inconnue`);
+    assert.ok(p.court && p.court.length <= 13, `${p.id} : nom court absent ou trop long`);
+  }
+});
+
+test("aucune plateforme n'est déclarée deux fois", async () => {
+  const { PLATEFORMES } = await import("./model.js");
+  const ids = PLATEFORMES.map(p => p.id);
+  assert.equal(new Set(ids).size, ids.length);
+});
+
+test("le menu groupé contient exactement la table", async () => {
+  const { plateformesGroupees, PLATFORMES_JEU } = await import("./model.js");
+  // Une plateforme absente du menu est une plateforme qu'on ne peut plus
+  // choisir — donc une machine invisible, sans que rien n'échoue.
+  const dansLeMenu = plateformesGroupees().flatMap(([, liste]) => liste.map(p => p.id));
+  assert.deepEqual([...dansLeMenu].sort(), [...PLATFORMES_JEU].sort());
+});
+
+test("la rétrocompatibilité ne s'étend pas au rétro", async () => {
+  const { BACK_COMPAT } = await import("./model.js");
+  // Que la Series X lise certains jeux 360 est vrai mais sélectif : une
+  // promesse fausse vaut moins qu'un silence.
+  assert.deepEqual(BACK_COMPAT, { "Xbox Series X": "Xbox One", "Switch 2": "Switch 1" });
+});

@@ -154,7 +154,7 @@ export function texteAgeSauvegarde(etat) {
 export const AFFICHAGE_DEFAUT = { view: "liste", sort: "titre", sortDir: 1, groupePar: "aucun", doublons: "masques" };
 
 const VUES = ["liste", "compact", "grille"];
-const GROUPES = ["aucun", "plateforme", "boutique", "serie", "genre"];
+const GROUPES = ["aucun", "plateforme", "generation", "famille", "boutique", "serie", "genre"];
 
 export function affichageRecu(brut, trisConnus = []) {
   const p = { ...AFFICHAGE_DEFAUT };

@@ -394,6 +394,64 @@ for (const [largeur, theme] of ECRANS) {
       await revenirALaListe();
       await page.getByRole("button", { name: /^Prêts/ }).click();
     }],
+    // Une console rétro, pour que le filtre de génération existe.
+    //
+    // Même raison que le prêt plus haut : la bibliothèque de départ est
+    // entièrement actuelle, donc la rangée « Génération » ne s'affiche jamais
+    // — elle n'apparaît que le jour où il y a quelque chose à séparer. Sans
+    // cette étape, ses puces ne seraient mesurées sur aucun écran, et c'est
+    // exactement ainsi que des commandes sous le plancher de 44 px ont vécu
+    // des mois dans ce projet.
+    ["une console rétro, pour faire exister la génération", async () => {
+      await revenirALaListe();
+      // L'étape précédente laisse l'onglet « Prêts », qui n'a pas de cartes.
+      await page.getByRole("button", { name: /^Console$/ }).click();
+      await page.locator(".gl-card").first().click();
+      await page.getByRole("button", { name: /Modifier la fiche/ }).first().click();
+      // « Modifier la fiche » propose d'abord la source : « À la main » ouvre
+      // la feuille de correction, celle qui porte le menu des plateformes.
+      await page.getByRole("button", { name: /À la main/ }).first().click();
+      await page.locator("label").filter({ hasText: /^Plateforme/ }).locator("select").selectOption("Mega Drive");
+      await page.getByRole("button", { name: "Enregistrer" }).click();
+      await page.waitForTimeout(250);
+      await revenirALaListe();
+    }],
+    ["Filtres · génération", async () => {
+      await page.getByRole("button", { name: /^Filtres/ }).click();
+      await page.getByRole("button", { name: /^Génération Toutes/ }).click();
+    }],
+    // La liste des plateformes suit la génération choisie : c'est aussi le
+    // moment où elle est la plus courte, donc celui où une puce mal
+    // dimensionnée se voit le mieux.
+    ["Filtres · plateformes du rétro", async () => {
+      await page.getByRole("button", { name: "Rétro", exact: true }).click();
+      // « Plateforme » tout court désigne aussi la puce de regroupement : le
+      // résumé de l'en-tête replié est ce qui distingue les deux.
+      await page.getByRole("button", { name: /^Plateforme Toutes/ }).click();
+    }],
+    ["grille, avec la console sous le titre", async () => {
+      await page.getByRole("button", { name: /^Génération Rétro/ }).click();
+      await page.getByRole("button", { name: "Toutes", exact: true }).first().click();
+      await page.getByRole("button", { name: "⊞ Grille" }).click();
+      await page.getByRole("button", { name: /^Voir \d+ jeu/ }).click();
+
+      // La grille montrait une jaquette et un titre, et rien ne disait sur
+      // quelle machine le jeu tourne. Mesurer la géométrie de la vignette ne
+      // l'aurait jamais dit : c'est une absence de contenu, pas de place.
+      const vignettes = await page.locator(".gl-tile").evaluateAll(
+        ts => ts.slice(0, 12).map(t => t.innerText.replace(/\n/g, " ")));
+      const muettes = vignettes.filter(t => !/Series X|Xbox One|Switch [12]|PC|Mega Drive/.test(t));
+      if (muettes.length) {
+        signaler("vue grille", "des vignettes ne disent pas la console", [
+          `${muettes.length} sur ${vignettes.length} — par exemple « ${muettes[0]} »`,
+        ]);
+      }
+    }],
+    ["retour en liste", async () => {
+      await page.getByRole("button", { name: /^Filtres/ }).click();
+      await page.getByRole("button", { name: "☰ Liste" }).click();
+      await page.getByRole("button", { name: /^Voir \d+ jeu/ }).click();
+    }],
     // L'univers PC : d'autres filtres, d'autres pastilles, un onglet en moins.
     ["PC", async () => { await page.getByRole("button", { name: /^PC$/ }).click(); }],
     ["PC · filtres", async () => { await page.getByRole("button", { name: /^Filtres/ }).click(); }],

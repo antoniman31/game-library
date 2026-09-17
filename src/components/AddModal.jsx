@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import Sheet from "./Sheet.jsx";
 import { bg, card, bdr, bdrChamp, txt, mut, accent, accentFond } from "../lib/theme.js";
-import { PC, PLATFORMES_JEU, isBackCompatPlatform, normaliserGenres, fusionnerInfobox, infoboxDepuisRawg } from "../lib/model.js";
+import { PC, plateformesGroupees, isBackCompatPlatform, normaliserGenres, fusionnerInfobox, infoboxDepuisRawg } from "../lib/model.js";
 import {
   rawgSearch, rawgDetail, wikiFrenchTitles, wikiArticleData, wikidataInfobox,
   sgdbSearch, sgdbGrids, produitParCodeBarres,
@@ -309,7 +309,9 @@ function AddModal({ onAdd, onClose }) {
             la première colonne sans voir la seconde. Empilés, ils coûtent une
             hauteur de champ et se lisent dans l'ordre où on les remplit. */}
         <Ligne label="Plateforme">
-          <select value={platform} onChange={e => setPlatform(e.target.value)} style={inp}>{PLATFORMES_JEU.map(p => <option key={p}>{p}</option>)}</select>
+          <select value={platform} onChange={e => setPlatform(e.target.value)} style={inp}>{plateformesGroupees().map(([nom, liste]) => (
+              <optgroup key={nom} label={nom}>{liste.map(p => <option key={p.id} value={p.id}>{p.id}</option>)}</optgroup>
+            ))}</select>
         </Ligne>
         {/* Un jeu PC est toujours démat : ce qui le distingue est la
             boutique, et elle prend la place du format. */}

@@ -17,8 +17,96 @@ export const PRET_LONG_JOURS = 30;
 // sans rapport — et qu'on paierait à chaque filtre, chaque statistique, chaque
 // tri.
 export const PC = "PC";
-export const PLATFORMS = ["tous", "Xbox Series X", "Xbox One", "Switch 2", "Switch 1"];
-export const PLATFORMS_PC = [PC];
+
+// ── La table des plateformes ───────────────────────────────────────────────
+//
+// Quatre plateformes tenaient dans un tableau de chaînes. Vingt-neuf, non :
+// il faut savoir de quelle famille chacune relève, à quelle génération, et
+// comment l'écrire court quand la place manque. C'est une table, et chaque
+// colonne existe parce que quelque chose la lit.
+//
+// Deux mots pour deux choses, et il faut les tenir séparés :
+//
+//   - GÉNÉRATION (`actuelle` / `retro`) — l'âge de la machine. La coupure est
+//     celle demandée : Xbox One, PS4 et Switch 1 sont actuelles, tout ce qui
+//     est antérieur est rétro. La Switch 1 est de 2017, même génération que la
+//     PS4 : elle ne bascule pas, aussi contre-intuitif que ça paraisse.
+//   - RÉTROCOMPATIBILITÉ (`avecRetrocompatibles` plus bas) — un jeu d'une
+//     machine jouable sur la suivante. Rien à voir, et le mot « rétro » les
+//     confondait : c'est pourquoi le second porte désormais son nom entier.
+//
+// Les identifiants sont ceux déjà écrits dans les fiches : aucune des 288
+// existantes n'a à être migrée. Et la console de 2001 s'appelle « Xbox
+// originale », pas « Xbox » — `migrateGames` convertit encore l'ancien
+// identifiant « Xbox » en Xbox One ou Series X selon la date, et lui donner ce
+// nom ferait basculer en silence une vraie Xbox de 2001 vers une Xbox One.
+export const FAMILLES = {
+  nintendo: "Nintendo",
+  xbox: "Xbox",
+  playstation: "PlayStation",
+  sega: "Sega",
+  pc: "PC",
+};
+
+export const GENERATIONS = ["actuelle", "retro"];
+
+// La couleur est écrite plateforme par plateforme plutôt que calculée depuis
+// la famille : une teinte qu'on lit se corrige d'un coup d'œil, une teinte
+// qu'on dérive demande d'exécuter la fonction dans sa tête. La règle qu'elles
+// suivent, elle, tient en une ligne — teinte de la famille, et le rétro plus
+// sourd que l'actuel.
+export const PLATEFORMES = [
+  // Actuelles
+  { id: "Xbox Series X", court: "Series X", famille: "xbox", generation: "actuelle", couleur: "#107C10" },
+  { id: "Xbox One", court: "Xbox One", famille: "xbox", generation: "actuelle", couleur: "#0a5c0a" },
+  { id: "PS5", court: "PS5", famille: "playstation", generation: "actuelle", couleur: "#0b3d91" },
+  { id: "PS4", court: "PS4", famille: "playstation", generation: "actuelle", couleur: "#082c6b" },
+  { id: "Switch 2", court: "Switch 2", famille: "nintendo", generation: "actuelle", couleur: "#e4000f" },
+  { id: "Switch 1", court: "Switch 1", famille: "nintendo", generation: "actuelle", couleur: "#b3000c" },
+  { id: PC, court: "PC", famille: "pc", generation: "actuelle", couleur: "#4b5563" },
+
+  // Rétro — Nintendo
+  { id: "Wii U", court: "Wii U", famille: "nintendo", generation: "retro", couleur: "#8f4a4a" },
+  { id: "Wii", court: "Wii", famille: "nintendo", generation: "retro", couleur: "#8f4a4a" },
+  { id: "GameCube", court: "GameCube", famille: "nintendo", generation: "retro", couleur: "#8f4a4a" },
+  { id: "Nintendo 64", court: "N64", famille: "nintendo", generation: "retro", couleur: "#8f4a4a" },
+  { id: "Super Nintendo", court: "SNES", famille: "nintendo", generation: "retro", couleur: "#8f4a4a" },
+  { id: "NES", court: "NES", famille: "nintendo", generation: "retro", couleur: "#8f4a4a" },
+  { id: "Nintendo 3DS", court: "3DS", famille: "nintendo", generation: "retro", couleur: "#8f4a4a" },
+  { id: "Nintendo DS", court: "DS", famille: "nintendo", generation: "retro", couleur: "#8f4a4a" },
+  { id: "Game Boy Advance", court: "GBA", famille: "nintendo", generation: "retro", couleur: "#8f4a4a" },
+  { id: "Game Boy", court: "Game Boy", famille: "nintendo", generation: "retro", couleur: "#8f4a4a" },
+
+  // Rétro — Xbox
+  { id: "Xbox 360", court: "Xbox 360", famille: "xbox", generation: "retro", couleur: "#3f6b3f" },
+  { id: "Xbox originale", court: "Xbox", famille: "xbox", generation: "retro", couleur: "#3f6b3f" },
+
+  // Rétro — PlayStation
+  { id: "PlayStation 3", court: "PS3", famille: "playstation", generation: "retro", couleur: "#41557f" },
+  { id: "PlayStation 2", court: "PS2", famille: "playstation", generation: "retro", couleur: "#41557f" },
+  { id: "PlayStation", court: "PS1", famille: "playstation", generation: "retro", couleur: "#41557f" },
+  { id: "PS Vita", court: "Vita", famille: "playstation", generation: "retro", couleur: "#41557f" },
+  { id: "PSP", court: "PSP", famille: "playstation", generation: "retro", couleur: "#41557f" },
+
+  // Rétro — Sega
+  { id: "Dreamcast", court: "Dreamcast", famille: "sega", generation: "retro", couleur: "#3f7a99" },
+  { id: "Saturn", court: "Saturn", famille: "sega", generation: "retro", couleur: "#3f7a99" },
+  { id: "Mega Drive", court: "Mega Drive", famille: "sega", generation: "retro", couleur: "#3f7a99" },
+  { id: "Master System", court: "Master System", famille: "sega", generation: "retro", couleur: "#3f7a99" },
+  { id: "Game Gear", court: "Game Gear", famille: "sega", generation: "retro", couleur: "#3f7a99" },
+];
+
+const PAR_ID = new Map(PLATEFORMES.map(p => [p.id, p]));
+
+// Une plateforme inconnue ne casse rien : une fiche importée d'ailleurs, ou
+// écrite avant l'ajout d'une machine, garde son nom tel quel et se range en
+// « actuelle ». Mieux vaut une fiche lisible qu'une fiche vide.
+export const plateformeConnue = (id) => PAR_ID.get(id) || null;
+export const nomCourt = (id) => PAR_ID.get(id)?.court || String(id || "");
+export const generationDe = (id) => PAR_ID.get(id)?.generation || "actuelle";
+export const familleDe = (id) => PAR_ID.get(id)?.famille || null;
+export const nomFamille = (id) => FAMILLES[familleDe(id)] || "";
+
 export const UNIVERS = ["console", "pc"];
 export const estPC = (g) => g?.platform === PC;
 export const universDuJeu = (g) => (estPC(g) ? "pc" : "console");
@@ -39,11 +127,36 @@ export function boutiquesPresentes(games) {
   return [...compte.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "fr"));
 }
 
+// Les plateformes du filtre ne sont pas les vingt-neuf de la table.
+//
+// Vingt-neuf entrées dans un filtre seraient vingt-cinq lignes vides pour qui
+// possède quatre consoles. C'est la règle que les genres et les boutiques
+// suivent déjà : on propose ce qu'on possède. Les vingt-neuf ne servent qu'au
+// menu d'ajout, où il faut bien pouvoir choisir une machine avant d'avoir un
+// jeu dessus.
+//
+// L'ordre de la table est conservé plutôt que celui du nombre de jeux : le
+// filtre d'une bibliothèque de collectionneur doit rester au même endroit d'une
+// fois sur l'autre, alors qu'une boutique qui monte peut bouger.
+export function plateformesPresentes(games, univers = "console") {
+  const vues = new Set();
+  for (const g of games || []) {
+    if (universDuJeu(g) !== univers) continue;
+    if (g?.platform) vues.add(g.platform);
+  }
+  const connues = PLATEFORMES.filter(p => vues.has(p.id)).map(p => p.id);
+  // Une plateforme inconnue de la table — fiche importée, machine pas encore
+  // ajoutée — se filtre quand même : l'ignorer rendrait ces jeux
+  // inatteignables.
+  const inconnues = [...vues].filter(id => !PAR_ID.has(id)).sort((a, b) => a.localeCompare(b, "fr"));
+  return [...connues, ...inconnues];
+}
+
 export const jeuDeLaBoutique = (g, boutique) =>
   boutique === "tous" || String(g?.boutique || "").trim() === boutique;
 
-// S4 : Series X vert vif (marque Xbox), One vert plus foncé, Switch rouge.
-export const PLATFORM_COLORS = { "Xbox Series X": "#107C10", "Xbox One": "#0a5c0a", "Switch 2": "#e4000f", "Switch 1": "#e4000f", [PC]: "#4b5563" };
+// Dérivée de la table : une couleur ne s'écrit qu'à un seul endroit.
+export const PLATFORM_COLORS = Object.fromEntries(PLATEFORMES.map(p => [p.id, p.couleur]));
 
 // Rétrocompatibilité : plateforme récente -> plateforme précédente dont les jeux
 // marqués backCompat sont aussi jouables dessus. Sert au filtre (platMatch) et à la
@@ -233,7 +346,7 @@ export function preterJeu(g, nom, retourPrevu) {
 //
 // Une seule liste, donc, et un test qui vérifie que la remise à zéro les couvre
 // tous : le prochain filtre ajouté ne pourra plus être oublié en silence.
-export const FILTRES = ["plat", "pretFil", "fmtFil", "genreFil", "modeFil", "noteFil", "completFil", "serieFil",
+export const FILTRES = ["plat", "genFil", "pretFil", "fmtFil", "genreFil", "modeFil", "noteFil", "completFil", "serieFil",
   "boutiqueFil"];
 
 export const FILTRES_VIDES = Object.freeze(Object.fromEntries(FILTRES.map(f => [f, "tous"])));
@@ -846,14 +959,26 @@ export const serieDuJeu = (g) => String(g?.infobox?.series || "").trim();
 // dont 19 seulement sont des jeux Series X. Les 19 étaient devenus
 // introuvables.
 //
-// `avecRetro` reste vrai par défaut : c'est le comportement d'avant, et celui
+// `avecRetrocompatibles` reste vrai par défaut : c'est le comportement d'avant, et celui
 // qu'on veut quand on cherche quoi jouer ce soir. Le décocher répond à l'autre
 // question, celle du collectionneur — qu'est-ce que j'ai VRAIMENT sur cette
 // console.
-export function jeuSurPlateforme(g, plat, avecRetro = true) {
+export function jeuSurPlateforme(g, plat, avecRetrocompatibles = true) {
   if (plat === "tous") return true;
   if (g.platform === plat) return true;
-  return avecRetro && BACK_COMPAT[plat] === g.platform && !!g.backCompat;
+  return avecRetrocompatibles && BACK_COMPAT[plat] === g.platform && !!g.backCompat;
+}
+
+// La génération, qui n'est pas la rétrocompatibilité.
+//
+// Ce filtre répond à « montre-moi mes vieilles machines » ou « oublie-les » ;
+// la case à cocher juste au-dessus répond à « compte aussi les jeux d'avant
+// jouables sur celle-ci ». Deux questions différentes, et c'est pour ne plus
+// pouvoir les confondre que l'autre s'appelle maintenant
+// `avecRetrocompatibles` en toutes lettres.
+export function jeuDeLaGeneration(g, gen) {
+  if (!gen || gen === "tous") return true;
+  return generationDe(g?.platform) === gen;
 }
 
 // Combien de jeux la case à cocher ajoute, pour le dire plutôt que le faire
@@ -974,7 +1099,24 @@ export const jeuxNoteDeclareeAbsente = (games) => (games || []).filter(g => g.no
 // ne va pas plutôt que d'écrire n'importe quoi.
 // Les plateformes qu'un jeu peut porter, PC compris : c'est la liste que
 // valide l'édition et l'import.
-export const PLATFORMES_JEU = [...PLATFORMS.slice(1), PC]; // sans le "tous" du filtre
+// L'ordre de la table est celui du menu d'ajout : les actuelles d'abord, puis
+// le rétro par famille, du plus récent au plus ancien.
+export const PLATFORMES_JEU = PLATEFORMES.map(p => p.id);
+
+// Le menu d'ajout, en sections.
+//
+// Vingt-neuf entrées à plat, c'est une liste où l'on cherche. En sections —
+// « Actuelles », puis une par famille — c'est une liste où l'on trouve : le
+// sélecteur natif d'Android affiche les intitulés de groupe, et faire défiler
+// jusqu'à « Sega » est un geste, pas une lecture.
+export function plateformesGroupees() {
+  const groupes = [["Actuelles", PLATEFORMES.filter(p => p.generation === "actuelle")]];
+  for (const [cle, nom] of Object.entries(FAMILLES)) {
+    const dedans = PLATEFORMES.filter(p => p.generation === "retro" && p.famille === cle);
+    if (dedans.length) groupes.push([`${nom} — rétro`, dedans]);
+  }
+  return groupes;
+}
 
 export function listeDepuisTexte(t) {
   return String(t || "").split(",").map(x => x.trim()).filter(Boolean);
