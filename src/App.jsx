@@ -1185,7 +1185,27 @@ export default function App() {
         {liste.map(g => (
           <div key={g.id} className="gl-tile" style={{ background:card, border:`1px solid ${bdr}`, borderRadius: "var(--r-md)", overflow:"hidden", cursor:"pointer" }}
             onClick={() => setFicheOuverte(g.id)}>
-            <Cover src={g.cover} title={g.title} size="100%" />
+            {/* La console, deux fois, et c'est délibéré — pour le moment.
+                Posée sur la jaquette elle se repère d'un coup d'œil sans lire,
+                mais elle mange un coin de l'illustration. Écrite sous le
+                titre elle ne recouvre rien, mais elle coûte une ligne dans
+                chaque vignette. Les deux cohabitent le temps de les voir en
+                vrai sur la bibliothèque réelle ; celle qui gagne restera
+                seule. Garder les deux serait redondant, et une redondance
+                qu'on oublie de trancher devient un défaut. */}
+            <div style={{ position:"relative" }}>
+              <Cover src={g.cover} title={g.title} size="100%" />
+              <span style={{
+                position:"absolute", left:5, bottom:5,
+                background:PLATFORM_COLORS[g.platform] || accentFond, color:"#fff",
+                fontSize:"var(--t-legende)", fontWeight:700, lineHeight:1.4,
+                borderRadius:"var(--r-xs)", padding:"1px 5px",
+                // Une jaquette claire sous une pastille claire ne se lirait
+                // plus : le liseré la détache de n'importe quelle image.
+                boxShadow:"0 0 0 1px #0006",
+                maxWidth:"calc(100% - 10px)", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap",
+              }}>{nomCourt(g.platform)}</span>
+            </div>
             <div style={{ height:3, background:g.lentA ? warnFond : "transparent" }} />
             <div style={{ padding:"6px 7px" }}>
               <div style={{ color:txt, fontSize: "var(--t-legende)", fontWeight:600, lineHeight:1.3, overflow:"hidden", display:"-webkit-box", WebkitLineClamp:2, WebkitBoxOrient:"vertical" }}>{g.title}</div>
