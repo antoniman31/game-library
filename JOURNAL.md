@@ -1962,6 +1962,65 @@ effacer la bibliothèque.
 
 ---
 
+### Phase 50 — Deux défauts, et vingt-cinq consoles de plus
+
+**Le clavier se fermait à chaque lettre, et personne ne savait pourquoi.**
+Antoni l'a signalé comme une gêne ; c'était pire. Mesuré : focus sur le champ,
+une touche, focus sur BODY, valeur « z » au lieu de « ze ». On ne perdait pas
+seulement le clavier, on perdait la frappe — ajouter un jeu à la main était
+devenu impossible.
+
+La cause tient en une ligne de React : `Ligne`, le petit libellé au-dessus de
+chaque champ, était déclaré dans le corps d'AddModal. Recréé à chaque rendu,
+donc un composant neuf pour React, donc le champ détruit et refabriqué à chaque
+frappe. Un champ neuf n'a pas le focus. Le correctif est un déplacement de neuf
+lignes.
+
+Ce qui vaut d'être retenu n'est pas le correctif mais l'angle mort : ce défaut
+a vécu dans une CI verte et sur des captures irréprochables. La promenade
+mesurait des géométries, jamais un comportement. Elle tape maintenant deux
+caractères et regarde si elle peut encore taper.
+
+**La date de sortie s'installait dans la date d'ajout.** Choisir une suggestion
+RAWG écrivait `released` dans `addedDate`. Ce n'était pas cosmétique :
+`addedDate` trie « récemment ajoutés » et départage Xbox One de Series X.
+Ajouter Halo 5 aujourd'hui l'enregistrait comme ajouté en 2015 — tout en bas de
+la liste, et sur la mauvaise console. La date n'est pas jetée pour autant : elle
+part dans l'infobox, où `dateDeSortie()` la cherchait déjà. Le champ existait ;
+la valeur était rangée dans le mauvais.
+
+**Vingt-neuf plateformes, et ce que ça casse.** Quatre consoles tenaient dans un
+tableau de chaînes. Vingt-neuf demandent une table : famille, génération, nom
+court, couleur.
+
+Le piège le plus coûteux n'était pas dans la liste mais dans une ligne vieille
+de plusieurs phases : `migrateGames` convertit encore l'ancien identifiant
+« Xbox » en Xbox One ou Series X selon la date. Nommer « Xbox » la console de
+2001 aurait fait basculer en silence chaque vraie Xbox vers une Xbox One. Elle
+s'appelle « Xbox originale ». Le contournement coûte un mot ; le défaut aurait
+coûté des fiches fausses, découvertes longtemps après.
+
+Second piège, verbal celui-là : « rétro » désignait déjà la rétrocompatibilité —
+les jeux d'une machine jouables sur la suivante. Avec les consoles rétro, le
+même mot désignait deux choses dans le même panneau. Le premier porte désormais
+son nom entier, `avecRetrocompatibles`.
+
+**Et la question que vingt-neuf entrées posent vraiment.** Un filtre à vingt-neuf
+lignes pour qui possède quatre consoles, c'est vingt-cinq lignes qui ne rendront
+jamais un jeu. La réponse était déjà écrite dans le projet, pour les genres et
+les boutiques : on propose ce qu'on possède. Les vingt-neuf ne servent qu'au
+menu d'ajout, en sections. La rangée « Génération » n'apparaît que le jour où il
+y a quelque chose à séparer.
+
+**Un TDZ, encore.** `GROUPES` lisait `generationsPresentes` déclaré vingt lignes
+plus bas : toute l'application sur son garde-fou d'erreur, avec un message
+minifié — « Cannot access 'we' before initialization ». Exactement le défaut que
+ce journal documente depuis la phase 43, refait par la même main. Il n'a pas été
+trouvé en relisant le diff mais en ouvrant l'application ; c'est la troisième
+fois que cette leçon-là se paie.
+
+---
+
 ## 3. Architecture finale
 
 ```
