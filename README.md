@@ -1227,6 +1227,7 @@ import, beaucoup moins.
 ├── scripts/
 │   ├── audit.mjs                  Audit des données d'un export (pas un test)
 │   ├── dates-suspectes.mjs        Retrouve une date d'ajout écrasée (pas un test)
+│   ├── peser-apk.mjs              Ventile le poids d'un APK (lancé par la CI)
 │   ├── audit.test.mjs             …mais l'audit, lui, est testé
 │   └── verif-ui.mjs               Mesure les écrans rendus : cibles, tailles, débordements
 ├── public/                        Icônes PWA (192/512, any + maskable), favicon

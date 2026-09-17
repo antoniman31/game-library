@@ -205,6 +205,17 @@ jobs:
           echo "APK=$apk" >> "$GITHUB_ENV"
           echo "APK : $apk — $(( $(stat -c%s "$apk") / 1024 )) Ko"
 
+      # Où va le poids, et pas seulement combien il y en a.
+      #
+      # Une taille totale ne dit pas quoi corriger. L'APK a quintuplé en
+      # ajoutant le lecteur de codes-barres, et « 22 Mo » ne disait pas que
+      # l'essentiel était un modèle compilé pour quatre architectures dont deux
+      # n'existent que sur émulateur. La ventilation reste dans le journal de
+      # chaque construction : la prochaine optimisation se jugera dessus plutôt
+      # que sur une intuition.
+      - name: Peser l'APK
+        run: node scripts/peser-apk.mjs "$APK"
+
       # Vérifier plutôt que supposer : si l'APK sortait signé par une autre clé
       # que celle qu'on vient de poser, il ne s'installerait pas par-dessus le
       # précédent et on ne l'apprendrait que sur le téléphone. L'empreinte
