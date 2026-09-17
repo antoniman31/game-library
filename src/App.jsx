@@ -1196,18 +1196,28 @@ export default function App() {
                 qu'on oublie de trancher devient un défaut. */}
             <div style={{ position:"relative" }}>
               <Cover src={g.cover} title={g.title} size="100%" />
-              {/* Empilées en bas à gauche plutôt qu'en ligne sous le titre :
-                  « Xbox One · 🔄 Series X · MC 84 » dépasse largement les
-                  120 px d'une vignette, et une information tronquée ne vaut
-                  pas mieux qu'une information absente. Sur la jaquette, elles
-                  ne coûtent aucune hauteur. */}
+              {/* Sur la jaquette, et nulle part ailleurs.
+                  Les deux emplacements ont cohabité le temps d'être vus en
+                  vrai : celui-ci gagne, et la ligne sous le titre a disparu.
+                  « Xbox One · 🔄 Series X · MC 84 » ne tenait de toute façon
+                  pas dans 120 px, et une information tronquée ne vaut pas
+                  mieux qu'une information absente.
+                  Ici, les pastilles ne coûtent aucune hauteur de vignette. */}
               <div style={{
                 position:"absolute", left:5, bottom:5, maxWidth:"calc(100% - 10px)",
                 display:"flex", flexDirection:"column", alignItems:"flex-start", gap:3,
               }}>
-                {/* La rétrocompatibilité au-dessus, parce qu'elle qualifie la
-                    plateforme écrite en dessous : on lit « Xbox One, aussi
-                    jouable sur Series X », dans cet ordre.
+                <span style={{
+                  background:PLATFORM_COLORS[g.platform] || accentFond, color:"#fff",
+                  fontSize:"var(--t-legende)", fontWeight:700, lineHeight:1.4,
+                  borderRadius:"var(--r-xs)", padding:"1px 5px",
+                  // Une jaquette claire sous une pastille claire ne se lirait
+                  // plus : le liseré la détache de n'importe quelle image.
+                  boxShadow:"0 0 0 1px #0006",
+                  maxWidth:"100%", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap",
+                }}>{nomCourt(g.platform)}</span>
+                {/* La rétrocompatibilité en dessous : la machine qu'on possède
+                    d'abord, ce qu'elle permet en plus ensuite.
                     Fond sombre fixe et texte blanc plutôt que le vert du
                     thème : ce dernier vaut #127034 en clair, illisible sur du
                     sombre, et la pastille doit rester opaque pour ne pas
@@ -1222,31 +1232,12 @@ export default function App() {
                     maxWidth:"100%", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap",
                   }}>🔄 {nomCourt(BACK_COMPAT_PARENT[g.platform])}</span>
                 )}
-                <span style={{
-                  background:PLATFORM_COLORS[g.platform] || accentFond, color:"#fff",
-                  fontSize:"var(--t-legende)", fontWeight:700, lineHeight:1.4,
-                  borderRadius:"var(--r-xs)", padding:"1px 5px",
-                  // Une jaquette claire sous une pastille claire ne se lirait
-                  // plus : le liseré la détache de n'importe quelle image.
-                  boxShadow:"0 0 0 1px #0006",
-                  maxWidth:"100%", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap",
-                }}>{nomCourt(g.platform)}</span>
               </div>
             </div>
             <div style={{ height:3, background:g.lentA ? warnFond : "transparent" }} />
             <div style={{ padding:"6px 7px" }}>
               <div style={{ color:txt, fontSize: "var(--t-legende)", fontWeight:600, lineHeight:1.3, overflow:"hidden", display:"-webkit-box", WebkitLineClamp:2, WebkitBoxOrient:"vertical" }}>{g.title}</div>
-              {/* La console, que la grille ne disait pas.
-                  La vue liste porte une pastille colorée, la vue compacte un
-                  point : la grille, elle, ne montrait que la jaquette et le
-                  titre — et une jaquette ne dit pas sur quelle machine le jeu
-                  tourne. Sous le titre plutôt que sur l'illustration : rien
-                  n'est recouvert, et avec vingt-neuf plateformes la couleur
-                  seule ne suffirait plus de toute façon. */}
-              <div style={{ display:"flex", gap:6, alignItems:"baseline", marginTop:2, fontSize:"var(--t-legende)" }}>
-                <span style={{ color:mut, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{nomCourt(g.platform)}</span>
-                {g.metacritic && <span style={{ color:g.metacritic>=80?ok:warn, flexShrink:0 }}>MC {g.metacritic}</span>}
-              </div>
+              {g.metacritic && <div style={{ color:g.metacritic>=80?ok:warn, fontSize: "var(--t-legende)", marginTop:2 }}>MC {g.metacritic}</div>}
             </div>
           </div>
         ))}
