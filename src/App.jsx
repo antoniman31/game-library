@@ -1,7 +1,8 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 
 import Cover from "./components/Cover.jsx";
-import GameCard from "./components/GameCard.jsx";
+import LigneJeu from "./components/LigneJeu.jsx";
+import FicheDetail from "./components/FicheDetail.jsx";
 import AddModal from "./components/AddModal.jsx";
 import ImportModal from "./components/ImportModal.jsx";
 import FiltersSheet from "./components/FiltersSheet.jsx";
@@ -171,17 +172,17 @@ export default function App() {
   const [enriching, setEnriching] = useState(false);
   const [enrichProg, setEnrichProg] = useState(0);
   const enrichCancelRef = useRef(false);
-  const [lastAddedId, setLastAddedId] = useState(null);
-  // Fiche à ouvrir et à faire défiler à l'écran. Un clic sur une vignette de la
-  // vue grille écrivait auparavant le titre du jeu dans la recherche puis
-  // l'effaçait deux secondes plus tard : si on commençait à taper pendant ce
-  // délai, le texte disparaissait sous les doigts.
-  const [focusId, setFocusId] = useState(null);
-  // Ces deux marqueurs n'ouvrent la fiche qu'UNE fois. Ils restaient posés
-  // indéfiniment : quitter l'onglet puis y revenir démonte les fiches et les
-  // remonte, si bien qu'une fiche refermée à la main se rouvrait toute seule,
-  // sans qu'on comprenne pourquoi celle-là et pas une autre.
-  const consommerOuverture = useCallback(() => { setFocusId(null); setLastAddedId(null); }, []);
+  // La fiche ouverte, quelle que soit la vue d'où l'on vient.
+  //
+  // C'était un marqueur « ouvre cette fiche-là, une fois » lu par la liste, et
+  // les deux autres vues n'avaient d'autre moyen de l'honorer que de basculer
+  // la liste entière — détruisant la vue qu'on avait choisie. C'est désormais
+  // un état franc : le détail est un panneau, et le panneau s'ouvre sur un jeu.
+  //
+  // Le « une seule fois » disparaît avec le marqueur, et son défaut avec :
+  // quitter l'onglet puis y revenir rouvrait une fiche qu'on avait refermée,
+  // parce que le remontage relisait un marqueur jamais consommé.
+  const [ficheOuverte, setFicheOuverte] = useState(null);
   // Le thème est persisté : il repartait en sombre à chaque rechargement.
   // index.html le pose sur <html> avant le premier rendu pour éviter le clignotement.
   // Trois modes, pas deux : « automatique » suit le réglage du téléphone, qui
@@ -644,7 +645,7 @@ export default function App() {
     }
     reinitialiserFiltres();
     applySearch("");
-    setFocusId(edition.id);
+    setFicheOuverte(edition.id);
   };
 
   const allerVers = (k) => {
@@ -669,7 +670,7 @@ export default function App() {
   const addGame = (g) => {
     setGames(gs => [g, ...gs]);
     setShowAdd(false);
-    setLastAddedId(g.id);
+    setFicheOuverte(g.id);
     setTab("library");
     setView("liste");
     reinitialiserFiltres();
@@ -1025,6 +1026,10 @@ export default function App() {
   // bibliothèque pour un seul affichage. Toute la bibliothèque, pas seulement
   // l'univers affiché : un jeu qu'on a sur PC compte quand on regarde une fiche
   // console.
+  // Le jeu dont le détail est affiché, relu dans la bibliothèque à chaque rendu
+  // plutôt que recopié : une modification faite DANS le panneau doit s'y voir.
+  const jeuOuvert = useMemo(() => games.find(g => g.id === ficheOuverte) || null,
+    [games, ficheOuverte]);
   const titresPossedes = useMemo(() => new Set(games.map(g => normTitle(g.title)).filter(Boolean)), [games]);
 
   // Les doublons se retirent APRÈS le filtrage et le tri : la carte gardée est
@@ -1109,7 +1114,7 @@ export default function App() {
       <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(120px,1fr))", gap:10 }}>
         {liste.map(g => (
           <div key={g.id} className="gl-tile" style={{ background:card, border:`1px solid ${bdr}`, borderRadius: "var(--r-md)", overflow:"hidden", cursor:"pointer" }}
-            onClick={() => { setView("liste"); setFocusId(g.id); }}>
+            onClick={() => setFicheOuverte(g.id)}>
             <Cover src={g.cover} title={g.title} size="100%" />
             <div style={{ height:3, background:g.lentA ? warnFond : "transparent" }} />
             <div style={{ padding:"6px 7px" }}>
@@ -1123,7 +1128,7 @@ export default function App() {
     if (view === "compact") return (
       <div style={{ background:card, border:`1px solid ${bdr}`, borderRadius:"var(--r-md)", overflow:"hidden" }}>
         {liste.map((g, i) => (
-          <button key={g.id} className="gl-row" onClick={() => { setView("liste"); setFocusId(g.id); }}
+          <button key={g.id} className="gl-row" onClick={() => setFicheOuverte(g.id)}
             style={{
               display:"flex", alignItems:"center", gap:10, width:"100%", boxSizing:"border-box",
               minHeight:"var(--tap)", padding:"8px 12px", textAlign:"left", cursor:"pointer",
@@ -1140,10 +1145,7 @@ export default function App() {
     );
     return (
       <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
-        {liste.map(g => <GameCard key={g.id} g={g} onEdit={edit} onDelete={deleteGame} onEnrich={enrichGame}
-          onSerie={setSerieFil} titresPossedes={titresPossedes}
-          autresEditions={autresEditions(g, games)} onAutreEdition={ouvrirAutreEdition}
-          autoOpen={g.id === lastAddedId || g.id === focusId} onOuverte={consommerOuverture} />)}
+        {liste.map(g => <LigneJeu key={g.id} g={g} onOuvrir={setFicheOuverte} />)}
       </div>
     );
   };
@@ -1535,6 +1537,26 @@ export default function App() {
       {showAdd && <AddModal onAdd={addGame} onClose={() => setShowAdd(false)} />}
       {showImport && <ImportModal games={games} onImportGames={importGames} onClose={() => setShowImport(false)} />}
       {showPlaynite && <PlayniteModal games={games} exclusions={exclusions} onImport={importerPlaynite} onClose={() => setShowPlaynite(false)} />}
+        {/* Le détail d'une fiche, dans un panneau — quelle que soit la vue.
+            La grille et la vue compacte basculaient la liste entière pour aller
+            l'afficher : on perdait la vue qu'on avait choisie et sa position.
+            Un panneau rend le geste identique partout, et ne monte le détail
+            que du jeu qu'on regarde.
+
+            Si le jeu disparaît de la bibliothèque — suppression —, `jeuOuvert`
+            devient nul et le panneau se referme de lui-même : rien à
+            coordonner entre les deux. */}
+        {jeuOuvert && (
+          <Sheet title={jeuOuvert.title} onClose={() => setFicheOuverte(null)}>
+            <FicheDetail
+              g={jeuOuvert} onEdit={edit} onDelete={deleteGame} onEnrich={enrichGame}
+              onSerie={(serie) => { setSerieFil(serie); setFicheOuverte(null); }}
+              titresPossedes={titresPossedes}
+              autresEditions={autresEditions(jeuOuvert, games)}
+              onAutreEdition={ouvrirAutreEdition} />
+          </Sheet>
+        )}
+
       {showFilters && (
         <FiltersSheet aPrete={aPrete}
           univers={univers}

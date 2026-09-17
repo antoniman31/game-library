@@ -42,6 +42,20 @@ export function refermerLeDessus() {
   return true;
 }
 
+// Est-ce celui-là qui est au premier plan ?
+//
+// Échap ne peut pas se contenter de fermer : chaque panneau pose son propre
+// écouteur clavier sur le document, et ils s'exécutent tous. Tant qu'un seul
+// panneau existait à la fois, cela ne se voyait pas ; depuis que le détail
+// d'une fiche est lui-même un panneau, ouvrir « RAWG » par-dessus puis appuyer
+// sur Échap fermait les deux d'un coup.
+//
+// Le bouton Retour n'avait pas ce défaut, parce qu'il passe par cette pile.
+// Échap y passe désormais aussi, avec la même règle : seul le dessus répond.
+export function estAuSommet(fermer) {
+  return pile.length > 0 && pile[pile.length - 1].fermer === fermer;
+}
+
 // Pour les tests, et pour eux seuls.
 export function profondeurRetour() {
   return pile.length;

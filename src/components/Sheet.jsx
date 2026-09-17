@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef } from "react";
 import { createPortal } from "react-dom";
 import { card, bdr, txt, bdrChamp } from "../lib/theme.js";
-import { empilerRetour } from "../lib/retour.js";
+import { empilerRetour, estAuSommet } from "../lib/retour.js";
 
 // Panneau glissant depuis le bas.
 //
@@ -37,6 +37,9 @@ export default function Sheet({ title, onClose, children }) {
   const fermerRef = useRef(onClose);
   fermerRef.current = onClose;
   const panneauRef = useRef(null);
+  // Une identité stable, qui sert de marque dans la pile des panneaux ouverts :
+  // c'est elle qui permet de savoir si ce panneau-ci est celui du dessus.
+  const fermerCeci = useRef(() => fermerRef.current());
   const titreId = useId();
   useEffect(() => {
     // Le focus entre dans le panneau et n'en sort plus tant qu'il est ouvert.
@@ -52,7 +55,10 @@ export default function Sheet({ title, onClose, children }) {
     panneauRef.current?.focus();
 
     const surTouche = (e) => {
-      if (e.key === "Escape") { fermerRef.current(); return; }
+      // Seul le panneau du dessus répond : sans cette garde, ouvrir « RAWG »
+      // par-dessus une fiche puis appuyer sur Échap refermait les deux, chaque
+      // panneau ayant posé son propre écouteur sur le document.
+      if (e.key === "Escape") { if (estAuSommet(fermerCeci.current)) fermerRef.current(); return; }
       if (e.key !== "Tab") return;
       const cibles = focalisables();
       if (!cibles.length) { e.preventDefault(); return; }
@@ -67,7 +73,7 @@ export default function Sheet({ title, onClose, children }) {
     // est ouvert par-dessus. Le panneau se déclare au premier plan plutôt que
     // de poser son propre écouteur — il y en a un seul, dans `natif.js`, et
     // c'est ce qui permet de distinguer « referme » de « quitte ».
-    const retirerRetour = empilerRetour(() => fermerRef.current());
+    const retirerRetour = empilerRetour(fermerCeci.current);
     // Sur <html>, pas sur <body> : `min-height: 100vh` est posé sur les deux,
     // et c'est l'élément racine qui défile ici — `document.scrollingElement` le
     // confirme. Le verrou posé sur <body> ne bloquait donc rien du tout.

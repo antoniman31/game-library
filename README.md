@@ -231,6 +231,14 @@ bibliothèque vide sans qu'on comprenne pourquoi.
   parcourir cent cinquante titres au pouce) et grille ; regroupement facultatif par
   plateforme, série ou genre, avec des en-têtes de section. Le regroupement ne change
   pas l'ordre : les sections apparaissent dans celui que le tri leur donne.
+- **Toucher un jeu ouvre sa fiche dans un panneau, depuis n'importe quelle vue.**
+  La grille et la vue compacte ne savaient pas afficher un détail : elles basculaient
+  la liste entière pour aller le chercher, et on perdait la vue qu'on avait choisie
+  avec sa position. Le détail vit désormais dans un composant à part
+  ([`FicheDetail`](src/components/FicheDetail.jsx)) de la ligne qui le résume
+  ([`LigneJeu`](src/components/LigneJeu.jsx)) : un seul détail est monté à la fois, et
+  le même geste donne le même résultat partout. Le titre n'apparaît plus qu'une fois,
+  dans l'en-tête du panneau, qui reste visible pendant qu'on défile.
 - **Les statistiques disent la même chose que les filtres.** Le bloc « Par plateforme »
   annonçait « 82 jeux jouables sur Xbox Series X » juste sous une barre marquée 19 :
   deux chiffres justes que rien ne reliait, alors que le filtre, lui, en montrait 101.
