@@ -1758,6 +1758,43 @@ le diff.
 
 ---
 
+### Phase 46 — Le panneau enfermé dans sa fiche
+
+« Pendant l'édition d'une fiche je peux plus scroller pour aller chercher le
+champ que je vais modifier. »
+
+`content-visibility: auto`, posé la veille sur les fiches pour ne pas dessiner
+celles qui sont hors écran, implique `contain: paint`. Et un élément qui
+confine sa peinture devient **bloc conteneur pour ses descendants
+`position: fixed`**. Les cinq panneaux d'une fiche — corriger, RAWG, Wikipédia,
+jaquette, vider — sont rendus à l'intérieur de cette fiche. Ils s'y sont donc
+trouvés enfermés.
+
+Mesuré plutôt que déduit : le voile du panneau, qui doit couvrir la fenêtre de
+390×800, mesurait 360×904 positionné à −225 ; le contenu à faire défiler
+comptait 1846 px pour une fenêtre de 153. C'est exactement le symptôme décrit.
+
+**Le portail n'est pas le pansement du jour, c'est la bonne place.** Un dialogue
+modal n'appartient pas au sous-arbre qui l'a ouvert ; rendu à la racine du
+document, aucun ancêtre ne pourra plus jamais le confiner, quel que soit le
+prochain `transform`, `filter` ou `contain` qu'on posera sur une fiche.
+
+**Ce qui m'a le plus gêné est que rien ne l'a vu.** Ni les tests, ni
+`verif:ui`, qui mesurait consciencieusement des tailles de cible dans un
+panneau dont la géométrie était déjà fausse. Ce défaut n'a de symptôme qu'à
+l'usage — on ne peut plus faire défiler —, et je ne m'en serais pas aperçu en
+relisant le diff. D'où une règle qui nomme la cause au lieu d'attendre l'effet :
+tout élément `position: fixed` dont un ancêtre crée un bloc conteneur est
+signalé, avec le nom de l'ancêtre et la propriété fautive. Vérifiée dans les
+deux sens — en retirant le portail, elle dit « DIV — enfermé par « gl-card »
+(content-visibility: auto) » sur trois étapes de la promenade.
+
+Et la promenade elle-même s'appuyait sans le savoir sur cette géométrie fausse :
+un panneau resté ouvert ne couvrait pas la barre d'onglets, puisqu'il était
+confiné. Corrigé, il la couvre — comme il l'a toujours fallu.
+
+---
+
 ## 3. Architecture finale
 
 ```

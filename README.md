@@ -1038,6 +1038,15 @@ fournit directement un texte français rédigé, sans quota ni découpage.
   avec l'utilisateur. Les commandes secondaires restent à 44 : c'est le plancher
   d'Apple et de WCAG 2.5.8, et les passer à 48 reflowerait tous les panneaux
   pour quatre pixels.
+- **Les panneaux sont rendus à la racine du document.** `position: fixed` n'est fixe
+  que tant qu'aucun ancêtre ne crée de bloc conteneur, et `content-visibility: auto`
+  — posé sur les fiches pour ne pas dessiner celles qui sont hors écran — en crée un.
+  Les cinq panneaux d'une fiche s'en sont trouvés enfermés dans leur fiche : mesurés à
+  360×904 positionnés à −225 au lieu de 390×800, avec 1846 px de contenu à faire tenir
+  dans une fenêtre de 153 px. Une fiche qu'on ne pouvait plus modifier. Un portail les
+  sort du sous-arbre, ce qui est de toute façon la place d'un dialogue modal, et
+  `verif:ui` signale désormais tout élément fixe qu'un ancêtre confine — la règle
+  nomme la cause, parce que ce défaut n'a de symptôme qu'à l'usage.
 - **Rien n'échoue plus en silence.** Une exception de rendu vidait `#root` sans
   un mot ; un `ErrorBoundary` affiche désormais l'erreur et propose d'exporter
   la bibliothèque avant toute chose. Les écritures dans `localStorage` étaient

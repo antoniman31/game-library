@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef } from "react";
+import { createPortal } from "react-dom";
 import { card, bdr, txt, bdrChamp } from "../lib/theme.js";
 import { empilerRetour } from "../lib/retour.js";
 
@@ -8,6 +9,19 @@ import { empilerRetour } from "../lib/retour.js";
 // occupait 317 px sur un écran de 915 : un tiers de la surface avant le premier
 // jeu. Un panneau les sort du chemin sans les enterrer, et sa position basse
 // les laisse sous le pouce.
+//
+// Il est rendu à la racine du document plutôt qu'à sa place dans l'arbre.
+// `position: fixed` n'est fixe que tant qu'aucun ancêtre ne crée de bloc
+// conteneur ; or `content-visibility: auto`, posé sur les fiches pour ne pas
+// dessiner celles qui sont hors écran, implique `contain: paint`, ce qui en
+// crée un. Les cinq panneaux d'une fiche s'en sont trouvés enfermés dans leur
+// fiche : mesuré à 360×904 positionné à −225 au lieu de 390×800, avec 1846 px
+// de contenu à faire tenir dans une fenêtre de 153 px — autant dire une fiche
+// qu'on ne peut plus modifier.
+//
+// Le portail est la bonne réponse et pas seulement la réponse du jour : un
+// dialogue modal n'appartient pas au sous-arbre qui l'a ouvert, et à la racine
+// aucun ancêtre ne pourra plus jamais le confiner.
 export default function Sheet({ title, onClose, children }) {
   // Échap ferme, et la page cesse de défiler derrière.
   //
@@ -70,7 +84,7 @@ export default function Sheet({ title, onClose, children }) {
     };
   }, []);
 
-  return (
+  return createPortal((
     <div
       style={{ position: "fixed", inset: 0, background: "#000b", zIndex: 300, display: "flex", alignItems: "flex-end" }}
       onClick={onClose}
@@ -110,5 +124,5 @@ export default function Sheet({ title, onClose, children }) {
         {children}
       </div>
     </div>
-  );
+  ), document.body);
 }

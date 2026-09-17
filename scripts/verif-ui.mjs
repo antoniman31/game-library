@@ -81,6 +81,37 @@ const ECRANS = [[360, "dark"], [360, "light"], [412, "dark"]];
 // Mesuré dans la page : ce que le navigateur affiche vraiment.
 const mesurer = () => ({
   debordement: document.documentElement.scrollWidth > document.documentElement.clientWidth,
+  // Un élément `position: fixed` n'est fixe que tant qu'aucun ancêtre ne crée
+  // de bloc conteneur. `content-visibility: auto`, une transformation, un
+  // filtre ou un `contain` en créent un, et l'élément se retrouve alors mesuré
+  // et positionné par rapport à cet ancêtre : un panneau modal enfermé dans la
+  // fiche qui l'a ouvert, avec 1846 px de contenu à faire tenir dans 153.
+  //
+  // C'est arrivé, et rien ne l'a vu : ni les tests, ni cette vérification, qui
+  // mesurait des tailles de cible dans un panneau dont la géométrie était déjà
+  // fausse. Le défaut n'a de symptôme qu'à l'usage — on ne peut plus faire
+  // défiler —, d'où cette règle, qui nomme la cause plutôt que d'attendre un
+  // effet.
+  confines: [...document.querySelectorAll("*")]
+    .filter(el => getComputedStyle(el).position === "fixed")
+    .map(el => {
+      for (let n = el.parentElement; n && n !== document.documentElement; n = n.parentElement) {
+        const s = getComputedStyle(n);
+        const cause = s.contentVisibility === "auto" ? "content-visibility: auto"
+          : s.contain && /paint|layout|strict|content/.test(s.contain) ? `contain: ${s.contain}`
+          : s.transform !== "none" ? "transform"
+          : s.filter !== "none" ? "filter"
+          : s.perspective !== "none" ? "perspective"
+          : null;
+        if (cause) {
+          const quoi = (el.getAttribute("role") || el.className || el.tagName).toString().slice(0, 20);
+          const ou = (n.className || n.tagName).toString().slice(0, 20);
+          return `${quoi} — enfermé par « ${ou} » (${cause})`;
+        }
+      }
+      return null;
+    })
+    .filter(Boolean),
   // La surface sensible d'une case à cocher enveloppée dans un <label> est
   // celle du label entier : mesurer la case seule signalerait un faux défaut.
   cibles: [...new Set([...document.querySelectorAll('button, a[href], input, select, textarea, [role="button"]')]
@@ -296,7 +327,15 @@ for (const [largeur, theme] of ECRANS) {
       await page.waitForTimeout(250);
       await page.locator(".gl-card").first().click();   // on referme la fiche
     }],
-    ["Prêts", async () => { await page.getByRole("button", { name: /^Prêts/ }).click(); }],
+    ["Prêts", async () => {
+      // Depuis que les panneaux sont rendus à la racine du document, un panneau
+      // resté ouvert couvre vraiment la barre d'onglets — avant, confiné dans
+      // sa fiche, il la laissait cliquable. La promenade s'appuyait sans le
+      // savoir sur cette géométrie fausse.
+      await page.keyboard.press("Escape");
+      await page.waitForTimeout(150);
+      await page.getByRole("button", { name: /^Prêts/ }).click();
+    }],
     // L'univers PC : d'autres filtres, d'autres pastilles, un onglet en moins.
     ["PC", async () => { await page.getByRole("button", { name: /^PC$/ }).click(); }],
     ["PC · filtres", async () => { await page.getByRole("button", { name: /^Filtres/ }).click(); }],
@@ -464,6 +503,7 @@ for (const [largeur, theme] of ECRANS) {
     const r = await page.evaluate(mesurer);
     const ou = `${largeur}px ${theme} · ${nom}`;
     if (r.debordement) signaler(ou, "la page déborde horizontalement", []);
+    if (r.confines.length) signaler(ou, `${r.confines.length} élément(s) fixe(s) enfermé(s) dans un ancêtre`, r.confines);
     if (r.cibles.length) signaler(ou, `${r.cibles.length} cible(s) sous ${PLANCHER_HAUTEUR}×${PLANCHER_LARGEUR} px`, r.cibles);
     if (r.textes.length) signaler(ou, `texte sous ${PLANCHER_TEXTE} px`, r.textes);
     if (r.champs.length) signaler(ou, `champ sous ${PLANCHER_CHAMP} px (zoom iOS)`, r.champs.map(t => `${t}px`));
