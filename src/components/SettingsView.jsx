@@ -331,7 +331,9 @@ export default function SettingsView({
 
           <div style={{ marginBottom: 12 }}>
             <EnTeteChamp nom="Relais CORS"
-              quoi="Worker Cloudflare, requis en ligne pour SteamGridDB, l'import Xbox et la synchronisation. À laisser vide en développement local." />
+              quoi={estNatif()
+                ? "Worker Cloudflare. Dans l'application, il ne sert plus qu'à la synchronisation : SteamGridDB, l'import Xbox et Steam sont appelés directement, la règle CORS étant une règle de navigateur. Inutile si tu ne synchronises pas."
+                : "Worker Cloudflare, requis en ligne pour SteamGridDB, l'import Xbox et la synchronisation. À laisser vide en développement local."} />
             <ChampProtege
               valeur={keys.proxy} enClair placeholder="https://mon-worker.workers.dev"
               ariaLabel="Adresse du relais"

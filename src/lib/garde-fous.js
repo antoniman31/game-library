@@ -15,7 +15,9 @@ export const CONSEQUENCES = {
   rawg: ["la clé RAWG", "plus de jaquettes, de notes ni de genres automatiques"],
   sgdb: ["la clé SteamGridDB", "plus de recherche de jaquettes format boîte"],
   xbl: ["la clé xbl.io", "plus d'import de la bibliothèque Xbox"],
-  proxy: ["l'adresse du relais", "SteamGridDB, l'import Xbox et la synchronisation cessent de fonctionner"],
+  // Dans l'application Android, SteamGridDB, Xbox et Steam sont appelés
+  // directement : seule la synchronisation a encore besoin du relais.
+  proxy: ["l'adresse du relais", "la synchronisation cesse de fonctionner, et sur le site SteamGridDB et l'import Xbox avec elle"],
 };
 
 // Ce qui disparaît entre deux états des réglages. Seul l'effacement compte :

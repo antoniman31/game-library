@@ -1,4 +1,6 @@
+import { Capacitor, CapacitorHttp } from "@capacitor/core";
 import { lire, ecrire } from "./storage.js";
+import { adresseAppel } from "./relais.js";
 // normTitle vit dans model.js — pur, donc testable sans DOM ; réexporté ici
 // pour les appelants historiques.
 import { normTitle } from "./model.js";
@@ -13,6 +15,7 @@ export { normTitle };
 // séparé de "gl_v2" pour qu'elles ne partent JAMAIS dans l'Export JSON).
 // `proxy` = base d'URL du relais CORS (Cloudflare Worker) pour SteamGridDB et xbl.io,
 // qui n'exposent pas de CORS. Vide -> chemins relatifs (proxy du serveur de dev Vite).
+// L'application Android, elle, n'en a pas besoin : voir `appelRelaye` plus bas.
 const KEYS_STORAGE = "gl_keys";
 const EMPTY_KEYS = { rawg: "", sgdb: "", xbl: "", proxy: "" };
 export function loadKeys() {
@@ -25,8 +28,39 @@ export function setApiKeys(k) {
   API_KEYS = { ...EMPTY_KEYS, ...k };
   ecrire(KEYS_STORAGE, JSON.stringify(API_KEYS));
 }
-// Base des appels relayés : le Worker en prod, le proxy Vite (relatif) en dev.
-const proxyBase = () => (API_KEYS.proxy || "").replace(/\/+$/, "");
+// ── Les trois appels qui demandaient un relais ─────────────────────────────
+//
+// SteamGridDB, xbl.io et le magasin Steam ne renvoient pas d'en-tête CORS : un
+// navigateur refuse de lire leur réponse, et le Worker Cloudflare du projet ne
+// fait rien d'autre que redemander la même chose depuis un endroit où la règle
+// ne s'applique pas.
+//
+// Cette règle est une règle de navigateur. L'application installée fait ses
+// requêtes depuis le code natif, où il n'y a ni origine ni CORS : elle va donc
+// à la source. Le relais devient facultatif pour qui ne synchronise pas — une
+// adresse en moins à saisir, un service en moins à maintenir, et un
+// intermédiaire en moins qui voit passer les clés.
+//
+// Ce que ça ne supprime pas : `/sync`, qui n'est pas un relais mais l'espace
+// où la sauvegarde est stockée. Qui sauvegarde en ligne garde son Worker.
+//
+// La réponse est ramenée à la forme d'un `Response` — `.ok`, `.json()` — pour
+// que les appelants ne sachent pas par où c'est passé. `CapacitorHttp` décode
+// déjà le JSON quand le type l'annonce, et rend une chaîne sinon : les deux
+// cas sont traités, parce que ces trois API ne sont pas toujours d'accord avec
+// elles-mêmes sur leur en-tête.
+const estNatif = () => Capacitor.isNativePlatform();
+
+async function appelRelaye(chemin, { headers } = {}) {
+  const url = adresseAppel(chemin, { natif: estNatif(), proxy: API_KEYS.proxy });
+  if (!estNatif()) return fetch(url, headers ? { headers } : undefined);
+
+  const r = await CapacitorHttp.get({ url, headers: headers || {} });
+  const data = typeof r.data === "string"
+    ? (() => { try { return JSON.parse(r.data); } catch { return null; } })()
+    : r.data;
+  return { ok: r.status >= 200 && r.status < 300, status: r.status, json: async () => data };
+}
 
 export async function rawgSearch(q) {
   if (!q || q.trim().length < 2 || !API_KEYS.rawg) return [];
@@ -99,13 +133,13 @@ export async function wikiArticleData(title) {
 // RAWG cherche par titre, et un titre suffit à la faire échouer : « Hogwarts
 // Legacy : L'Héritage de Poudlard » n'est pas « Hogwarts Legacy ». Steam, lui,
 // répond sur un numéro — l'appid que l'import Playnite a posé sur la fiche —,
-// donc sans aucune approximation. Le magasin n'expose pas de CORS : on passe
-// par le relais, qui n'a besoin d'aucune clé pour lui.
+// donc sans aucune approximation. Le magasin n'expose pas de CORS : voir
+// `appelRelaye`. Aucune clé n'est nécessaire pour lui.
 export async function steamMetacritic(appid) {
   const id = String(appid || "").trim();
   if (!/^\d+$/.test(id)) return null;
   try {
-    const r = await fetch(`${proxyBase()}/steam/appdetails?appids=${id}`);
+    const r = await appelRelaye(`/steam/appdetails?appids=${id}`);
     if (!r.ok) return null;
     const d = await r.json();
     const jeu = d?.[id];
@@ -190,14 +224,14 @@ export async function wikidataInfobox(wikiTitle) {
   } catch { return null; }
 }
 
-// SteamGridDB n'expose pas de CORS : on passe par le proxy du serveur de dev
-// (voir vite.config.js) qui relaie /sgdb/* vers l'API avec le token Authorization.
+// SteamGridDB n'expose pas de CORS : voir `appelRelaye`. Le jeton
+// Authorization part avec la requête, au relais ou à la source.
 // Recherche un jeu sur SteamGridDB (autocomplete) -> [{ id, name }].
 const sgdbHeaders = () => ({ Authorization: `Bearer ${API_KEYS.sgdb}` });
 export async function sgdbSearch(term) {
   if (!term || term.trim().length < 2 || !API_KEYS.sgdb) return [];
   try {
-    const r = await fetch(`${proxyBase()}/sgdb/search/autocomplete/${encodeURIComponent(term)}`, { headers: sgdbHeaders() });
+    const r = await appelRelaye(`/sgdb/search/autocomplete/${encodeURIComponent(term)}`, { headers: sgdbHeaders() });
     if (!r.ok) return [];
     const d = await r.json();
     return d?.data || [];
@@ -209,14 +243,14 @@ export async function sgdbSearch(term) {
 export async function sgdbGrids(id) {
   if (!API_KEYS.sgdb) return [];
   try {
-    const r = await fetch(`${proxyBase()}/sgdb/grids/game/${id}?dimensions=600x900`, { headers: sgdbHeaders() });
+    const r = await appelRelaye(`/sgdb/grids/game/${id}?dimensions=600x900`, { headers: sgdbHeaders() });
     if (!r.ok) return [];
     const d = await r.json();
     return (d?.data || []).map(x => ({ thumb: x.thumb || x.url, url: x.url })).filter(g => g.url);
   } catch { return []; }
 }
 
-// xbl.io n'expose pas de CORS : appels via le proxy Vite /xbl/* (token côté serveur).
+// xbl.io n'expose pas de CORS : voir `appelRelaye`.
 // Historique des jeux Xbox du compte lié à la clé -> [{ name, devices, image, lastPlayed }].
 // Filtré aux vrais jeux console Xbox (exclut PC-only / Win32 et apps/launchers).
 const XBL_CONSOLE_DEVICES = ["XboxSeries", "XboxOne", "Xbox360"];
@@ -231,7 +265,7 @@ const XBL_APP_BLOCKLIST = /\b(app on pc|launcher|xbox app|windows edition|for wi
 export async function xblTitleHistory() {
   if (!API_KEYS.xbl) return [];
   try {
-    const r = await fetch(`${proxyBase()}/xbl/player/titleHistory`, { headers: { "X-Authorization": API_KEYS.xbl } });
+    const r = await appelRelaye("/xbl/player/titleHistory", { headers: { "X-Authorization": API_KEYS.xbl } });
     if (!r.ok) return [];
     const d = await r.json();
     const titles = d?.content?.titles || [];
