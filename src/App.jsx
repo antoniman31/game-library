@@ -11,11 +11,12 @@ import Sheet from "./components/Sheet.jsx";
 import StatsView from "./components/StatsView.jsx";
 import SortSheet from "./components/SortSheet.jsx";
 import SettingsView from "./components/SettingsView.jsx";
+import FormulairePret from "./components/FormulairePret.jsx";
 import PlayniteModal from "./components/PlayniteModal.jsx";
 import NotesChoixSheet from "./components/NotesChoixSheet.jsx";
 
 import { hdr, card, bdr, bdrChamp, txt, mut, accent, accentDoux, accentFond, warnDoux, dangerDoux, ok, warn, warnFond, danger } from "./lib/theme.js";
-import { enregistrerFichier, estNatif, accorderBarreEtat, surFichierRecu, demanderRappels, accorderRappelSauvegarde } from "./lib/natif.js";
+import { enregistrerFichier, estNatif, accorderBarreEtat, surFichierRecu, demanderRappels, accorderRappelSauvegarde, accorderPastille } from "./lib/natif.js";
 import { descendreJaquettes, menageJaquettes, aDescendre } from "./lib/jaquettes.js";
 import { GAMES_INIT } from "./lib/seed.js";
 import { jeuDansUnivers, boutiquesPresentes, jeuDeLaBoutique, autresEditions,
@@ -25,7 +26,7 @@ import { jeuDansUnivers, boutiquesPresentes, jeuDeLaBoutique, autresEditions,
   empreinteMelange, compterFichesIncompletes, completerDepuisEditions, titreDeTri, rapprochementDouteux,
   masquerDoublons, appidSteam, noteChangee, jeuDeLaGeneration, plateformesPresentes, nomCourt,
   BACK_COMPAT_PARENT,
-  generationDe, nomFamille,
+  generationDe, nomFamille, rendreJeu, compteurPastille, textePastille,
   PLATFORM_COLORS } from "./lib/model.js";
 import { lire, ecrire, surEchecStockage } from "./lib/storage.js";
 import { chargerSync, enregistrerSync, genererCode, envoyer, recuperer } from "./lib/sync.js";
@@ -224,8 +225,18 @@ export default function App() {
   // le droit de notifier avant d'avoir rien montré se fait refuser, et sur
   // Android un refus est définitif.
   const [rappelActif, setRappelActif] = useState(() => lire("gl_rappel") === "1");
+  // La pastille sur l'icône, éteinte par défaut comme le rappel : elle coûte
+  // une notification permanente dans le volet, ce qui ne s'impose pas.
+  const [pastilleActive, setPastilleActive] = useState(() => lire("gl_pastille") === "1");
+  // Le jeu qu'un balayage veut prêter — le panneau demande le nom.
+  const [pretDemande, setPretDemande] = useState(null);
+  // Un retour rendu par balayage, le temps de pouvoir l'annuler. Un geste
+  // accidentel inscrirait sinon un faux retour dans l'historique des prêts,
+  // qui nourrit les statistiques et ne se corrige qu'à la main.
+  const [rendu, setRendu] = useState(null);
   const [syncEtat, setSyncEtat] = useState(null);   // { type: "ok" | "ko" | "…", texte }
   const undoRef = useRef(null);
+  const renduRef = useRef(null);
 
   // La bibliothèque entière était sérialisée à chaque changement de `games`.
   // Taper une note de 200 caractères déclenchait 200 écritures d'environ
@@ -626,6 +637,25 @@ export default function App() {
 
   const edit = useCallback((id, field, val) => setGames(gs => gs.map(g => g.id === id ? { ...g, [field]: val } : g)), []);
   const enrichGame = useCallback((id, data) => setGames(gs => gs.map(g => g.id === id ? { ...g, ...data } : g)), []);
+
+  // Le balayage d'une ligne. Les deux fonctions sont stables : `LigneJeu` est
+  // mémoïsée, et une fermeture neuve à chaque rendu rerendrait les 288 lignes.
+  const rendreParBalayage = useCallback((id) => {
+    setGames(gs => {
+      const avant = gs.find(g => g.id === id);
+      if (!avant?.lentA) return gs;
+      setRendu({ avant });
+      clearTimeout(renduRef.current);
+      renduRef.current = setTimeout(() => setRendu(null), 5000);
+      return gs.map(g => (g.id === id ? rendreJeu(g) : g));
+    });
+  }, []);
+  const annulerRendu = () => {
+    if (!rendu) return;
+    clearTimeout(renduRef.current);
+    setGames(gs => gs.map(g => (g.id === rendu.avant.id ? rendu.avant : g)));
+    setRendu(null);
+  };
   // Chaque filtre et le moyen de l'effacer, au même endroit. La table est
   // vérifiée contre `FILTRES` par un test : un filtre ajouté sans son
   // effacement fait échouer la CI au lieu de faire disparaître un jeu.
@@ -1067,7 +1097,11 @@ export default function App() {
   // plutôt que recopié : une modification faite DANS le panneau doit s'y voir.
   // Un bandeau occupe-t-il la bande juste au-dessus de la barre basse ?
   // Le bouton d'ajout s'en écarte : voir sa déclaration plus bas.
-  const bandeauAffiche = !!(majDispo || avis || deleted);
+  // Tous les bandeaux, sans exception : celui qu'on oublie ici laisse le
+  // bouton flottant par-dessus son « Annuler ». La règle de `verif:ui` l'a
+  // attrapé sur le bandeau de retour, ajouté sans passer par cette ligne.
+  const bandeauAffiche = !!(majDispo || avis || deleted || rendu);
+  const pretJeu = useMemo(() => games.find(g => g.id === pretDemande) || null, [games, pretDemande]);
   const jeuOuvert = useMemo(() => games.find(g => g.id === ficheOuverte) || null,
     [games, ficheOuverte]);
   const titresPossedes = useMemo(() => new Set(games.map(g => normTitle(g.title)).filter(Boolean)), [games]);
@@ -1109,6 +1143,24 @@ export default function App() {
   useEffect(() => {
     accorderRappelSauvegarde({ actif: rappelActif, configuree: sauvegarde.configuree, majLe: sync.majLe });
   }, [rappelActif, sauvegarde.configuree, sync.majLe]);
+
+  // La pastille suit ce qu'il reste à faire.
+  //
+  // Sur toute la bibliothèque et non sur l'univers courant : elle s'adresse à
+  // quelqu'un qui n'a aucun onglet ouvert. `compteurPastille` le garantit, et
+  // un test le garde.
+  const pastille = useMemo(() => compteurPastille(games), [games]);
+  useEffect(() => {
+    accorderPastille({ actif: pastilleActive, compte: pastille.total, detail: textePastille(pastille) });
+  }, [pastilleActive, pastille]);
+
+  const basculerPastille = useCallback(async (veut) => {
+    if (!veut) { setPastilleActive(false); ecrire("gl_pastille", "0"); return; }
+    const accorde = await demanderRappels();
+    setPastilleActive(accorde);
+    ecrire("gl_pastille", accorde ? "1" : "0");
+    if (!accorde) setAvis("Android refuse les notifications à cette application. Ça se rouvre dans les réglages du téléphone.");
+  }, []);
 
   // Allumer demande la permission ; l'éteindre ne demande rien. Si le système
   // refuse, l'interrupteur revient de lui-même à « éteint » : un interrupteur
@@ -1255,7 +1307,8 @@ export default function App() {
     );
     return (
       <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
-        {liste.map(g => <LigneJeu key={g.id} g={g} onOuvrir={setFicheOuverte} />)}
+        {liste.map(g => <LigneJeu key={g.id} g={g} onOuvrir={setFicheOuverte}
+          onPreter={setPretDemande} onRendre={rendreParBalayage} />)}
       </div>
     );
   };
@@ -1545,6 +1598,7 @@ export default function App() {
             testerCle={testerCle} etatCles={keyTest}
             sync={sync} majSync={majSync} genererCode={genererCode}
             rappelActif={rappelActif} onBasculerRappel={basculerRappel}
+          pastilleActive={pastilleActive} onBasculerPastille={basculerPastille} pastille={pastille}
             syncEtat={syncEtat} setSyncEtat={setSyncEtat}
             onEnvoyer={() => envoyerAuCloud()} onRecuperer={recupererDuCloud}
             onExporter={exportJSON} onImporter={importJSON}
@@ -1709,6 +1763,25 @@ export default function App() {
           <span style={{ color:txt, fontSize: "var(--t-corps)" }}>{avis}</span>
           <button onClick={() => setAvis(null)} aria-label="Masquer"
             style={{ ...btnBandeau(bdrChamp), color:mut, fontWeight:400 }}>OK</button>
+        </div>
+      )}
+
+      {/* Le prêt demandé par un balayage. Le même formulaire que la fiche —
+          deux copies du même geste, c'est deux endroits où corriger une
+          validation et un seul qu'on pense à corriger. */}
+      {pretJeu && (
+        <Sheet title={`Prêter ${pretJeu.title}`} onClose={() => setPretDemande(null)}>
+          <FormulairePret jeu={pretJeu} autoFocus
+            onPreter={j => { enrichGame(pretJeu.id, j); setPretDemande(null); }} />
+        </Sheet>
+      )}
+
+      {/* Rendre inscrit une ligne dans l'historique des prêts, qui nourrit les
+          statistiques. Un balayage accidentel doit pouvoir se défaire. */}
+      {rendu && (
+        <div role="status" style={{ ...bandeauBas, zIndex:400, gap:14, border:`1px solid ${bdr}` }}>
+          <span style={{ color:txt, fontSize: "var(--t-corps)", minWidth:0 }}>🏠 « {rendu.avant.title} » rendu</span>
+          <button onClick={annulerRendu} style={btnBandeau(accent)}>Annuler</button>
         </div>
       )}
 

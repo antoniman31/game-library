@@ -915,6 +915,38 @@ export function compterFichesIncompletes(games) {
   return (games || []).filter(g => CHAMPS_A_COMPLETER.some(([, , manque]) => manque(g))).length;
 }
 
+// ── Le compteur de la pastille ─────────────────────────────────────────────
+//
+// Ce que l'application peut dire sans être ouverte.
+//
+// Deux choses restent à faire dans une ludothèque : des fiches incomplètes, et
+// des jeux qu'on ne t'a pas rendus. Un seul nombre les additionne, comme
+// demandé — et c'est la notification qui porte le détail. Sur une icône on ne
+// peut afficher qu'un chiffre, et « 12 » ne dirait pas de quoi il s'agit ;
+// dans une ligne de texte, si.
+//
+// Sur TOUTE la bibliothèque, jamais sur l'univers courant. Les compteurs de
+// l'écran se limitent à l'onglet ouvert, ce qui est juste pour un filtre et
+// faux pour une pastille : celle-ci parle à quelqu'un qui n'a pas d'onglet
+// ouvert du tout.
+export function compteurPastille(games) {
+  const jeux = games || [];
+  const aCompleter = compterFichesIncompletes(jeux);
+  const enRetard = jeux.filter(pretEnRetard).length;
+  return { total: aCompleter + enRetard, aCompleter, enRetard };
+}
+
+// Le détail, en toutes lettres.
+//
+// Les parts nulles disparaissent : « 12 fiches à compléter · 0 jeu non rendu »
+// fait lire un zéro, ce qui est exactement le contraire d'un compte-rendu.
+export function textePastille({ aCompleter = 0, enRetard = 0 } = {}) {
+  const parts = [];
+  if (aCompleter > 0) parts.push(`${aCompleter} fiche${aCompleter > 1 ? "s" : ""} à compléter`);
+  if (enRetard > 0) parts.push(`${enRetard} jeu${enRetard > 1 ? "x" : ""} non rendu${enRetard > 1 ? "s" : ""}`);
+  return parts.join(" · ");
+}
+
 export function jeuACompleter(g, champ) {
   if (champ === "tous") return true;
   const trouve = CHAMPS_A_COMPLETER.find(([cle]) => cle === champ);

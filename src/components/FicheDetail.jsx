@@ -2,9 +2,10 @@ import { useState, useRef } from "react";
 import Cover from "./Cover.jsx";
 import InfoboxView from "./InfoboxView.jsx";
 import Sheet from "./Sheet.jsx";
-import { bg, card, bdr, bdrChamp, txt, mut, accent, accentDoux, accentFond, okDoux, warnDoux, dangerDoux, ok, warn, danger } from "../lib/theme.js";
+import FormulairePret from "./FormulairePret.jsx";
+import { bg, card, bdr, bdrChamp, txt, mut, accent, accentDoux, accentFond, okDoux, dangerDoux, ok, warn, danger } from "../lib/theme.js";
 import { PC, BACK_COMPAT_PARENT, plateformesGroupees, estUrlImage, normaliserGenres, joursDePret, pretEnRetard, brouillonDepuisJeu, validerEdition,
-  rendreJeu, preterJeu, annulerPret, dureeEntreeHistorique,
+  rendreJeu, annulerPret, dureeEntreeHistorique,
   fusionnerInfobox, infoboxDepuisRawg, libelleSources, CHAMPS_VIDABLES, viderChamps, jeuACompleter,
   libelleEdition } from "../lib/model.js";
 import {
@@ -67,8 +68,6 @@ const ligneChoix = {
 const boutonSource = { minHeight: "var(--tap-min)", padding: "0 12px", background: "transparent", border: `1px solid ${accent}`, color: accent, borderRadius: "var(--r-sm)", fontSize: "var(--t-legende)", cursor: "pointer" };
 
 function FicheDetail({ g, onEdit, onDelete, onEnrich, onSerie, autresEditions: autres = [], onAutreEdition, titresPossedes }) {
-  const [loanName, setLoanName] = useState(g.lentA || "");
-  const [loanRetour, setLoanRetour] = useState("");
   const [videOpen, setVideOpen] = useState(false);
   const [videChoix, setVideChoix] = useState([]);
   const [videRien, setVideRien] = useState(false);
@@ -371,7 +370,7 @@ function FicheDetail({ g, onEdit, onDelete, onEnrich, onSerie, autresEditions: a
                 {g.lentRetourPrevu && <><br />À rendre le {new Date(g.lentRetourPrevu).toLocaleDateString("fr-FR")}</>}
               </div>
               <div style={{ display: "flex", gap: "var(--ecart-tap)", flexWrap: "wrap" }}>
-                <button onClick={() => { onEnrich(g.id, rendreJeu(g)); setLoanName(""); setLoanRetour(""); }}
+                <button onClick={() => onEnrich(g.id, rendreJeu(g))}
                   style={{ minHeight: "var(--tap-min)", padding: "0 14px", background: okDoux, border: `1px solid ${ok}`, color: ok, borderRadius: "var(--r-sm)", fontSize: "var(--t-petit)", fontWeight: 600, cursor: "pointer" }}>✓ Rendu</button>
                 <a href={`sms:?body=${encodeURIComponent(`Salut ! Tu penses à me rendre ${g.title} ? 😊`)}`}
                   style={{ minHeight: "var(--tap-min)", padding: "0 14px", display: "inline-flex", alignItems: "center", background: "transparent", border: `1px solid ${bdr}`, color: txt, borderRadius: "var(--r-sm)", fontSize: "var(--t-petit)", textDecoration: "none" }}>Relancer par SMS</a>
@@ -379,29 +378,14 @@ function FicheDetail({ g, onEdit, onDelete, onEnrich, onSerie, autresEditions: a
                     saisi par erreur doit pouvoir disparaître sans y entrer. */}
                 <button onClick={() => {
                     if (!window.confirm(`Supprimer ce prêt à ${g.lentA} ?\n\nIl ne sera pas enregistré dans l'historique — à utiliser si le prêt n'a jamais eu lieu.`)) return;
-                    onEnrich(g.id, annulerPret(g)); setLoanName(""); setLoanRetour("");
+                    onEnrich(g.id, annulerPret(g));
                   }}
                   style={{ minHeight: "var(--tap-min)", padding: "0 12px", background: "transparent", border: "none", color: danger, fontSize: "var(--t-petit)", cursor: "pointer", opacity: 0.85 }}>Supprimer</button>
               </div>
             </div>
           ) : pretOuvert ? (
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <span style={{ display: "block", color: mut, fontSize: "var(--t-legende)", marginBottom: 4 }}>Prêté à</span>
-              <div style={{ display: "flex", gap: "var(--ecart-tap)" }}>
-                <input value={loanName} onChange={e => setLoanName(e.target.value)} placeholder="Nom…" autoFocus
-                  aria-label="Nom de la personne à qui prêter ce jeu"
-                  style={{ flex: 1, minWidth: 0, minHeight: "var(--tap-min)", background: "transparent", border: `1px solid ${bdrChamp}`, borderRadius: "var(--r-sm)", color: txt, padding: "0 10px", fontFamily: "inherit" }} />
-                <button onClick={() => { const j = preterJeu(g, loanName, loanRetour); if (j === g) return; onEnrich(g.id, j); setPretOuvert(false); setLoanRetour(""); }}
-                  disabled={!loanName.trim()}
-                  style={{ minHeight: "var(--tap-min)", padding: "0 14px", background: loanName.trim() ? warnDoux : "transparent", border: `1px solid ${loanName.trim() ? warn : bdr}`, color: loanName.trim() ? warn : mut, borderRadius: "var(--r-sm)", fontSize: "var(--t-petit)", fontWeight: 600, cursor: loanName.trim() ? "pointer" : "default" }}>Prêter</button>
-              </div>
-              {/* Facultatif : sans date, le seuil de 30 jours reste le repli. */}
-              <label style={{ display: "flex", gap: "var(--ecart-tap)", alignItems: "center", marginTop: "var(--ecart-tap)" }}>
-                <span style={{ color: mut, fontSize: "var(--t-legende)", flexShrink: 0 }}>À rendre le</span>
-                <input type="date" value={loanRetour} onChange={e => setLoanRetour(e.target.value)}
-                  style={{ flex: 1, minWidth: 0, minHeight: "var(--tap-min)", background: "transparent", border: `1px solid ${bdrChamp}`, borderRadius: "var(--r-sm)", color: txt, padding: "0 8px", fontFamily: "inherit" }} />
-              </label>
-            </div>
+            <FormulairePret jeu={g} autoFocus
+              onPreter={j => { onEnrich(g.id, j); setPretOuvert(false); }} />
           ) : (
             <button onClick={() => setPretOuvert(true)}
               style={{ minHeight: "var(--tap-min)", padding: "0 14px", background: "transparent", border: `1px solid ${bdrChamp}`, color: txt, borderRadius: "var(--r-sm)", fontSize: "var(--t-petit)", cursor: "pointer" }}>📤 Prêter ce jeu</button>

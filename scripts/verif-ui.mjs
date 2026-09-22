@@ -298,6 +298,10 @@ for (const [largeur, theme] of ECRANS) {
     // Sans quoi le service worker de la PWA sert sa propre copie de la page.
     serviceWorkers: "block",
     colorScheme: theme,
+    // Sans le tactile, `ontouchstart` n'existe pas et les gestes ne sont
+    // jamais rendus : le balayage d'une ligne resterait hors de portée de
+    // cette promenade, sur la vue la plus utilisée de l'application.
+    hasTouch: true,
   });
   const page = await ctx.newPage();
   const erreurs = [];
@@ -469,6 +473,48 @@ for (const [largeur, theme] of ECRANS) {
       await page.getByRole("button", { name: "☰ Liste" }).click();
       await page.getByRole("button", { name: /^Voir \d+ jeu/ }).click();
     }],
+    // Le balayage d'une ligne, prêté puis rendu.
+    //
+    // Ce n'est pas une mesure de géométrie : un geste n'a pas de taille, il a
+    // un effet. Et c'est un geste caché — rien à l'écran ne l'annonce —, donc
+    // le jour où il cesse de fonctionner, rien ne le dira.
+    ["balayer une ligne pour prêter", async () => {
+      await revenirALaListe();
+      await page.getByRole("button", { name: /^Console$/ }).click();
+      await page.getByLabel("Rechercher").fill("");
+      await page.waitForTimeout(200);
+
+      // Une carte NON prêtée : la promenade en a prêté une plus haut, et sur
+      // celle-là le balayage rend au lieu de prêter. Viser « la première »
+      // supposait un état que la promenade elle-même avait changé.
+      const carte = page.locator(".gl-card").filter({ hasNotText: "📤" }).first();
+      const titre = (await carte.innerText()).split("\n").find(l => l.trim().length > 3) || "";
+      const b = await carte.boundingBox();
+      // Un balayage franc : au-delà du seuil de 64 px, et horizontal pour que
+      // la direction se fige sur l'axe des x.
+      // Surtout pas de clic avant : toucher la carte ouvre la fiche, et le
+      // geste serait alors refusé par le garde-fou « un panneau est ouvert ».
+      await page.evaluate(([x, y]) => {
+        const cible = document.elementFromPoint(x, y)?.closest(".gl-card");
+        if (!cible) return;
+        const touche = (cx) => [new Touch({ identifier: 1, target: cible, clientX: cx, clientY: y })];
+        cible.dispatchEvent(new TouchEvent("touchstart", { bubbles: true, touches: touche(x), changedTouches: touche(x) }));
+        cible.dispatchEvent(new TouchEvent("touchmove", { bubbles: true, cancelable: true, touches: touche(x + 40), changedTouches: touche(x + 40) }));
+        cible.dispatchEvent(new TouchEvent("touchmove", { bubbles: true, cancelable: true, touches: touche(x + 120), changedTouches: touche(x + 120) }));
+        cible.dispatchEvent(new TouchEvent("touchend", { bubbles: true, touches: [], changedTouches: touche(x + 120) }));
+      }, [b.x + 20, b.y + b.height / 2]);
+      await page.waitForTimeout(400);
+
+      const panneau = await page.getByRole("dialog").filter({ hasText: /^Prêter/ }).count();
+      if (!panneau) {
+        signaler("vue liste", "le balayage n'ouvre pas le prêt", [
+          `Balayé « ${titre.trim()} » de 120 px vers la droite, aucun panneau « Prêter » ne s'est ouvert.`,
+          "C'est un geste caché : rien à l'écran ne dira qu'il a cessé de fonctionner.",
+        ]);
+      }
+    }],
+    ["refermer le prêt", async () => { await revenirALaListe(); }],
+
     // L'univers PC : d'autres filtres, d'autres pastilles, un onglet en moins.
     ["PC", async () => { await page.getByRole("button", { name: /^PC$/ }).click(); }],
     ["PC · filtres", async () => { await page.getByRole("button", { name: /^Filtres/ }).click(); }],
