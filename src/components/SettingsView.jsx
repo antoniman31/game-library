@@ -3,6 +3,7 @@ import { card, bdr, bdrChamp, txt, mut, accent, accentDoux, accentFond, ok, warn
 import { MODES, LIBELLES, ICONES } from "../lib/apparence.js";
 import { pertesDeReglages, messageDePerte, messageCodeSync, CONSEQUENCES } from "../lib/garde-fous.js";
 import { etatSauvegarde, texteAgeSauvegarde, JOURS_SAUVEGARDE_VIEILLE } from "../lib/preferences.js";
+import { textePastille } from "../lib/model.js";
 import ChampProtege from "./ChampProtege.jsx";
 import SousOnglets from "./SousOnglets.jsx";
 import PanneauOutils from "./PanneauOutils.jsx";
@@ -110,6 +111,7 @@ export default function SettingsView({
   keys, setKeys, appliquerCles, testerCle, etatCles,
   sync, majSync, genererCode, syncEtat, setSyncEtat, onEnvoyer, onRecuperer,
   rappelActif, onBasculerRappel,
+  pastilleActive, onBasculerPastille, pastille,
   onExporter, onImporter,
   onPlaynite, exclusions, onViderExclusions,
   outils,
@@ -261,6 +263,29 @@ export default function SettingsView({
             peut parler à qui a fermé l'onglet, et un interrupteur sans effet
             est un mensonge. Il vit sous l'âge de la sauvegarde parce que c'est
             là qu'on comprend à quoi il sert. */}
+        {/* La pastille ne dépend pas de la sauvegarde : elle compte ce qu'il
+            reste à faire dans la bibliothèque. Elle vit néanmoins ici, avec
+            l'autre interrupteur de notification — deux réglages qui demandent
+            la même permission gagnent à se voir l'un l'autre. */}
+        {estNatif() && (
+          <label style={{ display: "flex", gap: "var(--ecart-tap)", alignItems: "flex-start", marginTop: 12, minHeight: "var(--tap-min)", cursor: "pointer" }}>
+            <input type="checkbox" checked={!!pastilleActive}
+              onChange={e => onBasculerPastille?.(e.target.checked)}
+              style={{ marginTop: 2, width: 16, height: 16, accentColor: ACCENT, flexShrink: 0 }} />
+            <span>
+              <span style={{ color: txt, fontSize: "var(--t-petit)", fontWeight: 600 }}>Poser sur l'icône ce qu'il reste à faire</span>
+              <span style={{ display: "block", color: mut, fontSize: "var(--t-legende)", lineHeight: 1.5, marginTop: 2 }}>
+                {pastille?.total
+                  ? `Aujourd'hui : ${textePastille(pastille)}.`
+                  : "Rien à signaler aujourd'hui — la pastille n'apparaîtra que le jour où il y aura quelque chose."}
+                {" "}Android fabrique ses pastilles à partir des notifications : celle-ci reste
+                silencieuse et s'efface d'un balayage, mais elle occupe une ligne du volet tant
+                qu'elle est là.
+              </span>
+            </span>
+          </label>
+        )}
+
         {ageSauvegarde.configuree && estNatif() && (
           <label style={{ display: "flex", gap: "var(--ecart-tap)", alignItems: "flex-start", marginTop: 12, minHeight: "var(--tap-min)", cursor: "pointer" }}>
             <input type="checkbox" checked={!!rappelActif}

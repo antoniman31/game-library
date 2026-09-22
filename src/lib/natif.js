@@ -5,7 +5,7 @@
 // `if (Capacitor…)` dans les composants. Le jour où une nouvelle apparaît, on
 // sait où elle va.
 //
-// Elles sont huit :
+// Elles sont neuf :
 //   - enregistrer un fichier, parce qu'une WebView ignore `<a download>` ;
 //   - ouvrir un lien vers l'extérieur, parce qu'une WebView garde tout dedans ;
 //   - le bouton Retour d'Android, qui n'existe pas sur le web, et le fait de
@@ -15,6 +15,7 @@
 //   - recevoir un fichier ouvert depuis une autre application ;
 //   - rappeler une sauvegarde en retard quand personne ne regarde l'écran ;
 //   - lire le code-barres d'une boîte, qu'un navigateur ne sait pas faire ;
+//   - poser sur l'icône ce qu'il reste à faire, sans ouvrir l'application ;
 //   - et `estNatif`, pour ce qui n'a de sens que d'un côté.
 
 import { Capacitor } from "@capacitor/core";
@@ -351,4 +352,68 @@ export async function scanPossible() {
   if (!estNatif()) return false;
   try { return (await BarcodeScanner.isSupported()).supported === true; }
   catch { return false; }
+}
+
+// ── La pastille sur l'icône ────────────────────────────────────────────────
+//
+// Ce qui reste à faire, lisible sans ouvrir l'application.
+//
+// L'API web `setAppBadge()` ne marche pas sur Android — ni dans un navigateur,
+// ni dans une PWA installée, donc pas ici. Et les greffons qui promettent une
+// pastille reposent sur ShortcutBadger, qui a retiré le support du lanceur de
+// Google. Le seul mécanisme universel est celui qu'Android prévoit : les
+// lanceurs fabriquent leurs pastilles à partir des NOTIFICATIONS actives, et
+// `setNumber()` leur donne le chiffre à afficher.
+//
+// D'où une notification, et non une API de pastille. Elle coûte une ligne dans
+// le volet ; en échange elle porte le détail que l'icône ne peut pas dire —
+// « 12 fiches à compléter · 1 jeu non rendu » plutôt qu'un « 13 » muet.
+const ID_PASTILLE = 2;
+const CANAL_PASTILLE = "pastille";
+
+// Importance basse : pas de son, pas de vibration, pas de bandeau qui surgit.
+// Une notification qui sonne pour annoncer douze fiches à finir serait à
+// désactiver le jour même.
+let canalPose = false;
+async function poserCanal() {
+  if (canalPose) return;
+  try {
+    await LocalNotifications.createChannel({
+      id: CANAL_PASTILLE,
+      name: "Ce qu'il reste à faire",
+      description: "Le compteur posé sur l'icône de l'application. Silencieux.",
+      importance: 2,
+      visibility: 1,
+    });
+    canalPose = true;
+  } catch { /* un canal qu'on ne peut pas créer laisse la notification au canal par défaut */ }
+}
+
+export async function accorderPastille({ actif, compte, detail }) {
+  if (!estNatif()) return;
+
+  try {
+    // Zéro n'est pas une pastille à zéro, c'est une absence de pastille.
+    if (!actif || !compte) {
+      await LocalNotifications.cancel({ notifications: [{ id: ID_PASTILLE }] });
+      return;
+    }
+
+    await poserCanal();
+    await LocalNotifications.schedule({
+      notifications: [{
+        id: ID_PASTILLE,
+        channelId: CANAL_PASTILLE,
+        title: `${compte} chose${compte > 1 ? "s" : ""} à régler`,
+        body: detail,
+        // Le nombre que le lanceur pose sur l'icône.
+        badge: compte,
+        // Effaçable, et c'est un choix : une notification permanente garantit
+        // la pastille mais interdit de s'en débarrasser, sur un compteur qui
+        // bouge rarement. Balayée, elle revient au prochain lancement.
+        ongoing: false,
+        autoCancel: true,
+      }],
+    });
+  } catch { /* une pastille qu'on ne peut pas poser ne casse rien */ }
 }

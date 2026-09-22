@@ -1494,3 +1494,48 @@ test("la rétrocompatibilité ne s'étend pas au rétro", async () => {
   // promesse fausse vaut moins qu'un silence.
   assert.deepEqual(BACK_COMPAT, { "Xbox Series X": "Xbox One", "Switch 2": "Switch 1" });
 });
+
+// ── Le compteur de la pastille ─────────────────────────────────────────────
+
+test("la pastille compte toute la bibliothèque, pas l'univers courant", async () => {
+  const { compteurPastille } = await import("./model.js");
+  // Un jeu PC incomplet et un jeu console incomplet : la pastille parle à
+  // quelqu'un qui n'a aucun onglet ouvert, elle doit voir les deux.
+  const jeux = [
+    { title: "Console incomplet", platform: "Xbox One" },
+    { title: "PC incomplet", platform: "PC" },
+  ];
+  assert.equal(compteurPastille(jeux).aCompleter, 2);
+});
+
+test("un prêt en retard entre dans le compte", async () => {
+  const { compteurPastille } = await import("./model.js");
+  const vieux = { title: "Prêté", platform: "Xbox One", cover: "x", genre: ["Action"], style: "s", metacritic: 80,
+    lentA: "Paul", lentDate: "2020-01-01" };
+  const c = compteurPastille([vieux]);
+  assert.equal(c.enRetard, 1);
+  assert.equal(c.total, c.aCompleter + c.enRetard);
+});
+
+test("une bibliothèque sans rien à faire compte zéro", async () => {
+  const { compteurPastille } = await import("./model.js");
+  assert.deepEqual(compteurPastille([]), { total: 0, aCompleter: 0, enRetard: 0 });
+  assert.deepEqual(compteurPastille(null), { total: 0, aCompleter: 0, enRetard: 0 });
+});
+
+test("le détail s'écrit sans les parts nulles", async () => {
+  const { textePastille } = await import("./model.js");
+  // « 12 fiches à compléter · 0 jeu non rendu » fait lire un zéro, ce qui est
+  // l'inverse d'un compte-rendu.
+  assert.equal(textePastille({ aCompleter: 12, enRetard: 1 }), "12 fiches à compléter · 1 jeu non rendu");
+  assert.equal(textePastille({ aCompleter: 12, enRetard: 0 }), "12 fiches à compléter");
+  assert.equal(textePastille({ aCompleter: 0, enRetard: 3 }), "3 jeux non rendus");
+  assert.equal(textePastille({ aCompleter: 0, enRetard: 0 }), "");
+  assert.equal(textePastille(), "");
+});
+
+test("le singulier et le pluriel sont justes des deux côtés", async () => {
+  const { textePastille } = await import("./model.js");
+  assert.equal(textePastille({ aCompleter: 1, enRetard: 1 }), "1 fiche à compléter · 1 jeu non rendu");
+  assert.equal(textePastille({ aCompleter: 2, enRetard: 2 }), "2 fiches à compléter · 2 jeux non rendus");
+});
