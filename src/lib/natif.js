@@ -76,8 +76,7 @@ export async function enregistrerFichier(nom, contenu) {
 // Sur le web, `target="_blank"` suffit. Dans une WebView, un lien externe se
 // charge DANS l'application, qui devient un navigateur sans barre d'adresse
 // dont on ne peut plus sortir — ou, avec `_blank`, ne fait rien du tout. Les
-// liens vers YouTube, Wikipédia, jeuxvideo.com et IGN passent donc par le
-// navigateur du système.
+// liens vers Wikipédia passent donc par le navigateur du système.
 //
 // Les schémas qui ne sont pas du web — `sms:` pour relancer un emprunteur — ne
 // passent PAS par là : c'est le système qui doit les recevoir, et Android le
@@ -91,9 +90,8 @@ export async function ouvrirLien(url) {
 
 // Les liens vers l'extérieur, interceptés une fois pour toutes.
 //
-// Huit liens mènent hors de l'application — YouTube, jeuxvideo.com, IGN,
-// Wikipédia, les liens personnels d'une fiche, le « obtenir ↗ » des Réglages —
-// et rien ne garantit qu'il n'y en aura pas un neuvième. Les retoucher un par
+// Des liens mènent hors de l'application — Wikipédia, le « obtenir ↗ » des
+// Réglages — et rien ne garantit qu'il n'y en aura pas un de plus. Les retoucher un par
 // un aurait laissé le prochain se glisser hors de la règle ; un seul écouteur
 // sur le document les couvre tous, y compris ceux qui n'existent pas encore.
 //

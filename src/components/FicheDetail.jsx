@@ -100,8 +100,6 @@ function FicheDetail({ g, onEdit, onDelete, onEnrich, onSerie, autresEditions: a
   const [editionOuverte, setEditionOuverte] = useState(false);
   const [brouillon, setBrouillon] = useState(null);
   const [erreurs, setErreurs] = useState({});
-  const [section, setSection] = useState(null);
-  const toggle = s => setSection(c => c === s ? null : s);
 
   // Le traitement qui signalait les jeux délaissés — bordure en pointillés et
   // opacité réduite — sert désormais au seul signal qui reste : un prêt qui
@@ -231,18 +229,6 @@ function FicheDetail({ g, onEdit, onDelete, onEnrich, onSerie, autresEditions: a
       {controle}
       {erreurs[cle] && <span style={{ display: "block", color: danger, fontSize: "var(--t-legende)", marginTop: 3 }}>⚠️ {erreurs[cle]}</span>}
     </Balise>
-  );
-
-  const acc = (id, title, content) => (
-    // Un filet suffit à séparer : encadrer chaque section donnait six
-    // rectangles de poids identique, et donc aucune hiérarchie.
-    <div>
-      <button onClick={() => toggle(id)} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%", boxSizing: "border-box", background: "transparent", border: "none", borderTop: `1px solid ${bdr}`, minHeight: "var(--tap-min)", padding: "13px 2px", color: txt, fontSize: "var(--t-petit)", fontWeight: 600, cursor: "pointer", textAlign: "left" }}>
-        <span>{title}</span>
-        <span style={{ color: mut }}>{section === id ? "▾" : "▸"}</span>
-      </button>
-      {section === id && <div style={{ padding: "0 2px 12px" }}>{content}</div>}
-    </div>
   );
 
   return (
@@ -401,29 +387,6 @@ function FicheDetail({ g, onEdit, onDelete, onEnrich, onSerie, autresEditions: a
         </div>
       )}
 
-      {/* Liens & contenu (accordéon).
-
-          Il a porté trois champs de lien personnels — Soluce, Wiki, Ma
-          playlist YouTube. Sur les 288 fiches de la bibliothèque réelle,
-          les 864 champs étaient vides : pas un seul rempli depuis la
-          création du projet. Ils sont partis avec la zone de notes et le
-          tag, pour la même raison. Ne restent que les quatre recherches
-          engendrées depuis le titre, qui n'ont rien à saisir. */}
-      {/* 44 px de haut, pas 26. Ces quatre pastilles ont toujours été sous le
-          plancher que le reste de l'application respecte ; la vérification
-          d'ergonomie ne les voyait pas, parce qu'elle ne mesure que ce qui
-          est à l'écran au moment du contrôle et qu'elles se trouvaient
-          plus bas. Retirer les trois champs de lien les a fait remonter, et
-          elle les a vues. */}
-      {acc("links", "🔗 Liens & contenu", (
-          <div style={{ display: "flex", gap: "var(--ecart-tap)", flexWrap: "wrap" }}>
-            <a href={`https://www.youtube.com/results?search_query=${encodeURIComponent(g.title + " official trailer")}`} target="_blank" rel="noreferrer" style={{ background: dangerDoux, border: `1px solid ${danger}`, color: danger, borderRadius: "var(--r-xs)", padding: "0 10px", fontSize: "var(--t-legende)", textDecoration: "none", display: "inline-flex", alignItems: "center", minHeight: "var(--tap-min)" }}>▶ Trailer</a>
-            <a href={`https://www.youtube.com/results?search_query=${encodeURIComponent(g.title + " gameplay français")}`} target="_blank" rel="noreferrer" style={{ background: dangerDoux, border: `1px solid ${danger}`, color: danger, borderRadius: "var(--r-xs)", padding: "0 10px", fontSize: "var(--t-legende)", textDecoration: "none", display: "inline-flex", alignItems: "center", minHeight: "var(--tap-min)" }}>▶ Gameplay FR</a>
-            <a href={`https://www.jeuxvideo.com/recherche/?q=${encodeURIComponent(g.title)}`} target="_blank" rel="noreferrer" style={{ background: accentDoux, border: `1px solid ${accent}`, color: accent, borderRadius: "var(--r-xs)", padding: "0 10px", fontSize: "var(--t-legende)", textDecoration: "none", display: "inline-flex", alignItems: "center", minHeight: "var(--tap-min)" }}>JVC</a>
-            <a href={`https://www.ign.com/search?q=${encodeURIComponent(g.title)}`} target="_blank" rel="noreferrer" style={{ background: accentDoux, border: `1px solid ${accent}`, color: accent, borderRadius: "var(--r-xs)", padding: "0 10px", fontSize: "var(--t-legende)", textDecoration: "none", display: "inline-flex", alignItems: "center", minHeight: "var(--tap-min)" }}>IGN</a>
-          </div>
-      ))}
-
       {/* Re-association RAWG */}
       {rawgOpen && (
         <Sheet title="Ré-associer depuis RAWG" onClose={() => setRawgOpen(false)}>
@@ -511,8 +474,7 @@ function FicheDetail({ g, onEdit, onDelete, onEnrich, onSerie, autresEditions: a
         <Sheet title="Vider la fiche" onClose={() => setVideOpen(false)}>
           <div style={{ color: mut, fontSize: "var(--t-legende)", lineHeight: 1.5, marginBottom: 10 }}>
             Ce qui est effacé peut être retrouvé en repassant les sources, mais rien ne le
-            remettra à l'identique. Les prêts, les notes personnelles et les liens ne sont pas
-            touchés.
+            remettra à l'identique. Les prêts ne sont pas touchés.
           </div>
           {CHAMPS_VIDABLES.map(([cle, libelle]) => {
             const vide = jeuACompleter(g, cle);

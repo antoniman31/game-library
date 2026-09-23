@@ -805,8 +805,7 @@ export function appidSteam(jeu, games) {
 // le réseau pour ce qui est déjà là, à trois lignes de distance.
 //
 // Ne se partage que ce qui décrit LE JEU. Ce qui décrit l'ÉDITION reste à elle
-// — la date d'ajout, la plateforme, la boutique, le format, les prêts, les
-// liens et les notes personnelles. Et la règle habituelle vaut ici comme
+// — la date d'ajout, la plateforme, la boutique, le format, les prêts. Et la règle habituelle vaut ici comme
 // ailleurs : on ne remplit que le vide, on n'écrase jamais.
 // Les épisodes qu'une fiche cite, et ce que la bibliothèque en a.
 //

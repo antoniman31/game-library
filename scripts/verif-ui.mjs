@@ -564,21 +564,14 @@ for (const [largeur, theme] of ECRANS) {
         ])),
       });
     }],
-    // Les accordéons d'une fiche restent repliés : leurs champs — trois liens,
-    // un mémo, un tag — n'étaient donc jamais rendus, donc jamais mesurés. Ils
-    // faisaient 27 px.
     // On revient d'abord dans la bibliothèque : les étapes précédentes
-    // s'arrêtaient dans les Réglages, où il n'y a pas de fiche à déplier.
-    ["fiche · liens", async () => {
+    // s'arrêtaient dans les Réglages, où il n'y a pas de fiche à ouvrir.
+    ["fiche", async () => {
       await revenirALaListe();
       await page.getByRole("button", { name: /^Console$/ }).click();
-      if (!(await page.getByRole("button", { name: /Liens & contenu/ }).count())) {
+      if (!(await page.getByRole("button", { name: /Modifier la fiche/ }).count())) {
         await page.locator(".gl-card").first().click();
       }
-      await page.getByRole("button", { name: /Liens & contenu/ }).first().click();
-      // L'accordéon « Notes » ouvrait la marche ici. Il portait la zone de
-      // notes perso et le tag, deux champs que personne n'a jamais remplis et
-      // qui sont partis avec les trois liens personnels.
     }],
     // Les trois panneaux de source d'une fiche, chacun avec son champ de
     // recherche — trois champs de 32 px, pour l'endroit où le doigt se pose en
