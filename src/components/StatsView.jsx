@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { card, bdr, txt, mut, accent, accentFond, ok, warn, warnFond, danger } from "../lib/theme.js";
+import { card, bdr, txt, mut, accent, accentFond, ok, okFond, warn, warnFond, danger, dangerFond } from "../lib/theme.js";
 import { PLATFORM_COLORS } from "../lib/model.js";
 import { statsCirculation, statsCollection } from "../lib/stats.js";
 import SousOnglets from "./SousOnglets.jsx";
@@ -34,6 +34,73 @@ const Barre = ({ label, valeur, total, couleur = accentFond, suffixe }) => (
   </div>
 );
 
+// Pour une catégorie sans couleur propre — une boutique, contrairement à une
+// plateforme, n'en a pas dans le modèle — un cycle sur les quatre aplats du
+// thème. Pas de teinte en plus écrite en dur : le thème clair ne pourrait
+// pas la corriger.
+const PALETTE = [accentFond, warnFond, okFond, dangerFond];
+const couleurCycle = (i) => PALETTE[i % PALETTE.length];
+
+// Un anneau plutôt qu'une pile de barres, pour une répartition fermée : le
+// tout se lit d'un coup d'œil, sans additionner des largeurs de bande à la
+// main. Un dégradé conique CSS suffit — pas de bibliothèque, pas de tracé SVG
+// à calculer. Le détail par segment reste en toutes lettres dans la légende :
+// rien ici ne dépend d'un survol, qui ne déclenche rien au doigt.
+const Anneau = ({ segments, total, centre }) => {
+  let angle = 0;
+  const tranches = segments.map(([, valeur, couleur]) => {
+    const debut = angle;
+    angle += total ? (valeur / total) * 360 : 0;
+    return `${couleur} ${debut}deg ${angle}deg`;
+  });
+  return (
+    <div style={{ display: "flex", gap: 16, alignItems: "center", flexWrap: "wrap" }}>
+      <div style={{
+        width: 92, height: 92, borderRadius: "50%", flexShrink: 0,
+        background: segments.length ? `conic-gradient(${tranches.join(", ")})` : bdr,
+      }}>
+        <div style={{
+          width: 60, height: 60, margin: 16, borderRadius: "50%", background: card,
+          display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+        }}>
+          <div style={{ color: txt, fontSize: "var(--t-corps)", fontWeight: 700 }}>{total}</div>
+          {centre && <div style={{ color: mut, fontSize: "var(--t-legende)" }}>{centre}</div>}
+        </div>
+      </div>
+      <div style={{ flex: 1, minWidth: 140 }}>
+        {segments.map(([label, valeur, couleur]) => (
+          <div key={label} style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
+            <span style={{ width: 8, height: 8, borderRadius: "50%", background: couleur, flexShrink: 0 }} />
+            <span style={{ color: txt, fontSize: "var(--t-petit)", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{label}</span>
+            <span style={{ color: mut, fontSize: "var(--t-legende)", flexShrink: 0 }}>{valeur} · {total ? Math.round((valeur / total) * 100) : 0} %</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+// Une jauge circulaire pour un taux d'achèvement : le pourcentage se lit dans
+// l'anneau lui-même, ce qu'une barre linéaire de 4 px de haut ne rendait pas
+// aussi lisible à côté de cinq autres.
+const Jauge = ({ label, valeur, total }) => {
+  const pct = total ? Math.round((valeur / total) * 100) : 0;
+  const couleur = valeur === total ? ok : warn;
+  const R = 26, C = 2 * Math.PI * R;
+  return (
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+      <svg width="64" height="64" viewBox="0 0 64 64">
+        <circle cx="32" cy="32" r={R} fill="none" stroke={bdr} strokeWidth="6" />
+        <circle cx="32" cy="32" r={R} fill="none" stroke={couleur} strokeWidth="6" strokeLinecap="round"
+          strokeDasharray={C} strokeDashoffset={C - (pct / 100) * C} transform="rotate(-90 32 32)" />
+        <text x="32" y="37" textAnchor="middle" fontSize="13" fontWeight="700" fill={txt}>{pct}%</text>
+      </svg>
+      <span style={{ color: txt, fontSize: "var(--t-legende)", textAlign: "center", lineHeight: 1.3 }}>{label}</span>
+      <span style={{ color: mut, fontSize: "var(--t-legende)" }}>{valeur === total ? "complet" : `${total - valeur} sans`}</span>
+    </div>
+  );
+};
+
 const Tuiles = ({ items }) => (
   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "var(--ecart-tap)", marginBottom: "var(--ecart-bloc)" }}>
     {items.map(([l, v, c]) => (
@@ -45,25 +112,42 @@ const Tuiles = ({ items }) => (
   </div>
 );
 
-// Trois séries temporelles partagent désormais cette forme. Une barre à zéro
-// garde deux pixels de gris : sans elle, un mois vide disparaît et l'axe ment.
-const Histogramme = ({ donnees, couleur = accentFond, etiquette = (c) => c, periode }) => {
-  const max = Math.max(...donnees.map(([, n]) => n), 1);
+// Une courbe plutôt que des barres, pour les mêmes séries temporelles :
+// douze bâtons de la même famille montrent des quantités, une ligne montre en
+// plus un mouvement — ça monte, ça baisse. Le survol qui donnait le détail
+// d'un point ne déclenche rien au doigt ; la valeur reste donc en toutes
+// lettres sous chaque point, comme elle l'était déjà au-dessus de chaque
+// barre — un <span onClick> aurait résolu le même problème que le survol en
+// recréant celui, déjà réglé ailleurs dans l'application, du <div onClick> :
+// injoignable au clavier et muet pour un lecteur d'écran.
+const Courbe = ({ donnees, couleur = accentFond, etiquette = (c) => c, periode }) => {
+  const n = donnees.length;
+  const max = Math.max(...donnees.map(([, v]) => v), 1);
+  const x = (i) => (n > 1 ? ((i + 0.5) / n) * 100 : 50);
+  const y = (v) => 96 - (v / max) * 88;
+  const pts = donnees.map(([, v], i) => [x(i), y(v)]);
+
   return (
     <>
-      <div style={{ display: "flex", gap: 3, alignItems: "flex-end", height: 70 }}>
-        {donnees.map(([cle, n]) => (
-          <div key={cle} style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", alignItems: "center", gap: 3 }}>
-            <span style={{ color: mut, fontSize: "var(--t-legende)" }}>{n || ""}</span>
-            <div title={`${cle} : ${n}`} style={{ width: "100%", height: `${Math.max(2, (n / max) * 42)}px`, background: n ? couleur : bdr, borderRadius: "2px 2px 0 0" }} />
-            <span style={{ color: mut, fontSize: "var(--t-legende)" }}>{etiquette(cle)}</span>
-          </div>
+      <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"
+        style={{ width: "100%", height: 56, display: "block" }}>
+        <polyline points={pts.map(([px, py]) => `${px},${py}`).join(" ")} fill="none" stroke={couleur} strokeWidth="2" vectorEffect="non-scaling-stroke" />
+        {pts.map(([px, py], i) => <circle key={i} cx={px} cy={py} r="2" fill={couleur} />)}
+      </svg>
+      <div style={{ display: "flex", marginTop: 4 }}>
+        {donnees.map(([cle, v]) => (
+          <span key={cle} style={{ flex: 1, textAlign: "center", color: mut, fontSize: "var(--t-legende)" }}>{v || ""}</span>
         ))}
       </div>
-      {/* Les douze barres ne portent que le mois : « 09 » deux fois dans
+      <div style={{ display: "flex" }}>
+        {donnees.map(([cle]) => (
+          <span key={cle} style={{ flex: 1, textAlign: "center", color: mut, fontSize: "var(--t-legende)" }}>{etiquette(cle)}</span>
+        ))}
+      </div>
+      {/* Les douze colonnes ne portent que le mois : « 09 » deux fois dans
           l'année ne dit pas laquelle. L'année se lisait au survol — c'est-à-dire
-          nulle part sur un téléphone, où il n'y a pas de survol. Elle se lit
-          donc sous le graphique, une fois, au lieu de douze. */}
+          nulle part sur un téléphone. Elle se lit donc ici, une fois, au lieu
+          de douze. */}
       {periode && (
         <div style={{ color: mut, fontSize: "var(--t-legende)", marginTop: 4, textAlign: "center" }}>{periode}</div>
       )}
@@ -149,6 +233,17 @@ function Circulation({ games, jour }) {
             <Ligne gauche={`Pire : ${s.ponctualite.pire.titre}`}
               droite={`${s.ponctualite.pire.jours} j de trop · ${s.ponctualite.pire.a}`} couleur={danger} />
           )}
+          {/* La moyenne globale ci-dessus mélange qui rend toujours à temps et
+              qui ne rend jamais dans les temps. À partir de deux personnes,
+              cette liste dit qui est concerné. */}
+          {s.ponctualite.parPersonne.length > 1 && (
+            <div style={{ marginTop: 8, paddingTop: 8, borderTop: `1px solid ${bdr}` }}>
+              {s.ponctualite.parPersonne.map(p => (
+                <Ligne key={p.nom} gauche={p.nom} droite={`${p.aLHeure} à temps · ${p.enRetard} en retard`}
+                  couleur={p.enRetard > 0 ? warn : ok} />
+              ))}
+            </div>
+          )}
           <div style={{ color: mut, fontSize: "var(--t-legende)", marginTop: 8, lineHeight: 1.4 }}>
             Ne comptent que les prêts pour lesquels une date de retour avait été fixée.
           </div>
@@ -166,8 +261,16 @@ function Circulation({ games, jour }) {
       )}
 
       <Bloc titre="Rythme des prêts">
-        <Histogramme donnees={s.parMois} couleur={warnFond} etiquette={moisCourt} periode={periodeMois(s.parMois)} />
+        <Courbe donnees={s.parMois} couleur={warnFond} etiquette={moisCourt} periode={periodeMois(s.parMois)} />
         <div style={{ color: mut, fontSize: "var(--t-legende)", marginTop: 8 }}>Prêts commencés, mois par mois, sur un an.</div>
+        {/* Un total cumulé ne dit pas si le rythme accélère ou s'essouffle ;
+            cette comparaison le dit. Rien à afficher avant deux ans d'usage. */}
+        {s.evolutionPrets.delta !== null && (
+          <div style={{ color: mut, fontSize: "var(--t-legende)", marginTop: 4 }}>
+            {s.evolutionPrets.delta > 0 ? "▲" : s.evolutionPrets.delta < 0 ? "▼" : "="} {Math.abs(s.evolutionPrets.delta)} %
+            par rapport aux douze mois précédents ({s.evolutionPrets.actuel} contre {s.evolutionPrets.precedent}).
+          </div>
+        )}
       </Bloc>
 
       <Bloc titre="Qui emprunte">
@@ -223,6 +326,12 @@ function Collection({ games, jour, estPC }) {
   const s = useMemo(() => statsCollection(games, jour), [games, jour]);
   if (s.total === 0) return <div style={{ textAlign: "center", color: mut, padding: "40px 0" }}>Bibliothèque vide</div>;
   const noteParSource = estPC ? s.noteParBoutique : s.noteParPlateforme;
+  const genreDominantParSource = estPC ? s.genreDominantParBoutique : s.genreDominantParPlateforme;
+  // Une boutique n'a pas de couleur dans le modèle, contrairement à une
+  // plateforme : elle cycle sur la palette plutôt que de retomber toujours
+  // sur le même aplat.
+  const sourceEtCouleur = (estPC ? s.parBoutique : s.parPlateforme)
+    .map(([p, n], i) => [p, n, estPC ? couleurCycle(i) : (PLATFORM_COLORS[p] || accentFond)]);
 
   return (
     <div>
@@ -239,10 +348,7 @@ function Collection({ games, jour, estPC }) {
           ]} />
 
       <Bloc titre={estPC ? "Par boutique" : "Par plateforme"}>
-        {(estPC ? s.parBoutique : s.parPlateforme).map(([p, n]) => (
-          <Barre key={p} label={p} valeur={n} total={s.total} couleur={PLATFORM_COLORS[p] || accentFond}
-            suffixe={`${n} · ${Math.round((n / s.total) * 100)} %`} />
-        ))}
+        <Anneau total={s.total} segments={sourceEtCouleur} />
         {/* Seuls les exemplaires physiques se prêtent : ce partage dit quelle
             part de la collection est concernée par le sujet de l'application.
             Côté PC il n'y en a aucun, et la ligne ne s'écrit pas. */}
@@ -266,9 +372,7 @@ function Collection({ games, jour, estPC }) {
 
       {s.note.combien > 0 && (
         <Bloc titre={`Notes — ${s.note.moyenne} de moyenne sur ${s.note.combien} jeu${s.note.combien > 1 ? "x" : ""}`}>
-          {s.note.tranches.map(([label, n, couleur]) => (
-            <Barre key={label} label={label} valeur={n} total={s.note.combien} couleur={couleur} />
-          ))}
+          <Anneau total={s.note.combien} centre="notés" segments={s.note.tranches} />
           {/* La moyenne se laisse tirer par deux bouses ; la médiane dit où se
               tient vraiment le milieu de la collection. */}
           <Ligne gauche="Médiane" droite={s.note.mediane} />
@@ -298,6 +402,18 @@ function Collection({ games, jour, estPC }) {
           ))}
           <div style={{ color: mut, fontSize: "var(--t-legende)", marginTop: 8, lineHeight: 1.4 }}>
             Trois jeux notés au minimum : en dessous, une moyenne ne dit rien.
+          </div>
+        </Bloc>
+      )}
+
+      {/* Ce que valent tes choix, ci-dessus ; ce qu'ils SONT, ici. */}
+      {genreDominantParSource.length > 0 && (
+        <Bloc titre={estPC ? "Genre par boutique" : "Genre par plateforme"}>
+          {genreDominantParSource.map(([source, genre, n, total]) => (
+            <Ligne key={source} gauche={source} droite={`${genre} · ${n} sur ${total}`} />
+          ))}
+          <div style={{ color: mut, fontSize: "var(--t-legende)", marginTop: 8, lineHeight: 1.4 }}>
+            Trois jeux au minimum {estPC ? "par boutique" : "par plateforme"} : en dessous, un genre « dominant » n'est que le hasard d'un seul achat.
           </div>
         </Bloc>
       )}
@@ -358,12 +474,18 @@ function Collection({ games, jour, estPC }) {
 
       {s.parAnnee.length > 1 && (
         <Bloc titre="Ajouts par année">
-          <Histogramme donnees={s.parAnnee} etiquette={(an) => an.slice(2)} periode={s.parAnnee.length > 1 ? `${s.parAnnee[0][0]} → ${s.parAnnee[s.parAnnee.length - 1][0]}` : ""} />
+          <Courbe donnees={s.parAnnee} etiquette={(an) => an.slice(2)} periode={s.parAnnee.length > 1 ? `${s.parAnnee[0][0]} → ${s.parAnnee[s.parAnnee.length - 1][0]}` : ""} />
         </Bloc>
       )}
 
       <Bloc titre="Ajouts sur 12 mois">
-        <Histogramme donnees={s.parMoisAjout} etiquette={moisCourt} periode={periodeMois(s.parMoisAjout)} />
+        <Courbe donnees={s.parMoisAjout} etiquette={moisCourt} periode={periodeMois(s.parMoisAjout)} />
+        {s.evolutionAjouts.delta !== null && (
+          <div style={{ color: mut, fontSize: "var(--t-legende)", marginTop: 8 }}>
+            {s.evolutionAjouts.delta > 0 ? "▲" : s.evolutionAjouts.delta < 0 ? "▼" : "="} {Math.abs(s.evolutionAjouts.delta)} %
+            par rapport aux douze mois précédents ({s.evolutionAjouts.actuel} contre {s.evolutionAjouts.precedent}).
+          </div>
+        )}
       </Bloc>
 
       {s.doublons.length > 0 && (
@@ -391,11 +513,11 @@ function Collection({ games, jour, estPC }) {
       )}
 
       <Bloc titre="Ce qui manque">
-        {s.completude.map(([label, n]) => (
-          <Barre key={label} label={label} valeur={n} total={s.total}
-            couleur={n === s.total ? ok : warn}
-            suffixe={n === s.total ? "complet" : `${s.total - n} sans`} />
-        ))}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(76px, 1fr))", gap: 10 }}>
+          {s.completude.map(([label, n]) => (
+            <Jauge key={label} label={label} valeur={n} total={s.total} />
+          ))}
+        </div>
       </Bloc>
     </div>
   );

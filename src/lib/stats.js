@@ -56,6 +56,48 @@ const joursEntre = (a, b) => Math.round((new Date(b) - new Date(a)) / 86400000);
 // côté du retard. Cet arrondi-ci est symétrique.
 const arrondiSymetrique = (n) => (n < 0 ? -Math.round(-n) : Math.round(n));
 
+// Compare les douze derniers mois aux douze mois d'avant : un total cumulé
+// depuis toujours ne dit pas si le rythme accélère ou s'essouffle, seule une
+// comparaison le dit. `delta` vaut `null` quand il n'y a rien à comparer —
+// une bibliothèque utilisée depuis moins de deux ans, par exemple : dire
+// « +∞ % » ne serait pas un chiffre, ce serait un artefact du démarrage.
+export function comparaisonAnnuelle(dates, aujourdhui = aujourdhuiISO()) {
+  const decale = (n) => new Date(new Date(aujourdhui) - n * 365 * 86400000).toISOString().slice(0, 10);
+  const finPrecedente = decale(1);
+  const debutPrecedente = decale(2);
+  let actuel = 0, precedent = 0;
+  for (const d of dates) {
+    const c = String(d || "").slice(0, 10);
+    if (!c) continue;
+    if (c >= finPrecedente) actuel++;
+    else if (c >= debutPrecedente) precedent++;
+  }
+  return { actuel, precedent, delta: precedent ? Math.round(((actuel - precedent) / precedent) * 100) : null };
+}
+
+// Quel genre domine sur quelle plateforme ou boutique — la moyenne des notes
+// (ci-dessous) dit ce que valent tes choix, ceci dit ce qu'ils SONT. Même
+// seuil qu'ailleurs : en dessous de trois jeux, un genre « dominant » n'est
+// que le hasard d'un seul achat.
+function dominantParCle(jeux, cle, minimum) {
+  const m = new Map();
+  for (const g of jeux) {
+    const k = cle(g);
+    if (!k) continue;
+    const v = m.get(k) || { total: 0, genres: new Map() };
+    v.total++;
+    for (const genre of g.genre || []) v.genres.set(genre, (v.genres.get(genre) || 0) + 1);
+    m.set(k, v);
+  }
+  return [...m.entries()]
+    .filter(([, v]) => v.total >= minimum && v.genres.size > 0)
+    .map(([k, v]) => {
+      const [genre, n] = [...v.genres.entries()].sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : 1))[0];
+      return [k, genre, n, v.total];
+    })
+    .sort((a, b) => b[3] - a[3] || (a[0] < b[0] ? -1 : 1));
+}
+
 // ── Circulation ────────────────────────────────────────────────────────────
 // Un prêt en cours compte comme les prêts rendus : l'historique vient d'être
 // créé, il est vide, et des blocs qui n'afficheraient rien pendant des mois
@@ -113,6 +155,19 @@ export function statsCirculation(games, aujourdhui = aujourdhuiISO()) {
   // pas rendu du tout. Ceux-là sont déjà signalés en haut et dans « Dehors ».
   const avecDate = lignes.filter(l => l.prevu && !l.enCours);
   const ecarts = avecDate.map(l => joursEntre(l.prevu, l.au));
+
+  // La moyenne globale mélange l'emprunteur toujours à l'heure et celui qui
+  // ne rend jamais dans les temps : deux prêts qui pèsent pareil dans le
+  // total, deux comportements qui ne se ressemblent pas.
+  const parPersonneDate = new Map();
+  avecDate.forEach((l, i) => {
+    const nom = l.a.trim();
+    if (!nom) return;
+    const v = parPersonneDate.get(nom) || { nom, aLHeure: 0, enRetard: 0 };
+    if (ecarts[i] > 0) v.enRetard++; else v.aLHeure++;
+    parPersonneDate.set(nom, v);
+  });
+
   const ponctualite = avecDate.length ? {
     combien: avecDate.length,
     aLHeure: ecarts.filter(e => e <= 0).length,
@@ -124,6 +179,10 @@ export function statsCirculation(games, aujourdhui = aujourdhuiISO()) {
       const i = ecarts.indexOf(Math.max(...ecarts));
       return ecarts[i] > 0 ? { titre: avecDate[i].titre, a: avecDate[i].a, jours: ecarts[i] } : null;
     })() : null,
+    // N'a d'intérêt qu'à partir de deux personnes : avec une seule, cette
+    // liste redirait les trois chiffres déjà affichés juste au-dessus.
+    parPersonne: [...parPersonneDate.values()]
+      .sort((a, b) => b.enRetard - a.enRetard || (b.enRetard + b.aLHeure) - (a.enRetard + a.aLHeure)),
   } : null;
 
   // Ce qui est dehors, du plus ancien au plus récent : « 3 prêtés » ne dit pas
@@ -159,6 +218,8 @@ export function statsCirculation(games, aujourdhui = aujourdhuiISO()) {
     // Ce qui part, vu autrement que jeu par jeu.
     parPlateforme: compter(lignes.map(l => l.plateforme).filter(Boolean)),
     parGenre: compter(lignes.flatMap(l => l.genres)).slice(0, 6),
+    // Prête-t-on plus ou moins qu'il y a un an ?
+    evolutionPrets: comparaisonAnnuelle(lignes.map(l => l.du), aujourdhui),
   };
 }
 
@@ -296,6 +357,10 @@ export function statsCollection(games, aujourdhui = aujourdhuiISO()) {
     // utilisent déjà, c'est Steam, Epic, GOG, Amazon.
     parBoutique: compter(jeux.map(g => nomBoutique(g)).filter(Boolean)),
     noteParBoutique: moyenneParCle(jeux, nomBoutique, 3),
+    // Le genre qui domine sur chaque plateforme ou boutique — l'un des deux
+    // ne dit rien selon l'univers, pour la même raison que les notes ci-dessus.
+    genreDominantParPlateforme: dominantParCle(jeux, g => g.platform, 3),
+    genreDominantParBoutique: dominantParCle(jeux, nomBoutique, 3),
     retrocompatibles: retro,
     parGenre: compter(jeux.flatMap(g => g.genre || [])).slice(0, 8),
     note: {
@@ -344,6 +409,8 @@ export function statsCollection(games, aujourdhui = aujourdhuiISO()) {
       };
     })(),
     parMoisAjout: douzeDerniersMois(jeux.map(g => g.addedDate).filter(Boolean), aujourdhui),
+    // Achète-t-on plus ou moins qu'il y a un an ?
+    evolutionAjouts: comparaisonAnnuelle(jeux.map(g => g.addedDate), aujourdhui),
     formatParPlateforme: [...new Set(jeux.map(g => g.platform).filter(Boolean))].map(p => [
       p,
       jeux.filter(g => g.platform === p && g.format === "physique").length,

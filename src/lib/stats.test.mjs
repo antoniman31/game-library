@@ -8,7 +8,7 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { statsCirculation, statsCollection, lignesDePret } from "./stats.js";
+import { statsCirculation, statsCollection, lignesDePret, comparaisonAnnuelle } from "./stats.js";
 
 const jeu = (p = {}) => ({
   id: 1, title: "Jeu", platform: "Xbox Series X", format: "physique",
@@ -238,6 +238,23 @@ test("la ponctualité ne juge que les prêts qui avaient une date", () => {
   assert.equal(statsCirculation([jeu({ pretsPasses: [{ a: "Max", du: "2024-03-01", au: "2024-03-30" }] })]).ponctualite, null);
 });
 
+test("la ponctualité par personne ne mélange pas qui rend à temps et qui ne rend jamais à temps", () => {
+  const s = statsCirculation([
+    jeu({ id: 1, pretsPasses: [
+      { a: "Paul", du: "2024-01-01", au: "2024-01-10", prevu: "2024-01-10" },
+      { a: "Paul", du: "2024-02-01", au: "2024-02-05", prevu: "2024-02-10" },
+    ] }),
+    jeu({ id: 2, pretsPasses: [
+      { a: "Léa", du: "2024-01-01", au: "2024-01-15", prevu: "2024-01-10" },
+    ] }),
+  ]);
+  // La moyenne globale ne dirait qu'un tiers de retard ; la répartition par
+  // personne dit qui en est responsable.
+  const parNom = Object.fromEntries(s.ponctualite.parPersonne.map(p => [p.nom, p]));
+  assert.deepEqual(parNom.Paul, { nom: "Paul", aLHeure: 2, enRetard: 0 });
+  assert.deepEqual(parNom.Léa, { nom: "Léa", aLHeure: 0, enRetard: 1 });
+});
+
 test("la rotation compte les jeux sortis, pas les prêts", () => {
   const s = statsCirculation([
     // Trois prêts, mais un seul jeu : la rotation vaut un tiers, pas 100 %.
@@ -370,4 +387,52 @@ test("une entrée d'historique aux dates impossibles ne pollue pas les moyennes"
   const s = statsCirculation(jeux, "2026-09-08");
   assert.ok(Number.isFinite(s.dureeMoyenne), "la moyenne reste un nombre");
   assert.equal(s.dureeMoyenne, 5, "10 jours et 0 jour font 5 de moyenne");
+});
+
+// ── Évolution et croisements ────────────────────────────────────────────────
+
+test("la comparaison annuelle dit si le rythme accélère ou ralentit", () => {
+  const dates = [
+    ...Array(6).fill("2026-08-01"),  // dans les douze derniers mois
+    ...Array(3).fill("2025-03-01"),  // dans les douze mois d'avant
+    "2020-01-01",                    // hors des deux fenêtres : ignoré
+  ];
+  const c = comparaisonAnnuelle(dates, "2026-09-08");
+  assert.equal(c.actuel, 6);
+  assert.equal(c.precedent, 3);
+  assert.equal(c.delta, 100, "le double, donc +100 %");
+});
+
+test("la comparaison annuelle ne fabrique pas un pourcentage sans rien pour le fonder", () => {
+  // Une bibliothèque utilisée depuis moins de deux ans n'a pas de période
+  // précédente : dire « +∞ % » serait un artefact du démarrage, pas un chiffre.
+  assert.equal(comparaisonAnnuelle(["2026-08-01"], "2026-09-08").delta, null);
+  assert.deepEqual(comparaisonAnnuelle([], "2026-09-08"), { actuel: 0, precedent: 0, delta: null });
+});
+
+test("statsCirculation et statsCollection portent chacune leur évolution annuelle", () => {
+  const sc = statsCirculation([
+    jeu({ id: 1, pretsPasses: [{ a: "Paul", du: "2026-08-01", au: "2026-08-05" }] }),
+  ], "2026-09-08");
+  assert.equal(sc.evolutionPrets.actuel, 1);
+
+  const col = statsCollection([jeu({ id: 1, addedDate: "2026-08-01" })], "2026-09-08");
+  assert.equal(col.evolutionAjouts.actuel, 1);
+});
+
+test("le genre dominant par plateforme ne compte pas une seule barre pleine sur PC", () => {
+  const s = statsCollection([
+    jeu({ id: 1, platform: "Xbox Series X", genre: ["RPG"] }),
+    jeu({ id: 2, platform: "Xbox Series X", genre: ["RPG"] }),
+    jeu({ id: 3, platform: "Xbox Series X", genre: ["Action"] }),
+    jeu({ id: 4, platform: "PC", boutique: "Steam", genre: ["Course"] }),
+    jeu({ id: 5, platform: "PC", boutique: "Steam", genre: ["Course"] }),
+    jeu({ id: 6, platform: "PC", boutique: "Steam", genre: ["Puzzle"] }),
+  ]);
+  assert.deepEqual(s.genreDominantParPlateforme.find(([p]) => p === "Xbox Series X"),
+    ["Xbox Series X", "RPG", 2, 3]);
+  // Ici c'est `parPlateforme` qui ne dirait qu'une barre pleine à 100 % :
+  // la boutique est ce qui distingue, comme pour les notes.
+  assert.deepEqual(s.genreDominantParBoutique.find(([b]) => b === "Steam"),
+    ["Steam", "Course", 2, 3]);
 });
