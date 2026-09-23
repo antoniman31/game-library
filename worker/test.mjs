@@ -12,7 +12,7 @@ import worker from "./index.js";
 
 const kv = new Map();
 const env = { SYNC: { get: async k => (kv.has(k) ? kv.get(k) : null), put: async (k, v) => void kv.set(k, v) } };
-const ORIG = "https://antoniman31.github.io";
+const ORIG = "https://localhost";
 
 const appel = (methode, chemin, { origin = ORIG, code, base, corps, env: e = env } = {}) =>
   worker.fetch(new Request("https://w.dev" + chemin, {
@@ -33,6 +33,9 @@ const test = (nom, ok, detail) => { if (!ok) echecs++; dire(nom, ok, detail); };
 // Origine
 let r = await appel("GET", "/sync", { origin: "https://evil.example", code: CODE });
 test("origine non listée refusée", r.status === 403);
+// Le site GitHub Pages est fermé : son origine n'a plus rien à faire ici.
+r = await appel("GET", "/sync", { origin: "https://antoniman31.github.io", code: CODE });
+test("origine de l'ancien site refusée", r.status === 403);
 // L'application Android sert ses fichiers depuis une origine locale, pas depuis
 // le site : sans elle dans la liste, l'app installée perd la synchronisation,
 // les jaquettes, l'import Xbox et les notes Steam d'un seul coup — et le

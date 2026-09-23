@@ -1,4 +1,8 @@
-name: Vérification et déploiement
+name: Vérification
+
+# Le site GitHub Pages n'existe plus : l'application s'installe par l'APK,
+# qui embarque ses propres fichiers. Ce workflow ne publie donc plus rien ;
+# il garde le rôle qui compte, refuser une pull request qui ne compile pas.
 
 # Les vérifications tournent aussi sur les pull requests. Auparavant, le
 # workflow ne se déclenchait que sur un push vers `main` : lint et build ne
@@ -17,14 +21,12 @@ on:
 # l'application et stockées sur son appareil, jamais dans le dépôt ni dans le build.
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
-# Un déploiement à la fois par référence : les pushes sur `main` restent
-# sérialisés, sans qu'une pull request attende celle d'à côté.
+# Une vérification à la fois par référence : un nouveau push annule celle qui
+# tournait encore sur l'ancien commit.
 concurrency:
-  group: pages-${{ github.ref }}
-  cancel-in-progress: false
+  group: verification-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   verifier:
@@ -61,27 +63,5 @@ jobs:
         # rétrocompatibilité. C'est là qu'une régression mange des données.
         run: npm test
 
-      - name: Construire le site
+      - name: Construire
         run: npm run build
-
-      - uses: actions/configure-pages@v5
-        if: github.event_name != 'pull_request'
-
-      - uses: actions/upload-pages-artifact@v3
-        if: github.event_name != 'pull_request'
-        with:
-          path: dist
-
-  deploy:
-    name: Publier sur GitHub Pages
-    # Une pull request se vérifie mais ne publie rien : elle n'a pas à écraser
-    # le site en ligne avant d'avoir été relue.
-    if: github.event_name != 'pull_request'
-    needs: verifier
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - id: deployment
-        uses: actions/deploy-pages@v4

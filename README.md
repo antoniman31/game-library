@@ -4,7 +4,8 @@ Bibliothèque de jeux vidéo personnelle (Xbox / Switch) : catalogue, prêts,
 statistiques, et enrichissement automatique des fiches depuis plusieurs bases
 de données publiques.
 
-**➡️ [antoniman31.github.io/game-library](https://antoniman31.github.io/game-library/)** — installable en PWA sur mobile.
+Application **Android** : l'APK se construit par GitHub Actions (voir
+[L'application Android](#lapplication-android)).
 
 Application **React + Vite**, sans backend applicatif : l'interface est
 découpée en composants et modules (`src/components/`, `src/lib/`), les données
@@ -32,13 +33,11 @@ fois de relais CORS et de sauvegarde entre appareils.
 
 ## Démarrage rapide
 
-1. Ouvrir **[l'application](https://antoniman31.github.io/game-library/)**.
+1. Installer l'APK produit par le workflow « Application Android ».
 2. Aller dans l'onglet **⚙️ → Services** et saisir ses clés API (voir
    ci-dessous). Sans clé, l'application fonctionne mais sans jaquettes ni
    enrichissement.
-3. Sur mobile : menu du navigateur → **« Installer l'application »** / « Ajouter à
-   l'écran d'accueil ».
-4. Pour transférer une bibliothèque existante, deux chemins depuis **⚙️ →
+3. Pour transférer une bibliothèque existante, deux chemins depuis **⚙️ →
    Sauvegarde** : la **synchronisation par code** (elle emporte aussi
    l'apparence, et les clés si on coche la case), ou la **copie hors ligne**
    Exporter / Importer, qui ne demande aucun relais.
@@ -1100,7 +1099,7 @@ npm run preview
 npm run lint     # oxlint
 npm test         # 122 tests (modèle, import, genres, filtres, tris, prêts,
                  #             stats, thème, préférences, cohérence, audit, Worker)
-npm run test:worker                   # 32 vérifications du relais, sans déploiement
+npm run test:worker                   # 38 vérifications du relais, sans déploiement
 npm run verif:ui                      # mesure les écrans rendus (voir plus bas)
 npm run audit -- ma-sauvegarde.json   # symptômes dans les données (voir plus bas)
 ```
@@ -1218,10 +1217,10 @@ import, beaucoup moins.
 ### Structure
 
 ```
-├── .github/workflows/deploy.yml   Build + publication GitHub Pages
+├── .github/workflows/verification.yml  Lint + tests + build, sans publication
 ├── worker/                        Relais CORS + sauvegarde en ligne (sans secret)
 │   ├── index.js
-│   ├── test.mjs                   32 vérifications, sans dépendance ni déploiement
+│   ├── test.mjs                   38 vérifications, sans dépendance ni déploiement
 │   ├── wrangler.toml
 │   └── README.md
 ├── scripts/
@@ -1266,29 +1265,18 @@ import, beaucoup moins.
 
 ## Déploiement
 
-Deux workflows, deux cibles : le site et le Worker ne vivent pas au même
-endroit et ne se publient pas ensemble.
+Il n'y a plus de site : l'ancienne version GitHub Pages est fermée,
+l'application s'installe par l'APK (voir plus bas).
+[`.github/workflows/verification.yml`](.github/workflows/verification.yml)
+tourne sur chaque pull request et chaque push sur `main` — `npm ci`,
+`npm run lint`, `npm test`, `npm run build` — et ne publie rien.
 
-Le site, à chaque push sur `main`
-([`.github/workflows/deploy.yml`](.github/workflows/deploy.yml)) : `npm ci`,
-`npm run lint`, `npm test`, `npm run build`, puis publication de
-`dist/` sur GitHub Pages via les actions
-officielles `configure-pages` / `upload-pages-artifact` / `deploy-pages`.
+Le déploiement du Worker demande un seul secret, `CLOUDFLARE_API_TOKEN`, qui
+n'autorise que la mise à jour des Workers du compte et ne donne accès à aucune
+donnée de l'application.
 
-**Aucun secret n'est nécessaire pour publier le site** — c'est toute la raison
-d'être du choix « clés saisies par l'utilisateur ». Le déploiement du Worker en
-demande un seul, `CLOUDFLARE_API_TOKEN`, qui n'autorise que la mise à jour des
-Workers du compte et ne donne accès à aucune donnée de l'application.
-
-Le service worker est en `autoUpdate` : une nouvelle version est récupérée
-automatiquement au chargement suivant. L'onglet déjà ouvert, lui, continue
-d'exécuter l'ancien code — d'où la bannière **« ✨ Nouvelle version »** avec son
-bouton Recharger, déclenchée par l'événement `controllerchange`. Sans elle, il
-fallait fermer l'application et la rouvrir sans jamais savoir s'il y avait
-quelque chose à voir.
-
-**Le Worker se déploie tout seul, par un workflow à part.** GitHub Pages ne
-publie que `dist/`, si bien que le Worker se déployait à la main : le code de
+**Le Worker se déploie tout seul, par un workflow à part.** Il se déployait
+autrefois à la main : le code de
 `/sync` a passé plusieurs heures dans le dépôt sans jamais atteindre la
 production, et l'oubli n'était visible nulle part.
 [`.github/workflows/worker.yml`](.github/workflows/worker.yml) s'en charge

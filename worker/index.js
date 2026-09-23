@@ -17,10 +17,9 @@
 //   - CIBLES   : ce qu'il accepte de relayer
 
 const ORIGINES = [
-  "https://antoniman31.github.io",
-  // L'application Android. Capacitor sert les fichiers de l'APK depuis une
-  // origine locale, et non depuis le site : sans cette ligne, l'application
-  // installée perd d'un coup les jaquettes SteamGridDB, l'import Xbox, les
+  // L'application Android, seule cliente depuis la fermeture du site GitHub
+  // Pages. Capacitor sert les fichiers de l'APK depuis une origine locale :
+  // sans cette ligne, l'application installée perd d'un coup les jaquettes SteamGridDB, l'import Xbox, les
   // notes Steam et la synchronisation — les quatre passent par ici.
   //
   // Cette liste n'est pas une barrière de sécurité, et il vaut mieux l'écrire
