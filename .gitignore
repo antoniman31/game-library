@@ -31,3 +31,14 @@ dist-ssr
 # c'est la règle qui avait déjà fait écarter un dossier docs/ commité.
 android
 assets
+
+# Garde-fou : ce que le dépôt ne doit jamais accueillir, même par erreur.
+# La clé de signature de débogage vit dans un secret GitHub, et la future clé de
+# publication du Play Store se fabrique sur la machine de son propriétaire. Ni
+# l'une ni l'autre n'a de raison d'être dans un dossier suivi par git.
+*.keystore
+*.jks
+*.p12
+*.pem
+.env
+.env.*
