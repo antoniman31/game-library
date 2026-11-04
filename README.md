@@ -1,849 +1,133 @@
 # Game Library
 
-Bibliothèque de jeux vidéo personnelle (Xbox / Switch) : catalogue, prêts,
-statistiques, et enrichissement automatique des fiches depuis plusieurs bases
-de données publiques.
+Ludothèque personnelle (console et PC) : catalogue, prêts, statistiques, et
+enrichissement automatique des fiches depuis plusieurs bases publiques.
 
-**➡️ [antoniman31.github.io/game-library](https://antoniman31.github.io/game-library/)** — installable en PWA sur mobile.
+**➡️ [antoniman31.github.io/game-library](https://antoniman31.github.io/game-library/)** — installable en PWA sur mobile. Une application Android (APK) est construite à la demande.
 
-Application **React + Vite**, sans backend applicatif : l'interface est
-découpée en composants et modules (`src/components/`, `src/lib/`), les données
-vivent dans le `localStorage` du navigateur, et un Worker Cloudflare sert à la
-fois de relais CORS et de sauvegarde entre appareils.
+React 19 + Vite, sans backend applicatif : les données vivent dans le
+`localStorage` de l'appareil, et un Worker Cloudflare sert de relais CORS et de
+sauvegarde entre appareils.
 
 ---
 
 ## Sommaire
 
-- [Démarrage rapide](#démarrage-rapide)
-- [Configuration des clés API](#configuration-des-clés-api)
-- [Le relais CORS](#le-relais-cors-worker-cloudflare)
-- [Fonctionnalités](#fonctionnalités)
-- [Ergonomie et système visuel](#ergonomie-et-système-visuel)
-- [Sources de données](#sources-de-données)
-- [Modèle de données](#modèle-de-données)
-- [Architecture et choix techniques](#architecture-et-choix-techniques)
-- [Développement](#développement)
-- [Déploiement](#déploiement)
-- [L'application Android](#lapplication-android)
-- [Limites connues](#limites-connues)
+[Démarrage rapide](#démarrage-rapide) · [Clés API](#clés-api) ·
+[Relais CORS](#relais-cors) · [Fonctionnalités](#fonctionnalités) ·
+[Sources de données](#sources-de-données) · [Données et sauvegarde](#données-et-sauvegarde) ·
+[Développement](#développement) · [Déploiement](#déploiement) ·
+[Android](#android) · [Limites connues](#limites-connues) ·
+[Documentation](#documentation)
 
 ---
 
 ## Démarrage rapide
 
-1. Ouvrir **[l'application](https://antoniman31.github.io/game-library/)**.
-2. Aller dans l'onglet **⚙️ → Services** et saisir ses clés API (voir
-   ci-dessous). Sans clé, l'application fonctionne mais sans jaquettes ni
-   enrichissement.
-3. Sur mobile : menu du navigateur → **« Installer l'application »** / « Ajouter à
-   l'écran d'accueil ».
-4. Pour transférer une bibliothèque existante, deux chemins depuis **⚙️ →
-   Sauvegarde** : la **synchronisation par code** (elle emporte aussi
-   l'apparence, et les clés si on coche la case), ou la **copie hors ligne**
-   Exporter / Importer, qui ne demande aucun relais.
+1. Ouvrir [l'application](https://antoniman31.github.io/game-library/).
+2. ⚙️ → **Services** : saisir ses clés API (voir ci-dessous). Sans clé, tout
+   fonctionne sauf les jaquettes et l'enrichissement.
+3. Sur mobile : menu du navigateur → « Installer l'application ».
+4. Pour transférer une bibliothèque existante : ⚙️ → **Sauvegarde**, soit par
+   **code de synchronisation** (elle emporte aussi l'apparence), soit par
+   **export / import JSON** hors ligne, sans relais.
 
 ---
 
-## Configuration des clés API
+## Clés API
 
-⚠️ **Le dépôt ne contient aucune clé.** Chacun saisit les siennes dans
-**⚙️ → Services** ; elles sont enregistrées **sur l'appareil** (`localStorage`,
-entrée `gl_keys`) et ne transitent que vers les services concernés.
+⚠️ **Le dépôt ne contient aucune clé.** Chacun saisit les siennes dans ⚙️ →
+Services ; elles restent **sur l'appareil** (`gl_keys`) et ne partent que vers
+le service concerné. Un bouton « Tester » valide chaque clé.
 
-| Service | À quoi ça sert | Obtenir une clé | Obligatoire ? |
+| Service | Sert à | Obtenir une clé | Obligatoire |
 |---|---|---|---|
-| **RAWG** | Jaquettes, score Metacritic, genres, dates de sortie | [rawg.io/apidocs](https://rawg.io/apidocs) | Recommandé |
-| **SteamGridDB** | Jaquettes verticales format boîte (2:3) | [steamgriddb.com](https://www.steamgriddb.com/profile/preferences/api) | Optionnel |
-| **xbl.io** | Import de la bibliothèque Xbox Live | [xbl.io/console](https://xbl.io/console) | Optionnel |
+| **RAWG** | Jaquettes, Metacritic, genres, dates de sortie | [rawg.io/apidocs](https://rawg.io/apidocs) | Recommandé |
+| **SteamGridDB** | Jaquettes verticales 2:3 | [steamgriddb.com](https://www.steamgriddb.com/profile/preferences/api) | Optionnel |
+| **xbl.io** | Import de la bibliothèque Xbox | [xbl.io/console](https://xbl.io/console) | Optionnel |
 
-**Wikipédia** et **Wikidata** ne demandent aucune clé.
+Wikipédia, Wikidata et le magasin Steam n'en demandent pas.
 
-Un bouton **« Tester »** valide chaque clé (✅ / ❌) sans quitter l'écran.
-
-### Pourquoi les clés sont-elles saisies à la main ?
-
-Une application 100 % statique n'a pas de serveur où cacher un secret : toute clé
-embarquée dans le code se retrouverait lisible dans le bundle JavaScript **et**
-dans le dépôt public. Les faire saisir par l'utilisateur règle le problème à la
-racine — chacun utilise son propre quota, et le dépôt reste sain.
-
-L'**Export JSON contient les jeux mais jamais les clés**, afin qu'une sauvegarde
-puisse être partagée ou stockée sans fuite. La synchronisation en ligne peut,
-elle, les emporter — mais seulement si l'on coche une case prévue pour, décochée
-par défaut (voir [Sauvegarde](#sauvegarde)).
-
-Une fois renseignée, chaque clé passe en **lecture seule** avec un cadenas :
-« Modifier » et « Supprimer » sont deux boutons distincts, chacun demandant
-confirmation. Ces valeurs n'existent nulle part ailleurs — ni dans l'export, ni
-dans le dépôt — et se perdaient d'un doigt qui glisse.
+Une application statique n'a pas de serveur où cacher un secret : toute clé
+embarquée serait lisible dans le bundle et dans le dépôt public. L'export JSON
+n'emporte jamais les clés ; la synchronisation ne les emporte que si on coche
+une case, décochée par défaut. Détail : [docs/deploiement.md](docs/deploiement.md).
 
 ---
 
-## Le relais CORS (Worker Cloudflare)
+## Relais CORS
 
-**SteamGridDB** et **xbl.io** ne renvoient pas d'en-tête
-`Access-Control-Allow-Origin` : un navigateur refuse donc de lire leurs réponses,
-**même avec une clé valide**. Ce n'est pas un problème d'authentification mais une
-règle du navigateur — la clé, où qu'elle soit stockée, n'y change rien.
-
-Le dossier [`worker/`](worker/) contient un petit relais Cloudflare Worker qui
-rétablit ces en-têtes. Points importants :
-
-- **Il ne contient aucun secret.** La clé est envoyée par le client à chaque
-  requête et simplement retransmise. Rien à faire tourner, rien à renouveler.
-- **Ce n'est pas un proxy ouvert** : double liste blanche, sur les **origines**
-  autorisées à l'appeler *et* sur les **cibles** qu'il accepte de relayer
-  (uniquement `steamgriddb.com` et `xbl.io`).
-
-### Déploiement (gratuit, ~2 minutes)
+SteamGridDB et xbl.io n'envoient pas d'en-tête CORS : un navigateur refuse de
+lire leurs réponses, même avec une clé valide. Le dossier [`worker/`](worker/)
+contient un Worker Cloudflare qui les rétablit. **Il ne détient aucun secret**
+(la clé est retransmise telle qu'envoyée) et **n'est pas un proxy ouvert** :
+double liste blanche sur les origines appelantes et sur les cibles relayées.
 
 ```bash
-cd worker
-npx wrangler login     # compte Cloudflare gratuit, plan Workers gratuit
-npx wrangler deploy
+cd worker && npx wrangler login && npx wrangler deploy
 ```
 
-Wrangler affiche une URL du type `https://game-library-proxy.<compte>.workers.dev`.
-La coller dans **⚙️ → Services → « Relais CORS »** → Enregistrer.
-
-> **Relais déjà déployé pour ce projet :**
-> `https://game-library-proxy.antoniman31.workers.dev`
-> Il suffit de le coller dans ⚙️ sur chaque appareil — inutile de redéployer.
-
-> Sans ce relais, **tout le reste fonctionne** : RAWG, Wikipédia et Wikidata
-> autorisent les appels directs. Seuls SteamGridDB et l'import Xbox sont
-> indisponibles en ligne.
-
-Si l'application est servie depuis une autre adresse, ajouter celle-ci dans
-`ORIGINES` (`worker/index.js`) et redéployer, sinon le navigateur renverra une
-erreur CORS.
+Coller l'URL obtenue dans ⚙️ → Services → « Relais CORS ». Un relais est déjà
+déployé : `https://game-library-proxy.antoniman31.workers.dev`. Sans relais,
+tout fonctionne sauf SteamGridDB, l'import Xbox, les notes Steam et la
+synchronisation. En développement, le proxy de Vite joue le même rôle.
 
 ---
 
 ## Fonctionnalités
 
-### Deux univers — onglets « Console » et « PC »
-
-Une ludothèque de console et une bibliothèque PC ne se décrivent pas avec les
-mêmes mots. Sur console, la plateforme dit sur quelle machine le jeu tourne et le
-format dit s'il est sur une galette ou dans un compte ; sur PC la machine est
-toujours la même, et ce qui distingue un jeu d'un autre est la **boutique**.
-D'où `platform: "PC"` et un champ `boutique` séparé, plutôt qu'une liste
-« PC (Steam) », « PC (Epic) » qui mélangerait deux axes sans rapport et qu'on
-paierait à chaque filtre.
-
-La boutique n'est **pas une liste fermée**, contrairement aux plateformes : elle
-est dérivée de la bibliothèque comme les genres. Une boutique nouvelle se saisit
-une fois dans une fiche et apparaît dans les filtres — Ubisoft Connect, EA App,
-itch.io entrent sans modification du code.
-
-Un jeu PC est toujours démat et jamais rétrocompatible : le modèle le force, et
-l'édition ne propose ni format ni case de rétrocompatibilité. Le panneau des
-filtres change avec l'univers — Boutique remplace Plateforme, Prêt et Format
-disparaissent — les statistiques suivent l'univers et le disent en titre, et
-« Prêts » quitte la barre d'onglets côté PC : un jeu Steam ne se prête pas.
-
-**Et tant qu'aucun prêt n'a jamais eu lieu, l'onglet n'est pas là non plus.**
-Mesuré sur la bibliothèque réelle : zéro prêt en cours, zéro dans l'historique,
-sur 288 jeux dont 89 physiques — un onglet sur quatre pour une fonctionnalité
-qui n'a jamais servi. Prêter reste à portée, le bouton est sur la fiche du jeu,
-et le premier prêt fait apparaître l'onglet, le groupe « Prêt » du panneau de
-filtres et la vue « Circulation » des statistiques. L'onglet qu'on regarde ne
-s'évapore pas sous le doigt : il reste tant qu'il est sélectionné.
-
-**Un jeu possédé des deux côtés se signale tout seul.** Deux fiches dont les
-titres sont identiques une fois normalisés sont le même jeu : la fiche console
-affiche « Aussi sur PC · Steam », la fiche PC « Aussi sur Xbox Series X », et
-toucher la pastille ouvre l'autre. Rien n'est stocké — un lien enregistré
-devrait être tenu à jour et finirait par mentir. La correspondance est exacte et
-jamais approximative : « GTA V » et « Grand Theft Auto V » ne se rejoindront
-pas, ce qui est un manque silencieux mais préférable à une affirmation fausse
-sur ce qu'on possède. Le même mécanisme signale un jeu possédé sur deux
-consoles.
-
-Changer d'univers remet les filtres à zéro : « Xbox One » et « Steam » ne
-veulent rien dire l'un pour l'autre, et un filtre survivant afficherait une
-bibliothèque vide sans qu'on comprenne pourquoi.
-
-### La bibliothèque
-
-- **94 jeux** pré-remplis en données de départ ; ajout, édition et suppression libres.
-- **Recherche** sur titre + genre + tag, **insensible à la casse et aux accents**
-  (« creatif » trouve le genre « Créatif »). La description est volontairement
-  exclue : un mot du résumé faisait remonter des jeux sans rapport.
-- **Filtres combinables** : plateforme, prêt (chez moi / prêtés), format (physique /
-  démat), **mode de jeu** (solo / à plusieurs / coopératif) et **genre**. Chaque groupe
-  tient sur une ligne portant sa valeur courante et s'ouvre au toucher, un seul à la
-  fois : dépliés, les sept groupes faisaient quarante boutons d'un coup, et il fallait
-  défiler pour découvrir qu'un filtre par mode existait.
-- **La rétrocompatibilité se décide.** Une plateforme récente montre ses jeux natifs et
-  ceux de la précédente marqués rétrocompatibles — mais le mélange était imposé : sur
-  une bibliothèque réelle, « Xbox Series X » rendait 101 jeux dont 19 seulement sont
-  des jeux Series X, et ces 19 étaient introuvables. Une case à cocher, présente
-  uniquement pour une console qui en accueille une autre et cochée par défaut, porte
-  le même libellé pour la Xbox et pour la Switch — « Inclure les jeux
-  rétrocompatibles » — et laisse les noms et les nombres à la ligne de détail :
-  « 82 jeux Xbox One démarrent sur Xbox Series X. Décoche pour ne voir que les 19 jeux
-  vraiment Xbox Series X. » Décochée, la ligne repliée annonce « Xbox Series X seul ».
-- **« À compléter » est en tête du panneau, et c'est le seul bloc plein.** Tous les
-  autres filtres répondent à « montre-moi » ; celui-ci répond à « qu'est-ce qu'il me
-  reste à faire », et l'onglet Stats savait le compter depuis longtemps sans qu'on
-  puisse y aller. Il annonce le nombre de fiches concernées — pas la somme des colonnes,
-  un même jeu pouvant manquer de trois choses — et n'affiche que ce qui manque
-  réellement : une option s'efface dès que son champ est rempli partout, et le bloc
-  entier disparaît quand la bibliothèque est complète. Un appel à l'action sans action
-  à faire est pire qu'une absence. Une exception, et c'est la seule : si le filtre est
-  posé au moment où le dernier manque est comblé, le bloc reste — sinon il emporterait
-  avec lui le seul moyen d'enlever un filtre qui vide désormais la liste. Les mêmes prédicats servent au bloc « Ce qui
-  manque » des Stats : le chiffre affiché et la liste obtenue ne peuvent pas diverger.
-- **Filtre par note** : au-dessus d'un seuil (90, 80 ou 70). Un seuil répond à
-  « qu'est-ce que j'ai de vraiment bien » ; une tranche obligerait à toutes les cocher.
-- **Le filtre par série se pose depuis une fiche**, en touchant le nom de la série :
-  cinquante-huit séries ne tiennent pas dans une grille de boutons. Le groupe
-  correspondant n'apparaît dans le panneau que pour montrer celui qui est posé et
-  permettre de l'enlever.
-- **Cinq tris** : titre, date d'ajout, date de sortie, note, et au hasard — pour quand
-  la question est « je joue à quoi ce soir ». Le sens s'inverse d'un bouton, sauf pour
-  le hasard où il n'aurait pas de sens. Ce qui n'a pas de valeur va toujours à la fin,
-  dans un sens comme dans l'autre : inverser un tri ne remonte pas les jeux sans note
-  en tête. Le tirage au hasard tient tant qu'on ne redemande pas à mélanger — une
-  empreinte calculée depuis l'identifiant et une graine, plutôt qu'un `Math.random()`
-  dans le comparateur qui ferait danser la liste à chaque frappe.
-- **Le tri est sur la ligne de recherche**, plus dans le panneau : ce n'est pas un
-  filtre, le badge ne le compte pas. Il y a d'abord occupé une rangée à lui, ce qui
-  faisait deux rangées de commandes avant la première jaquette ; il tient désormais à
-  côté du champ, avec la flèche de sens et « Filtres ». Quatre commandes sur 360 px
-  ne rentrent qu'à deux conditions : le champ abrège son invite — « Rechercher… »,
-  réduite à une loupe quand le bouton de tri porte son libellé, une invite ne
-  s'abrégeant pas comme un texte mais se coupant net — et le bouton de tri ne dit son
-  libellé que lorsqu'il ne trie plus par défaut. Le contour accentué reste au seul
-  bouton « Filtres » : deux boutons au même traitement, côte à côte et sans la même
-  importance, se confondent. Le nombre de jeux affichés remonte dans l'en-tête, à côté
-  du total — « 155 jeux · 23 affichés ».
-- **Le tri alphabétique met l'article initial de côté.** « The Legend of Zelda »,
-  « The Last of Us », « The Sims 4 » se rangeaient tous à la lettre T, en un bloc où
-  l'on ne trouve rien — et l'arrivée des jeux PC en a ajouté des dizaines. « The »,
-  « A », « An », « Le », « La », « Les », « L' » sont sautés au classement ; l'affichage
-  ne change pas, c'est un ordre, pas un titre. Un mot qui commence par un article n'en
-  est pas un : « Alone in the Dark » reste à A, « Anno 1800 » aussi.
-- **Trois vues et un regroupement** : liste, compacte (une ligne par jeu, pour
-  parcourir cent cinquante titres au pouce) et grille ; regroupement facultatif par
-  plateforme, série ou genre, avec des en-têtes de section. Le regroupement ne change
-  pas l'ordre : les sections apparaissent dans celui que le tri leur donne.
-- **La navigation est en bas.** Les quatre onglets vivaient en haut, dans la zone que
-  la cartographie du pouce désigne comme la plus difficile à atteindre à une main,
-  alors que ce sont les commandes les plus touchées. L'engrenage, lui, ne descend pas :
-  il reste dans l'en-tête avec sa pastille de sauvegarde, plutôt que d'être la cinquième
-  entrée étriquée d'une barre à quatre. « + Ajouter » devient un bouton rond flottant —
-  il recouvre un coin de la liste, c'est le prix connu de ce motif, et il **s'efface
-  tant qu'un bandeau occupe la même bande** : sans cela il se posait exactement sur le
-  « Annuler » d'une suppression. La hauteur de la barre est un jeton, `--barre-basse`,
-  parce que trois autres endroits doivent s'en écarter.
-- **Toucher un jeu ouvre sa fiche dans un panneau, depuis n'importe quelle vue.**
-  La grille et la vue compacte ne savaient pas afficher un détail : elles basculaient
-  la liste entière pour aller le chercher, et on perdait la vue qu'on avait choisie
-  avec sa position. Le détail vit désormais dans un composant à part
-  ([`FicheDetail`](src/components/FicheDetail.jsx)) de la ligne qui le résume
-  ([`LigneJeu`](src/components/LigneJeu.jsx)) : un seul détail est monté à la fois, et
-  le même geste donne le même résultat partout. Le titre n'apparaît plus qu'une fois,
-  dans l'en-tête du panneau, qui reste visible pendant qu'on défile.
-- **Les statistiques disent la même chose que les filtres.** Le bloc « Par plateforme »
-  annonçait « 82 jeux jouables sur Xbox Series X » juste sous une barre marquée 19 :
-  deux chiffres justes que rien ne reliait, alors que le filtre, lui, en montrait 101.
-  Chaque console qui en accueille une autre porte désormais une ligne complète —
-  « Sur Xbox Series X : 19 natifs et 82 hérités de Xbox One, soit 101 jouables ».
-- **Le mode de jeu** répond à la question qu'une ludothèque de cent cinquante jeux
-  rend difficile — « on est deux ce soir, on lance quoi ». Il vient de la fiche
-  Wikidata, dont les étiquettes ne forment pas un vocabulaire (« solo », « Solo »,
-  « mode coopératif », « joueur contre joueur », « multijoueur en écran divisé /
-  partagé ») : elles sont classées à la lecture plutôt que réécrites, parce que leur
-  formulation est une information. Le coopératif compte comme un multijoueur, jamais
-  l'inverse. Un jeu sans fiche Wikidata n'a aucun mode connu et ne sort d'aucun de ces
-  choix — le panneau le dit et donne le nombre, plutôt que de laisser croire que ces
-  jeux ne sont pas solo.
-- **Le genre** est dérivé de la bibliothèque, pas d'une liste fermée, et classé par
-  nombre de jeux. Les huit premiers sont affichés, le reste derrière un bouton : sur
-  une bibliothèque réelle il y a vingt-huit genres, et vingt-huit boutons ne sont plus
-  un choix. Le genre sélectionné reste visible même s'il vient de la traîne, sinon le
-  filtre actif disparaît de l'écran.
-  Le vocabulaire est français quelle que soit la source : RAWG répond en anglais,
-  Playnite dans les deux langues, et la table ramène chaque notion à une seule forme
-  — « Card & Board Game » devient « Jeu de société », « Tactical » « Tactique »,
-  « Massively Multiplayer » « Massivement multijoueur », « Family » « Famille ».
-  « Indie » et « Open World » restent tels quels : ce sont les formes en usage.
-  Sept valeurs venues de Steam sont écartées à la lecture — Utilitaires, Retouche
-  photo, Production vidéo, Animation & Modélisation, Conception & Illustration, Accès
-  anticipé, Free-to-play : elles décrivent un logiciel, un modèle économique ou un
-  stade de développement, jamais une manière de jouer. Comme la migration rejoue la
-  normalisation à chaque chargement, les fiches déjà en place se nettoient seules.
-- **Tout est modifiable** : « Modifier la fiche » ouvre un panneau qui laisse
-  corriger ce que les sources automatiques ont écrit — titre, plateforme,
-  format, rétrocompatibilité, genres, note, date, description, jaquette et
-  jusqu'aux champs Wikidata. Avant, une erreur de RAWG ne se corrigeait qu'en
-  supprimant le jeu pour le recréer.
-- **Trois modes de thème** : automatique (il suit le réglage du téléphone, y
-  compris quand celui-ci bascule le soir), clair, et noir profond.
-- **Suppression avec toast « Annuler »** (5 s), précédée d'une confirmation qui
-  rappelle ce qui part avec le jeu.
-
-### Prêts
-
-C'est le seul état que l'application suive : ce jeu est-il chez moi, ou dehors ?
-
-- Prêter un jeu — nom de l'emprunteur, et **date de retour facultative**.
-- **Alerte** : la date convenue quand elle existe, sinon un seuil de 30 jours.
-  La bande sous la jaquette passe à l'orange, la fiche et l'onglet Prêts
-  signalent le retard.
-- « ✓ Rendu » **archive** le prêt au lieu de l'effacer : la fiche rappelle à qui
-  le jeu a déjà été confié et combien de temps, l'onglet Prêts liste les retours
-  sous « Déjà rendus », et l'onglet Stats indique à qui l'on prête le plus.
-  L'historique est borné à 20 entrées par jeu et voyage dans l'export.
-- Bouton **SMS** de relance (lien `sms:` pré-rempli).
-- Un prêt **saisi par erreur** s'efface sans être archivé, et chaque ligne de
-  « Déjà rendus » porte sa croix : sans ça, un essai fausse les moyennes pour
-  toujours. Les deux gestes demandent confirmation.
-
-### Fiche de jeu
-
-Chaque fiche se déplie et regroupe, en accordéons repliés par défaut :
-**🔗 Liens & contenu** (recherches YouTube / JVC / IGN + 3 liens personnels) et
-**📝 Notes**. Restent toujours visibles : l'identité du jeu, l'infobox Wikidata
-et le bloc **Prêt**, seule action qu'on répète. La description est repliée avec
-un « Lire la suite ».
-
-Le format et la rétrocompatibilité ont quitté la fiche pour le panneau
-d'édition : on les règle une fois dans la vie d'un jeu, alors qu'ils occupaient
-une place permanente. Les pastilles « démat » et « 🔄 Compatible Series X » en
-haut de la carte continuent de les annoncer.
-
-Les quatre sources — correction manuelle, RAWG, titre français, jaquette —
-s'ouvrent en **panneau au premier plan** plutôt qu'à l'intérieur de la fiche,
-qui devenait interminable.
-
-### Enrichissement automatique
-
-Trois sources, activables jeu par jeu depuis la fiche :
-
-| Bouton | Ce qu'il remplace |
-|---|---|
-| **🔄 Rechercher sur RAWG** | Jaquette, Metacritic, genres, et les infos de l'édition possédée — utile quand un jeu a été mal associé |
-| **📚 Wikipédia** | Titre commercial officiel FR, puis au choix : résumé, jaquette d'infobox, infos Wikidata |
-| **🧹 Vider** | Efface au choix infos, description, jaquette, note ou genres — pour repartir d'une base propre |
-| **📦 Jaquette SteamGridDB** | Jaquette verticale 600×900 choisie parmi une grille de vignettes |
-
-**La fiche détaillée** — développeur, éditeur, dates de sortie, mode de jeu
-(solo / multi / coop), série et jeux précédent/suivant — vient de deux sources
-qui ne décrivent pas tout à fait la même chose. Wikipédia range un remaster sous
-la page du jeu d'origine : « Sonic The Hedgehog » y sort en 1991, quelle que soit
-la compilation qu'on possède. RAWG a une entrée par édition, avec la date de
-celle qu'on a achetée, mais ses studios viennent d'une base communautaire, moins
-sûre sur les vieux titres. Aucune ne gagne partout.
-
-**Une source ne remplit donc que les champs vides et n'écrase jamais.** Passer
-RAWG puis Wikipédia sur un remaster garde la date de la version possédée et
-complète le reste. Une source qui n'a rien rempli ne signe pas la provenance :
-annoncer « et RAWG » sur une fiche où RAWG n'a rien apporté serait une fausse
-piste au moment de démêler une date. Car la fiche dit d'où elle vient —
-« Source : RAWG et Wikidata » sous les lignes. Et puisque plus rien ne s'écrase,
-« 🧹 Vider » existe pour repartir propre : sans lui une fiche fausse le
-resterait, chaque nouvelle source la respectant poliment.
-
-Côté Wikidata, le moteur de jeu est volontairement exclu, et les libellés sont
-résolus en `fr` → `en` → `mul` (Wikidata range les noms propres sous `mul`, ce
-qui explique que certains éditeurs ne remontent pas si on ne demande que
-`fr`/`en`). Côté RAWG, les modes viennent des étiquettes `Singleplayer`,
-`Multiplayer` et `Co-op`, traduites dans le vocabulaire que le filtre par mode
-sait déjà lire.
-
-**Bouton « 📤 Partager la liste »** (en-tête, sur Console et PC) : produit la liste **affichée** —
-donc celle de l'univers où l'on se trouve, console ou PC, et le titre le dit — en
-texte lisible — groupée par plateforme, un jeu par ligne avec son format et, le cas
-échéant, le prêt en cours avec sa date de retour convenue ; la note Metacritic n'y figure
-pas, elle sert à trier sa propre bibliothèque, pas à conseiller quelqu'un d'autre — et l'envoie au menu de partage du téléphone, ou la copie
-dans le presse-papier ailleurs. Pas de sélecteur de plateforme : le panneau des filtres a
-déjà composé la liste, et deux endroits pour dire la même chose finiraient par se
-contredire.
-
-**Bouton « Compléter les notes manquantes »** (⚙️ → Outils) : trois sources dans
-l'ordre de leur sûreté, la première qui répond gagne.
-
-1. **RAWG**, qui cherche par titre — et qu'un titre suffit à faire échouer :
-   « Hogwarts Legacy : L'Héritage de Poudlard » ne lui disait rien.
-2. **Le magasin Steam**, qui répond sur l'**appid** posé par l'import Playnite, donc sans
-   aucune approximation. L'appid est cherché sur la fiche **puis sur ses autres éditions** :
-   une fiche Xbox n'en a pas, mais le même jeu acheté sur Steam, si.
-3. **Wikidata** (P444 « note de critique » qualifiée par P447 = Metacritic), sans clé et
-   sans relais, valable aussi côté console — mais peuplée par des contributeurs, donc
-   inégale.
-
-**Un seul bouton, deux populations.** Il traite d'abord les fiches jamais
-interrogées — donc les jeux ajoutés depuis la dernière fois. Quand il n'en reste
-aucune, il propose de revenir sur celles déclarées sans note connue : un jeu de 1994
-le restera, un jeu sorti l'an dernier peut avoir été noté depuis. Le bilan annonce
-combien de fiches attendent cette seconde passe.
-
-**Tout revérifier, notes existantes comprises.** La même question propose de
-reprendre l'ensemble de la bibliothèque. Ce passage **n'écrit rien** : compléter une
-note vide ne peut rien abîmer, mais rafraîchir une note existante peut écraser une
-note juste — y compris une note corrigée à la main — quand une source se trompe de
-jeu. Il rassemble donc ce qui changerait et l'affiche : une ligne par fiche, « 95 →
-82 », la source qui répond, les plus grands écarts en tête parce que ce sont les
-seuls qui demandent un jugement, et un rapprochement douteux signalé en orange. Les
-fiches dont la note est confirmée n'apparaissent pas. On coche, on applique.
-
-**Aucune clé n'est exigée** : Wikidata n'en demande pas, Steam répond par le relais
-sur un appid, et RAWG est simplement sauté si sa clé manque.
-
-**Et quand les trois disent non, la fiche cesse de réclamer.** Elle porte « Pas de note
-connue » et sort de « À compléter → Note ». Le filtre **Note → « Sans note »**
-reste le moyen de toutes les revoir, marquées ou non. Sur une bibliothèque réelle, sept des jeux
-sans note sont antérieurs à Metacritic — Fallout est de 1997, Alone in the Dark 2 de
-1993 — et deux autres sont des remasters gratuits. Aucune source ne leur inventera un
-chiffre ; les redemander à chaque passage transformait une action qui se termine en
-corvée qui recommence. Une note saisie à la main efface la mention, un champ vidé rend
-la fiche aux sources.
-
-**Bouton « Rattraper les jaquettes manquantes »** (⚙️ → Outils) : cherche sur
-SteamGridDB une jaquette pour chaque fiche qui n'en a pas, avec progression et arrêt
-possible. L'application en rattrape déjà douze à chaque ouverture, ce qui convenait à une
-bibliothèque qui grandit d'un jeu par semaine ; un import Playnite en laisse cent
-quarante d'un coup. SteamGridDB et lui seul : ses images sont des jaquettes verticales
-600×900, du même format que celles des fiches console — RAWG rendrait des paysages, et
-une grille où un jeu sur trois n'a pas la même forme se lit plus mal qu'une grille où il
-manque une image. Un titre trop éloigné de ce que la recherche renvoie est laissé sans
-image et compté à part : une jaquette fausse ne se remarque pas dans trois cents fiches.
-
-**Bouton « Actualiser les descriptions »** (⚙️ → Outils) : régénère la description de
-toute la bibliothèque depuis Wikipédia. Il est **annulable en cours de route**,
-respecte un délai anti-rate-limit (~150 ms) et affiche en fin de course la
-**liste des jeux sans page Wikipédia trouvée**. Il retient le **meilleur titre**
-(exact → préfixe → premier résultat) pour éviter de récupérer la page de la
-*série* au lieu de celle du jeu — sans quoi « Assassin's Creed Unity » héritait
-de la description générique d'« Assassin's Creed ». Comme il **remplace** toutes
-les descriptions, y compris celles corrigées à la main, il demande confirmation
-en disant combien il va en écraser.
-
-**Bouton « Compléter les notes »** (même panneau) : cherche sur RAWG les scores
-Metacritic manquants, puis affiche un **rapport vérifiable** — pour chaque note
-trouvée, le titre RAWG qui a répondu. Un rapprochement douteux est marqué ⚠️ et
-se retire d'un bouton : sur une centaine de jeux, un titre approximatif finit
-toujours par ramener la note d'un autre jeu.
-
-### Import de la bibliothèque Xbox Live
-
-Bouton **« 🎮 Importer Xbox »** → récupère l'historique de jeux du compte associé
-à la clé xbl.io.
-
-- **Filtrage** : sur ~164 titres renvoyés, seuls les vrais jeux console sont
-  gardés (~150). Les entrées PC-only / Win32 et les applications (Xbox App,
-  Minecraft Launcher, Solitaire…) sont écartées.
-- **Écran de prévisualisation obligatoire** : chaque titre est marqué
-  **« Nouveau »** ou **« Déjà présent »** (comparaison de titre normalisée), avec
-  compteurs, « tout cocher / décocher » et cases individuelles — indispensable
-  pour écarter les doublons FR/EN que la normalisation ne rattrape pas.
-- **À l'import** : `format: "démat"`, jaquette xbl.io immédiate, **date d'ajout =
-  date de sortie officielle** récupérée via RAWG (repli : dernière session, puis
-  date du jour), plateforme Xbox One / Series X déduite, `backCompat` cohérent.
-  Progression affichée et **arrêt possible**.
-- **Enrichissement post-import** proposé en bannière (RAWG + Wikipédia),
-  best-effort et annulable.
-
-> ⚠️ L'API expose l'**historique joué**, pas la liste des achats : un jeu acheté
-> mais jamais lancé n'apparaît pas, un jeu Game Pass lancé une fois apparaît.
-> Aucun temps de jeu n'est importé (absent de l'endpoint).
-
-### Import des jeux PC (Playnite)
-
-**Le problème.** Steam demande une clé d'API ; Epic, GOG et Amazon n'ont pas
-d'API publique du tout. Les mails de confirmation ne portent les titres que
-dans leur corps HTML, et il n'existe aucun mail Amazon Gaming. Écrire quatre
-intégrations ici aurait donc coûté cher pour un résultat partiel.
-
-[Playnite](https://github.com/JosefNemec/Playnite) (Windows, MIT) lit ces
-quatre boutiques depuis les clients installés et télécharge les métadonnées
-d'IGDB. Il fait ce travail sur le PC ; l'application lit son export.
-
-**Deux façons d'obtenir le fichier**, l'application lit les deux.
-
-La plus simple : installer l'extension [Json Library Import
-Export](https://github.com/sokolinthesky/JsonLibraryImportExport) depuis
-l'annuaire d'add-ons de Playnite, puis Extensions → Json Library Import Export
-→ Export. Elle écrit un dossier de fichiers ; seul `games.json` sert ici. Son
-format est celui des objets Playnite bruts, en anglais et imbriqué.
-
-L'autre, sans extension tierce : le script ci-dessous, qui écrit directement un
-fichier plat. Créer un dossier `ExportLudotheque` dans
-`%AppData%\Playnite\Extensions\` (ou dans le dossier `Extensions` de
-l'installation portable) avec ces deux fichiers, en UTF-8, puis relancer
-Playnite : l'entrée apparaît dans le menu principal.
-
-`extension.yaml` :
-
-```yaml
-Id: ExportLudotheque_Script
-Name: Export ludothèque
-Author: Antoni
-Version: 1.0
-Module: export.psm1
-Type: Script
-```
-
-`export.psm1` :
-
-```powershell
-function GetMainMenuItems()
-{
-    param($menuArgs)
-    $item = New-Object Playnite.SDK.Plugins.ScriptMainMenuItem
-    $item.Description = "Exporter la ludothèque (JSON)"
-    $item.FunctionName = "ExportLudotheque"
-    $item.MenuSection = "@Export ludothèque"
-    return $item
-}
-
-function ExportLudotheque()
-{
-    # Playnite passe un argument à la fonction du menu : sans ce `param`,
-    # le clic échoue sur « Impossible de trouver un paramètre positionnel ».
-    param($menuArgs)
-
-    $chemin = $PlayniteApi.Dialogs.SaveFile("JSON|*.json")
-    if (!$chemin) { return }
-
-    $jeux = @()
-    foreach ($j in $PlayniteApi.Database.Games)
-    {
-        $boutique = ""
-        if ($j.Source) { $boutique = $j.Source.Name }
-
-        $sortie = ""
-        if ($j.ReleaseDate -ne $null) { $sortie = $j.ReleaseDate.Serialize() }
-
-        $jeux += [PSCustomObject]@{
-            titre           = $j.Name
-            boutique        = $boutique
-            idBoutique      = $j.GameId
-            plateformes     = @($j.Platforms  | ForEach-Object { $_.Name })
-            sortie          = $sortie
-            genres          = @($j.Genres     | ForEach-Object { $_.Name })
-            developpeurs    = @($j.Developers | ForEach-Object { $_.Name })
-            editeurs        = @($j.Publishers | ForEach-Object { $_.Name })
-            series          = @($j.Series     | ForEach-Object { $_.Name })
-            fonctionnalites = @($j.Features   | ForEach-Object { $_.Name })
-            description     = $j.Description
-            installe        = $j.IsInstalled
-        }
-    }
-
-    $jeux | ConvertTo-Json -Depth 4 | Out-File -FilePath $chemin -Encoding utf8
-    $PlayniteApi.Dialogs.ShowMessage("$($jeux.Count) jeux exportés.")
-}
-```
-
-**Dans l'application** : ⚙️ → Sauvegarde → **« 🖥️ Importer un export Playnite »**.
-
-- **Écran de prévisualisation obligatoire**, comme pour l'import Xbox : chaque
-  ligne est marquée **Nouveau**, **Déjà présent**, **Écarté** ou **Ignoré**, et
-  seules les nouvelles sont cochables. Rien n'est écrit avant validation.
-- **Ce qui entre** : une fiche PC, démat, avec sa boutique, sa référence
-  boutique, ses genres (ramenés au vocabulaire du projet), sa description
-  (nettoyée de son HTML, résumée au-delà de 900 caractères) et une infobox
-  signée « IGDB (via Playnite) ». La date d'ajout reprend la date de sortie
-  quand elle est complète.
-- **Deux langues dans le même fichier** : Playnite répond dans la langue de son
-  interface, mais ses sources ne sont pas toutes traduites. Un export réel de
-  181 jeux porte « Solo » 130 fois et « Single Player » 17, « Indépendant » et
-  « Indie », « Course automobile » et « Racing ». Les tables de genres et de
-  modes couvrent donc les deux formes, sans quoi les filtres couperaient la
-  bibliothèque en deux moitiés arbitraires.
-- **Ce qui est ignoré** : une ligne sans titre, une ligne en double, et toute
-  plateforme qui n'est pas celle d'un PC — les importateurs PSN et Xbox de
-  Playnite et ses jeux émulés partagent la même base que Steam.
-- **La série est choisie, pas prise au hasard.** Les sources de Playnite ne
-  s'accordent pas sur ce qu'est une série : un export réel donne « ''Half-Life'' »
-  avec son balisage wiki, « AmplitudeStudios » qui est le studio, et pour Age of
-  Mythology deux réponses à la fois. Le balisage est retiré, ce qui porte le nom d'un
-  studio du jeu est écarté, et entre plusieurs candidates on garde la plus longue que
-  le titre contient — « Age of Mythology » plutôt qu'« Age of Empires », « Plague Inc. »
-  plutôt qu'« Inc. ». Les deux premières règles vivent dans le modèle et sont rejouées
-  à chaque chargement : les fiches déjà importées se nettoient seules.
-
-  Deux formes de nom de studio échappaient à la comparaison caractère à caractère et
-  ont été ajoutées. **Une forme juridique seule** — « Inc. », « Ltd », « GmbH » — est
-  la fin d'un nom d'entreprise dont le début s'est perdu : elle ne désigne rien et
-  n'a besoin d'aucun studio à qui se comparer. **Un sigle** — « WB Games » pour
-  « Warner Bros. Games » — demande deux conditions à la fois : le même dernier mot,
-  qui doit être un suffixe de studio, et des initiales qui correspondent. Les deux
-  ensemble, parce que le suffixe seul écarterait « Hunger Games » chez un éditeur
-  nommé « X Games », et les initiales seules n'importe quel sigle.
-- **Ce qui n'est pas repris** : les jaquettes (des fichiers sur le disque du PC,
-  pas des URL — elles continuent de venir de RAWG), le temps de jeu (retiré du
-  modèle) et le statut de complétion de Playnite.
-
-**La liste des écartés.** Un jeu importé puis supprimé est retenu par sa
-référence de boutique dans `gl_exclusions`, et ne revient pas au prochain
-import. Sans elle, chaque import ramène ce qu'on vient d'écarter et l'on cesse
-d'importer. La liste voyage avec la sauvegarde en ligne (elle ne contient aucun
-secret) et se vide depuis ⚙️ → Sauvegarde. Annuler une suppression retire
-l'exclusion.
-
-### Le même jeu chez deux boutiques
-
-Sur PC, la boutique distingue une édition d'une autre — mais posséder
-Borderlands 2 sur Steam **et** sur Epic ne donne pas deux jeux à jouer, seulement
-deux façons de le lancer. Sur une bibliothèque réelle, neuf titres sur cent
-quatre-vingts occupaient ainsi deux cartes voisines, identiques jusqu'à la
-jaquette.
-
-- **Une seule carte par titre**, côté PC uniquement : sur console, deux fiches
-  d'un même titre sont deux machines, donc deux objets qu'on possède vraiment.
-- **La carte gardée est la plus complète** — celle qui a la jaquette et la
-  description, pas celle qui est arrivée la première. À égalité, l'ordre de la
-  bibliothèque tranche, pour que deux affichages successifs montrent la même.
-- **Rien n'est supprimé ni fusionné.** La fiche cachée garde sa référence de
-  boutique, donc la liste des écartés et les prochains imports continuent de la
-  reconnaître. Fusionner aurait demandé de changer le modèle — `boutique`
-  devenant une liste — et fait perdre l'identifiant par boutique, qui est ce qui
-  rend les réimports exacts.
-- **L'en-tête le dit** : « 180 jeux · 9 doublons masqués ». Un jeu qui manque à
-  l'appel doit s'expliquer là où on compte les jeux.
-- **Filtres → Même jeu, deux boutiques** bascule entre « Une seule carte » et
-  « Toutes les boutiques ». Le réglage vit avec la vue et le regroupement, pas
-  avec les filtres : il change comment on regarde, pas ce qu'on possède.
-- **Toucher « Aussi sur PC · Steam » sur la carte gardée montre les doublons** :
-  la pastille désigne précisément une carte retirée de la liste, et c'est le seul
-  moyen que le geste aboutisse. Le réglage reste alors sur « Toutes les
-  boutiques » jusqu'à ce qu'on le remette.
-- Les statistiques comptent les fiches, pas les cartes : elles annoncent donc
-  180 là où la liste en montre 171. Elles disent ce qu'on possède, la liste dit
-  ce qu'on peut lancer.
-
-### Remplir une fiche depuis ses autres éditions
-
-Posséder « Forza Horizon 5 » sur Xbox et sur PC, c'est avoir deux fiches pour un
-seul jeu. La première a été remplie par Wikipédia et RAWG au fil des mois ; la
-seconde arrive nue d'un import. Rien ne justifie d'aller réinterroger le réseau
-pour ce qui est déjà là, à trois lignes de distance.
-
-- **Ce qui se partage** décrit le jeu : jaquette, description, note, genres,
-  infobox. **Ce qui ne se partage pas** décrit l'édition : date d'ajout,
-  plateforme, boutique, format, prêts, liens et notes personnelles.
-- **On ne remplit que le vide**, jamais on n'écrase — la règle de
-  `fusionnerInfobox`, appliquée aux autres champs. L'infobox, elle, se fusionne
-  champ par champ : une édition peut avoir les développeurs et l'autre la série.
-- **La provenance ne ment pas** : une donnée reprise garde la source d'origine
-  (Wikidata, RAWG…), parce que c'est bien de là qu'elle vient — seulement par le
-  chemin de la fiche voisine.
-- **Deux moments** : à l'import Playnite, où le récapitulatif annonce combien de
-  lignes se rempliront toutes seules et lesquelles (« déjà sur Xbox One ») ; et
-  par ⚙️ → Outils → **« Remplir depuis les autres éditions »** pour les fiches déjà en
-  place, qui annonce le détail par champ avant d'écrire.
-- Sur une bibliothèque réelle de 155 jeux console et 180 jeux PC importés :
-  **38 fiches remplies à l'import** — jaquette, description, note, genres — puis
-  6 complétées par l'action, et plus rien ensuite.
-
-### Plateformes et rétrocompatibilité
-
-L'ancienne plateforme « Xbox » est séparée en **Xbox One** / **Xbox Series X**
-selon la date (seuil du **10/11/2020**, sortie de la Series X), via une migration
-idempotente au chargement.
-
-La règle est déclarative (constante `BACK_COMPAT`) : **une plateforme récente
-affiche ses jeux natifs plus ceux de la génération précédente marqués
-`backCompat`**.
-
-- **Xbox Series X** → natifs + Xbox One rétrocompatibles
-- **Switch 2** → natifs + Switch 1 rétrocompatibles
-- **Xbox One** et **Switch 1** restent **stricts**
-
-Badge discret **« 🔄 Compatible Series X »** / **« 🔄 Compatible Switch 2 »**, et
-un choix **« Jouable sur … : oui / non »** dans le panneau d'édition pour les
-rares exceptions — il disparaît, et la valeur avec lui, si l'on choisit une
-plateforme sans console parente. Ce choix manuel est protégé par une **migration versionnée par jeu**
-(`bcV`) : le rattrapage automatique ne s'applique qu'une fois, il n'écrase donc
-jamais une décision prise à la main.
-
-### Statistiques
-
-Deux sous-onglets côté console, parce que les deux familles ne répondent pas à
-la même question. Chaque bloc disparaît quand il n'a rien à dire : un « aucune
-donnée » répété six fois occupe autant de place qu'un vrai contenu.
-
-Côté PC, il n'y en a qu'un — et donc aucun sélecteur, puisqu'un choix unique
-n'est pas un choix. « Circulation » ne compte que des prêts, et un jeu Steam ne
-se prête pas : c'est la même règle que l'onglet « Prêts » de la barre
-principale, absent du même univers pour la même raison.
-
-**Circulation** — ce qui sort. Nombre de prêts, durée moyenne, jeux jamais
-prêtés, taux de rotation de la collection, personnes distinctes, qui emprunte le
-plus et qui garde le plus longtemps (ce ne sont pas les mêmes), rythme mensuel
-sur un an, ce qui est dehors trié par ancienneté, et la **ponctualité** : a-t-il
-rendu quand il l'avait dit, ce qui n'est pas la même question que combien de
-temps il a gardé. Ne comptent là que les prêts rendus pour lesquels une date
-avait été fixée.
-
-**Collection** — ce qu'on possède. Répartition par plateforme, format et genre,
-note moyenne **et médiane** (deux mauvais jeux tirent une moyenne, pas une
-médiane), moyenne par plateforme et par genre, âge réel des jeux d'après leur
-date de sortie Wikidata, délai médian entre la sortie et l'achat, rythme
-d'ajout, studios et séries, et ce qui manque encore à remplir.
-
-Côté PC, trois de ces blocs changent de sujet. La plateforme y est constante
-par construction — une seule barre à 100 % — et le format aussi, puisqu'un jeu
-PC est forcé en démat à l'import : les tuiles « Physiques / Démat » y affichaient
-0 et le total. C'est la **boutique** qui distingue une bibliothèque PC, et c'est
-elle qui prend la place : répartition par boutique, moyenne par boutique, et les
-tuiles deviennent Total / Boutiques / Notés. Une fiche sans boutique est comptée
-sous « Sans boutique » plutôt qu'écartée — sans quoi la somme des barres serait
-inférieure au total affiché juste au-dessus.
-
-S'y ajoutent deux listes qui ne sont pas des statistiques mais qui valent le
-reste : les **doublons possibles** — deux fiches sur deux plateformes, c'est
-normal ; deux fois la même plateforme, en rouge, est une saisie en double — et
-les **épisodes manquants**, déduits des champs « épisode précédent / suivant »
-de Wikidata : tu as Halo 5, tu n'as pas Halo 4, l'application te le dit.
-
-Un bouton **Recalculer**, en bas, relit l'heure. Les chiffres suivent la
-bibliothèque en direct ; seuls les jours écoulés et la fenêtre des douze mois se
-figent quand l'application reste ouverte plusieurs jours.
-
-### Sauvegarde
-
-Tout est dans **⚙️ → Sauvegarde**, où deux blocs répondent au même besoin —
-sortir la bibliothèque de cet appareil et l'y ramener — par deux chemins :
-
-- **Synchronisation par code** : dépose la bibliothèque sur le Worker et la
-  reprend ailleurs, avec le même code de 26 caractères sur chaque appareil.
-  Elle emporte aussi l'**apparence**, et les **clés des services** si l'on coche
-  la case prévue — décochée par défaut, parce que cocher change la nature du
-  code : il protège une liste de jeux, il protégerait des identifiants. Le code
-  lui-même reste sur l'appareil et ne part jamais dans l'export.
-- **Copie hors ligne** : Export / Import JSON, sans aucun relais à déployer.
-  À l'import, un panneau annonce ce que contient le fichier — jeux valides,
-  entrées ignorées, valeurs corrigées — et propose **Fusionner**, **Remplacer**
-  ou **Annuler** ; chaque bouton dit sa conséquence, chiffres en main.
-
-Une récupération ne remplace rien sans confirmation, chiffres en main, et les
-préférences se reprennent sur une **seconde question** : on vient chercher une
-bibliothèque, pas forcément se faire changer son thème.
-
-Un envoi qui écraserait le travail d'un autre appareil est **refusé** : le
-Worker compare l'horodatage annoncé à celui qu'il détient et répond 409, et
-l'application pose alors le choix au lieu de trancher toute seule.
-
----
-
-## Ergonomie et système visuel
-
-L'interface a été confrontée à Material Design 3, aux lois de l'UX et à un
-cahier des charges d'accessibilité. Ce qui en est ressorti ne vit pas dans une
-note d'intention mais dans des jetons CSS (`src/index.css`) : une règle qu'on
-peut recopier de travers finit par l'être.
-
-| Jeton | Valeur | Ce qu'il tient |
-|---|---|---|
-| `--tap` | 48 px | Hauteur d'une commande principale (Material) |
-| `--tap-min` | 44 px | Plancher d'une commande posée dans une ligne (Apple HIG, WCAG 2.5.5) |
-| `--ecart-tap` | 8 px | Séparation entre deux cibles voisines |
-| `--ecart-bloc` | 28 px | Séparation entre deux blocs — contre 12 px à l'intérieur d'un bloc |
-| `--large-lisible` | 720 px | Largeur maximale du contenu ; le fond des barres collantes reste pleine largeur |
-| `--bdr` / `--bdr-champ` | — | Filet décoratif / contour d'un contrôle, à 3:1 (WCAG 1.4.11) |
-| `--t-legende` → `--t-chiffre` | 12 → 24 px | Cinq rôles typographiques, texte courant à 16 |
-| `--r-xs` → `--r-lg` | 4 → 16 px | Échelle de formes |
-
-Quelques règles qui ne se voient qu'à l'usage :
-
-- **Le texte courant fait 16 px, les champs de saisie aussi.** Sous ce seuil,
-  Safari iOS zoome tout seul à la prise de focus : ce n'est pas un réglage,
-  c'est un comportement du navigateur. Le prix est la densité — cinq jeux par
-  écran au lieu de huit, contre une longueur de ligne qui rentre enfin dans la
-  fourchette conseillée sur mobile.
-- **`--accent` se lit SUR le fond, `--accent-fond` porte du blanc.** Un seul
-  bleu ne peut pas satisfaire les deux contraintes ; les confondre fait tomber
-  le contraste de 5,17 à 3,00:1.
-- **`--bdr` sépare, `--bdr-champ` délimite.** Un filet entre deux lignes n'a
-  rien à prouver ; la bordure d'un champ de saisie ou d'un bouton fantôme est
-  la seule chose qui dise où le contrôle commence, et WCAG 1.4.11 la chiffre à
-  3:1. `--bdr` n'en donnait que 1,3 sur son fond. Relever `--bdr` lui-même
-  aurait quadrillé chaque carte de traits durs pour rien : une carte se
-  distingue déjà par son fond.
-- **Le contenu s'arrête à 720 px, les barres collantes non.** Sans plafond, un
-  écran de bureau étirait chaque onglet à 350 px et faisait courir une
-  description sur cent soixante caractères par ligne, deux fois la longueur que
-  l'œil suit. C'est le contenu des barres qui se centre, pas leur fond : un
-  en-tête centré laisserait voir la liste défiler dans les bandes nues.
-- **Un formulaire tient sur une colonne.** Deux colonnes sur mobile font sauter
-  des champs au regard, qui descend la première sans voir la seconde.
-- **Ce qui se clique est un bouton.** Une suggestion de recherche ou une
-  vignette de jaquette posée sur un `<div onClick>` ne répond pas à Entrée, ne
-  reçoit pas le focus — donc échappe au piège à focus du panneau, que Tab
-  traverse sans la voir — et s'annonce comme du texte.
-- **Chaque valeur masquée porte son propre œil.** Un seul « Afficher » pour
-  quatre champs oblige à défiler jusqu'en bas pour relire une clé, et
-  n'atteignait pas du tout le code de synchronisation, qui vit dans l'autre
-  onglet.
-- **Un bouton a cinq états** : repos, survol (réservé aux pointeurs fins),
-  focus (anneau de 2 px sur `:focus-visible`, jamais au doigt), pressé, et
-  désactivé.
-- **L'aplat bleu est l'action principale, partout.** Le contour teinté ne dit
-  pas « fais ceci » mais « c'est ce qui est choisi ».
-- **Les panneaux sont de vrais dialogues** : `role="dialog"`, `aria-modal`,
-  focus enfermé dedans et rendu à la fermeture, Échap qui ferme, défilement
-  bloqué derrière.
-- **Aucun choix destructeur ne se cache derrière « Annuler ».** L'import
-  proposait autrefois « OK = REMPLACER / Annuler = FUSIONNER » dans une boîte
-  du navigateur : Échap, qui ferme sur Annuler, importait le fichier. Trois
-  boutons nommés, et annuler n'importe rien.
-
-Ces règles ne se relisent pas, elles se mesurent : `npm run verif:ui` construit
-l'application, la sert lui-même et échoue si une cible passe sous le plancher,
-si deux cibles voisines sont séparées de moins de 8 px, si un texte descend
-sous 12 px, si un bandeau flottant oublie la zone sûre du bas, si un libellé se
-tronque ou si la page déborde.
-
-Un audit complet, mené en mesurant dans le navigateur sur quatorze écrans et
-deux thèmes, a montré la limite de ce garde-fou : il ne visitait ni la fenêtre
-d'ajout, ni l'édition à la main, ni une fiche assez longue pour afficher « Lire
-la suite ». Trois défauts y ont vécu des mois derrière un « Rien à signaler » —
-non pas parce qu'il n'y avait rien, mais parce qu'il ne regardait pas là. Ils
-sont corrigés et ces écrans sont maintenant dans la promenade. Le même audit a
-trouvé un jeton de couleur qui passait sur les cartes (4,91:1) et échouait sur
-l'en-tête (4,31:1) : un jeton mesuré sur un seul de ses fonds n'est mesuré nulle
-part.
-
-Un second audit, mené contre le même cahier des charges, a montré que la
-première correction n'avait pas suffi — et pour la même raison. Le garde-fou ne
-visitait toujours ni les accordéons d'une fiche (trois champs de liens et un
-mémo, à 27 px), ni les trois panneaux de source (un champ de recherche à 32 px
-chacun), ni les bandeaux flottants, qui n'apparaissent qu'après une action et
-portaient donc depuis toujours des boutons de 26 px. La fenêtre d'import Xbox,
-elle, n'y était jamais entrée du tout : elle demande une clé xbl.io pour
-s'ouvrir. C'était la seule à réimplémenter le panneau glissant au lieu
-d'utiliser `Sheet`, et elle avait gardé tous les défauts que les autres écrans
-avaient corrigés depuis — pas de piège à focus, pas d'Échap, des boutons de
-39 px. Une fenêtre écrite à part ne reçoit aucune des corrections faites
-ailleurs.
-
-Le garde-fou a donc gagné deux règles de plus — la séparation de 8 px et la
-zone sûre du bas — et l'une comme l'autre a trouvé quelque chose le jour même :
-six paires de boutons à 6 px, dont la barre d'onglets entière, et les trois
-bandeaux posés à vingt pixels du bord, c'est-à-dire dans la bande où le
-balayage du système passe avant l'application. La zone sûre ne se mesure pas en
-pixels sur une machine sans encoche, où `env(safe-area-inset-bottom)` vaut
-zéro : c'est la déclaration qui se lit, pas son résultat.
-
-Deux écarts restent assumés, et sont écrits ici plutôt que tus : les commandes
-secondaires font 44 px et non 48 ; et tout se trouve en haut de l'écran, dans
-la zone que la cartographie du pouce désigne comme la plus difficile à
-atteindre à une main. Ce dernier point demanderait une barre de navigation
-basse, c'est-à-dire une refonte de l'ossature. L'échelle typographique, elle,
-s'arrête à 24 px et n'a ni Display ni H1 au sens des référentiels : c'est une
-liste dense, pas un article, et un titre de 32 px y prendrait la place de deux
-jeux sans rien apprendre. Les listes contiguës — accordéon des filtres, cases à
-cocher, segments — n'ont toujours pas 8 px entre elles, et c'est volontaire :
-la règle vise deux boutons distincts qu'on risque de confondre, pas le motif
-d'une liste, où le contact est justement ce qui dit qu'on lit la même chose.
+Chaque point renvoie au détail dans [`docs/`](docs/).
+
+**Bibliothèque** ([détail](docs/fonctionnalites.md))
+- Deux univers, **Console** et **PC** : sur PC la *boutique* remplace la
+  plateforme, et un même titre sur plusieurs boutiques n'occupe qu'une carte.
+- Recherche insensible à la casse et aux accents (titre, genre) ; filtres par
+  plateforme, prêt, format, mode de jeu, genre, note, série et « À compléter » ;
+  cinq tris (titre, ajout, sortie, note, hasard) ; vues liste, compacte et grille,
+  avec regroupement facultatif.
+- Rétrocompatibilité déclarative : Xbox Series X montre ses jeux natifs et ceux
+  de Xbox One marqués compatibles ; idem Switch 2 / Switch.
+- « Aussi sur PC · Steam » : un jeu possédé sur deux supports se signale seul.
+- Fiche modifiable champ par champ ; suppression avec annulation de 5 s.
+- Thème automatique, clair ou noir profond ; navigation en bas, une main.
+
+**Prêts** ([détail](docs/fonctionnalites.md))
+- Emprunteur, date de retour facultative, alerte de retard, relance par SMS.
+- « Rendu » archive le prêt ; l'historique alimente les statistiques.
+- L'onglet n'apparaît qu'après le premier prêt, et jamais côté PC.
+
+**Enrichissement** ([détail](docs/enrichissement.md))
+- RAWG, Wikipédia FR, Wikidata, SteamGridDB, magasin Steam, jeu par jeu ou en
+  masse (⚙️ → Outils). **Une source ne remplit que les champs vides et n'écrase
+  jamais** ; la fiche dit d'où viennent ses données.
+- Notes Metacritic en trois sources (RAWG, Steam, Wikidata) ; repasser sur
+  l'existant ne fait que proposer des changements à cocher.
+- Remplissage depuis les autres éditions du même jeu, sans réseau.
+- Scan de codes-barres (application Android).
+
+**Imports** ([détail](docs/imports.md))
+- **Xbox Live** via xbl.io : historique joué, aperçu obligatoire avant écriture.
+- **Playnite** (Steam, Epic, GOG, Amazon) : lecture d'un fichier exporté ; aperçu
+  obligatoire, liste des jeux écartés qui ne reviennent pas.
+
+**Statistiques** ([détail](docs/fonctionnalites.md))
+- Sous-onglets *Collection* (plateformes, genres, notes moyenne et médiane,
+  âge, rythme d'ajout) et *Circulation* (prêts, ponctualité), avec anneaux,
+  jauges et courbes dont chaque valeur reste écrite ; côté PC, la boutique
+  remplace la plateforme.
+- Doublons possibles et épisodes manquants d'une série.
+
+**Sauvegarde** ([détail](docs/fonctionnalites.md))
+- Synchronisation par code (26 caractères), manuelle, avec détection de
+  conflit ; copie hors ligne JSON avec Fusionner / Remplacer / Annuler.
+- Une pastille signale une sauvegarde vieille de plus de sept jours.
+
+**Ce que l'application ne fait pas, volontairement** : suivre la progression ou
+le temps de jeu (retirés : la console le tient mieux). Voir
+[`JOURNAL.md`](JOURNAL.md), phase 9.
+
+Principes d'interface (cibles tactiles ≥ 44 px, contrastes mesurés, vrais
+`<button>`, panneaux accessibles) : [docs/ergonomie.md](docs/ergonomie.md).
 
 ---
 
@@ -853,240 +137,25 @@ d'une liste, où le contact est justement ce qui dit qu'on lit la même chose.
 |---|---|---|---|
 | RAWG | oui | ✅ direct | Jaquettes, Metacritic, genres, dates de sortie |
 | Wikipédia FR | non | ✅ direct | Titre officiel français, résumé, image d'infobox |
-| Wikidata | non | ✅ direct | Développeur, éditeur, sorties, mode de jeu, série, note Metacritic |
-| SteamGridDB | oui | ❌ via relais | Jaquettes verticales format boîte |
-| xbl.io | oui | ❌ via relais | Historique de la bibliothèque Xbox |
-| Playnite (fichier) | non | — | Jeux PC des boutiques, et leurs infos IGDB |
-| Magasin Steam | non | ❌ via relais | Note Metacritic, demandée par appid |
+| Wikidata | non | ✅ direct | Développeur, éditeur, sorties, mode de jeu, série, note |
+| SteamGridDB | oui | ❌ relais | Jaquettes verticales |
+| xbl.io | oui | ❌ relais | Historique Xbox |
+| Magasin Steam | non | ❌ relais | Note Metacritic, par appid |
+| Playnite (fichier) | non | — | Jeux PC des boutiques et leurs infos IGDB |
 
 ---
 
-## Modèle de données
+## Données et sauvegarde
 
-Un jeu est un objet simple, persisté dans `localStorage` sous la clé `gl_v2` :
+Un jeu est un objet simple persisté sous `gl_v2` (`localStorage`). Quatre clés
+vivent à part pour ne jamais entrer dans l'export : `gl_keys` (clés des
+services), `gl_sync` (code de synchronisation), `gl_theme` et `gl_affichage`.
 
-```js
-{
-  id, title, platform, format,       // "physique" | "démat"
-  addedDate,                         // sert aussi de date de sortie (proxy)
-  genre: [], style,                  // style = description
-  cover, metacritic,
-  lentA, lentDate, lentRetourPrevu,  // prêt en cours, date de retour convenue
-  pretsPasses: [{ a, du, au, prevu }],   // historique, borné à 20 par jeu
-                                     // `myLinks`, `tips` et `tag` ont vécu ici.
-                                     // 864 champs de lien vides, 0 note, un
-                                     // seul tag posé par un import : retirés.
-  backCompat, bcV,                   // rétrocompatibilité + version de migration
-  boutique,                          // PC uniquement : Steam, GOG, Epic…
-  refBoutique,                       // identifiant chez la boutique (import Playnite)
-  noteAbsente,                       // aucune source ne note ce jeu : on cesse de chercher
-  infobox                            // données Wikidata / RAWG / IGDB, ou null
-}
-```
-
-Sept champs ont été **supprimés** par la migration, pas seulement masqués :
-`status`, `playedMinutes`, `manualMinutes`, `sessions`, `hltb`, `note`,
-`progression`. Les garder ferait croire à des fonctions inexistantes, et ils
-voyageaient à chaque écriture et à chaque synchronisation.
-
-**Les genres parlent une seule langue.** Ils viennent de deux endroits qui ne
-s'accordaient pas : la bibliothèque de départ, écrite à la main en français
-(Aventure, Plateforme, Course, Furtif), et RAWG, qui répond en anglais. Sur une
-bibliothèque réelle de 154 jeux, cela donnait **33 valeurs dont la moitié en
-double** — « Adventure » 21 et « Aventure » 20, « Platformer » 16 et
-« Plateforme » 17, « Racing » 10 et « Course » 6. Un filtre par genre aurait
-coupé la collection en deux moitiés arbitraires, selon la source qui avait
-répondu la première.
-
-Une table de correspondance ramène chaque genre à la forme du projet, à
-l'enregistrement comme à l'import et à l'édition : 33 valeurs deviennent 28, et
-aucun jeu ne perd de genre. Elle règle aussi la casse — « aventure » tapé à la
-main ne compte plus à part. La fonction est idempotente, donc la migration la
-rejoue à chaque chargement sans numéro de version. Un genre absent de la table
-garde sa forme : elle corrige des doublons connus, elle n'impose pas un
-vocabulaire fermé.
-
-**Ce que l'application accepte d'un fichier.** L'import ne fait pas confiance à
-ce qu'on lui donne : une date illisible, une plateforme inconnue, un format
-inventé ou une note en toutes lettres sont ramenés à une valeur sûre, et le
-nombre d'entrées corrigées est annoncé. Le contrôle ne portait que sur les
-types — « pas une date » est une chaîne, donc ça passait, et le `NaN` qui en
-sortait remontait jusque dans les moyennes de l'onglet Stats, affiché comme une
-statistique.
-
-Le format ne suffit pourtant pas non plus. **« 0001-01-01 » est une date ISO
-parfaitement valide**, et l'histogramme des ajouts, qui comble toutes les années
-entre la plus ancienne et la plus récente, en tirait deux mille colonnes larges
-de zéro pixel — quinze secondes de rendu pour une année mal tapée dans un champ
-date. Une date doit donc aussi être **plausible** : entre 1970 et dix ans devant
-(une date de retour convenue est légitimement dans le futur). Même raisonnement
-pour les liens d'une fiche : ils finissent dans un `href`, et `javascript:` en
-est un — seuls `http://` et `https://` entrent, et sont rendus.
-
-Quatre autres clés vivent à part dans le `localStorage`, précisément pour ne
-jamais entrer dans l'export : `gl_keys` (clés des services), `gl_sync` (code de
-synchronisation), `gl_theme` (mode d'apparence) et `gl_affichage` (vue, tri, sens
-et regroupement — pas les filtres, voir plus bas).
-
-**Ce que la synchronisation emporte** : la totalité de chaque fiche, sans
-exception — jusqu'à l'historique des prêts passés et la provenance des infos —
-plus le mode d'apparence, plus les clés des services si la case est cochée. Ce
-qu'elle n'emporte jamais : l'adresse du relais, sans laquelle on ne peut pas la
-joindre (la restaurer depuis elle-même serait circulaire), et le code de
-synchronisation, qui est ce qui la protège.
-
-**Les réglages d'affichage survivent au lancement, les filtres non.** Un
-réglage d'affichage change comment on regarde ; un filtre change ce qu'on voit.
-Un filtre qui survit au redémarrage, c'est une bibliothèque amputée sans qu'on
-sache pourquoi — exactement le défaut corrigé sur l'ajout d'un jeu, mais
-permanent.
-
-**L'âge de la sauvegarde se voit.** La synchronisation est manuelle, et le
-reste : personne ne veut qu'une application pousse ses données sans qu'on le lui
-demande. Mais une sauvegarde qu'on oublie de faire n'existe pas. Passé sept
-jours, une pastille orange apparaît sur l'onglet ⚙️ et la ligne des réglages dit
-« il y a 12 jours » au lieu d'une date à convertir de tête. Rien à écarter,
-aucune bannière : seulement un retard qui cesse d'être invisible.
-
----
-
-## Architecture et choix techniques
-
-### D'un seul fichier à un découpage
-
-Le projet est né d'un artefact autonome et a grandi par ajouts successifs : tout
-vivait dans `src/App.jsx`, 1 560 lignes et 136 Ko, styles inline compris. Ça a
-tenu longtemps, puis chaque ajout est devenu plus coûteux que le précédent et
-une erreur ne se cherchait plus qu'à l'aveugle.
-
-Le code est désormais réparti entre `src/lib/` (réseau, domaine, stockage,
-synchronisation) et `src/components/`, et `App.jsx` ne garde que l'ossature.
-
-Les couleurs, elles, ont quitté le JavaScript. Chaque composant recevait une
-prop `dark` et recalculait ses teintes dans des styles inline
-(`dark ? "#1a1a2e" : "#f0f4ff"`, une quarantaine de fois). Tant que rien ne
-passait par une feuille de style, aucune media query, aucun `:hover` et aucun
-mode d'affichage n'étaient possibles. Elles sont maintenant des jetons CSS dans
-`src/index.css`, basculés par un attribut `data-theme` sur `<html>`.
-
-### Où sont passées les traductions automatiques ?
-
-Les descriptions ont d'abord été traduites de l'anglais via l'API MyMemory
-(gratuite, 500 caractères par requête, avec découpage en segments et recollage).
-Cette approche a été **entièrement retirée** au profit de **Wikipédia FR**, qui
-fournit directement un texte français rédigé, sans quota ni découpage.
-
-### Décisions notables
-
-- **Le lint distingue le navigateur du Worker.** `no-undef` est actif, et
-  l'environnement Node est déclaré dans un `overrides` limité à `worker/**`
-  plutôt que globalement. Déclaré partout, il rendrait `process` défini dans
-  `src/` aussi : un `process.env.X` glissé dans le code navigateur passerait le
-  lint pour échouer à l'exécution, Vite ne fournissant pas `process` au
-  navigateur. Attention au nom du fichier : oxlint ne lit que `.oxlintrc.json`,
-  avec le point ; un `oxlintrc.json` sans point est ignoré en silence.
-- **La CI tourne sur les pull requests**, le job `deploy` restant réservé à
-  `main`. Le workflow ne se déclenchait que sur un push vers `main` : lint et
-  build ne s'exécutaient donc qu'après la fusion, au moment où ils déploient
-  déjà. Une pull request qui ne compilait pas n'était visible qu'une fois le
-  site cassé.
-- **`npm ci` en CI.** Le lockfile échouait autrefois à la validation stricte
-  parce qu'il lui manquait les binaires natifs Linux de Rollup, absents quand il
-  était généré sous Windows. Il les porte désormais, et le workflow est repassé
-  à `npm ci` : `npm install` laissait npm résoudre librement, donc une version
-  mineure d'une dépendance transitive pouvait casser un déploiement sans qu'un
-  seul commit touche au projet. Si tu installes sous Windows, npm ajoutera les
-  binaires win32 : commite le lockfile mis à jour, il portera alors les deux
-  plateformes.
-- **Le sombre est un vrai noir.** Le noir profond a d'abord été une préférence
-  applicable par-dessus un sombre bleu nuit, ce qui faisait quatre commandes
-  dans un panneau qui en comptait déjà trois pour la même question — et pour un
-  choix qui n'en est pas un : entre un bleu nuit et un vrai noir, on tranche une
-  fois. Sur une dalle OLED, un pixel noir est un pixel éteint. Les cartes ne
-  sont pas noires elles aussi, sinon plus rien ne se distingue : ce sont les
-  bordures, remontées, qui portent la structure.
-- **Les gestes irréversibles demandent confirmation, en disant ce qu'ils
-  coûtent.** Supprimer un jeu emporte son historique de prêts et le retour
-  arrière ne dure que cinq secondes ; effacer une clé nomme le service qui
-  cessera de fonctionner ; remplacer le code de synchronisation rend
-  inaccessible la sauvegarde qu'il protégeait, ce qui ne se voit pas tout de
-  suite. Ces messages vivent dans `src/lib/garde-fous.js`, purs et testés :
-  c'est le genre de garde-fou qu'on écrit une fois et qu'on ne relit jamais,
-  jusqu'au jour où il ne se déclenche pas.
-- **Ce que l'application ne fait pas.** Elle a longtemps suivi la progression
-  (non commencé, en cours, terminé, platine, abandonné) et le temps de jeu, avec
-  chronomètre et historique de sessions. Les deux ont été retirés : la console
-  tient déjà ces données, mieux et sans saisie manuelle. Les redoubler ici
-  demandait du travail pour une information qu'on possède ailleurs. Il reste ce
-  que la console ne sait pas faire — voir toute la bibliothèque d'un coup, et
-  savoir chez qui sont les jeux.
-- **Ce qui est écrit deux fois est surveillé.** Le script anti-clignotement
-  d'`index.html` réécrit à la main la logique de `resoudreTheme()` et les
-  couleurs de barre système — il le doit, il s'exécute avant que le bundle
-  existe. Rien n'obligeait ces deux copies à rester d'accord : une couleur de
-  fond changée d'un côté et oubliée de l'autre, et la barre d'état affiche
-  l'ancienne teinte le temps du chargement, ce que personne ne signale jamais.
-  `coherence.test.mjs` exécute le script inline dans un contexte minimal et
-  compare son verdict à celui du module, pour toutes les valeurs possibles. Il
-  vérifie aussi que chaque jeton nommé par `theme.js` est défini dans les deux
-  thèmes. L'idée vient du `check_sources_sync.py` d'un autre projet, écrit après
-  qu'une divergence du même genre soit restée invisible plusieurs semaines.
-- **Les couleurs sont des jetons, y compris l'accent.** Le bleu était écrit en
-  dur une cinquantaine de fois dans le JavaScript ; le jeton `--accent` existait
-  mais ne servait à rien, si bien que le thème clair ne pouvait pas le corriger.
-  Or sur fond clair il ne donnait que 2,58:1 alors que WCAG AA demande 4,5:1 —
-  et c'est la couleur de presque tout le petit texte cliquable. Le thème clair
-  le remonte désormais à 5,75:1 ; le sombre garde exactement la même teinte.
-- **Le mobile d'abord.** L'en-tête collant empilait le titre, cinq boutons à
-  libellé complet, les onglets, la recherche et quatre rangées de puces de
-  filtres : 317 px sur un écran de 915, soit un tiers de la surface avant le
-  premier jeu, et une rangée de boutons qui débordait de 13 px et faisait
-  défiler la page latéralement. Filtres et actions sont passés dans des
-  panneaux glissants. La liste a longtemps été paginée par 30, jusqu'à ce que la
-  mesure montre que tout monter d'un coup ne coûte qu'une seconde de plus au
-  démarrage sur un vieux téléphone : le bouton « Charger 30 de plus » a disparu
-  et la bibliothèque s'affiche entière. La bibliothèque a depuis presque doublé,
-  et la mesure a été refaite sur les 288 jeux réels : `content-visibility: auto`
-  sur les fiches et `loading="lazy"` sur les jaquettes ramènent la liste complète
-  de 2 471 à 1 727 ms sur un processeur ralenti six fois, et le pire cas — effacer
-  la recherche pour faire revenir toute la liste — de 880 à 711 ms. Les cibles principales, longtemps à 44 px « pour ne pas faire
-  exploser la densité », sont passées à 48 — le chiffre de Material — après
-  qu'un audit a montré que le compromis avait été fait avec nous-mêmes et non
-  avec l'utilisateur. Les commandes secondaires restent à 44 : c'est le plancher
-  d'Apple et de WCAG 2.5.8, et les passer à 48 reflowerait tous les panneaux
-  pour quatre pixels.
-- **Les panneaux sont rendus à la racine du document.** `position: fixed` n'est fixe
-  que tant qu'aucun ancêtre ne crée de bloc conteneur, et `content-visibility: auto`
-  — posé sur les fiches pour ne pas dessiner celles qui sont hors écran — en crée un.
-  Les cinq panneaux d'une fiche s'en sont trouvés enfermés dans leur fiche : mesurés à
-  360×904 positionnés à −225 au lieu de 390×800, avec 1846 px de contenu à faire tenir
-  dans une fenêtre de 153 px. Une fiche qu'on ne pouvait plus modifier. Un portail les
-  sort du sous-arbre, ce qui est de toute façon la place d'un dialogue modal, et
-  `verif:ui` signale désormais tout élément fixe qu'un ancêtre confine — la règle
-  nomme la cause, parce que ce défaut n'a de symptôme qu'à l'usage.
-- **Rien n'échoue plus en silence.** Une exception de rendu vidait `#root` sans
-  un mot ; un `ErrorBoundary` affiche désormais l'erreur et propose d'exporter
-  la bibliothèque avant toute chose. Les écritures dans `localStorage` étaient
-  enveloppées dans un `catch {}` muet : un quota saturé faisait perdre la
-  persistance sans le moindre signe.
-- **Déploiement par artefact**, pas de dossier `docs/` commité : aucun fichier
-  généré n'entre dans le dépôt.
-- **`addedDate` sert de proxy de date de sortie** pour classer Xbox One /
-  Series X. C'est approximatif pour quelques titres anciens (Halo 4, sorti en
-  2012 sur Xbox 360, se retrouve classé Xbox One) — assumé pour rester simple.
-- **Le service worker ne met jamais les appels d'API en cache**, uniquement la
-  coquille de l'application et les jaquettes distantes : les données doivent
-  rester fraîches et échouer proprement hors ligne.
-- **Les jaquettes xbl.io sont réécrites en HTTPS.** L'API les renvoie en `http://`
-  (bloquées en contenu mixte sur un site HTTPS), et une partie vient de
-  `images-eds.xboxlive.com`, hôte qui ne répond pas en TLS — un simple passage en
-  `https` échouait donc aussi. Le helper `httpsImage` bascule vers l'hôte
-  `images-eds-ssl` équivalent avant de forcer le schéma. Bug invisible en
-  développement, où la page est servie en `http://localhost`.
-- **Historique git purgé avant la première publication.** Les clés avaient été
-  committées pendant le développement local ; elles ont été retirées de tous les
-  commits avec `git-filter-repo` **avant** le premier push. Elles ne sont donc
-  jamais sorties de la machine de développement.
+Toute donnée venue d'un fichier, du stockage ou de la sauvegarde distante est
+traitée comme une entrée non fiable : dates, plateformes et formats invalides
+sont ramenés à une valeur sûre, et le nombre de corrections est annoncé. Le
+modèle complet, les migrations et les règles de validation sont dans
+[docs/donnees.md](docs/donnees.md).
 
 ---
 
@@ -1094,424 +163,94 @@ fournit directement un texte français rédigé, sans quota ni découpage.
 
 ```bash
 npm install
-npm run dev      # http://localhost:5173/game-library/
+npm run dev          # http://localhost:5173/game-library/
 npm run build
-npm run preview
-npm run lint     # oxlint
-npm test         # 122 tests (modèle, import, genres, filtres, tris, prêts,
-                 #             stats, thème, préférences, cohérence, audit, Worker)
-npm run test:worker                   # 32 vérifications du relais, sans déploiement
-npm run verif:ui                      # mesure les écrans rendus (voir plus bas)
-npm run audit -- ma-sauvegarde.json   # symptômes dans les données (voir plus bas)
+npm run lint         # oxlint
+npm test             # modules de src/lib, scripts et Worker (node --test)
+npm run verif:ui     # mesure les écrans rendus ; demande Playwright et un navigateur
+npm run audit -- ma-sauvegarde.json   # symptômes dans les données
 ```
 
-En développement, le proxy du serveur Vite joue exactement le rôle du Worker : il
-relaie `/sgdb/*` et `/xbl/*` **sans détenir de clé** (c'est le client qui envoie
-l'en-tête d'authentification). Il n'est donc **pas nécessaire de déployer le
-Worker pour travailler en local**.
+Lint et tests doivent passer avant tout commit ; `verif:ui` pour tout changement
+d'interface. En local, le Worker n'est pas nécessaire. Détail des outils, dont
+`scripts/dates-suspectes.mjs` : [docs/outils.md](docs/outils.md). Règles de
+travail du projet : [`CLAUDE.md`](CLAUDE.md).
 
-### Vérifier l'interface rendue
-
-Les règles d'ergonomie portent sur des pixels affichés, pas sur des
-déclarations : un bouton peut être écrit correctement et mesurer 34 px une fois
-la police appliquée et la ligne calculée. Trois défauts ont été trouvés ainsi,
-et par aucun autre moyen.
-
-```bash
-npm run verif:ui
-```
-
-Le script construit, sert `dist/` lui-même et ouvre dix-sept écrans, à 360 et
-412 px, dans les deux thèmes. Il échoue s'il trouve une cible sous 44 × 24 px,
-un texte sous 12 px, un champ de saisie sous 16 px, un libellé tronqué, un
-débordement horizontal ou une erreur JavaScript. Il demande Playwright et un
-navigateur, d'où son absence de `npm test`, qui tourne sur des modules purs.
-
-Deux angles morts ont été refermés en même temps, et ils valent d'être dits :
-la promenade ne visitait ni la fenêtre d'ajout, ni l'édition à la main, ni une
-fiche assez longue pour afficher « Lire la suite » — trois défauts y ont vécu
-des mois derrière un « Rien à signaler ». Et le script mesurait un serveur
-lancé à part, donc le dernier `dist/` construit : oublier de reconstruire, et
-il validait la version d'avant les corrections. Un garde-fou qui mesure autre
-chose que ce qu'on lui présente ne dit rien, il rassure.
-
-### Auditer ses données
-
-```bash
-npm run audit -- ma-sauvegarde.json                # rapport
-npm run audit -- ma-sauvegarde.json --jaquettes    # vérifie aussi les URLs (réseau)
-npm run audit -- ma-sauvegarde.json --strict       # code de retour ≠ 0 s'il y a des constats
-
-# Sortie JSON, pour comparer deux passages — après un gros import, la question
-# n'est pas « combien de constats » mais « lesquels sont apparus ». `--silent`
-# est nécessaire : sans lui la bannière de npm précède la sortie et le fichier
-# obtenu n'est plus du JSON.
-npm run --silent audit -- ma-sauvegarde.json --json > avant.json
-```
-
-Les constats sont classés en trois niveaux, du plus grave au moins grave :
-**🔴 grave** (une date illisible qui produira des `NaN`, un identifiant en
-double qui casse l'édition), **🟠 à vérifier** (une valeur qui n'aurait pas dû
-entrer), **⚪ pour information** (un champ vide, à combler quand on veut). Un
-rapport à plat mettait « 60 jeux sans jaquette » au même rang qu'« identifiant
-en double » : il fallait tout relire pour trouver ce qui compte.
-
-### Retrouver une date d'ajout écrasée
-
-```bash
-node scripts/dates-suspectes.mjs ma-sauvegarde.json                     # rapport
-node scripts/dates-suspectes.mjs ma-sauvegarde.json --corriger sortie.json
-```
-
-Choisir une suggestion RAWG écrivait la **date de sortie** du jeu dans
-« Ajouté le ». Corrigé, mais les fiches créées avant le correctif portent
-encore une date fausse — et `addedDate` trie « récemment ajoutés » et départage
-Xbox One de Series X.
-
-La date n'est pas perdue : **l'identifiant d'un jeu est l'instant de sa
-création** (`id: Date.now()`, à l'ajout comme aux imports). La vérité était dans
-la fiche depuis le début, personne ne l'avait lue.
-
-Trois niveaux de certitude, parce qu'un écart peut être légitime — qui saisit à
-la main la date d'achat d'un jeu acheté l'an dernier crée exactement le même
-écart qu'un défaut. **Certain** : la date d'ajout est une date de sortie
-inscrite dans la fiche, ce qui est la signature du défaut et pas une
-coïncidence. **Probable** : elle précède de plus d'un an la création de la
-fiche. **Possible** : écart plus court, à juger à la main.
-
-`--corriger` n'écrit jamais sur le fichier d'entrée, refuse une sortie qui lui
-est identique, ne remet que les niveaux « certain » et « probable », et rend
-une copie qui ne diffère de l'entrée que par ces dates — pas par les champs que
-la migration aurait complétés au passage.
-
-### Ce que l'audit signale
-
-Prend un export JSON et signale : doublons de titre sur une même plateforme,
-identifiants réutilisés, champs vides (jaquette, genre, description, note),
-valeurs impossibles (plateforme inconnue, format inventé, note hors bornes,
-dates illisibles), **années d'ajout invraisemblables** et **liens non ouvrables**
-— les deux qui ont la bonne forme sans être des données —, dates d'ajout à
-venir, prêts incomplets ou très anciens, retours antérieurs au prêt, et séries
-Wikidata éloignées du titre, signe qu'une source a répondu pour un autre jeu.
-
-Cette dernière règle demandait autrefois que le titre et la série se préfixent
-l'un l'autre. C'est un test d'égalité déguisé appliqué à deux chaînes qui n'ont
-aucune raison d'être égales : un titre nomme un jeu, une série nomme une
-famille. Passée sur une bibliothèque réelle de 154 jeux, **elle s'est trompée
-vingt fois sur vingt** — « Sonic Generations → Sonic the Hedgehog » signalé, le
-mot « Sonic » sous les yeux. Une catégorie qui a toujours tort n'est pas neutre :
-elle apprend à sauter la ligne. Elle exige désormais qu'aucun mot significatif
-ne soit commun au titre et à la série (20 constats → 4), **et** qu'aucun autre
-jeu ne porte cette série (4 → 2) : si quatre fiches annoncent « The Legend of
-Zelda », la série existe.
-
-L'audit lui-même est testé (`scripts/audit.test.mjs`) : il est lancé en
-sous-processus avec sa sortie `--json`, pour vérifier le programme tel qu'il
-s'exécute plutôt qu'une fonction extraite pour l'occasion. Une règle fausse ne
-casse rien — elle ment, et rien ne le signale.
-
-Ce n'est **pas** un test : `npm test` vérifie des invariants et doit rester vert,
-l'audit signale des *symptômes* qui peuvent être parfaitement légitimes. Deux
-exemplaires du même jeu, c'est possible ; deux entrées identiques après un
-import, beaucoup moins.
-
-### Structure
-
-```
-├── .github/workflows/deploy.yml   Build + publication GitHub Pages
-├── worker/                        Relais CORS + sauvegarde en ligne (sans secret)
-│   ├── index.js
-│   ├── test.mjs                   32 vérifications, sans dépendance ni déploiement
-│   ├── wrangler.toml
-│   └── README.md
-├── scripts/
-│   ├── audit.mjs                  Audit des données d'un export (pas un test)
-│   ├── dates-suspectes.mjs        Retrouve une date d'ajout écrasée (pas un test)
-│   ├── peser-apk.mjs              Ventile le poids d'un APK (lancé par la CI)
-│   ├── audit.test.mjs             …mais l'audit, lui, est testé
-│   └── verif-ui.mjs               Mesure les écrans rendus : cibles, tailles, débordements
-├── public/                        Icônes PWA (192/512, any + maskable), favicon
-├── src/
-│   ├── App.jsx                    Ossature : état global, en-tête, onglets
-│   ├── main.jsx                   Montage + garde-fou d'erreurs global
-│   ├── index.css                  Jetons : couleurs, cibles tactiles, typographie, formes
-│   ├── lib/                       Modules purs : testables sans navigateur
-│   │   ├── api.js                 RAWG, Wikipédia, Wikidata, SteamGridDB, xbl.io
-│   │   ├── model.js               Plateformes, prêts, migration, validation, édition
-│   │   ├── stats.js               Agrégats des deux sous-onglets Stats
-│   │   ├── apparence.js           Modes de thème et couleur de barre système
-│   │   ├── playnite.js            Lecture d'un export Playnite (jeux PC)
-│   │   ├── preferences.js         Ce que la sauvegarde emporte en plus des jeux
-│   │   ├── garde-fous.js          Messages des confirmations destructrices
-│   │   ├── maj.js                 Détection d'une version déjà installée
-│   │   ├── seed.js                Bibliothèque de démarrage
-│   │   ├── storage.js             localStorage instrumenté (alerte de quota)
-│   │   ├── sync.js                Sauvegarde sur le Worker
-│   │   ├── theme.js               Alias vers les jetons CSS
-│   │   ├── tri.js                 Les tris de la liste et ce qu'ils veulent dire
-│   │   ├── coherence.test.mjs     Ce qui est écrit deux fois doit concorder
-│   │   └── *.test.mjs             Tests des modules ci-dessus (node --test)
-│   └── components/
-│       ├── GameCard.jsx  AddModal.jsx  ImportModal.jsx  PlayniteModal.jsx
-│       ├── StatsView.jsx  SettingsView.jsx  ScoresSheet.jsx
-│       ├── Sheet.jsx  FiltersSheet.jsx  SortSheet.jsx  PanneauOutils.jsx  SousOnglets.jsx
-│       └── Cover.jsx  InfoboxView.jsx  ChampProtege.jsx  ErrorBoundary.jsx
-├── index.html
-├── vite.config.js                 base, PWA, proxys de dev
-├── PROGRESS.md                    État des fonctionnalités
-└── JOURNAL.md                     Journal de développement : décisions, bugs, impasses
-```
+Organisation : `src/lib/` pour la logique pure (un `*.test.mjs` à côté de chaque
+module), `src/components/` pour l'interface, `worker/` pour le relais,
+`scripts/` pour l'audit et la chaîne Android. Arbre complet :
+[docs/architecture.md](docs/architecture.md).
 
 ---
 
 ## Déploiement
 
-Deux workflows, deux cibles : le site et le Worker ne vivent pas au même
-endroit et ne se publient pas ensemble.
+- **Site** : à chaque push sur `main`, `deploy.yml` lance `npm ci`, lint, tests et
+  build, puis publie `dist/` sur GitHub Pages. Aucun secret n'est nécessaire.
+- **Worker** : `worker.yml` le déploie dès que `worker/**` change sur `main`,
+  tests d'abord. Un seul secret, `CLOUDFLARE_API_TOKEN`.
+- **Mise à jour** : le service worker récupère la nouvelle version au chargement
+  suivant ; une bannière « Nouvelle version » propose de recharger.
 
-Le site, à chaque push sur `main`
-([`.github/workflows/deploy.yml`](.github/workflows/deploy.yml)) : `npm ci`,
-`npm run lint`, `npm test`, `npm run build`, puis publication de
-`dist/` sur GitHub Pages via les actions
-officielles `configure-pages` / `upload-pages-artifact` / `deploy-pages`.
-
-**Aucun secret n'est nécessaire pour publier le site** — c'est toute la raison
-d'être du choix « clés saisies par l'utilisateur ». Le déploiement du Worker en
-demande un seul, `CLOUDFLARE_API_TOKEN`, qui n'autorise que la mise à jour des
-Workers du compte et ne donne accès à aucune donnée de l'application.
-
-Le service worker est en `autoUpdate` : une nouvelle version est récupérée
-automatiquement au chargement suivant. L'onglet déjà ouvert, lui, continue
-d'exécuter l'ancien code — d'où la bannière **« ✨ Nouvelle version »** avec son
-bouton Recharger, déclenchée par l'événement `controllerchange`. Sans elle, il
-fallait fermer l'application et la rouvrir sans jamais savoir s'il y avait
-quelque chose à voir.
-
-**Le Worker se déploie tout seul, par un workflow à part.** GitHub Pages ne
-publie que `dist/`, si bien que le Worker se déployait à la main : le code de
-`/sync` a passé plusieurs heures dans le dépôt sans jamais atteindre la
-production, et l'oubli n'était visible nulle part.
-[`.github/workflows/worker.yml`](.github/workflows/worker.yml) s'en charge
-désormais dès que `worker/**` change sur `main` — tests d'abord, déploiement
-ensuite. `npx wrangler deploy` ne sert plus qu'à déployer sa propre copie.
+Détail : [docs/deploiement.md](docs/deploiement.md).
 
 ---
 
-## L'application Android
+## Android
 
-La même application, empaquetée dans un APK par Capacitor : les fichiers sont
-dans l'application, rien ne dépend du site en ligne.
+La même application, empaquetée par Capacitor dans un APK (`--mode android` :
+seule différence, la base des chemins et l'absence de service worker).
 
-```bash
-npm run android        # build Android + icônes + projet natif
-```
+Le workflow [`android.yml`](.github/workflows/android.yml) se lance à la main
+(Actions → « Application Android ») avec une variante, *publication* (réduite,
+non débogable, par défaut) ou *débogage*, et dépose l'APK en artefact. Il est
+signé par une clé fixe, ce qui permet de mettre à jour sans désinstaller.
+`android/` et `assets/` sont engendrés et absents du dépôt.
 
-Puis, avec le SDK Android : `cd android && ./gradlew assembleDebug`. En
-pratique on ne le fait pas à la main —
-[`.github/workflows/android.yml`](.github/workflows/android.yml) le construit
-sur demande (onglet Actions → « Application Android » → Run workflow) et dépose
-l'APK en artefact téléchargeable.
-
-**Ce qui diffère du site, et rien d'autre.** Les fichiers sont servis depuis la
-racine de la WebView et non depuis `/game-library/`, et le service worker est
-retiré : il n'a rien à mettre en cache puisque tout est déjà dans l'APK, et la
-bannière « Nouvelle version » qu'il déclenche n'aurait rien à annoncer — les
-mises à jour arrivent par un nouvel APK. C'est tout le contenu de
-`--mode android`, et c'est ce qui garantit que le site ne peut pas dériver de
-l'application.
-
-**Six comportements qu'une WebView ne partage pas avec un navigateur**, tous
-regroupés dans [`src/lib/natif.js`](src/lib/natif.js) plutôt que dispersés :
-
-- **L'export.** Une WebView Android ignore purement et simplement l'attribut
-  `download` : le bouton ne faisait rien, et rien ne le disait. C'était le
-  défaut le plus grave du passage en application — l'export est la seule copie
-  de la bibliothèque qui sorte de l'appareil, et il aurait échoué en silence.
-  Le fichier est donc vraiment écrit, puis le panneau de partage du système
-  s'ouvre. L'export de secours de l'écran d'erreur passe par le même chemin,
-  et c'est là que ça compte le plus : cet écran ne s'affiche que lorsque
-  l'application est déjà tombée.
-- **Le bouton Retour.** Il ne faisait **rien** — ni refermer, ni quitter. Sans
-  écouteur enregistré, Capacitor remonte l'historique de la WebView et, s'il
-  n'y en a pas, ne fait rien : l'activité ne se termine pas. Or une application
-  à une seule page n'a pas d'historique, et l'écouteur n'existait que pendant
-  qu'un panneau était ouvert. Le reste du temps, le bouton était mort. Il y en
-  a maintenant un seul, posé avant le premier rendu comme celui des liens, qui
-  tranche : s'il y a quelque chose au premier plan il le referme — la même
-  chose qu'Échap —, sinon il quitte. La pile de ce qui est au premier plan vit
-  dans [`src/lib/retour.js`](src/lib/retour.js), qui ne connaît ni Android ni
-  Capacitor : la décision se teste sans téléphone.
-- **Les liens sortants.** Un lien externe se chargerait *dans* la WebView, qui
-  devient un navigateur sans barre d'adresse dont on ne ressort pas. Un seul
-  écouteur, posé avant le premier rendu, les envoie au navigateur du système —
-  y compris ceux qu'on ajoutera plus tard, ce qu'une retouche des huit liens
-  existants n'aurait pas garanti. Les schémas qui ne sont pas du web, comme le
-  `sms:` de relance d'un emprunteur, continuent d'aller au système.
-- **La barre d'état.** Sur le site, une balise `<meta name="theme-color">`
-  suffit ; dans une WebView elle ne veut rien dire, la barre appartient au
-  système. Ce n'est pas qu'esthétique : l'application a son propre réglage
-  clair/sombre, qui peut contredire celui du téléphone — téléphone en sombre et
-  application en clair, le système dessinait des icônes claires sur un en-tête
-  clair. Seul le style est réglé, pas la couleur : depuis qu'Android impose le
-  bord à bord, c'est l'en-tête de l'application qu'on voit derrière la barre.
-- **La version affichée.** Le site se met à jour tout seul, l'application
-  s'installe à la main, et ni l'un ni l'autre ne disait ce qu'il était.
-  ⚙️ l'affiche : le numéro de construction qu'Android connaît côté application,
-  le commit côté site.
-- **Les icônes.** Android veut une icône adaptative à deux couches, que le
-  système recadre selon le téléphone. Elles ne sont pas dessinées mais
-  dérivées : l'avant-plan est le `maskable` de la PWA, dont les marges de
-  sécurité existent précisément pour ça, et le fond est le noir de
-  l'application. [`scripts/icones-android.mjs`](scripts/icones-android.mjs) les
-  fabrique depuis `public/`, et
-  [`scripts/elaguer-android.mjs`](scripts/elaguer-android.mjs) retire ensuite
-  les douze dossiers d'écran de démarrage sombres, doubles exacts de leurs
-  jumeaux de jour — 350 Ko. Chaque fichier est comparé avant d'être retiré :
-  le jour où le sombre différera du clair, il survivra.
-
-**Le relais a une origine de plus.** Capacitor sert les fichiers depuis une
-origine locale et non depuis le site : sans `https://localhost` dans la liste
-du Worker, l'application installée perdrait d'un coup les jaquettes
-SteamGridDB, l'import Xbox, les notes Steam et la synchronisation — quatre
-pannes sans rapport apparent. Cette liste n'est pas une barrière de sécurité,
-et mieux vaut l'écrire que le sous-entendre : un appel hors navigateur
-l'ignore complètement. Elle empêche un site tiers d'utiliser le relais depuis
-le navigateur d'un visiteur ; ce qui protège la sauvegarde, c'est le code de
-synchronisation.
-
-**Ni `android/` ni `assets/` ne sont dans le dépôt.** Les deux sont engendrés
-par `npm run android` depuis `public/` et `capacitor.config.json`. Le projet
-n'accueille aucun fichier produit — c'est la règle qui avait déjà fait écarter
-un dossier `docs/` commité pour GitHub Pages — et cinquante fichiers de Gradle
-que personne ne relit ne feraient pas exception.
-
-**Les jaquettes sont gardées sur l'appareil.** Une jaquette est une URL —
-SteamGridDB, RAWG, Microsoft. Sur le site, le service worker les met en cache
-soixante jours ; dans l'application il n'existe pas, si bien qu'elle les
-retéléchargeait à chaque lancement et n'affichait que des cadres vides sans
-réseau. Le site était devenu meilleur que l'application sur le seul point où
-l'application devait gagner. ⚙️ → Outils → **« Enregistrer les jaquettes sur
-l'appareil »** les descend une fois dans son stockage privé.
-
-Le champ `cover` de la fiche n'est pas touché, et c'est le choix qui compte :
-l'URL reste la référence — c'est elle qui part dans l'export et la
-synchronisation, c'est elle que lit le site, c'est elle qu'un autre appareil
-saura redescendre. Un chemin de fichier local ne veut rien dire ailleurs que
-sur ce téléphone-ci. L'index qui associe une URL à son fichier vit donc à part,
-dans `gl_jaquettes`, comme les clés et le code de synchronisation. L'opération
-s'interrompt sans rien perdre : chaque image descendue est notée aussitôt, et
-la reprise repart où elle s'était arrêtée. Un ménage suit, qui retire les
-fichiers dont plus aucune fiche ne veut.
-
-**Les polices sont embarquées.** Inter et Press Start 2P venaient de Google
-Fonts, par le réseau, et ne figuraient dans aucun build : hors ligne, le titre
-perdait sa police pixel et le reste retombait sur celle du système — des deux
-côtés, le site compris. Seul le sous-ensemble `latin` est pris, vérifié plutôt
-que supposé : il contient œ, les guillemets français, le tiret cadratin et
-l'apostrophe typographique. Quatre fichiers, 88 Ko, et les règles `@font-face`
-sont écrites à la main parce que celles du paquet traînent un repli `.woff` que
-personne ne demandera jamais.
-
-**Le site et l'application sont deux bibliothèques distinctes.** Même code,
-mais chacune son stockage : un jeu ajouté dans l'application n'apparaît pas sur
-le site tant qu'on n'a pas fait ⚙️ → Envoyer d'un côté et Récupérer de l'autre.
-La synchronisation passe d'optionnelle à nécessaire dès qu'on utilise les deux.
-
-**L'APK produit est un APK de débogage** : installable tel quel. Ce n'est pas
-ce qu'il faudra pour le Play Store, qui exige une version signée par une clé de
-publication — et un APK de débogage est marqué `debuggable`, ce qui laisse un
-appareil branché en USB lire les données de l'application. Sur son propre
-téléphone c'est acceptable ; pour distribuer, non.
-
-**La clé de signature est fixe, et c'est ce qui permet les mises à jour.**
-Android n'identifie pas une application par son nom mais par la clé qui l'a
-signée : deux APK signés différemment sont deux applications étrangères, et la
-seconde ne s'installe pas par-dessus la première. Laissée à elle-même, la CI
-fabrique une clé neuve à chaque exécution — chaque APK aurait alors exigé une
-désinstallation, donc la perte de la bibliothèque locale. La clé vit dans le
-secret `ANDROID_DEBUG_KEYSTORE` (le magasin encodé en base64) ; le workflow
-l'écrit sur le disque de la machine et **la déclare explicitement** dans le
-projet engendré par Capacitor. Le dépôt dans `~/.android/debug.keystore`, où
-Gradle est censé la chercher, a été essayé et n'a pas fonctionné : cet
-emplacement se résout à partir de variables d'environnement propres à la
-machine, un chemin écrit noir sur blanc ne dépend de rien.
-
-Trois vérifications plutôt que trois suppositions : si le secret manque la
-construction s'arrête, le magasin est relu dès qu'il est écrit — un
-copier-coller tronqué se voit là et non sur le téléphone — et l'empreinte de
-l'APK produit est comparée à celle attendue.
-
-En recréer une, si le secret est perdu — au prix d'une dernière désinstallation,
-et en remplaçant l'empreinte inscrite dans le workflow par celle qu'affiche
-`keytool -list -v` :
-
-```sh
-keytool -genkeypair -v -keystore debug.keystore -storetype PKCS12 \
-  -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10950 \
-  -storepass android -keypass android -dname "CN=Android Debug,O=Android,C=US"
-base64 -w0 debug.keystore   # à coller dans le secret
-```
-
-Les mots de passe sont ceux, publics, de la clé de débogage d'Android : le
-secret n'ajoute pas de confidentialité, il empêche seulement un inconnu de
-signer un APK au nom de cette application.
+Le site et l'application sont deux bibliothèques distinctes : utiliser les deux
+demande la synchronisation. Comportements propres à la WebView (export, bouton
+Retour, liens sortants, barre d'état, jaquettes sur l'appareil) :
+[docs/android.md](docs/android.md).
 
 ---
 
 ## Limites connues
 
-- **La synchronisation est manuelle.** ⚙️ → Sauvegarde dépose la bibliothèque
-  sur le Worker et la récupère, avec le même code sur chaque appareil ; rien ne
-  part ni n'arrive tout seul, et une récupération remplace la bibliothèque
-  locale après confirmation. C'est un choix — personne ne veut qu'une
-  application pousse ses données sans qu'on le lui demande — mais une sauvegarde
-  qu'on oublie de faire n'existe pas : passé sept jours sans envoi, une pastille
-  apparaît sur l'onglet ⚙️ et la ligne des réglages donne l'âge en clair.
-  Cela signale le retard, cela ne le rattrape pas. Sans relais déployé, il reste la copie hors ligne.
-  Le **code de synchronisation** est à saisir sur chaque appareil — il ne
-  figure ni dans l'export ni dans la sauvegarde qu'il protège. Les clés des
-  services peuvent voyager, mais seulement si on le demande explicitement.
-- **Deux envois vraiment simultanés peuvent encore se marcher dessus.** Le
-  Worker lit la sauvegarde, compare l'horodatage annoncé, puis écrit : entre la
-  lecture et l'écriture, rien ne verrouille l'espace KV. Deux appareils qui
-  envoient dans la même seconde passeraient donc tous deux le contrôle. Pour
-  deux appareils pilotés par la même personne, le cas ne se présente pas ; il
-  est écrit ici parce qu'il n'est pas couvert, pas parce qu'il est probable.
-- **SteamGridDB et l'import Xbox exigent le relais** déployé et renseigné dans ⚙️.
+- **La synchronisation est manuelle** : rien ne part ni n'arrive tout seul. Elle
+  signale le retard (pastille après sept jours), elle ne le rattrape pas.
+- **Deux envois vraiment simultanés peuvent se marcher dessus** : le Worker lit,
+  compare, puis écrit, sans verrou sur le KV. Non couvert, peu probable à un seul
+  utilisateur.
+- **SteamGridDB, l'import Xbox, les notes Steam et la synchronisation exigent le
+  relais.**
 - **xbl.io** expose l'historique joué, pas les achats, et aucun temps de jeu.
-- **Wikidata est incomplet** sur certains jeux (souvent les titres Nintendo ou
-  très récents) : l'infobox s'affiche alors partiellement, sans casser la fiche.
+- **Wikidata est incomplet** sur certains jeux (titres Nintendo, très récents) :
+  l'infobox s'affiche partiellement.
 - **Le classement Xbox One / Series X repose sur `addedDate`**, faute de date de
-  sortie stockée séparément.
-- **La navigation est en haut de l'écran.** Les quatre onglets et le bouton
-  « + Ajouter » occupent la zone que la cartographie du pouce désigne comme la
-  plus difficile à atteindre à une main. Une barre basse et un bouton flottant
-  y répondraient : c'est le seul écart structurel au cahier des charges, parce
-  qu'il déplace l'ossature et non trois valeurs.
-- **Toute la bibliothèque est montée d'un coup.** Mesuré sur 155 jeux et la
-  version construite, cela coûte 0,2 s de plus au démarrage sur une machine de
-  bureau, 0,7 sur un téléphone récent et 1,1 sur un ancien. À bibliothèque
-  doublée, la question se repose : les chiffres sont en commentaire dans
-  `App.jsx` pour qu'on n'ait pas à les redécouvrir. Elle l'est depuis — 288 jeux
-  au 15/09/2026 —, et l'application reste fluide sur le téléphone d'Antoni,
-  lancement et défilement compris. Ces trois durées n'ont pas été remesurées pour
-  autant : elles disent pourquoi la pagination a été retirée, pas ce que coûte la
-  bibliothèque d'aujourd'hui.
-- **Les filtres ne survivent pas au lancement, délibérément.** La vue, le tri,
-  son sens et le regroupement, si. Un réglage d'affichage change comment on
-  regarde ; un filtre change ce qu'on voit, et un filtre qui survit au
-  redémarrage donne une bibliothèque amputée sans qu'on sache pourquoi.
+  sortie séparée ; approximatif pour quelques titres anciens.
+- **Les filtres ne survivent pas au lancement, délibérément** ; la vue, le tri et
+  le regroupement, si.
 - **`localStorage` n'est pas un coffre-fort** : les clés y sont lisibles par tout
-  script s'exécutant sur la page. Acceptable pour une application personnelle
-  sans contenu tiers.
+  script de la page. Acceptable pour une application personnelle sans contenu tiers.
 
 ---
 
-## Aller plus loin
+## Documentation
 
-- [`PROGRESS.md`](PROGRESS.md) — état détaillé des fonctionnalités
-- [`JOURNAL.md`](JOURNAL.md) — journal de développement : chronologie, décisions et leurs
-  raisons, bugs rencontrés et leurs causes réelles, approches abandonnées
+| Fichier | Contenu |
+|---|---|
+| [`docs/fonctionnalites.md`](docs/fonctionnalites.md) | Comportement détaillé : univers, filtres, prêts, stats, sauvegarde |
+| [`docs/enrichissement.md`](docs/enrichissement.md) | Sources, notes, jaquettes, règle « ne jamais écraser » |
+| [`docs/imports.md`](docs/imports.md) | Imports Xbox et Playnite |
+| [`docs/donnees.md`](docs/donnees.md) | Modèle de données, migrations, validation |
+| [`docs/ergonomie.md`](docs/ergonomie.md) | Jetons, règles d'interface, garde-fous mesurés |
+| [`docs/architecture.md`](docs/architecture.md) | Décisions techniques, performances, arbre du dépôt |
+| [`docs/deploiement.md`](docs/deploiement.md) | Clés, relais, publication du site et du Worker |
+| [`docs/android.md`](docs/android.md) | APK, signature, spécificités de la WebView |
+| [`docs/outils.md`](docs/outils.md) | `verif:ui`, audit des données, dates suspectes |
+| [`PROGRESS.md`](PROGRESS.md) | État des fonctionnalités |
+| [`JOURNAL.md`](JOURNAL.md) | Chronologie, décisions, bugs, impasses |
+| [`TODO.md`](TODO.md) | Liste de travail |
 
 ## Licence
 

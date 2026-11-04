@@ -4,8 +4,8 @@
 > voir [`JOURNAL.md`](JOURNAL.md). Pour l'installation et la configuration,
 > voir [`README.md`](README.md).
 
-Application de gestion de bibliothèque de jeux vidéo (Xbox / Switch), usage perso.
-Dernière mise à jour : 2026-09-04.
+Application de gestion de bibliothèque de jeux vidéo (console et PC), usage perso.
+Dernière mise à jour : 2026-11-04.
 
 ## Stack & lancement
 
@@ -22,7 +22,7 @@ Dernière mise à jour : 2026-09-04.
   npm run dev   # http://localhost:5173/game-library/
   ```
 - Build de prod : `npm run build`. Vérifications : `npm run lint`, `npm test`
-  (88 tests + 29 vérifications du Worker).
+  (289 tests, Worker compris).
 - **En ligne (PWA installable)** : https://antoniman31.github.io/game-library/
   — déploiement automatique par GitHub Actions à chaque push sur `main`.
 
@@ -52,9 +52,9 @@ en lecture seule, avec « Modifier » et « Supprimer » séparés et confirmés
   champs Wikidata. La saisie passe par un brouillon local — « Annuler » retrouve
   vraiment l'état d'avant — et refuse ce qui casserait le modèle (note hors bornes,
   date invalide, plateforme inconnue).
-- **Accordéons repliés** : « 🔗 Liens & contenu » (recherches YouTube / JVC / IGN +
-  3 liens personnels) et « 📝 Notes ». Toujours visibles : l'identité du jeu,
-  l'infobox Wikidata, et le bloc **Prêt** — la seule action qu'on répète.
+- **Toujours visibles** : l'identité du jeu, l'infobox Wikidata, et le bloc **Prêt** —
+  la seule action qu'on répète. Les liens personnels, les conseils et la note libre
+  ont été retirés du modèle (864 champs de lien vides, zéro note).
 - Description repliée avec « Lire la suite ».
 - Les quatre sources (correction manuelle, RAWG, titre français, jaquette) s'ouvrent
   en **panneau au premier plan**, pas à l'intérieur de la fiche.
@@ -124,7 +124,7 @@ et la fiche affiche d'où viennent ses infos (« Source : RAWG et Wikidata »).
   fiche du même jeu sur une autre plateforme ou une autre boutique. Sans réseau,
   sans rien écraser, et la provenance reste celle de la source d'origine.
 
-### Actions de masse (panneau ⋯)
+### Actions de masse (⚙️ → Outils)
 
 - **Partager la liste** : la liste affichée, en texte groupé par plateforme, envoyée au
   menu de partage du téléphone ou copiée dans le presse-papier. Chaque ligne porte le
@@ -215,7 +215,7 @@ Deux sous-onglets. Chaque bloc disparaît quand il n'a rien à dire.
 
 ### Organisation & interface
 
-- **Recherche** sur titre + genre + tag, insensible à la casse et aux accents. La
+- **Recherche** sur titre + genre, insensible à la casse et aux accents. La
   description est volontairement exclue (trop de faux positifs).
 - **Genres normalisés** : RAWG répond en anglais, le projet parle français. Une table
   de correspondance ramène chaque genre à une forme unique — sur 154 jeux réels,
@@ -265,9 +265,6 @@ Deux sous-onglets. Chaque bloc disparaît quand il n'a rien à dire.
   couvre pas les achats anciens), et Antoni a choisi de ne pas les saisir plutôt que de
   garder une tâche ouverte indéfiniment. Les totaux affichés comptent donc ce qui est
   enregistré, pas ce qui est possédé.
-- **La navigation est en haut de l'écran** : les quatre onglets et « + Ajouter »
-  occupent la zone la plus difficile à atteindre d'une main. Une barre basse et un
-  bouton flottant y répondraient — refonte de l'ossature, pas correctif.
 
 ## Fait récemment
 
@@ -380,7 +377,7 @@ n'avait jamais servi : il n'apparaît plus qu'à partir du premier prêt.
 dernier ; il est corrigé, et la règle est décrite dans « Fait récemment ».
 
 **La PWA tourne bien sur téléphone avec 288 jeux** — testé par Antoni le 15/09/2026,
-sans réserve. Le chiffre du README a depuis été remesuré sur les 288 jeux réels, ce
+sans réserve. Le chiffre a depuis été remesuré (`docs/architecture.md`) sur les 288 jeux réels, ce
 qu'il réclamait : la liste complète montait en 2 471 ms sur un processeur ralenti six
 fois, et en 1 727 ms depuis que `content-visibility` et le chargement paresseux des
 jaquettes sont posés. Le pire cas — effacer la recherche pour faire revenir toute la
@@ -408,27 +405,6 @@ six séries portées par un seul jeu, ce qui n'est pas un défaut.
 
 ## Structure
 
-```
-game-library/
-├── index.html            ← script anti-clignotement du thème
-├── package.json
-├── .github/workflows/    ← deploy.yml : lint, tests, build, publication Pages
-├── worker/               ← relais CORS + sauvegarde KV (sans secret) + tests
-├── scripts/audit.mjs     ← audit des données d'un export (pas un test)
-├── scripts/verif-ui.mjs  ← mesure les écrans rendus : cibles tactiles,
-│                           tailles de texte, débordements (npm run verif:ui)
-├── vite.config.js        ← base '/game-library/', PWA, proxys de dev (sans clé)
-├── PROGRESS.md           ← ce fichier
-└── src/
-    ├── App.jsx           ← ossature : état global, en-tête, onglets
-    ├── main.jsx          ← montage + garde-fou d'erreurs global
-    ├── index.css         ← jetons de thème, animations, survol
-    ├── lib/              ← api, model, stats, apparence, playnite, preferences,
-    │                       garde-fous, maj, seed, storage, sync, theme
-    │                       (+ *.test.mjs, dont coherence.test.mjs qui
-    │                        surveille ce qui est écrit deux fois)
-    └── components/       ← GameCard, AddModal, ImportModal, PlayniteModal, StatsView,
-                             SettingsView, ScoresSheet, Sheet, FiltersSheet,
-                             PanneauOutils, SousOnglets, Cover, InfoboxView,
-                             ChampProtege, ErrorBoundary
-```
+Voir [`docs/architecture.md`](docs/architecture.md) : arbre du dépôt à jour, décisions
+techniques et performances mesurées. Le détail de chaque fonctionnalité est dans
+[`docs/`](docs/), l'entrée est le [`README.md`](README.md).
