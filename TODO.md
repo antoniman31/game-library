@@ -37,19 +37,9 @@ que la fonctionnalité marche sur du matériel réel avant d'y toucher.
 ## Depuis l'audit complet du 8 octobre
 
 Rien de grave : ni faille, ni bug, ni code mort trouvé dans l'ensemble du
-projet (lib, composants, Worker, scripts, CI). Deux constats réels, tous
-deux sans urgence.
+projet (lib, composants, Worker, scripts, CI). Un constat réel reste ouvert,
+sans urgence ; l'autre (README et PROGRESS en retard sur le code) est réglé.
 
-- [ ] **`README.md` et `PROGRESS.md` ont deux semaines de retard sur le
-      code.** Les deux décrivent encore l'accordéon « 🔗 Liens & contenu »
-      (supprimé en PR #76) comme s'il existait. `README.md` ligne 172 dit que
-      la recherche porte sur « titre + genre + tag » — le champ `tag` est
-      retiré du modèle, la recherche ne porte plus que sur titre et genre.
-      `PROGRESS.md` est daté du 4 septembre, annonce « 88 tests » (289
-      aujourd'hui), et ne mentionne ni les graphiques de Stats (PR #78), ni
-      ce fichier, ni la décision de garder le site secondaire à l'APK.
-      `JOURNAL.md` n'est pas concerné : c'est un historique assumé, ses
-      mentions passées sont normales.
 - [ ] **`storage.js` et `sync.js` n'ont pas de test dédié**, alors qu'ils
       portent une vraie logique de branchement (quel message afficher selon
       le type d'erreur de stockage ; comment interpréter un 404/409/autre du
