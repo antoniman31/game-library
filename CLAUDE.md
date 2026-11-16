@@ -51,6 +51,8 @@ détail des décisions : `JOURNAL.md` ; ce qui reste : `RESTE-A-FAIRE.md`.
   au moins pour une commande en ligne ; `verif:ui` mesure les deux.
 - Un `const` lu avant sa déclaration fait tomber toute l'application sur son
   garde-fou d'erreurs : c'est arrivé trois fois. Déclarer avant d'utiliser.
+- La CSP du site est écrite à la construction par `src/lib/csp.js` (empreinte du script du thème recalculée à chaque
+  build) ; `verif:ui` échoue sur tout refus de la CSP. Pas de CSP dans l'APK (`--mode android`).
 - La sauvegarde distante est une entrée non fiable comme un fichier :
   `validerJeuxImportes`, `preferencesRecues`.
 

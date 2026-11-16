@@ -311,6 +311,9 @@ for (const [largeur, theme] of ECRANS) {
   const page = await ctx.newPage();
   const erreurs = [];
   page.on("pageerror", e => erreurs.push(String(e)));
+  // Un script ou une requête refusés par la CSP (src/lib/csp.js) sont une erreur : sur le site publié, ils casseraient
+  // une fonction sans le moindre message à l'écran.
+  page.on("console", m => { if (/Content Security Policy/i.test(m.text())) erreurs.push(`refus de la CSP : ${m.text().slice(0, 200)}`); });
   // Supprimer un jeu demande confirmation ; sans réponse, l'étape resterait
   // bloquée sur une boîte que Playwright refuse par défaut.
   page.on("dialog", d => d.accept());

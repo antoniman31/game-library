@@ -2,6 +2,7 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 import { execSync } from 'node:child_process'
+import { pluginCsp } from './src/lib/csp.js'
 
 // De quelle version s'agit-il ?
 //
@@ -43,6 +44,8 @@ export default defineConfig(({ mode }) => {
   define: { __COMMIT__: JSON.stringify(commit) },
   plugins: [
     react(),
+    // Le site seulement : voir src/lib/csp.js.
+    !pourAndroid && pluginCsp(),
     !pourAndroid && VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg'],
