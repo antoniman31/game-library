@@ -72,12 +72,61 @@ jobs:
         with:
           path: dist
 
+  # Le contrôle d'interface ne tournait qu'à la main (`npm run verif:ui`) : il ne protégeait que si quelqu'un pensait à le lancer.
+  # Cibles tactiles de 48 px, contraste, focus et débordements, sur des pages réelles. Bloque le déploiement, comme chez Bricks.
+  # Règle commune « CI, trois niveaux » (16/11/2026) : une PR qui ne touche que des .md n'a rien à donner aux contrôles
+  # lourds, qui sont alors marqués « sautés » (un job sauté compte comme réussi pour les contrôles obligatoires).
+  # Sur main et au lancement manuel, tout tourne toujours.
+  changements:
+    name: Fichiers touchés
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      code: ${{ steps.tri.outputs.code }}
+    steps:
+      - uses: actions/checkout@v4
+        if: github.event_name == 'pull_request'
+        with:
+          fetch-depth: 2
+      - id: tri
+        env:
+          EVENEMENT: ${{ github.event_name }}
+        run: |
+          if [ "$EVENEMENT" != pull_request ]; then echo code=true >> "$GITHUB_OUTPUT"; exit 0; fi
+          # Le commit de fusion d'une PR a pour premier parent la pointe de main : leur écart est exactement la PR.
+          fichiers=$(git diff --name-only HEAD^1 HEAD)
+          printf '%s\n' "$fichiers"
+          if printf '%s\n' "$fichiers" | grep -qvE '\.md$'; then echo code=true; else echo code=false; fi >> "$GITHUB_OUTPUT"
+
+  interface:
+    name: Interface
+    needs: changements
+    if: needs.changements.outputs.code == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Installer les dépendances
+        run: npm ci --no-audit --no-fund
+
+      - name: Installer le navigateur de test
+        run: npx playwright install --with-deps --only-shell chromium
+
+      - name: Vérifier l'interface
+        run: npm run verif:ui
+
   deploy:
     name: Publier sur GitHub Pages
     # Une pull request se vérifie mais ne publie rien : elle n'a pas à écraser
     # le site en ligne avant d'avoir été relue.
     if: github.event_name != 'pull_request'
-    needs: verifier
+    needs: [verifier, interface]
     runs-on: ubuntu-latest
     environment:
       name: github-pages

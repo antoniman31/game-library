@@ -2702,3 +2702,8 @@ techniques et performances mesurées. Le détail de chaque fonctionnalité est d
   par écran), à 48 avec l'ancien jeton `--tap-min: 44px` aussi (fiche, vidage, Prêts, Réglages, Services, Playnite…).
 - **`--tap-min` passe de 44 à 48 px** (règle commune) : `verif:ui` « Rien à signaler » à 48 × 24.
 
+### CI, trois niveaux ; le contrôle d'interface en CI — 16/11/2026
+
+Bloc commun : règle « CI, trois niveaux » (rapide à chaque PR, lourd seulement si autre chose que des `.md` change, appareil réel). `npm run verif:ui` ne tournait qu'à la main : il devient le job « Interface » de la CI, qui bloque le déploiement
+comme chez Bricks. Il dépend d'un job `changements` et se saute sur une PR qui ne touche que des `.md`. Mesuré en local
+le 16/11 : 49 s, build compris, « Rien à signaler ».
