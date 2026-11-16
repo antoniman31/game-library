@@ -10,7 +10,7 @@ peut recopier de travers finit par l'être.
 | Jeton | Valeur | Ce qu'il tient |
 |---|---|---|
 | `--tap` | 48 px | Hauteur d'une commande principale (Material) |
-| `--tap-min` | 44 px | Plancher d'une commande posée dans une ligne (Apple HIG, WCAG 2.5.5) |
+| `--tap-min` | 48 px | Plancher d'une commande posée dans une ligne (44 px jusqu'au 16/11/2026 ; 48 depuis la règle commune des dépôts) |
 | `--ecart-tap` | 8 px | Séparation entre deux cibles voisines |
 | `--ecart-bloc` | 28 px | Séparation entre deux blocs — contre 12 px à l'intérieur d'un bloc |
 | `--large-lisible` | 720 px | Largeur maximale du contenu ; le fond des barres collantes reste pleine largeur |
@@ -99,8 +99,8 @@ balayage du système passe avant l'application. La zone sûre ne se mesure pas e
 pixels sur une machine sans encoche, où `env(safe-area-inset-bottom)` vaut
 zéro : c'est la déclaration qui se lit, pas son résultat.
 
-Deux écarts restent assumés, et sont écrits ici plutôt que tus : les commandes
-secondaires font 44 px et non 48 ; et l'échelle typographique
+Un écart reste assumé, et est écrit ici plutôt que tu (les commandes secondaires
+à 44 px au lieu de 48 en étaient un autre, refermé le 16/11/2026) : l'échelle typographique
 s'arrête à 24 px et n'a ni Display ni H1 au sens des référentiels : c'est une
 liste dense, pas un article, et un titre de 32 px y prendrait la place de deux
 jeux sans rien apprendre. Les listes contiguës — accordéon des filtres, cases à

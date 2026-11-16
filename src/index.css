@@ -136,15 +136,15 @@
 
      `--tap-min` est le plancher des commandes secondaires posées DANS une
      ligne — la croix qui ferme une bannière, celle qui retire une ligne
-     d'historique. Monter celles-là à 48 découperait leur ligne en deux ; 44 px
-     est le plancher d'Apple (HIG) et celui de WCAG 2.5.5, donc le plus bas des
-     trois standards, pas un chiffre choisi pour nous arranger. Rien au-dessous
-     de ces deux valeurs.
+     d'historique. Il était de 44 px (Apple HIG, WCAG 2.5.5), pour ne pas
+     découper ces lignes en deux. Depuis le 16/11/2026, la règle commune des
+     dépôts d'Antoni est 48 px partout (norme Android, le même S26 pour toutes
+     ses applis) : les deux jetons valent 48, et `verif-ui` mesure 48.
 
      `--ecart-tap` sépare deux cibles voisines : 8 px, sans quoi deux boutons
      collés se touchent et le doigt prend l'un pour l'autre. */
   --tap: 48px;
-  --tap-min: 44px;
+  --tap-min: 48px;
   --ecart-tap: 8px;
 
   /* Largeur maximale du contenu.

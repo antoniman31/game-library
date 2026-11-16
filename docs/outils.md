@@ -14,7 +14,7 @@ npm run verif:ui
 ```
 
 Le script construit, sert `dist/` lui-même et ouvre dix-sept écrans, à 360 et
-412 px, dans les deux thèmes. Il échoue s'il trouve une cible sous 44 × 24 px,
+412 px, dans les deux thèmes. Il échoue s'il trouve une cible sous 48 × 24 px,
 un texte sous 12 px, un champ de saisie sous 16 px, un libellé tronqué, un
 débordement horizontal ou une erreur JavaScript. Il demande Playwright et un
 navigateur, d'où son absence de `npm test`, qui tourne sur des modules purs.

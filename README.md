@@ -125,7 +125,7 @@ Chaque point renvoie au détail dans [`docs/`](docs/).
 le temps de jeu (retirés : la console le tient mieux). Voir
 [`JOURNAL.md`](JOURNAL.md), phase 9.
 
-Principes d'interface (cibles tactiles ≥ 44 px, contrastes mesurés, vrais
+Principes d'interface (cibles tactiles ≥ 48 px, contrastes mesurés, vrais
 `<button>`, panneaux accessibles) : [docs/ergonomie.md](docs/ergonomie.md).
 
 ---
@@ -247,9 +247,8 @@ Retour, liens sortants, barre d'état, jaquettes sur l'appareil) :
 | [`docs/deploiement.md`](docs/deploiement.md) | Clés, relais, publication du site et du Worker |
 | [`docs/android.md`](docs/android.md) | APK, signature, spécificités de la WebView |
 | [`docs/outils.md`](docs/outils.md) | `verif:ui`, audit des données, dates suspectes |
-| [`PROGRESS.md`](PROGRESS.md) | État des fonctionnalités |
 | [`JOURNAL.md`](JOURNAL.md) | Chronologie, décisions, bugs, impasses |
-| [`TODO.md`](TODO.md) | Liste de travail |
+| [`RESTE-A-FAIRE.md`](RESTE-A-FAIRE.md) | Ce qui reste à faire |
 
 ## Licence
 

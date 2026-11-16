@@ -9,7 +9,8 @@
 //
 // Ce script ouvre l'application construite, à la largeur de deux téléphones
 // courants, dans les deux thèmes, et échoue s'il trouve :
-//   - une cible interactive sous 44 × 24 px (Apple HIG, WCAG 2.5.5) ;
+//   - une cible interactive sous 48 × 24 px (48 de haut : règle commune des
+//     dépôts d'Antoni depuis le 16/11/2026, norme Android ; 44 avant) ;
 //   - deux cibles voisines séparées de moins de 8 px (règle de séparation) ;
 //   - un texte sous 12 px ;
 //   - un champ de saisie sous 16 px (sous quoi Safari iOS zoome tout seul) ;
@@ -66,7 +67,7 @@ function servirDist(port) {
 const PORT = 4179;
 const serveurLocal = process.env.URL ? null : await servirDist(PORT);
 const URL_APP = process.env.URL || `http://localhost:${PORT}/game-library/`;
-const PLANCHER_HAUTEUR = 44;   // HIG, WCAG 2.5.5
+const PLANCHER_HAUTEUR = 48;   // règle commune des dépôts (16/11/2026), norme Android ; 44 avant (HIG, WCAG 2.5.5)
 const PLANCHER_LARGEUR = 24;   // WCAG 2.5.8, pour les commandes en ligne
 const PLANCHER_TEXTE = 12;   // plancher d'une pastille ou d'un horodatage
 const PLANCHER_CHAMP = 16;     // au-dessous, Safari iOS zoome à la prise de focus
@@ -79,7 +80,11 @@ const BARRE_GESTES = 34;
 const ECRANS = [[360, "dark"], [360, "light"], [412, "dark"]];
 
 // Mesuré dans la page : ce que le navigateur affiche vraiment.
-const mesurer = () => ({
+// Les planchers voyagent en argument : la mesure s'exécute dans la page, où les
+// constantes du script n'existent pas. Jusqu'au 16/11/2026 elle avait ses
+// propres valeurs écrites en dur (43,5 et 23,5) : changer PLANCHER_HAUTEUR ne
+// changeait que le message, et un seuil à 60 passait encore.
+const mesurer = ({ hauteur, largeur }) => ({
   debordement: document.documentElement.scrollWidth > document.documentElement.clientWidth,
   // Un élément `position: fixed` n'est fixe que tant qu'aucun ancêtre ne crée
   // de bloc conteneur. `content-visibility: auto`, une transformation, un
@@ -161,7 +166,7 @@ const mesurer = () => ({
   cibles: [...new Set([...document.querySelectorAll('button, a[href], input, select, textarea, [role="button"]')]
     .map(el => [el, (el.closest("label") || el).getBoundingClientRect()])
     .filter(([, b]) => b.width && b.height)
-    .filter(([, b]) => b.height < 43.5 || b.width < 23.5)
+    .filter(([, b]) => b.height < hauteur - 0.5 || b.width < largeur - 0.5)
     .map(([el, b]) => {
       const nom = (el.innerText || el.getAttribute("aria-label") || el.type || el.tagName).trim().slice(0, 28);
       return `${nom} — ${Math.round(b.width)}×${Math.round(b.height)}`;
@@ -710,7 +715,7 @@ for (const [largeur, theme] of ECRANS) {
   for (const [nom, aller] of etapes) {
     await aller();
     await page.waitForTimeout(150);
-    const r = await page.evaluate(mesurer);
+    const r = await page.evaluate(mesurer, { hauteur: PLANCHER_HAUTEUR, largeur: PLANCHER_LARGEUR });
     const ou = `${largeur}px ${theme} · ${nom}`;
     if (r.debordement) signaler(ou, "la page déborde horizontalement", []);
     if (r.confines.length) signaler(ou, `${r.confines.length} élément(s) fixe(s) enfermé(s) dans un ancêtre`, r.confines);

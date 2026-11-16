@@ -171,8 +171,7 @@ bibliothèque d'aujourd'hui.
 ├── vite.config.js        Base, PWA, proxys de développement, mode android
 ├── capacitor.config.json
 ├── CLAUDE.md             Règles de travail du projet
-├── TODO.md               Liste de travail courte
-├── PROGRESS.md           État des fonctionnalités
+├── RESTE-A-FAIRE.md      Ce qui reste à faire
 └── JOURNAL.md            Journal : décisions, bugs, impasses
 ```
 
