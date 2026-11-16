@@ -4,17 +4,15 @@ Liste de travail courte, pas un journal : voir [`JOURNAL.md`](JOURNAL.md) pour
 l'historique des décisions, [`PROGRESS.md`](PROGRESS.md) pour l'état complet
 du projet.
 
-## APK : remesurer
+## APK : mesuré, rien à faire
 
-Le scan de codes-barres est retiré (16/11/2026), et avec lui ML Kit et CameraX.
-Les 11,8 Mo de bibliothèques x86 de la mesure de référence (PR #73, 22,8 Mo)
-venaient vraisemblablement de ce module (non mesuré). Le cache Gradle est en place.
-
-- [ ] **Relancer le workflow « Application Android »** (variante `publication`)
-      et lire `node scripts/peser-apk.mjs` : s'il reste des bibliothèques natives
-      x86, ajouter le filtre d'ABI `arm64-v8a` (décision déjà prise) ; sinon,
-      rien à faire. Comparer aussi la durée de la compilation Gradle (3 min 26
-      sans cache), à la deuxième construction.
+Construction de publication n° 21 (16/11/2026, après le retrait du scan), lue par
+`scripts/peser-apk.mjs` : **1 333 Ko** au lieu de 22,8 Mo (PR #73). Ressources
+Android 611 Ko, code dex 475 Ko, application web 219 Ko, **aucune bibliothèque
+native** : les 11,8 Mo de x86 venaient du module de scan. Le filtre d'ABI
+`arm64-v8a` n'a plus d'objet. Compilation Gradle : 1 min 52 sans cache (3 min 26
+avant, ML Kit compris) ; le cache est enregistré, la prochaine construction dira
+ce qu'il fait gagner.
 
 ## Depuis l'audit complet du 8 octobre
 
