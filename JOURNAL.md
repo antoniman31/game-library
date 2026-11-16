@@ -2707,3 +2707,14 @@ techniques et performances mesurées. Le détail de chaque fonctionnalité est d
 Bloc commun : règle « CI, trois niveaux » (rapide à chaque PR, lourd seulement si autre chose que des `.md` change, appareil réel). `npm run verif:ui` ne tournait qu'à la main : il devient le job « Interface » de la CI, qui bloque le déploiement
 comme chez Bricks. Il dépend d'un job `changements` et se saute sur une PR qui ne touche que des `.md`. Mesuré en local
 le 16/11 : 49 s, build compris, « Rien à signaler ».
+
+### Actions figées, Dependabot, CSP du site — 16/11/2026
+
+- Les 16 appels d'actions des trois workflows sont figés sur un commit précis, la version en commentaire : une étiquette
+  comme `@v4` peut être déplacée par son auteur, ou par qui lui vole son compte, et ces workflows manipulent le jeton
+  Cloudflare et la clé de signature de l'APK. `dependabot.yml` (mensuel, une PR par écosystème : actions et npm).
+- CSP posée à la construction du site par `src/lib/csp.js` (plugin Vite, build seulement) : scripts limités aux fichiers
+  du site et au script du thème, autorisé par son empreinte recalculée à chaque build. Images et appels réseau restent
+  ouverts à toute adresse https (jaquettes de nombreux services, relais à l'adresse choisie). Pas dans l'APK.
+- `verif:ui` échoue sur tout refus de la CSP. Vu échouer : sans l'empreinte, il signale le script du thème bloqué ;
+  avec, « Rien à signaler ». 293 tests (dont 5 pour `csp.js`).

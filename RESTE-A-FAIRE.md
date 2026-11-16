@@ -20,6 +20,9 @@ Rien d'ouvert : `storage.js` et `sync.js` ont leurs tests depuis le 16/11/2026.
 
 ## À vérifier par Antoni (repris de l'ancien PROGRESS.md du 04/11/2026)
 
+- [ ] **CSP du site (16/11/2026)** : ouvrir le site sur le S26 et sur le PC, puis vérifier que jaquettes, recherche,
+      synchronisation et services s'affichent comme avant ; un refus de la CSP casserait une fonction sans message.
+
 - [ ] **Rendre sa série à *Plague Inc: Evolved*** si elle manque : la fausse série
       « Inc. » est écartée à la lecture, et rien ne la reprend toute seule.
       « Plague Inc. » se saisit à la main sur la fiche.
