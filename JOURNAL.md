@@ -2026,8 +2026,9 @@ boîtes depuis la phase où elle est née, et l'essai n'est jamais venu : Antoni
 tranché « retirer ». Partent avec lui `@capacitor-mlkit/barcode-scanning`
 (CameraX, ML Kit), l'appel d'essai à UPCitemdb, `codebarres.js` et son test. Les
 deux optimisations d'APK qui l'attendaient (ML Kit « non empaqueté », filtre
-d'ABI) attendent une nouvelle mesure : les bibliothèques natives x86
-venaient vraisemblablement de ce module, ce qui reste à vérifier.
+d'ABI) n'ont plus d'objet : mesuré sur la construction n° 21, l'APK de
+publication passe de 22,8 Mo à 1 333 Ko et ne contient plus aucune
+bibliothèque native. Les 11,8 Mo de x86 venaient bien de ce module.
 
 **Le relais garde les deux envois précédents.** La garde du 409 empêche un autre
 appareil d'écraser le travail de celui-ci ; elle ne protège pas d'un envoi
