@@ -45,7 +45,7 @@ export function genererCode() {
 // Les deux appels partagent la même mécanique d'erreur : on veut un message
 // lisible à l'écran, pas une promesse rejetée qui finit dans la console d'un
 // téléphone que personne n'ouvrira.
-async function appeler(proxy, code, methode, corps, base) {
+async function appeler(proxy, code, methode, corps, base, version) {
   if (!proxy) return { ok: false, erreur: "Renseigne d'abord l'URL du relais CORS ci-dessus." };
   if (!code) return { ok: false, erreur: "Génère d'abord un code de synchronisation." };
   try {
@@ -54,6 +54,7 @@ async function appeler(proxy, code, methode, corps, base) {
       headers: {
         "X-Sync-Code": code,
         ...(base ? { "X-Sync-Base": base } : {}),
+        ...(version ? { "X-Sync-Version": String(version) } : {}),
         ...(corps ? { "Content-Type": "application/json" } : {}),
       },
       body: corps,
@@ -61,7 +62,7 @@ async function appeler(proxy, code, methode, corps, base) {
     let data = null;
     try { data = await r.json(); } catch { /* réponse non JSON : on s'en tient au statut */ }
     if (!r.ok) {
-      if (r.status === 404) return { ok: false, erreur: "Aucune sauvegarde pour ce code." };
+      if (r.status === 404) return { ok: false, erreur: version ? "Aucune version précédente gardée." : "Aucune sauvegarde pour ce code." };
       // 409 : un autre appareil a envoyé depuis notre dernière synchronisation.
       // Ce n'est pas une erreur à afficher sèchement, c'est un choix à poser.
       if (r.status === 409) return { ok: false, conflit: true, data, erreur: data?.erreur || "Conflit de synchronisation." };
@@ -85,5 +86,7 @@ async function appeler(proxy, code, methode, corps, base) {
 export const envoyer = (proxy, code, games, base, prefs) =>
   appeler(proxy, code, "PUT", JSON.stringify(prefs ? { games, prefs } : { games }), base);
 
-export const recuperer = (proxy, code) =>
-  appeler(proxy, code, "GET", null);
+// `version` : 0 (ou absent) pour la sauvegarde courante, 1 ou 2 pour l'une des
+// deux précédentes que le relais garde à chaque envoi.
+export const recuperer = (proxy, code, version = 0) =>
+  appeler(proxy, code, "GET", null, null, version);

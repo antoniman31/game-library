@@ -74,6 +74,11 @@ qu'elle n'emporte jamais : l'adresse du relais, sans laquelle on ne peut pas la
 joindre (la restaurer depuis elle-même serait circulaire), et le code de
 synchronisation, qui est ce qui la protège.
 
+**Le relais garde les deux envois précédents.** Chaque envoi décale la version
+courante vers deux copies (clés KV : empreintes du code suivi du rang). ⚙️ →
+« Version précédente » propose la dernière, puis celle d'avant ; une version
+reprise se renvoie par-dessus la courante sans conflit.
+
 **Les réglages d'affichage survivent au lancement, les filtres non.** Un
 réglage d'affichage change comment on regarde ; un filtre change ce qu'on voit.
 Un filtre qui survit au redémarrage, c'est une bibliothèque amputée sans qu'on

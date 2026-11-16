@@ -5,8 +5,8 @@
 // branché en USB lire les données de l'application — et sans aucune réduction
 // de code. Tant que l'application ne dépendait que de Capacitor, ça ne pesait
 // pas lourd. Le lecteur de codes-barres a changé l'échelle : CameraX, ML Kit
-// et les services Google arrivent avec, et la plus grande part n'est jamais
-// appelée.
+// et les services Google arrivaient avec, et la plus grande part n'était jamais
+// appelée. Il est retiré depuis le 16/11/2026 ; R8 reste utile pour tout le reste.
 //
 // R8 retire ce qui n'est pas atteignable et `shrinkResources` les ressources
 // devenues orphelines. Rien de tout cela ne touche au code web, qui vit dans

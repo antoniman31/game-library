@@ -109,7 +109,7 @@ const EnTeteChamp = ({ nom, lien, quoi }) => (
 export default function SettingsView({
   modeTheme, setModeTheme,
   keys, setKeys, appliquerCles, testerCle, etatCles,
-  sync, majSync, genererCode, syncEtat, setSyncEtat, onEnvoyer, onRecuperer,
+  sync, majSync, genererCode, syncEtat, setSyncEtat, onEnvoyer, onRecuperer, onRecupererAncienne,
   rappelActif, onBasculerRappel,
   pastilleActive, onBasculerPastille, pastille,
   onExporter, onImporter,
@@ -229,6 +229,11 @@ export default function SettingsView({
             <div style={{ display: "flex", gap: "var(--ecart-tap)" }}>
               <Bouton pleinePlace intention="principal" disabled={syncEtat?.type === "…"} onClick={onEnvoyer}>⬆ Envoyer</Bouton>
               <Bouton pleinePlace disabled={syncEtat?.type === "…"} onClick={onRecuperer}>⬇ Récupérer</Bouton>
+            </div>
+            {/* Le relais garde les deux envois précédents : une bibliothèque
+                abîmée puis envoyée n'efface plus la bonne. */}
+            <div style={{ display: "flex", marginTop: "var(--ecart-tap)" }}>
+              <Bouton pleinePlace disabled={syncEtat?.type === "…" || !sync.code} onClick={onRecupererAncienne}>⬇ Version précédente</Bouton>
             </div>
 
             {syncEtat && (

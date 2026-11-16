@@ -4,44 +4,18 @@ Liste de travail courte, pas un journal : voir [`JOURNAL.md`](JOURNAL.md) pour
 l'historique des décisions, [`PROGRESS.md`](PROGRESS.md) pour l'état complet
 du projet.
 
-## Optimisations APK — en attente du test de scan
+## APK : remesurer
 
-Mesure de référence (PR #73, `node scripts/peser-apk.mjs`) : l'APK de
-publication pèse 22,8 Mo, dont 11,8 Mo (52 %) d'architectures natives qui ne
-servent qu'à l'émulateur Android (x86 6,0 Mo, x86_64 5,7 Mo) — aucun
-téléphone réel ne les utilise.
+Le scan de codes-barres est retiré (16/11/2026), et avec lui ML Kit et CameraX.
+Les 11,8 Mo de bibliothèques x86 de la mesure de référence (PR #73, 22,8 Mo)
+venaient vraisemblablement de ce module (non mesuré). Le cache Gradle est en place.
 
-- [ ] **Limiter l'APK à `arm64-v8a` seul.** Ajoute un filtre d'ABI dans le
-      `build.gradle` engendré (même mécanisme que
-      `scripts/publication-android.mjs`). Gain attendu : environ la moitié
-      de la taille actuelle. Décision prise : arm64 seul, sans
-      `armeabi-v7a` (couvre tous les téléphones vendus depuis ~2017).
-- [ ] **Client ML Kit « non empaqueté » pour le scan de codes-barres.** Le
-      modèle de reconnaissance est aujourd'hui livré dans l'APK ; la version
-      « unbundled » le télécharge une fois depuis Play Services au lieu de
-      le porter à chaque mise à jour. Gain plus modeste que l'ABI, mais réel.
-
-**Bloqué par :** le test du scan de codes-barres sur les trois boîtes
-physiques annoncé par Antoni — ni fait ni invalidé à ce jour. Les deux
-chantiers touchent au module qui scanne, donc ils attendent sa confirmation
-que la fonctionnalité marche sur du matériel réel avant d'y toucher.
-
-## Prêt à faire, indépendant du reste
-
-- [ ] **Cache Gradle dans `.github/workflows/android.yml`.** Chaque
-      construction Android repart de zéro : la seule étape de compilation
-      Gradle prend à elle seule 3 min 26 sur la dernière mesure, sans qu'aucune
-      dépendance ne soit mise en cache d'une construction à l'autre. Aucun
-      risque fonctionnel, à faire quand on veut.
+- [ ] **Relancer le workflow « Application Android »** (variante `publication`)
+      et lire `node scripts/peser-apk.mjs` : s'il reste des bibliothèques natives
+      x86, ajouter le filtre d'ABI `arm64-v8a` (décision déjà prise) ; sinon,
+      rien à faire. Comparer aussi la durée de la compilation Gradle (3 min 26
+      sans cache), à la deuxième construction.
 
 ## Depuis l'audit complet du 8 octobre
 
-Rien de grave : ni faille, ni bug, ni code mort trouvé dans l'ensemble du
-projet (lib, composants, Worker, scripts, CI). Un constat réel reste ouvert,
-sans urgence ; l'autre (README et PROGRESS en retard sur le code) est réglé.
-
-- [ ] **`storage.js` et `sync.js` n'ont pas de test dédié**, alors qu'ils
-      portent une vraie logique de branchement (quel message afficher selon
-      le type d'erreur de stockage ; comment interpréter un 404/409/autre du
-      relais) — presque tous les autres modules de `src/lib/` en ont un,
-      y compris des modules plus petits qu'eux.
+Rien d'ouvert : `storage.js` et `sync.js` ont leurs tests depuis le 16/11/2026.
