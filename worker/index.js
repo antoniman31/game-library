@@ -51,7 +51,7 @@ const TAILLE_MAX = 2 * 1024 * 1024;
 const corsHeaders = (origine) => ({
   "Access-Control-Allow-Origin": origine,
   "Access-Control-Allow-Methods": "GET, PUT, OPTIONS",
-  "Access-Control-Allow-Headers": "Authorization, X-Authorization, X-Sync-Code, X-Sync-Base, Content-Type",
+  "Access-Control-Allow-Headers": "Authorization, X-Authorization, X-Sync-Code, X-Sync-Base, X-Sync-Version, Content-Type",
   "Access-Control-Max-Age": "86400",
   Vary: "Origin",
 });
@@ -65,6 +65,14 @@ async function empreinte(code) {
   const octets = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(code));
   return [...new Uint8Array(octets)].map(b => b.toString(16).padStart(2, "0")).join("");
 }
+
+// Les deux versions précédentes, gardées à chaque envoi. La garde du 409 empêche
+// l'écrasement par un autre appareil, pas l'envoi assumé (« force ») d'une
+// bibliothèque abîmée sur cet appareil : sans copie, la bonne était perdue.
+// Leurs clés sont des empreintes elles aussi (du code suivi du rang), pour que
+// la liste des clés KV ne révèle ni le code ni le lien entre versions.
+const VERSIONS_GARDEES = 2;
+const clePrecedente = (code, rang) => empreinte(`${code}\u0000precedente-${rang}`);
 
 // Un code trop court serait devinable ; l'app en génère de 26 caractères.
 const codeValide = (c) => typeof c === "string" && /^[A-Za-z0-9_-]{20,128}$/.test(c);
@@ -87,6 +95,30 @@ async function sauvegarde(request, env, origine) {
   const cle = await empreinte(code);
 
   if (request.method === "GET") {
+    // `X-Sync-Version: 1` ou `2` : une version précédente. La réponse porte
+    // alors `baseActuelle`, l'horodatage de la version courante : l'appareil
+    // qui reprend une ancienne version pourra la renvoyer sans conflit.
+    const rang = Number(request.headers.get("X-Sync-Version") || 0);
+    if (rang !== 0) {
+      if (!Number.isInteger(rang) || rang < 1 || rang > VERSIONS_GARDEES) {
+        return new Response(JSON.stringify({ erreur: "Version demandée inconnue." }),
+          { status: 400, headers: { ...entetes, "Content-Type": "application/json" } });
+      }
+      const ancien = await env.SYNC.get(await clePrecedente(code, rang));
+      if (ancien === null) {
+        return new Response(JSON.stringify({ erreur: "Aucune version précédente gardée." }),
+          { status: 404, headers: { ...entetes, "Content-Type": "application/json" } });
+      }
+      let courant = null;
+      try { courant = JSON.parse(await env.SYNC.get(cle)); } catch { /* illisible : pas de base */ }
+      let lu;
+      try { lu = JSON.parse(ancien); } catch {
+        return new Response(JSON.stringify({ erreur: "Version précédente illisible." }),
+          { status: 500, headers: { ...entetes, "Content-Type": "application/json" } });
+      }
+      return new Response(JSON.stringify({ ...lu, baseActuelle: courant?.updatedAt ?? null }),
+        { status: 200, headers: { ...entetes, "Content-Type": "application/json" } });
+    }
     const contenu = await env.SYNC.get(cle);
     if (contenu === null) {
       return new Response(JSON.stringify({ erreur: "Aucune sauvegarde pour ce code." }),
@@ -182,6 +214,15 @@ async function sauvegarde(request, env, origine) {
     ...(prefs !== undefined ? { prefs } : {}),
     updatedAt: quand,
   });
+  // Décalage des versions précédentes avant d'écrire la nouvelle : la plus
+  // ancienne tombe, la courante devient la première précédente.
+  if (existant !== null) {
+    for (let rang = VERSIONS_GARDEES; rang > 1; rang--) {
+      const avant = await env.SYNC.get(await clePrecedente(code, rang - 1));
+      if (avant !== null) await env.SYNC.put(await clePrecedente(code, rang), avant);
+    }
+    await env.SYNC.put(await clePrecedente(code, 1), existant);
+  }
   await env.SYNC.put(cle, enregistre);
   return new Response(enregistre, { status: 200, headers: { ...entetes, "Content-Type": "application/json" } });
 }

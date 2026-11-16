@@ -32,8 +32,8 @@ jobs:
     # deux étapes qui la vérifient lisent la même valeur.
     #
     # VARIANTE décide de ce qui sort. La publication est le défaut : R8 retire
-    # le code inatteignable — devenu la majorité de l'APK depuis que le lecteur
-    # de codes-barres amène CameraX et ML Kit avec lui — et l'APK n'est plus
+    # le code inatteignable (la majorité de l'APK tant que le lecteur de
+    # codes-barres, retiré le 16/11/2026, amenait CameraX et ML Kit) et l'APK n'est plus
     # marqué `debuggable`, ce qui laissait n'importe quel appareil branché en
     # USB lire les données de l'application.
     #
@@ -60,6 +60,19 @@ jobs:
         with:
           distribution: temurin
           java-version: 21
+
+      # Le cache Gradle (dépendances et distribution) : sans lui, chaque
+      # construction retéléchargeait tout, et la seule compilation Gradle
+      # prenait 3 min 26 (mesure du TODO). Les dépendances Android viennent des
+      # greffons Capacitor, donc du lockfile npm : c'est lui qui fait la clé.
+      # Un cache périmé ne casse rien, Gradle complète ce qui manque.
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+          restore-keys: gradle-${{ runner.os }}-
 
       - run: npm ci
 

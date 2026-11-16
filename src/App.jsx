@@ -879,9 +879,12 @@ export default function App() {
     setKeyTest(t => ({ ...t, [id]: ok ? "ok" : "ko" }));
   };
 
-  const recupererDuCloud = async () => {
+  // `version` : 0 pour la sauvegarde courante, 1 ou 2 pour les deux
+  // précédentes que le relais garde (une bibliothèque abîmée puis envoyée
+  // n'efface plus la bonne).
+  const recupererDuCloud = async (version = 0) => {
     setSyncEtat({ type: "…", texte: "Récupération…" });
-    const r = await recuperer(keys.proxy, sync.code);
+    const r = await recuperer(keys.proxy, sync.code, version);
     if (!r.ok) { setSyncEtat({ type: "ko", texte: r.erreur }); return; }
 
     const distants = Array.isArray(r.data?.games) ? r.data.games : null;
@@ -894,13 +897,17 @@ export default function App() {
 
     // Un remplacement écrase du travail local : il se confirme, chiffres en main.
     const ok = window.confirm(
-      `Sauvegarde du ${quand} : ${jeux.length} jeu(x).\n` +
+      `${version ? "Version précédente" : "Sauvegarde"} du ${quand} : ${jeux.length} jeu(x).\n` +
       `Cet appareil en compte ${games.length}.` +
       (rejetes ? `\n\n⚠️ ${rejetes} entrée(s) ignorée(s).` : "") +
       (corriges ? `\n⚠️ ${corriges} entrée(s) corrigée(s).` : "") +
       `\n\nRemplacer la bibliothèque de cet appareil ?`
     );
-    if (!ok) { setSyncEtat({ type: "ko", texte: "Récupération annulée." }); return; }
+    if (!ok) {
+      if (version === 1 && window.confirm("Voir la version d'encore avant ?")) return recupererDuCloud(2);
+      setSyncEtat({ type: "ko", texte: "Récupération annulée." });
+      return;
+    }
     setGames(jeux);
 
     // Les préférences se reprennent à part, et sur une seconde question : on
@@ -920,8 +927,10 @@ export default function App() {
       if (prefs.exclusions) setExclusions(l => [...new Set([...l, ...prefs.exclusions])]);
     }
 
-    majSync({ ...sync, majLe: r.data.updatedAt || null });
-    setSyncEtat({ type: "ok", texte: `${jeux.length} jeu${jeux.length > 1 ? "x" : ""} récupéré${jeux.length > 1 ? "s" : ""}.` });
+    // Une version précédente reprise se renvoie par-dessus la courante : la base
+    // est donc celle de la courante, sinon le prochain envoi serait un conflit.
+    majSync({ ...sync, majLe: (version ? r.data.baseActuelle : null) || r.data.updatedAt || null });
+    setSyncEtat({ type: "ok", texte: `${jeux.length} jeu${jeux.length > 1 ? "x" : ""} récupéré${jeux.length > 1 ? "s" : ""}.${version ? " Touche « Envoyer » pour en faire la sauvegarde courante." : ""}` });
   };
 
   // L'export, qui ne marche pas de la même façon des deux côtés.
@@ -1600,7 +1609,7 @@ export default function App() {
             rappelActif={rappelActif} onBasculerRappel={basculerRappel}
           pastilleActive={pastilleActive} onBasculerPastille={basculerPastille} pastille={pastille}
             syncEtat={syncEtat} setSyncEtat={setSyncEtat}
-            onEnvoyer={() => envoyerAuCloud()} onRecuperer={recupererDuCloud}
+            onEnvoyer={() => envoyerAuCloud()} onRecuperer={() => recupererDuCloud()} onRecupererAncienne={() => recupererDuCloud(1)}
             onExporter={exportJSON} onImporter={importJSON}
             onPlaynite={() => setShowPlaynite(true)}
             exclusions={exclusions}

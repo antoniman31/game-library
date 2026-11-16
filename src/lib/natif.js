@@ -25,7 +25,6 @@ import { Browser } from "@capacitor/browser";
 import { App as AppNatif } from "@capacitor/app";
 import { StatusBar, Style } from "@capacitor/status-bar";
 import { LocalNotifications } from "@capacitor/local-notifications";
-import { BarcodeScanner, BarcodeFormat } from "@capacitor-mlkit/barcode-scanning";
 import { refermerLeDessus } from "./retour.js";
 import { prochainRappel, rappelAReplanifier } from "./rappel.js";
 
@@ -309,47 +308,6 @@ export async function accorderRappelSauvegarde({ actif, configuree, majLe }) {
     // orange sont toujours là.
     return null;
   }
-}
-
-// ── Lire le code-barres d'une boîte ────────────────────────────────────────
-//
-// `scan()` passe par le lecteur de Google Play Services : l'interface, la
-// caméra et le modèle sont fournis par le système. C'est le seul chemin qui ne
-// demande pas la permission caméra — l'application ne voit jamais l'image,
-// seulement le code lu. Sur un appareil sans Play Services, il n'y a rien à
-// faire, et le bouton ne s'affiche pas.
-//
-// Le module se télécharge à la première utilisation. On le demande donc avant
-// de scanner, sinon le premier scan de la vie de l'application échoue sans
-// rien dire, et c'est le seul qu'on juge.
-export async function scannerCodeBarres() {
-  if (!estNatif()) return { ok: false, erreur: "Le scan n'existe que dans l'application." };
-
-  try {
-    const { available } = await BarcodeScanner.isGoogleBarcodeScannerModuleAvailable();
-    if (!available) {
-      await BarcodeScanner.installGoogleBarcodeScannerModule();
-      return { ok: false, erreur: "Le lecteur de codes-barres s'installe. Réessaie dans un instant." };
-    }
-
-    const { barcodes } = await BarcodeScanner.scan({
-      formats: [BarcodeFormat.Ean13, BarcodeFormat.Ean8, BarcodeFormat.UpcA, BarcodeFormat.UpcE],
-    });
-    const code = barcodes?.[0]?.rawValue || barcodes?.[0]?.displayValue || "";
-    // Annuler est un geste délibéré, pas une panne : pas de message.
-    if (!code) return { ok: false, erreur: null };
-    return { ok: true, code };
-  } catch (e) {
-    return { ok: false, erreur: String(e?.message || e) };
-  }
-}
-
-// Le scan est-il possible ici ? Un bouton qui n'a aucune chance de marcher ne
-// doit pas s'afficher.
-export async function scanPossible() {
-  if (!estNatif()) return false;
-  try { return (await BarcodeScanner.isSupported()).supported === true; }
-  catch { return false; }
 }
 
 // ── La pastille sur l'icône ────────────────────────────────────────────────

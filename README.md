@@ -103,7 +103,6 @@ Chaque point renvoie au détail dans [`docs/`](docs/).
 - Notes Metacritic en trois sources (RAWG, Steam, Wikidata) ; repasser sur
   l'existant ne fait que proposer des changements à cocher.
 - Remplissage depuis les autres éditions du même jeu, sans réseau.
-- Scan de codes-barres (application Android).
 
 **Imports** ([détail](docs/imports.md))
 - **Xbox Live** via xbl.io : historique joué, aperçu obligatoire avant écriture.

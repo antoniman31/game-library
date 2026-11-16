@@ -2019,6 +2019,28 @@ ce journal documente depuis la phase 43, refait par la même main. Il n'a pas é
 trouvé en relisant le diff mais en ouvrant l'application ; c'est la troisième
 fois que cette leçon-là se paie.
 
+### Phase 51 — Le scan retiré, deux versions précédentes gardées (16/11/2026)
+
+**Le scan de codes-barres est retiré.** L'expérience attendait l'essai sur trois
+boîtes depuis la phase où elle est née, et l'essai n'est jamais venu : Antoni a
+tranché « retirer ». Partent avec lui `@capacitor-mlkit/barcode-scanning`
+(CameraX, ML Kit), l'appel d'essai à UPCitemdb, `codebarres.js` et son test. Les
+deux optimisations d'APK qui l'attendaient (ML Kit « non empaqueté », filtre
+d'ABI) attendent une nouvelle mesure : les bibliothèques natives x86
+venaient vraisemblablement de ce module, ce qui reste à vérifier.
+
+**Le relais garde les deux envois précédents.** La garde du 409 empêche un autre
+appareil d'écraser le travail de celui-ci ; elle ne protège pas d'un envoi
+assumé (« force ») d'une bibliothèque abîmée. Chaque envoi décale maintenant la
+version courante vers deux copies précédentes, sous des clés qui sont elles
+aussi des empreintes. ⚙️ → « Version précédente » propose la dernière, puis
+celle d'avant ; reprise, elle se renvoie par-dessus la courante sans conflit
+(le relais rend la base actuelle avec elle).
+
+**`storage.js` et `sync.js` ont leurs tests**, le dernier constat ouvert de
+l'audit du 8 octobre. **La construction Android garde son cache Gradle**
+(dépendances et distribution, clé sur le lockfile npm).
+
 ---
 
 ## 3. Architecture finale
@@ -2223,11 +2245,7 @@ mesure avec le simple en-tête `X-Authorization` de xbl.io.
   et le pattern VAPID est éprouvé dans un autre projet de l'auteur. Écarté : cela
   suppose un backend qui pousse, donc envoyer la liste des prêts à un serveur pour un
   gain quasi nul.
-- **Le scan de code-barres est une expérience non tranchée** — la chaîne technique est
-  écrite et testée, mais la question qu'elle pose reste ouverte : une boîte européenne
-  d'un jeu de quelques années figure-t-elle dans une base de produits dont la raison
-  d'être est le commerce en ligne ? Trois boîtes scannées suffiront à le dire. Si la
-  réponse est non, ce n'est pas le code qu'il faudra corriger, c'est la source.
+- **Le scan de code-barres est retiré** (16/11/2026, phase 51) : l'essai sur trois boîtes n'est jamais venu.
 - **Parcours SteamGridDB de bout en bout en ligne** — validé par le bouton « Tester »,
   mais le choix d'une jaquette depuis une fiche n'a pas été rejoué en production.
 - **Import Nintendo** — voir section 6. La bibliothèque Switch a finalement été

@@ -183,6 +183,31 @@ test("sans espace KV -> 501 explicite", r.status === 501, (await r.json()).erreu
 r = await appel("GET", "/inconnu/x");
 test("chemin non relayable -> 404", r.status === 404);
 
+// Versions précédentes : les deux dernières sont gardées, la plus ancienne tombe.
+{
+  const CODE5 = "VVVVVVVVVVVVVVVVVVVVVVVVV5";
+  const lireVersion = (rang) => worker.fetch(new Request("https://w.dev/sync", {
+    method: "GET", headers: { Origin: ORIG, "X-Sync-Code": CODE5, "X-Sync-Version": String(rang) },
+  }), env);
+  let rv = await lireVersion(1);
+  test("version précédente absente -> 404", rv.status === 404);
+  const a = await (await appel("PUT", "/sync", { code: CODE5, corps: JSON.stringify({ games: [{ id: 1, title: "A" }] }) })).json();
+  const b = await (await appel("PUT", "/sync", { code: CODE5, base: a.updatedAt, corps: JSON.stringify({ games: [{ id: 1, title: "B" }] }) })).json();
+  const c = await (await appel("PUT", "/sync", { code: CODE5, base: b.updatedAt, corps: JSON.stringify({ games: [{ id: 1, title: "C" }] }) })).json();
+  await appel("PUT", "/sync", { code: CODE5, base: c.updatedAt, corps: JSON.stringify({ games: [{ id: 1, title: "D" }] }) });
+  const v1 = await (await lireVersion(1)).json();
+  const v2 = await (await lireVersion(2)).json();
+  test("version 1 = l'avant-dernier envoi", v1.games?.[0]?.title === "C", v1.games?.[0]?.title);
+  test("version 2 = celui d'avant", v2.games?.[0]?.title === "B", v2.games?.[0]?.title);
+  const courant = await (await appel("GET", "/sync", { code: CODE5 })).json();
+  test("une version précédente porte la base actuelle", v1.baseActuelle === courant.updatedAt);
+  // Reprendre une ancienne version puis la renvoyer sur cette base ne fait pas de conflit.
+  rv = await appel("PUT", "/sync", { code: CODE5, base: v1.baseActuelle, corps: JSON.stringify({ games: v2.games }) });
+  test("renvoi d'une version reprise accepté", rv.status === 200);
+  test("rang hors limites -> 400", (await lireVersion(3)).status === 400 && (await lireVersion("x")).status === 400);
+  test("clés des versions = empreintes aussi", [...kv.keys()].every(k => /^[0-9a-f]{64}$/.test(k)));
+}
+
 // Toute réponse doit être lisible par le navigateur.
 //
 // Sans en-tête CORS, le navigateur refuse de lire le corps et signale une
