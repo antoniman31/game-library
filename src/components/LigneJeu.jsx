@@ -1,6 +1,6 @@
 import { memo, useRef, useState } from "react";
 import Cover from "./Cover.jsx";
-import { card, bdr, txt, mut, demat, accent, accentFond, ok, okDoux, warn, warnDoux, warnFond, danger } from "../lib/theme.js";
+import { card, bdr, txt, mut, demat, accent, accentFond, ok, okDoux, warn, warnDoux, warnFond, danger, surAccent, compatFond, pretFond } from "../lib/theme.js";
 import { PC, PLATFORM_COLORS, BACK_COMPAT_PARENT, joursDePret, pretEnRetard } from "../lib/model.js";
 import { profondeurRetour } from "../lib/retour.js";
 
@@ -114,15 +114,15 @@ function LigneJeu({ g, onOuvrir, onPreter, onRendre }) {
       <Cover src={g.cover} title={g.title} size={46} />
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginBottom: 4 }}>
-          <span style={{ background: PLATFORM_COLORS[g.platform] || accentFond, color: "#fff", fontSize: "var(--t-legende)", fontWeight: 700, borderRadius: "var(--r-xs)", padding: "1px 5px" }}>{g.platform}</span>
+          <span style={{ background: PLATFORM_COLORS[g.platform] || accentFond, color: surAccent, fontSize: "var(--t-legende)", fontWeight: 700, borderRadius: "var(--r-xs)", padding: "1px 5px" }}>{g.platform}</span>
           {/* Sur PC, « démat » ne dit rien : ils le sont tous. La pastille
               porte donc la boutique, qui est ce qui distingue un jeu d'un
               autre — et reste muette tant qu'aucune n'est renseignée. */}
           {g.platform === PC
             ? (g.boutique ? <span style={{ background: demat, color: accent, fontSize: "var(--t-legende)", borderRadius: "var(--r-xs)", padding: "1px 5px" }}>{g.boutique}</span> : null)
             : g.format === "démat" && <span style={{ background: demat, color: accent, fontSize: "var(--t-legende)", borderRadius: "var(--r-xs)", padding: "1px 5px" }}>démat</span>}
-          {BACK_COMPAT_PARENT[g.platform] && g.backCompat && <span title={`Rétrocompatible ${BACK_COMPAT_PARENT[g.platform]}`} style={{ background: "#107C1022", color: ok, fontSize: "var(--t-legende)", borderRadius: "var(--r-xs)", padding: "1px 5px" }}>🔄 Compatible {BACK_COMPAT_PARENT[g.platform].replace("Xbox ", "")}</span>}
-          {g.lentA && <span key={g.lentA} style={{ background: "#7c320044", color: warn, fontSize: "var(--t-legende)", borderRadius: "var(--r-xs)", padding: "1px 5px", animation: "statusPop 200ms ease" }}>📤 {g.lentA}{jours !== null ? ` · ${jours}j` : ""}</span>}
+          {BACK_COMPAT_PARENT[g.platform] && g.backCompat && <span title={`Rétrocompatible ${BACK_COMPAT_PARENT[g.platform]}`} style={{ background: compatFond, color: ok, fontSize: "var(--t-legende)", borderRadius: "var(--r-xs)", padding: "1px 5px" }}>🔄 Compatible {BACK_COMPAT_PARENT[g.platform].replace("Xbox ", "")}</span>}
+          {g.lentA && <span key={g.lentA} style={{ background: pretFond, color: warn, fontSize: "var(--t-legende)", borderRadius: "var(--r-xs)", padding: "1px 5px", animation: "statusPop 200ms ease" }}>📤 {g.lentA}{jours !== null ? ` · ${jours}j` : ""}</span>}
           {/* Rien d'autre ici : les badges disent l'exemplaire, pas le contenu. */}
         </div>
         <div style={{ fontWeight: 600, fontSize: "var(--t-corps)", color: txt, marginBottom: 2, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>{g.title}</div>

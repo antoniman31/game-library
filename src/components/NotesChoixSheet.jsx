@@ -1,6 +1,6 @@
 import { useState } from "react";
 import Sheet from "./Sheet.jsx";
-import { bdr, txt, mut, accent, accentFond, ok, warn, danger, bdrChamp } from "../lib/theme.js";
+import { bdr, txt, mut, accent, accentFond, ok, warn, danger, bdrChamp, surAccent } from "../lib/theme.js";
 import { rapprochementDouteux } from "../lib/model.js";
 
 // Ce qu'une revérification générale changerait, avant qu'elle ne change rien.
@@ -71,7 +71,7 @@ export default function NotesChoixSheet({ propositions, stopped, onAppliquer, on
       </div>
 
       <button onClick={() => onAppliquer(choisies)} disabled={!choisies.length}
-        style={{ width: "100%", background: accentFond, border: "none", color: "#fff", borderRadius: "var(--r-sm)", minHeight: "var(--tap)", cursor: choisies.length ? "pointer" : "default", opacity: choisies.length ? 1 : 0.5, fontSize: "var(--t-corps)", fontWeight: 600 }}>
+        style={{ width: "100%", background: accentFond, border: "none", color: surAccent, borderRadius: "var(--r-sm)", minHeight: "var(--tap)", cursor: choisies.length ? "pointer" : "default", opacity: choisies.length ? 1 : 0.5, fontSize: "var(--t-corps)", fontWeight: 600 }}>
         Appliquer {choisies.length} modification{choisies.length > 1 ? "s" : ""}
       </button>
     </Sheet>

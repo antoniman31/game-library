@@ -1,6 +1,6 @@
 import { useState } from "react";
 import Sheet from "./Sheet.jsx";
-import { card, bdr, txt, mut, accent, accentDoux, warn, bdrChamp } from "../lib/theme.js";
+import { card, bdr, txt, mut, accent, accentDoux, warn, bdrChamp, surAccent } from "../lib/theme.js";
 import { BACK_COMPAT, SEUILS_NOTE, SANS_NOTE, CHAMPS_A_COMPLETER, compterFiltres, nomCourt, generationDe, familleDe } from "../lib/model.js";
 
 const ACCENT = accent;
@@ -422,7 +422,7 @@ export default function FiltersSheet({
           onClick={onClose}
           style={{
             flex: 2, minHeight: "var(--tap)", background: "var(--accent-fond)", border: "none",
-            color: "#fff", borderRadius: "var(--r-sm)", fontSize: "var(--t-corps)",
+            color: surAccent, borderRadius: "var(--r-sm)", fontSize: "var(--t-corps)",
             fontWeight: 600, cursor: "pointer", fontFamily: "inherit",
           }}
         >

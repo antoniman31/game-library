@@ -8,6 +8,8 @@ import { installerLiensExternes, installerRetour, quitterApp } from './lib/natif
 // Erreurs hors rendu (gestionnaires d'événements, promesses, code asynchrone) :
 // le garde-fou React ne les voit pas, et sur Chrome mobile il n'y a pas de
 // console pour les lire. Un bandeau les affiche donc à l'écran.
+// Ses couleurs sont écrites en dur exprès (exception à la règle des jetons) : il doit rester lisible même quand la
+// panne empêche la feuille de style de se charger. Blanc sur #b91c1c : 6,47:1.
 function bandeauErreur(texte) {
   const div = document.createElement("div")
   div.style.cssText =

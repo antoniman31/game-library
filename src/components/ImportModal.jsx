@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { bdr, bdrChamp, txt, mut, accent, accentFond, dangerDoux, ok, danger } from "../lib/theme.js";
+import { bdr, bdrChamp, txt, mut, accent, accentFond, dangerDoux, ok, danger, surAccent } from "../lib/theme.js";
 import { XBOX_SERIES_CUTOFF, isBackCompatPlatform } from "../lib/model.js";
 import { xblTitleHistory, normTitle, rawgSearch } from "../lib/api.js";
 import Sheet from "./Sheet.jsx";
@@ -119,7 +119,7 @@ function ImportModal({ games, onImportGames, onClose }) {
               {!importing
                 ? <>
                     <button onClick={onClose} style={{ flex: 1, minHeight: "var(--tap)", background: "transparent", border: `1px solid ${bdrChamp}`, color: mut, borderRadius: "var(--r-sm)", padding: "0 12px", cursor: "pointer", fontSize: "var(--t-corps)", fontFamily: "inherit" }}>Annuler</button>
-                    <button onClick={doImport} disabled={selectedCount === 0} style={{ flex: 2, minHeight: "var(--tap)", background: accentFond, border: "none", color: "#fff", borderRadius: "var(--r-sm)", padding: "0 12px", cursor: selectedCount ? "pointer" : "default", opacity: selectedCount ? 1 : 0.5, fontSize: "var(--t-corps)", fontWeight: 600, fontFamily: "inherit" }}>Importer {selectedCount} jeu(x)</button>
+                    <button onClick={doImport} disabled={selectedCount === 0} style={{ flex: 2, minHeight: "var(--tap)", background: accentFond, border: "none", color: surAccent, borderRadius: "var(--r-sm)", padding: "0 12px", cursor: selectedCount ? "pointer" : "default", opacity: selectedCount ? 1 : 0.5, fontSize: "var(--t-corps)", fontWeight: 600, fontFamily: "inherit" }}>Importer {selectedCount} jeu(x)</button>
                   </>
                 : <button onClick={() => { cancelRef.current = true; }} style={{ flex: 1, minHeight: "var(--tap)", background: dangerDoux, border: `1px solid ${danger}`, color: danger, borderRadius: "var(--r-sm)", padding: "0 12px", cursor: "pointer", fontSize: "var(--t-corps)", fontWeight: 600, fontFamily: "inherit" }}>Arrêter l'import</button>}
             </div>

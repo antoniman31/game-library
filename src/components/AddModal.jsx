@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
 import Sheet from "./Sheet.jsx";
-import { bg, card, bdr, bdrChamp, txt, mut, accent, accentFond } from "../lib/theme.js";
+import { bg, card, bdr, bdrChamp, txt, mut, accent, accentFond, surAccent, ombreForte } from "../lib/theme.js";
 import { PC, plateformesGroupees, isBackCompatPlatform, normaliserGenres, fusionnerInfobox, infoboxDepuisRawg } from "../lib/model.js";
 import {
   rawgSearch, rawgDetail, wikiFrenchTitles, wikiArticleData, wikidataInfobox,
@@ -179,7 +179,7 @@ function AddModal({ onAdd, onClose }) {
           </Ligne>
           {loading && <div style={{ color: accent, fontSize: "var(--t-legende)", marginTop: 3 }}>Recherche RAWG…</div>}
           {sugg.length > 0 && (
-            <div style={{ position: "absolute", top: "100%", left: 0, right: 0, background: card, border: `1px solid ${bdr}`, borderRadius: "var(--r-sm)", zIndex: 10, overflow: "hidden", boxShadow: "0 8px 24px #0008" }}>
+            <div style={{ position: "absolute", top: "100%", left: 0, right: 0, background: card, border: `1px solid ${bdr}`, borderRadius: "var(--r-sm)", zIndex: 10, overflow: "hidden", boxShadow: `0 8px 24px ${ombreForte}` }}>
               {sugg.map(s => (
                 <button key={s.id} type="button" className="gl-row" onClick={() => pick(s)} style={ligneChoix}>
                   {s.background_image && <img src={s.background_image} alt="" style={{ width: 34, height: 51, minWidth: 34, objectFit: "cover", borderRadius: "var(--r-xs)" }} />}
@@ -283,7 +283,7 @@ function AddModal({ onAdd, onClose }) {
             texte au lieu de la poser. */}
         <div style={{ display: "flex", gap: "var(--ecart-tap)", marginTop: 4 }}>
           <button onClick={onClose} style={{ flex: 1, minHeight: "var(--tap)", background: "transparent", border: `1px solid ${bdrChamp}`, color: mut, borderRadius: "var(--r-sm)", padding: "0 12px", cursor: "pointer", fontSize: "var(--t-corps)", fontFamily: "inherit" }}>Annuler</button>
-          <button onClick={handleAdd} style={{ flex: 2, minHeight: "var(--tap)", background: accentFond, border: "none", color: "#fff", borderRadius: "var(--r-sm)", padding: "0 12px", cursor: "pointer", fontSize: "var(--t-corps)", fontWeight: 600, fontFamily: "inherit" }}>Ajouter</button>
+          <button onClick={handleAdd} style={{ flex: 2, minHeight: "var(--tap)", background: accentFond, border: "none", color: surAccent, borderRadius: "var(--r-sm)", padding: "0 12px", cursor: "pointer", fontSize: "var(--t-corps)", fontWeight: 600, fontFamily: "inherit" }}>Ajouter</button>
         </div>
     </Sheet>
   );

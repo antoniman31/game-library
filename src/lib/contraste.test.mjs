@@ -52,7 +52,10 @@ function paires(T) {
   p.push(["--accent sur --demat", T.accent, T.demat]);
   for (const c of ["accent", "ok", "warn", "danger"])
     p.push([`--${c} sur --${c}-doux (posé sur --card)`, T[c], surFond(T[`${c}-doux`], T.card)]);
-  p.push(["blanc sur --accent-fond", "#ffffff", T["accent-fond"]]);
+  p.push(["--sur-accent sur --accent-fond", T["sur-accent"], T["accent-fond"]]);
+  p.push(["--sur-accent sur --badge-sombre", T["sur-accent"], T["badge-sombre"]]);
+  p.push(["--ok sur --compat-fond (posé sur --card)", T.ok, surFond(T["compat-fond"], T.card)]);
+  p.push(["--warn sur --pret-fond (posé sur --card)", T.warn, surFond(T["pret-fond"], T.card)]);
   return p;
 }
 
@@ -64,9 +67,12 @@ for (const [nom, T] of Object.entries(THEMES)) {
   });
 }
 
-test("le texte blanc sur la couleur de chaque console atteint 4,5:1 (étiquettes de plateforme)", () => {
-  const faibles = PLATEFORMES.filter(p => ratio("#ffffff", p.couleur) < AA)
-    .map(p => `${p.id} (${p.couleur}) : ${ratio("#ffffff", p.couleur).toFixed(2)}:1`);
+test("le texte --sur-accent sur la couleur de chaque console atteint 4,5:1 (étiquettes de plateforme)", () => {
+  // Depuis le 21/11/2026, model.js nomme un jeton (« var(--plat-…) ») : sa valeur se lit dans index.css.
+  const valeur = (c) => { const m = /^var\(--([a-z0-9-]+)\)$/.exec(c); return m ? SOMBRE[m[1]] : c; };
+  const texte = SOMBRE["sur-accent"] || "#ffffff";
+  const faibles = PLATEFORMES.filter(p => !valeur(p.couleur) || ratio(texte, valeur(p.couleur)) < AA)
+    .map(p => `${p.id} (${p.couleur} = ${valeur(p.couleur)}) : ${valeur(p.couleur) ? ratio(texte, valeur(p.couleur)).toFixed(2) + ":1" : "jeton absent"}`);
   assert.deepEqual(faibles, []);
 });
 

@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef } from "react";
 import { createPortal } from "react-dom";
-import { card, bdr, txt, bdrChamp } from "../lib/theme.js";
+import { card, bdr, txt, bdrChamp, voile } from "../lib/theme.js";
 import { empilerRetour, estAuSommet } from "../lib/retour.js";
 
 // Panneau glissant depuis le bas.
@@ -92,7 +92,7 @@ export default function Sheet({ title, onClose, children }) {
 
   return createPortal((
     <div
-      style={{ position: "fixed", inset: 0, background: "#000b", zIndex: 300, display: "flex", alignItems: "flex-end" }}
+      style={{ position: "fixed", inset: 0, background: voile, zIndex: 300, display: "flex", alignItems: "flex-end" }}
       onClick={onClose}
     >
       <div

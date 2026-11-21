@@ -42,3 +42,15 @@ export const dangerDoux = "var(--danger-doux)";
 export const okFond = "var(--ok-fond)";
 export const warnFond = "var(--warn-fond)";
 export const dangerFond = "var(--danger-fond)";
+
+// Ajoutés à l'audit « Design » du 21/11/2026 : écrits en dur dans les composants jusque-là, mêmes valeurs.
+export const surAccent = "var(--sur-accent)";      // texte sur l'aplat d'accent et sur une étiquette de console
+export const badgeSombre = "var(--badge-sombre)";
+export const contourSombre = "var(--contour-sombre)";
+export const ombreDouce = "var(--ombre-douce)";
+export const ombreMoyenne = "var(--ombre-moyenne)";
+export const ombreForte = "var(--ombre-forte)";
+export const voile = "var(--voile)";
+export const compatFond = "var(--compat-fond)";
+export const pretFond = "var(--pret-fond)";
+export const COUVERTURES = ["var(--couv-1)", "var(--couv-2)", "var(--couv-3)", "var(--couv-4)", "var(--couv-5)"];

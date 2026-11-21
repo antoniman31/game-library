@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { COUVERTURES } from "../lib/theme.js";
 import { sourceJaquette } from "../lib/jaquettes.js";
 
 // Jaquette au format boîte de jeu : rectangle vertical ~2:3.
@@ -15,7 +16,7 @@ function Cover({ src, title, size = 72 }) {
   const [err, setErr] = useState(false);
   const [localRate, setLocalRate] = useState(false);
   // `"".charCodeAt(0)` vaut NaN, et l'index NaN donnait une couleur `undefined`.
-  const bg = ["#1a2a4a","#2a1a4a","#1a4a2a","#4a2a1a","#2a4a4a"][(title?.charCodeAt(0) || 0) % 5];
+  const bg = COUVERTURES[(title?.charCodeAt(0) || 0) % COUVERTURES.length];
   const isFull = size === "100%";
   const box = isFull
     ? { width: "100%", aspectRatio: "2 / 3", minWidth: 0 }
