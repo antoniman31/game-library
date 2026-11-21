@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { card, bdr, bdrChamp, txt, mut, accent, accentDoux, accentFond, ok, warn, danger } from "../lib/theme.js";
+import { card, bdr, bdrChamp, txt, mut, accent, accentDoux, accentFond, ok, warn, danger, surAccent } from "../lib/theme.js";
 import { MODES, LIBELLES, ICONES } from "../lib/apparence.js";
 import { pertesDeReglages, messageDePerte, messageCodeSync, CONSEQUENCES } from "../lib/garde-fous.js";
 import { etatSauvegarde, texteAgeSauvegarde, JOURS_SAUVEGARDE_VIEILLE } from "../lib/preferences.js";
@@ -57,7 +57,7 @@ const Section = ({ titre, aide, children }) => (
 // « fais ceci », il dit « c'est ce qui est choisi » — le mode de thème actif,
 // exactement comme un sous-onglet sélectionné.
 const STYLES_BOUTON = {
-  principal: { background: accentFond, border: "1px solid transparent", color: "#fff", fontWeight: 600 },
+  principal: { background: accentFond, border: "1px solid transparent", color: surAccent, fontWeight: 600 },
   selection: { background: accentDoux, border: `1px solid ${ACCENT}`, color: ACCENT, fontWeight: 600 },
   neutre: { background: "transparent", border: `1px solid ${bdrChamp}`, color: txt, fontWeight: 400 },
   danger: { background: "transparent", border: `1px solid ${danger}`, color: danger, fontWeight: 600 },

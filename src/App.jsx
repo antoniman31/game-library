@@ -15,7 +15,7 @@ import FormulairePret from "./components/FormulairePret.jsx";
 import PlayniteModal from "./components/PlayniteModal.jsx";
 import NotesChoixSheet from "./components/NotesChoixSheet.jsx";
 
-import { hdr, card, bdr, bdrChamp, txt, mut, accent, accentDoux, accentFond, warnDoux, dangerDoux, ok, warn, warnFond, danger } from "./lib/theme.js";
+import { hdr, card, bdr, bdrChamp, txt, mut, accent, accentDoux, accentFond, warnDoux, dangerDoux, ok, warn, warnFond, danger, surAccent, badgeSombre, contourSombre, ombreDouce, ombreMoyenne } from "./lib/theme.js";
 import { enregistrerFichier, estNatif, accorderBarreEtat, surFichierRecu, demanderRappels, accorderRappelSauvegarde, accorderPastille } from "./lib/natif.js";
 import { descendreJaquettes, menageJaquettes, aDescendre } from "./lib/jaquettes.js";
 import { GAMES_INIT } from "./lib/seed.js";
@@ -82,7 +82,7 @@ const bandeauBas = {
   transform: "translateX(-50%)", width: "max-content",
   maxWidth: "calc(100vw - 24px)", display: "flex", alignItems: "center",
   background: card, borderRadius: "var(--r-md)", padding: "8px 10px 8px 14px",
-  boxShadow: "0 8px 24px rgba(0,0,0,0.4)", animation: "toastIn 200ms ease",
+  boxShadow: `0 8px 24px ${ombreDouce}`, animation: "toastIn 200ms ease",
 };
 
 // Le bouton d'un bandeau reste un bouton : `padding: 4px 12px` lui donnait la
@@ -1261,12 +1261,12 @@ export default function App() {
                 display:"flex", flexDirection:"column", alignItems:"flex-start", gap:3,
               }}>
                 <span style={{
-                  background:PLATFORM_COLORS[g.platform] || accentFond, color:"#fff",
+                  background:PLATFORM_COLORS[g.platform] || accentFond, color:surAccent,
                   fontSize:"var(--t-legende)", fontWeight:700, lineHeight:1.4,
                   borderRadius:"var(--r-xs)", padding:"1px 5px",
                   // Une jaquette claire sous une pastille claire ne se lirait
                   // plus : le liseré la détache de n'importe quelle image.
-                  boxShadow:"0 0 0 1px #0006",
+                  boxShadow:`0 0 0 1px ${contourSombre}`,
                   maxWidth:"100%", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap",
                 }}>{nomCourt(g.platform)}</span>
                 {/* La rétrocompatibilité en dessous : la machine qu'on possède
@@ -1278,10 +1278,10 @@ export default function App() {
                     la liste. */}
                 {BACK_COMPAT_PARENT[g.platform] && g.backCompat && (
                   <span title={`Rétrocompatible ${BACK_COMPAT_PARENT[g.platform]}`} style={{
-                    background:"#111827", color:"#fff",
+                    background:badgeSombre, color:surAccent,
                     fontSize:"var(--t-legende)", fontWeight:600, lineHeight:1.4,
                     borderRadius:"var(--r-xs)", padding:"1px 5px",
-                    boxShadow:"0 0 0 1px #0006",
+                    boxShadow:`0 0 0 1px ${contourSombre}`,
                     maxWidth:"100%", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap",
                   }}>🔄 {nomCourt(BACK_COMPAT_PARENT[g.platform])}</span>
                 )}
@@ -1383,7 +1383,7 @@ export default function App() {
               aria-label={sauvegardeAlerte ? "Réglages — sauvegarde à faire" : "Réglages"}
               style={{ ...btnHdr, position: "relative",
                 background: tab === "settings" ? accentFond : "transparent",
-                color: tab === "settings" ? "#fff" : txt }}>
+                color: tab === "settings" ? surAccent : txt }}>
               ⚙️
               {sauvegardeAlerte && <span aria-hidden="true" style={{
                 position: "absolute", top: 4, right: 4, width: 8, height: 8,
@@ -1514,7 +1514,7 @@ export default function App() {
             )}
             <button onClick={() => setShowFilters(true)}
               style={{ ...btnHdr, padding: "0 10px", borderColor: filtresActifs ? ACCENT : bdr, color: filtresActifs ? ACCENT : txt, fontSize: "var(--t-corps)" }}>
-              Filtres{filtresActifs > 0 && <span style={{ background: accentFond, color: "#fff", borderRadius: "var(--r-sm)", padding: "1px 6px", fontSize: "var(--t-legende)", fontWeight: 700 }}>{filtresActifs}</span>}
+              Filtres{filtresActifs > 0 && <span style={{ background: accentFond, color: surAccent, borderRadius: "var(--r-sm)", padding: "1px 6px", fontSize: "var(--t-legende)", fontWeight: 700 }}>{filtresActifs}</span>}
             </button>
           </div>
         )}
@@ -1673,7 +1673,7 @@ export default function App() {
           )}
           <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 12 }}>
             <button onClick={fusionnerImport}
-              style={{ minHeight: "var(--tap)", background: accentFond, border: "1px solid transparent", color: "#fff", borderRadius: "var(--r-sm)", fontSize: "var(--t-corps)", fontWeight: 600, cursor: "pointer", fontFamily: "inherit", textAlign: "left", padding: "0 14px" }}>
+              style={{ minHeight: "var(--tap)", background: accentFond, border: "1px solid transparent", color: surAccent, borderRadius: "var(--r-sm)", fontSize: "var(--t-corps)", fontWeight: 600, cursor: "pointer", fontFamily: "inherit", textAlign: "left", padding: "0 14px" }}>
               Fusionner — ajoute seulement les jeux absents
             </button>
             <button onClick={remplacerParImport}
@@ -1829,7 +1829,7 @@ export default function App() {
                 position: "relative",
                 flex: 1, minWidth: 0,
                 minHeight: "var(--tap)", background: tab===k ? accentFond : "transparent",
-                border: `1px solid ${tab===k ? accentFond : bdrChamp}`, color: tab===k ? "#fff" : mut,
+                border: `1px solid ${tab===k ? accentFond : bdrChamp}`, color: tab===k ? surAccent : mut,
                 borderRadius: "var(--r-md)", padding: "0 2px", fontSize: "var(--t-petit)", fontWeight: tab===k ? 600 : 400,
                 cursor: "pointer", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
               }}>
@@ -1868,9 +1868,9 @@ export default function App() {
           right: "calc(16px + var(--safe-right))",
           bottom: "calc(var(--barre-basse) + 16px + var(--safe-bottom))",
           width: "var(--tap)", height: "var(--tap)", borderRadius: "50%",
-          background: accentFond, border: "none", color: "#fff",
+          background: accentFond, border: "none", color: surAccent,
           fontSize: "var(--t-chiffre)", lineHeight: 1, cursor: "pointer",
-          boxShadow: "0 6px 20px rgba(0,0,0,0.45)" }}>+</button>
+          boxShadow: `0 6px 20px ${ombreMoyenne}` }}>+</button>
       )}
     </div>
   );

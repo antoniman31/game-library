@@ -193,6 +193,36 @@
   --r-sm: 8px;    /* boutons, champs */
   --r-md: 12px;   /* cartes, blocs */
   --r-lg: 16px;   /* panneaux glissants */
+  /* Jetons ajoutés à l'audit « Design » du 21/11/2026 : ces couleurs étaient écrites en dur dans les composants (63
+     occurrences) ; elles gardent leur valeur exacte, rien ne change à l'écran. Le contraste du texte posé dessus est
+     mesuré par src/lib/contraste.test.mjs. Identiques dans les deux thèmes, sauf mention. */
+  --sur-accent: #ffffff;         /* texte sur l'aplat d'accent et sur les étiquettes de console */
+  --badge-sombre: #111827;       /* pastille « numérique » sur la jaquette, lisible sur n'importe quelle image */
+  --contour-sombre: #0006;       /* liseré d'1 px qui détache une pastille de la jaquette */
+  --ombre-douce: rgba(0, 0, 0, 0.4);
+  --ombre-moyenne: rgba(0, 0, 0, 0.45);
+  --ombre-forte: #0008;
+  --voile: #000b;                /* fond derrière une feuille ouverte */
+  --compat-fond: #107C1022;      /* badge « Compatible » (rétrocompatibilité Xbox) */
+  --pret-fond: #7c320044;        /* badge « prêté à … » */
+  /* Jaquette absente : un fond tiré du titre, pour que deux jeux voisins ne se confondent pas. */
+  --couv-1: #1a2a4a;
+  --couv-2: #2a1a4a;
+  --couv-3: #1a4a2a;
+  --couv-4: #4a2a1a;
+  --couv-5: #2a4a4a;
+  /* Couleurs de console (identité, pas thème) : teinte de la famille, le rétro plus sourd que l'actuel. */
+  --plat-series-x: #107C10;
+  --plat-xbox-one: #0a5c0a;
+  --plat-ps5: #0b3d91;
+  --plat-ps4: #082c6b;
+  --plat-switch-2: #e4000f;
+  --plat-switch-1: #b3000c;
+  --plat-pc: #4b5563;
+  --plat-nintendo-retro: #8f4a4a;
+  --plat-xbox-retro: #3f6b3f;
+  --plat-playstation-retro: #41557f;
+  --plat-sega-retro: #3f7a99;
 }
 
 html[data-theme="light"] {
@@ -234,6 +264,24 @@ html[data-theme="light"] {
   --ok-fond: #16a34a;
   --warn-fond: #ea8a04;
   --danger-fond: #dc2626;
+  /* Badge « prêté à » : #7c320044 posé sur la carte claire ne donnait que 4,04:1 au texte orange (mesuré le 21/11/2026
+     par contraste.test.mjs) ; moitié moins opaque, la même teinte donne 5,16:1. Choix d'Antoni (option A). */
+  --pret-fond: #7c320022;
+  /* Jetons de l'audit du 21/11/2026 : même valeur qu'en sombre (une ombre ou une pastille sur image ne dépend pas du
+     thème), écrits ici parce que chaque jeton nommé par theme.js doit l'être dans les deux thèmes (coherence.test.mjs). */
+  --sur-accent: #ffffff;
+  --badge-sombre: #111827;
+  --contour-sombre: #0006;
+  --ombre-douce: rgba(0, 0, 0, 0.4);
+  --ombre-moyenne: rgba(0, 0, 0, 0.45);
+  --ombre-forte: #0008;
+  --voile: #000b;
+  --compat-fond: #107C1022;
+  --couv-1: #1a2a4a;
+  --couv-2: #2a1a4a;
+  --couv-3: #1a4a2a;
+  --couv-4: #4a2a1a;
+  --couv-5: #2a4a4a;
 }
 
 * {
@@ -334,7 +382,7 @@ body {
   }
   .gl-tile:hover {
     transform: scale(1.04);
-    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.45);
+    box-shadow: 0 10px 24px var(--ombre-moyenne);
     position: relative;
     z-index: 1;
   }

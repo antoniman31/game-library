@@ -3,7 +3,7 @@ import Cover from "./Cover.jsx";
 import InfoboxView from "./InfoboxView.jsx";
 import Sheet from "./Sheet.jsx";
 import FormulairePret from "./FormulairePret.jsx";
-import { bg, card, bdr, bdrChamp, txt, mut, accent, accentDoux, accentFond, okDoux, dangerDoux, ok, warn, danger } from "../lib/theme.js";
+import { bg, card, bdr, bdrChamp, txt, mut, accent, accentDoux, accentFond, okDoux, dangerDoux, ok, warn, danger, surAccent, ombreForte } from "../lib/theme.js";
 import { PC, BACK_COMPAT_PARENT, plateformesGroupees, estUrlImage, normaliserGenres, joursDePret, pretEnRetard, brouillonDepuisJeu, validerEdition,
   rendreJeu, annulerPret, dureeEntreeHistorique,
   fusionnerInfobox, infoboxDepuisRawg, libelleSources, CHAMPS_VIDABLES, viderChamps, jeuACompleter,
@@ -393,7 +393,7 @@ function FicheDetail({ g, onEdit, onDelete, onEnrich, onSerie, autresEditions: a
           <input value={rawgQ} onChange={e => rawgQuery(e.target.value)} placeholder="Titre du jeu…" autoFocus style={champRecherche} />
           {rawgBusy && <div style={{ color: accent, fontSize: "var(--t-legende)", marginTop: 4 }}>Récupération & traduction…</div>}
           {rawgSugg.length > 0 && !rawgBusy && (
-            <div style={{ marginTop: 6, background: card, border: `1px solid ${bdr}`, borderRadius: "var(--r-sm)", maxHeight: 300, overflowY: "auto", boxShadow: "0 8px 24px #0008" }}>
+            <div style={{ marginTop: 6, background: card, border: `1px solid ${bdr}`, borderRadius: "var(--r-sm)", maxHeight: 300, overflowY: "auto", boxShadow: `0 8px 24px ${ombreForte}` }}>
               {rawgSugg.map(s => (
                 <button key={s.id} type="button" className="gl-row" onClick={() => rawgPick(s)} style={ligneChoix}>
                   {s.background_image && <img src={s.background_image} alt="" style={{ width: 34, height: 51, minWidth: 34, objectFit: "cover", borderRadius: "var(--r-xs)" }} />}
@@ -414,7 +414,7 @@ function FicheDetail({ g, onEdit, onDelete, onEnrich, onSerie, autresEditions: a
           <input value={wikiQ} onChange={e => wikiQuery(e.target.value)} placeholder="Titre du jeu…" autoFocus style={champRecherche} />
           {wikiBusy && <div style={{ color: accent, fontSize: "var(--t-legende)", marginTop: 4 }}>Recherche…</div>}
           {!wikiBusy && wikiSugg.length > 0 && (
-            <div style={{ marginTop: 6, background: card, border: `1px solid ${bdr}`, borderRadius: "var(--r-sm)", maxHeight: 300, overflowY: "auto", boxShadow: "0 8px 24px #0008" }}>
+            <div style={{ marginTop: 6, background: card, border: `1px solid ${bdr}`, borderRadius: "var(--r-sm)", maxHeight: 300, overflowY: "auto", boxShadow: `0 8px 24px ${ombreForte}` }}>
               {wikiSugg.map((s, i) => (
                 <div key={i} className="gl-row" style={{ display: "flex", gap: 8, padding: "7px 9px", borderBottom: `1px solid ${bdr}`, alignItems: "center" }}>
                   <button type="button" onClick={() => wikiPick(s.title)} style={{ ...ligneChoix, flex: 1, borderBottom: "none", padding: "0 0 0 0", color: txt, fontSize: "var(--t-petit)", fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display: "block", textAlign: "left" }}>{s.title}</button>
@@ -640,7 +640,7 @@ function FicheDetail({ g, onEdit, onDelete, onEnrich, onSerie, autresEditions: a
           {ligneEdition("Épisode suivant", "followedBy", <input value={brouillon.followedBy} onChange={e => champ("followedBy", e.target.value)} style={champStyle("followedBy")} />)}
 
           <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
-            <button onClick={enregistrer} style={{ minHeight: "var(--tap)", padding: "0 16px", background: accentFond, border: "1px solid transparent", color: "#fff", borderRadius: "var(--r-sm)", fontSize: "var(--t-petit)", fontWeight: 600, cursor: "pointer" }}>Enregistrer</button>
+            <button onClick={enregistrer} style={{ minHeight: "var(--tap)", padding: "0 16px", background: accentFond, border: "1px solid transparent", color: surAccent, borderRadius: "var(--r-sm)", fontSize: "var(--t-petit)", fontWeight: 600, cursor: "pointer" }}>Enregistrer</button>
             <button onClick={fermerEdition} style={{ minHeight: "var(--tap)", padding: "0 14px", background: "transparent", border: `1px solid ${bdr}`, color: mut, borderRadius: "var(--r-sm)", fontSize: "var(--t-petit)", cursor: "pointer" }}>Annuler</button>
           </div>
           {/* Le champ fautif peut être remonté hors de l'écran au moment

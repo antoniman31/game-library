@@ -1465,8 +1465,13 @@ test("le filtre ne propose que les plateformes possédées", async () => {
 
 test("chaque plateforme a une couleur, et aucune n'est orpheline", async () => {
   const { PLATEFORMES, PLATFORM_COLORS, FAMILLES, GENERATIONS } = await import("./model.js");
+  // Depuis le 21/11/2026, la couleur est un jeton d'index.css (« var(--plat-…) ») : il doit y être défini, en hexadécimal.
+  const { readFileSync } = await import("node:fs");
+  const css = readFileSync(new URL("../index.css", import.meta.url), "utf-8");
   for (const p of PLATEFORMES) {
-    assert.match(p.couleur, /^#[0-9a-f]{6}$/i, p.id);
+    const jeton = /^var\((--plat-[a-z0-9-]+)\)$/.exec(p.couleur);
+    assert.ok(jeton, `${p.id} : couleur « ${p.couleur} », un jeton --plat-… était attendu`);
+    assert.match(css, new RegExp(`${jeton[1]}:\\s*#[0-9a-f]{6};`, "i"), `${p.id} : ${jeton[1]} absent d'index.css`);
     assert.equal(PLATFORM_COLORS[p.id], p.couleur, p.id);
     assert.ok(FAMILLES[p.famille], `${p.id} : famille « ${p.famille} » inconnue`);
     assert.ok(GENERATIONS.includes(p.generation), `${p.id} : génération « ${p.generation} » inconnue`);

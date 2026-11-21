@@ -2758,3 +2758,18 @@ que l'interface pose (texte sur fond plein, accent sur « démat », chaque coul
 sur l'aplat d'accent et sur chaque console). Seuil 4,5:1. Toutes les paires actuelles passent ; vu en échec en remettant
 l'ancien `--mut` clair (#8090b0 : 2,56 à 2,92:1) et une console éclaircie (3,06:1), valeurs restaurées avant le commit.
 Les aplats des statistiques ne portent pas de texte et ne sont pas testés comme tels.
+
+### Couleurs en jetons — 21/11/2026
+
+Suite de l'audit « Design » : les 63 couleurs écrites en dur dans le JavaScript vivent désormais dans `index.css`
+(`--sur-accent`, `--badge-sombre`, `--contour-sombre`, trois ombres, `--voile`, `--compat-fond`, `--pret-fond`,
+`--couv-1` à `--couv-5`, et onze couleurs de console `--plat-*` que `model.js` nomme au lieu de les écrire). Valeurs
+inchangées. Exceptions écrites : le bandeau d'erreur de `main.jsx` (il doit rester lisible si la feuille de style ne s'est
+pas chargée) et la couleur de barre d'`apparence.js` (une balise `<meta>` ne lit pas de jeton).
+
+Le test de contraste, étendu aux nouvelles paires, a trouvé un vrai défaut : le badge « prêté à » en thème clair ne
+donnait que 4,04:1. Antoni a choisi la même teinte, moitié moins opaque (`--pret-fond: #7c320022` en clair) : 5,16:1 ;
+le sombre ne change pas (8,10:1). Nouveau `src/lib/couleurs.test.mjs` : aucune couleur en dur hors exceptions (vu en échec
+sur l'ancien code). Le contrôle des couleurs de console de `model.test.mjs` vérifie maintenant le jeton et sa valeur
+hexadécimale dans `index.css` (vu en échec en retirant `--plat-pc`). Les nouveaux jetons sont écrits dans les deux thèmes,
+comme `coherence.test.mjs` l'exige.

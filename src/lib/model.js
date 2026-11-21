@@ -50,6 +50,7 @@ export const FAMILLES = {
 
 export const GENERATIONS = ["actuelle", "retro"];
 
+// Les valeurs vivent dans index.css (jetons --plat-*, 21/11/2026) ; le choix reste fait plateforme par plateforme.
 // La couleur est écrite plateforme par plateforme plutôt que calculée depuis
 // la famille : une teinte qu'on lit se corrige d'un coup d'œil, une teinte
 // qu'on dérive demande d'exécuter la fonction dans sa tête. La règle qu'elles
@@ -57,43 +58,43 @@ export const GENERATIONS = ["actuelle", "retro"];
 // sourd que l'actuel.
 export const PLATEFORMES = [
   // Actuelles
-  { id: "Xbox Series X", court: "Series X", famille: "xbox", generation: "actuelle", couleur: "#107C10" },
-  { id: "Xbox One", court: "Xbox One", famille: "xbox", generation: "actuelle", couleur: "#0a5c0a" },
-  { id: "PS5", court: "PS5", famille: "playstation", generation: "actuelle", couleur: "#0b3d91" },
-  { id: "PS4", court: "PS4", famille: "playstation", generation: "actuelle", couleur: "#082c6b" },
-  { id: "Switch 2", court: "Switch 2", famille: "nintendo", generation: "actuelle", couleur: "#e4000f" },
-  { id: "Switch 1", court: "Switch 1", famille: "nintendo", generation: "actuelle", couleur: "#b3000c" },
-  { id: PC, court: "PC", famille: "pc", generation: "actuelle", couleur: "#4b5563" },
+  { id: "Xbox Series X", court: "Series X", famille: "xbox", generation: "actuelle", couleur: "var(--plat-series-x)" },
+  { id: "Xbox One", court: "Xbox One", famille: "xbox", generation: "actuelle", couleur: "var(--plat-xbox-one)" },
+  { id: "PS5", court: "PS5", famille: "playstation", generation: "actuelle", couleur: "var(--plat-ps5)" },
+  { id: "PS4", court: "PS4", famille: "playstation", generation: "actuelle", couleur: "var(--plat-ps4)" },
+  { id: "Switch 2", court: "Switch 2", famille: "nintendo", generation: "actuelle", couleur: "var(--plat-switch-2)" },
+  { id: "Switch 1", court: "Switch 1", famille: "nintendo", generation: "actuelle", couleur: "var(--plat-switch-1)" },
+  { id: PC, court: "PC", famille: "pc", generation: "actuelle", couleur: "var(--plat-pc)" },
 
   // Rétro — Nintendo
-  { id: "Wii U", court: "Wii U", famille: "nintendo", generation: "retro", couleur: "#8f4a4a" },
-  { id: "Wii", court: "Wii", famille: "nintendo", generation: "retro", couleur: "#8f4a4a" },
-  { id: "GameCube", court: "GameCube", famille: "nintendo", generation: "retro", couleur: "#8f4a4a" },
-  { id: "Nintendo 64", court: "N64", famille: "nintendo", generation: "retro", couleur: "#8f4a4a" },
-  { id: "Super Nintendo", court: "SNES", famille: "nintendo", generation: "retro", couleur: "#8f4a4a" },
-  { id: "NES", court: "NES", famille: "nintendo", generation: "retro", couleur: "#8f4a4a" },
-  { id: "Nintendo 3DS", court: "3DS", famille: "nintendo", generation: "retro", couleur: "#8f4a4a" },
-  { id: "Nintendo DS", court: "DS", famille: "nintendo", generation: "retro", couleur: "#8f4a4a" },
-  { id: "Game Boy Advance", court: "GBA", famille: "nintendo", generation: "retro", couleur: "#8f4a4a" },
-  { id: "Game Boy", court: "Game Boy", famille: "nintendo", generation: "retro", couleur: "#8f4a4a" },
+  { id: "Wii U", court: "Wii U", famille: "nintendo", generation: "retro", couleur: "var(--plat-nintendo-retro)" },
+  { id: "Wii", court: "Wii", famille: "nintendo", generation: "retro", couleur: "var(--plat-nintendo-retro)" },
+  { id: "GameCube", court: "GameCube", famille: "nintendo", generation: "retro", couleur: "var(--plat-nintendo-retro)" },
+  { id: "Nintendo 64", court: "N64", famille: "nintendo", generation: "retro", couleur: "var(--plat-nintendo-retro)" },
+  { id: "Super Nintendo", court: "SNES", famille: "nintendo", generation: "retro", couleur: "var(--plat-nintendo-retro)" },
+  { id: "NES", court: "NES", famille: "nintendo", generation: "retro", couleur: "var(--plat-nintendo-retro)" },
+  { id: "Nintendo 3DS", court: "3DS", famille: "nintendo", generation: "retro", couleur: "var(--plat-nintendo-retro)" },
+  { id: "Nintendo DS", court: "DS", famille: "nintendo", generation: "retro", couleur: "var(--plat-nintendo-retro)" },
+  { id: "Game Boy Advance", court: "GBA", famille: "nintendo", generation: "retro", couleur: "var(--plat-nintendo-retro)" },
+  { id: "Game Boy", court: "Game Boy", famille: "nintendo", generation: "retro", couleur: "var(--plat-nintendo-retro)" },
 
   // Rétro — Xbox
-  { id: "Xbox 360", court: "Xbox 360", famille: "xbox", generation: "retro", couleur: "#3f6b3f" },
-  { id: "Xbox originale", court: "Xbox", famille: "xbox", generation: "retro", couleur: "#3f6b3f" },
+  { id: "Xbox 360", court: "Xbox 360", famille: "xbox", generation: "retro", couleur: "var(--plat-xbox-retro)" },
+  { id: "Xbox originale", court: "Xbox", famille: "xbox", generation: "retro", couleur: "var(--plat-xbox-retro)" },
 
   // Rétro — PlayStation
-  { id: "PlayStation 3", court: "PS3", famille: "playstation", generation: "retro", couleur: "#41557f" },
-  { id: "PlayStation 2", court: "PS2", famille: "playstation", generation: "retro", couleur: "#41557f" },
-  { id: "PlayStation", court: "PS1", famille: "playstation", generation: "retro", couleur: "#41557f" },
-  { id: "PS Vita", court: "Vita", famille: "playstation", generation: "retro", couleur: "#41557f" },
-  { id: "PSP", court: "PSP", famille: "playstation", generation: "retro", couleur: "#41557f" },
+  { id: "PlayStation 3", court: "PS3", famille: "playstation", generation: "retro", couleur: "var(--plat-playstation-retro)" },
+  { id: "PlayStation 2", court: "PS2", famille: "playstation", generation: "retro", couleur: "var(--plat-playstation-retro)" },
+  { id: "PlayStation", court: "PS1", famille: "playstation", generation: "retro", couleur: "var(--plat-playstation-retro)" },
+  { id: "PS Vita", court: "Vita", famille: "playstation", generation: "retro", couleur: "var(--plat-playstation-retro)" },
+  { id: "PSP", court: "PSP", famille: "playstation", generation: "retro", couleur: "var(--plat-playstation-retro)" },
 
   // Rétro — Sega
-  { id: "Dreamcast", court: "Dreamcast", famille: "sega", generation: "retro", couleur: "#3f7a99" },
-  { id: "Saturn", court: "Saturn", famille: "sega", generation: "retro", couleur: "#3f7a99" },
-  { id: "Mega Drive", court: "Mega Drive", famille: "sega", generation: "retro", couleur: "#3f7a99" },
-  { id: "Master System", court: "Master System", famille: "sega", generation: "retro", couleur: "#3f7a99" },
-  { id: "Game Gear", court: "Game Gear", famille: "sega", generation: "retro", couleur: "#3f7a99" },
+  { id: "Dreamcast", court: "Dreamcast", famille: "sega", generation: "retro", couleur: "var(--plat-sega-retro)" },
+  { id: "Saturn", court: "Saturn", famille: "sega", generation: "retro", couleur: "var(--plat-sega-retro)" },
+  { id: "Mega Drive", court: "Mega Drive", famille: "sega", generation: "retro", couleur: "var(--plat-sega-retro)" },
+  { id: "Master System", court: "Master System", famille: "sega", generation: "retro", couleur: "var(--plat-sega-retro)" },
+  { id: "Game Gear", court: "Game Gear", famille: "sega", generation: "retro", couleur: "var(--plat-sega-retro)" },
 ];
 
 const PAR_ID = new Map(PLATEFORMES.map(p => [p.id, p]));

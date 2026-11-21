@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { bdr, txt, mut, accent, accentFond, ok, bdrChamp } from "../lib/theme.js";
+import { bdr, txt, mut, accent, accentFond, ok, bdrChamp, surAccent } from "../lib/theme.js";
 import Sheet from "./Sheet.jsx";
 import { lirePlaynite, analyserImport, jeuxAImporter } from "../lib/playnite.js";
 
@@ -125,7 +125,7 @@ function PlayniteModal({ games, exclusions, onImport, onClose }) {
             })}
           </div>
           <button onClick={() => onImport(jeuxAImporter(choisis, Date.now(), games))} disabled={!choisis.length}
-            style={{ width: "100%", background: accentFond, border: "none", color: "#fff", borderRadius: "var(--r-sm)", minHeight: "var(--tap)", cursor: choisis.length ? "pointer" : "default", opacity: choisis.length ? 1 : 0.5, fontSize: "var(--t-corps)", fontWeight: 600 }}>
+            style={{ width: "100%", background: accentFond, border: "none", color: surAccent, borderRadius: "var(--r-sm)", minHeight: "var(--tap)", cursor: choisis.length ? "pointer" : "default", opacity: choisis.length ? 1 : 0.5, fontSize: "var(--t-corps)", fontWeight: 600 }}>
             Importer {choisis.length} jeu(x)
           </button>
         </>

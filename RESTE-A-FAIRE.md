@@ -7,9 +7,9 @@ du projet. (Anciennement `TODO.md`, renommé le 16/11/2026.)
 ## Audit design du 21/11/2026
 
 - Fait : le contraste est mesuré par `src/lib/contraste.test.mjs` (toutes les paires à 4,5:1 ou plus).
-- Reste : 63 couleurs écrites en dur à passer en jetons, sans changement visible (texte blanc sur l'accent, ombres et
-  voiles, couleurs de console, jaquettes par défaut, badges) ; exceptions écrites pour le bandeau d'erreur de `main.jsx`
-  (affiché avant la feuille de style) et la barre d'état d'`apparence.js` (ne lit pas de jeton). PR suivante.
+- Fait : les couleurs écrites en dur sont passées en jetons (`src/lib/couleurs.test.mjs` refuse d'en réécrire une).
+- À vérifier sur le S26, dans les deux thèmes : étiquettes de console, boutons bleus, jaquettes par défaut, ombres des
+  menus, identiques à avant ; en thème clair, le badge « prêté à » un peu plus pâle (seul changement voulu).
 
 ## APK : mesuré, rien à faire
 
