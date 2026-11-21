@@ -38,8 +38,9 @@ détail des décisions : `JOURNAL.md` ; ce qui reste : `RESTE-A-FAIRE.md`.
 - `npm run lint` (oxlint) et `npm test` (tests des modules, des scripts et du
   Worker) : à passer avant tout commit.
 - `CHROMIUM=/opt/pw-browsers/chromium npm run verif:ui` :
-  construit, puis mesure l'ergonomie tactile, le contraste, le focus et les
-  débordements sur des pages réelles. À passer pour tout changement d'interface ; la CI le joue aussi (job « Interface »,
+  construit, puis mesure l'ergonomie tactile, le focus et les débordements sur
+  des pages réelles. Le contraste se mesure à part, sur les jetons de
+  `index.css` dans les deux thèmes (`src/lib/contraste.test.mjs`, dans `npm test`). À passer pour tout changement d'interface ; la CI le joue aussi (job « Interface »,
   sauté sur une PR qui ne touche que des `.md`).
 - L'APK ne se construit pas en local : workflow « Application Android »
   (`android.yml`, déclenché à la main, variante `publication`). `android/` et

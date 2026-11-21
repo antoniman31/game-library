@@ -4,6 +4,13 @@ Liste de travail courte, pas un journal : voir [`JOURNAL.md`](JOURNAL.md) pour
 l'historique des décisions, [`README.md`](README.md) et `docs/` pour l'état
 du projet. (Anciennement `TODO.md`, renommé le 16/11/2026.)
 
+## Audit design du 21/11/2026
+
+- Fait : le contraste est mesuré par `src/lib/contraste.test.mjs` (toutes les paires à 4,5:1 ou plus).
+- Reste : 63 couleurs écrites en dur à passer en jetons, sans changement visible (texte blanc sur l'accent, ombres et
+  voiles, couleurs de console, jaquettes par défaut, badges) ; exceptions écrites pour le bandeau d'erreur de `main.jsx`
+  (affiché avant la feuille de style) et la barre d'état d'`apparence.js` (ne lit pas de jeton). PR suivante.
+
 ## APK : mesuré, rien à faire
 
 Construction de publication n° 21 (16/11/2026, après le retrait du scan), lue par
