@@ -2748,3 +2748,13 @@ Bloc commun de `CLAUDE.md` aligné sur `regles-communes` (BLOC.md, commit 400626
 ### Règles communes mises à jour — 21/11/2026
 
 Bloc commun de `CLAUDE.md` aligné sur `regles-communes` (BLOC.md, commit 2005adb), par la propagation automatique.
+
+### Contraste mesuré par un test — 21/11/2026
+
+Audit de la règle commune « Design » : `CLAUDE.md` disait que `verif:ui` mesurait le contraste, il ne le mesure pas (cibles
+tactiles, focus, débordements seulement), et les ratios d'`index.css` n'étaient écrits qu'en commentaire. Nouveau
+`src/lib/contraste.test.mjs`, sans dépendance : il lit les jetons des deux thèmes et calcule le ratio WCAG de chaque paire
+que l'interface pose (texte sur fond plein, accent sur « démat », chaque couleur sur son « -doux » posé sur la carte, blanc
+sur l'aplat d'accent et sur chaque console). Seuil 4,5:1. Toutes les paires actuelles passent ; vu en échec en remettant
+l'ancien `--mut` clair (#8090b0 : 2,56 à 2,92:1) et une console éclaircie (3,06:1), valeurs restaurées avant le commit.
+Les aplats des statistiques ne portent pas de texte et ne sont pas testés comme tels.
