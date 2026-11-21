@@ -20,6 +20,11 @@ Rien d'ouvert : `storage.js` et `sync.js` ont leurs tests depuis le 16/11/2026.
 
 ## À vérifier par Antoni (repris de l'ancien PROGRESS.md du 04/11/2026)
 
+- [ ] **Hors ligne et mise à jour du site (21/11/2026)** : vite-plugin-pwa est passé de 1 à 2 (#90). Ouvrir le site
+      connecté, puis en mode avion : il s'affiche ; après une nouvelle version, la bannière de mise à jour apparaît.
+- [ ] **Reconstruire l'APK** (workflow « Application Android ») : Capacitor 8.6 et @capacitor/assets 4 (#90) n'y sont
+      pas encore passés ; l'installer et vérifier le démarrage, le bouton Retour et le partage.
+
 - [ ] **CSP du site (16/11/2026)** : ouvrir le site sur le S26 et sur le PC, puis vérifier que jaquettes, recherche,
       synchronisation et services s'affichent comme avant ; un refus de la CSP casserait une fonction sans message.
 
