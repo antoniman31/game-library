@@ -2726,3 +2726,9 @@ le 16/11 : 49 s, build compris, « Rien à signaler ».
   Le site est vérifié ; l'APK n'est pas encore reconstruit, et le mode hors ligne est à revoir sur le S26
   (`RESTE-A-FAIRE.md`).
 - Qualité : lint OK, 293 tests, `verif:ui` « Rien à signaler », rejoués en local après fusion.
+
+### Règles communes : trois changements — 21/11/2026
+
+Bloc commun de `CLAUDE.md` mis à jour (décision d'Antoni) : deux règles en plus et une règle précisée, « Versions et API » (vérifier les
+versions dans la doc officielle, signaler tout code déprécié) et « Contradiction » (signaler une demande qui contredit une
+règle avant de l'appliquer) ; « Proposer d'abord » demande désormais un plan détaillé et des suggestions avant tout code, et un visuel (maquette HTML ou schéma ASCII) pour une fonctionnalité ou un design ; « les 8 dépôts » devient « tous les dépôts d'Antoni, existants et futurs », avec l'arrivée de game_timer.
