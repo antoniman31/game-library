@@ -2718,3 +2718,11 @@ le 16/11 : 49 s, build compris, « Rien à signaler ».
   ouverts à toute adresse https (jaquettes de nombreux services, relais à l'adresse choisie). Pas dans l'APK.
 - `verif:ui` échoue sur tout refus de la CSP. Vu échouer : sans l'empreinte, il signale le script du thème bloqué ;
   avec, « Rien à signaler ». 293 tests (dont 5 pour `csp.js`).
+
+### Mises à jour Dependabot — 21/11/2026
+
+- #89 : les 9 actions des workflows, dont cloudflare/wrangler-action 4 (le Worker s'est redéployé sans erreur).
+- #90 : 18 dépendances npm, dont React 19.3.1, Capacitor 8.6, @capacitor/assets 4, Vite 8.3.8 et vite-plugin-pwa 2.0.
+  Le site est vérifié ; l'APK n'est pas encore reconstruit, et le mode hors ligne est à revoir sur le S26
+  (`RESTE-A-FAIRE.md`).
+- Qualité : lint OK, 293 tests, `verif:ui` « Rien à signaler », rejoués en local après fusion.
