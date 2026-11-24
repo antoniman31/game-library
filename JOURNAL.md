@@ -2778,3 +2778,11 @@ comme `coherence.test.mjs` l'exige.
 
 Antoni a vérifié sur le S26, dans les deux thèmes : étiquettes de console, boutons, jaquettes par défaut et ombres
 identiques à avant ; le badge « prêté à » un peu plus pâle en thème clair, lisible.
+
+### Messages d'erreur : dire quoi faire — 24/11/2026
+
+Revue de la règle commune « Design » (un message d'erreur dit ce qui s'est passé et comment corriger). Six messages
+s'arrêtaient au constat : copie de la liste, écriture de la sauvegarde, lecture d'un fichier importé (deux cas), date
+d'ajout et plateforme refusées dans la fiche. Ils prennent la forme « constat : action » (« Sauvegarde non écrite : libère
+de la place sur l'appareil, puis réessaie. »). Test ajouté à `model.test.mjs` : chaque refus d'un champ dit ce qui est
+attendu (vu échouer sur l'ancien code, « Plateforme inconnue »). Qualité : lint inchangé (7 avertissements d'avant), 300 tests.

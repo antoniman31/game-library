@@ -1193,7 +1193,7 @@ export function validerEdition(b) {
   const erreurs = {};
   const titre = String(b.title || "").trim();
   if (!titre) erreurs.title = "Titre obligatoire";
-  if (!PLATFORMES_JEU.includes(b.platform)) erreurs.platform = "Plateforme inconnue";
+  if (!PLATFORMES_JEU.includes(b.platform)) erreurs.platform = "Plateforme inconnue : choisis-en une dans la liste";
 
   // Une plateforme sans console parente ne peut pas être rétrocompatible.
   // Sans cette remise à zéro, faire passer un jeu de Xbox One à Xbox Series X
@@ -1218,7 +1218,7 @@ export function validerEdition(b) {
 
   const date = String(b.addedDate || "").trim();
   const anneeMax = Number(aujourdhuiISO().slice(0, 4)) + ANNEES_A_VENIR;
-  if (!estDateISO(date)) erreurs.addedDate = "Date invalide";
+  if (!estDateISO(date)) erreurs.addedDate = "Date invalide : choisis un jour dans le calendrier";
   else if (!estDatePlausible(date)) erreurs.addedDate = `Année attendue entre ${ANNEE_MIN} et ${anneeMax}`;
 
   const cover = String(b.cover || "").trim();
