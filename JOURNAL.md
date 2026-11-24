@@ -2773,3 +2773,8 @@ le sombre ne change pas (8,10:1). Nouveau `src/lib/couleurs.test.mjs` : aucune c
 sur l'ancien code). Le contrôle des couleurs de console de `model.test.mjs` vérifie maintenant le jeton et sa valeur
 hexadécimale dans `index.css` (vu en échec en retirant `--plat-pc`). Les nouveaux jetons sont écrits dans les deux thèmes,
 comme `coherence.test.mjs` l'exige.
+
+### Couleurs en jetons : vérifiées sur le S26 — 24/11/2026
+
+Antoni a vérifié sur le S26, dans les deux thèmes : étiquettes de console, boutons, jaquettes par défaut et ombres
+identiques à avant ; le badge « prêté à » un peu plus pâle en thème clair, lisible.
