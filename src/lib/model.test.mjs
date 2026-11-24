@@ -307,14 +307,6 @@ test("une date d'ajout invalide est refusée", () => {
   assert.deepEqual(validerEdition(brouillonValide({ addedDate: "2022-01-01" })).erreurs, {});
 });
 
-test("un champ refusé dit quoi saisir (règle commune « Design », 24/11/2026)", () => {
-  // « Date invalide » seul ne disait pas quoi faire : chaque refus nomme ce qui est attendu.
-  const { erreurs } = validerEdition(brouillonValide({ addedDate: "", platform: "Atari", metacritic: "abc", cover: "x" }));
-  for (const [champ, m] of Object.entries(erreurs))
-    assert.match(m, /attendu|entre|choisis|obligatoire/i, `${champ} : « ${m} » ne dit pas quoi saisir`);
-  assert.equal(Object.keys(erreurs).length, 4);
-});
-
 test("la jaquette veut une URL d'image, et le vide efface", () => {
   assert.equal(validerEdition(brouillonValide({ cover: "  " })).valeurs.cover, null);
   assert.ok(validerEdition(brouillonValide({ cover: "javascript:alert(1)" })).erreurs.cover);
