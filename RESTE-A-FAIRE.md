@@ -8,8 +8,7 @@ du projet. (Anciennement `TODO.md`, renommé le 16/11/2026.)
 
 - Fait : le contraste est mesuré par `src/lib/contraste.test.mjs` (toutes les paires à 4,5:1 ou plus).
 - Fait : les couleurs écrites en dur sont passées en jetons (`src/lib/couleurs.test.mjs` refuse d'en réécrire une).
-- À vérifier sur le S26, dans les deux thèmes : étiquettes de console, boutons bleus, jaquettes par défaut, ombres des
-  menus, identiques à avant ; en thème clair, le badge « prêté à » un peu plus pâle (seul changement voulu).
+- Vérifié sur le S26 par Antoni le 24/11/2026 : rendu identique dans les deux thèmes, badge « prêté à » lisible en clair.
 
 ## APK : mesuré, rien à faire
 
