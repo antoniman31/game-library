@@ -631,7 +631,7 @@ export default function App() {
     const quoi = await partagerTexte(texteListe(affichee, titre), titre);
     if (quoi === "annule") return;
     setAvis(quoi === "copie" ? "Liste copiée — colle-la où tu veux."
-      : quoi === "echec" ? "Impossible de copier la liste."
+      : quoi === "echec" ? "Copie refusée par le navigateur : autorise le presse-papiers, puis réessaie."
       : "Liste envoyée.");
   };
 
@@ -950,7 +950,7 @@ export default function App() {
         setAvis(r.partage ? "Sauvegarde envoyée." : "Sauvegarde écrite, mais pas partagée.");
       }
     } catch {
-      setAvis("Impossible d'écrire la sauvegarde.");
+      setAvis("Sauvegarde non écrite : libère de la place sur l'appareil, puis réessaie.");
     }
   };
   // Un texte JSON, d'où qu'il vienne.
@@ -982,7 +982,7 @@ export default function App() {
     if (!file) return;
     const reader = new FileReader();
     reader.onload = () => ouvrirTexteImporte(reader.result);
-    reader.onerror = () => alert("Lecture du fichier impossible.");
+    reader.onerror = () => alert("Lecture du fichier impossible : choisis un export .json de la ludothèque.");
     reader.readAsText(file);
     e.target.value = "";
   };
@@ -995,7 +995,7 @@ export default function App() {
   // s'ouvre ensuite est exactement celui du sélecteur de fichiers : on ne
   // remplace jamais une bibliothèque sans que quelqu'un l'ait demandé.
   useEffect(() => surFichierRecu((texte, url, erreur) => {
-    if (texte === null) { setAvis(`Fichier illisible : ${erreur || url}`); return; }
+    if (texte === null) { setAvis(`Fichier illisible (${erreur || url}) : rouvre-le depuis le gestionnaire de fichiers.`); return; }
     ouvrirTexteImporte(texte);
   }), [ouvrirTexteImporte]);
 

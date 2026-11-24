@@ -10,6 +10,8 @@ du projet. (Anciennement `TODO.md`, renommé le 16/11/2026.)
 - Fait : les couleurs écrites en dur sont passées en jetons (`src/lib/couleurs.test.mjs` refuse d'en réécrire une).
 - À vérifier sur le S26, dans les deux thèmes : étiquettes de console, boutons bleus, jaquettes par défaut, ombres des
   menus, identiques à avant ; en thème clair, le badge « prêté à » un peu plus pâle (seul changement voulu).
+- Fait (24/11/2026) : les messages d'erreur disent quoi faire. À vérifier sur le S26 : vider la date d'ajout d'un jeu,
+  importer un fichier qui n'est pas un export.
 
 ## APK : mesuré, rien à faire
 

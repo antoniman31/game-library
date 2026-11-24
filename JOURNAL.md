@@ -2773,3 +2773,11 @@ le sombre ne change pas (8,10:1). Nouveau `src/lib/couleurs.test.mjs` : aucune c
 sur l'ancien code). Le contrôle des couleurs de console de `model.test.mjs` vérifie maintenant le jeton et sa valeur
 hexadécimale dans `index.css` (vu en échec en retirant `--plat-pc`). Les nouveaux jetons sont écrits dans les deux thèmes,
 comme `coherence.test.mjs` l'exige.
+
+### Messages d'erreur : dire quoi faire — 24/11/2026
+
+Revue de la règle commune « Design » (un message d'erreur dit ce qui s'est passé et comment corriger). Six messages
+s'arrêtaient au constat : copie de la liste, écriture de la sauvegarde, lecture d'un fichier importé (deux cas), date
+d'ajout et plateforme refusées dans la fiche. Ils prennent la forme « constat : action » (« Sauvegarde non écrite : libère
+de la place sur l'appareil, puis réessaie. »). Test ajouté à `model.test.mjs` : chaque refus d'un champ dit ce qui est
+attendu (vu échouer sur l'ancien code, « Plateforme inconnue »). Qualité : lint inchangé (7 avertissements d'avant), 300 tests.
