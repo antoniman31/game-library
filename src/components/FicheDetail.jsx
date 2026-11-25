@@ -1,3 +1,4 @@
+import Icone from "./Icone.jsx";
 import { useState, useRef } from "react";
 import Cover from "./Cover.jsx";
 import InfoboxView from "./InfoboxView.jsx";
@@ -227,7 +228,7 @@ function FicheDetail({ g, onEdit, onDelete, onEnrich, onSerie, autresEditions: a
         {label}{aide ? <span style={{ opacity: 0.75 }}> · {aide}</span> : null}
       </span>
       {controle}
-      {erreurs[cle] && <span style={{ display: "block", color: danger, fontSize: "var(--t-legende)", marginTop: 3 }}>⚠️ {erreurs[cle]}</span>}
+      {erreurs[cle] && <span style={{ display: "block", color: danger, fontSize: "var(--t-legende)", marginTop: 3 }}><Icone nom="warning" /> {erreurs[cle]}</span>}
     </Balise>
   );
 
@@ -324,7 +325,7 @@ function FicheDetail({ g, onEdit, onDelete, onEnrich, onSerie, autresEditions: a
           <span style={{ color: mut, fontSize: "var(--t-legende)" }}>Aucune fiche détaillée</span>
           <button onClick={() => { setWikiOpen(true); setWikiQ(g.title); setWikiDone(false); wikiQuery(g.title); }}
             style={{ minHeight: "var(--tap-min)", padding: "0 10px", background: "transparent", border: `1px solid ${bdr}`, color: accent, borderRadius: "var(--r-sm)", fontSize: "var(--t-legende)", cursor: "pointer", fontFamily: "inherit" }}>
-            📚 Chercher sur Wikipédia
+            <Icone nom="menu_book" /> Chercher sur Wikipédia
           </button>
         </div>
       )}
@@ -348,16 +349,16 @@ function FicheDetail({ g, onEdit, onDelete, onEnrich, onSerie, autresEditions: a
           <span style={{ color: mut, fontSize: "var(--t-legende)", flex: "0 0 52px", paddingTop: 10 }}>Prêt</span>
           {g.lentA ? (
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ color: warn, fontSize: "var(--t-petit)", fontWeight: 600, paddingTop: 2 }}>📤 Prêté à {g.lentA}</div>
+              <div style={{ color: warn, fontSize: "var(--t-petit)", fontWeight: 600, paddingTop: 2 }}><Icone nom="outbox" /> Prêté à {g.lentA}</div>
               <div style={{ color: warn, fontSize: "var(--t-legende)", margin: "2px 0 8px" }}>
                 Depuis le {new Date(g.lentDate).toLocaleDateString("fr-FR")}
                 {jours !== null ? ` · ${jours} jour${jours > 1 ? "s" : ""}` : ""}
-                {enRetard ? " ⚠️" : ""}
+                {enRetard && <> <Icone nom="warning" /></>}
                 {g.lentRetourPrevu && <><br />À rendre le {new Date(g.lentRetourPrevu).toLocaleDateString("fr-FR")}</>}
               </div>
               <div style={{ display: "flex", gap: "var(--ecart-tap)", flexWrap: "wrap" }}>
                 <button onClick={() => onEnrich(g.id, rendreJeu(g))}
-                  style={{ minHeight: "var(--tap-min)", padding: "0 14px", background: okDoux, border: `1px solid ${ok}`, color: ok, borderRadius: "var(--r-sm)", fontSize: "var(--t-petit)", fontWeight: 600, cursor: "pointer" }}>✓ Rendu</button>
+                  style={{ minHeight: "var(--tap-min)", padding: "0 14px", background: okDoux, border: `1px solid ${ok}`, color: ok, borderRadius: "var(--r-sm)", fontSize: "var(--t-petit)", fontWeight: 600, cursor: "pointer" }}><Icone nom="check" /> Rendu</button>
                 <a href={`sms:?body=${encodeURIComponent(`Salut ! Tu penses à me rendre ${g.title} ? 😊`)}`}
                   style={{ minHeight: "var(--tap-min)", padding: "0 14px", display: "inline-flex", alignItems: "center", background: "transparent", border: `1px solid ${bdr}`, color: txt, borderRadius: "var(--r-sm)", fontSize: "var(--t-petit)", textDecoration: "none" }}>Relancer par SMS</a>
                 {/* « Rendu » archive et nourrit les statistiques ; un prêt
@@ -374,7 +375,7 @@ function FicheDetail({ g, onEdit, onDelete, onEnrich, onSerie, autresEditions: a
               onPreter={j => { onEnrich(g.id, j); setPretOuvert(false); }} />
           ) : (
             <button onClick={() => setPretOuvert(true)}
-              style={{ minHeight: "var(--tap-min)", padding: "0 14px", background: "transparent", border: `1px solid ${bdrChamp}`, color: txt, borderRadius: "var(--r-sm)", fontSize: "var(--t-petit)", cursor: "pointer" }}>📤 Prêter ce jeu</button>
+              style={{ minHeight: "var(--tap-min)", padding: "0 14px", background: "transparent", border: `1px solid ${bdrChamp}`, color: txt, borderRadius: "var(--r-sm)", fontSize: "var(--t-petit)", cursor: "pointer" }}><Icone nom="outbox" /> Prêter ce jeu</button>
           )}
         </div>
       </div>
@@ -454,7 +455,7 @@ function FicheDetail({ g, onEdit, onDelete, onEnrich, onSerie, autresEditions: a
           {/* Infos Wikidata */}
           {wikiInfo && (
             <div style={{ marginTop: 10, borderTop: `1px solid ${bdr}`, paddingTop: 8 }}>
-              <div style={{ color: txt, fontSize: "var(--t-legende)", fontWeight: 600, marginBottom: 4 }}>ℹ️ Infos (Wikidata)</div>
+              <div style={{ color: txt, fontSize: "var(--t-legende)", fontWeight: 600, marginBottom: 4 }}><Icone nom="info" /> Infos (Wikidata)</div>
               <div style={{ marginBottom: 6 }}><InfoboxView info={wikiInfo} /></div>
               <div style={{ display: "flex", gap: "var(--ecart-tap)", flexWrap: "wrap" }}>
                 <button onClick={() => { onEdit(g.id, "infobox", fusionnerInfobox(g.infobox, wikiInfo, "wikidata")); setWikiInfo(null); }} style={{ background: okDoux, border: `1px solid ${ok}`, color: ok, borderRadius: "var(--r-sm)", padding: "0 10px", minHeight: "var(--tap-min)", fontSize: "var(--t-legende)", cursor: "pointer" }}>Compléter avec ces infos</button>
@@ -518,7 +519,7 @@ function FicheDetail({ g, onEdit, onDelete, onEnrich, onSerie, autresEditions: a
           </div>
           {videRien && (
             <div role="alert" style={{ color: danger, fontSize: "var(--t-legende)", marginTop: 8 }}>
-              ⚠️ Coche au moins un champ à effacer.
+              <Icone nom="warning" /> Coche au moins un champ à effacer.
             </div>
           )}
         </Sheet>
@@ -567,15 +568,15 @@ function FicheDetail({ g, onEdit, onDelete, onEnrich, onSerie, autresEditions: a
       {sourcesOuvertes && (
         <div style={{ display: "flex", gap: "var(--ecart-tap)", flexWrap: "wrap", marginTop: 10 }}>
           <button onClick={() => { setSourcesOuvertes(false); ouvrirEdition(); }}
-            style={{ ...boutonSource, background: accentDoux, fontWeight: 600 }}>✏️ À la main</button>
-          <button onClick={() => { setSourcesOuvertes(false); setRawgOpen(true); setRawgQ(g.title); rawgQuery(g.title); }} style={boutonSource}>🔄 RAWG</button>
-          <button onClick={() => { setSourcesOuvertes(false); setWikiOpen(true); setWikiQ(g.title); setWikiDone(false); wikiQuery(g.title); }} style={boutonSource}>📚 Wikipédia</button>
-          <button onClick={() => { setSourcesOuvertes(false); setSgdbOpen(true); setSgdbQ(g.title); setSgdbDone(false); sgdbQuery(g.title); }} style={boutonSource}>📦 Jaquette</button>
+            style={{ ...boutonSource, background: accentDoux, fontWeight: 600 }}><Icone nom="edit" /> À la main</button>
+          <button onClick={() => { setSourcesOuvertes(false); setRawgOpen(true); setRawgQ(g.title); rawgQuery(g.title); }} style={boutonSource}><Icone nom="refresh" /> RAWG</button>
+          <button onClick={() => { setSourcesOuvertes(false); setWikiOpen(true); setWikiQ(g.title); setWikiDone(false); wikiQuery(g.title); }} style={boutonSource}><Icone nom="menu_book" /> Wikipédia</button>
+          <button onClick={() => { setSourcesOuvertes(false); setSgdbOpen(true); setSgdbQ(g.title); setSgdbDone(false); sgdbQuery(g.title); }} style={boutonSource}><Icone nom="image" /> Jaquette</button>
           {/* Puisque les sources ne s'écrasent plus, il faut de quoi
               repartir propre : sans ce bouton, une infobox fausse le
               resterait, chaque nouvelle source la respectant poliment. */}
           <button onClick={() => { setSourcesOuvertes(false); setVideChoix([]); setVideRien(false); setVideOpen(true); }}
-            style={{ ...boutonSource, borderColor: bdrChamp, color: mut }}>🧹 Vider</button>
+            style={{ ...boutonSource, borderColor: bdrChamp, color: mut }}><Icone nom="mop" /> Vider</button>
         </div>
       )}
 
@@ -647,7 +648,7 @@ function FicheDetail({ g, onEdit, onDelete, onEnrich, onSerie, autresEditions: a
               où on appuie sur Enregistrer : sans ce rappel, le bouton
               paraît sans effet. */}
           {Object.keys(erreurs).length > 0 && (
-            <div role="alert" style={{ color: danger, fontSize: "var(--t-legende)", marginTop: 8 }}>⚠️ Rien n'a été enregistré : {Object.keys(erreurs).length} champ{Object.keys(erreurs).length > 1 ? "s sont signalés" : " est signalé"} plus haut, avec l'explication sous chacun.</div>
+            <div role="alert" style={{ color: danger, fontSize: "var(--t-legende)", marginTop: 8 }}><Icone nom="warning" /> Rien n'a été enregistré : {Object.keys(erreurs).length} champ{Object.keys(erreurs).length > 1 ? "s sont signalés" : " est signalé"} plus haut, avec l'explication sous chacun.</div>
           )}
         </Sheet>
       )}

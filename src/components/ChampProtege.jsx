@@ -1,3 +1,4 @@
+import Icone from "./Icone.jsx";
 import { useState } from "react";
 import { bg, bdrChamp, txt, mut, accent, danger } from "../lib/theme.js";
 import { messageDeverrouillage, messageSuppression } from "../lib/garde-fous.js";
@@ -67,7 +68,7 @@ export default function ChampProtege({
           {champ}
           {/* Dire que c'est verrouillé, sinon le champ passe pour cassé. */}
           {verrou && (
-            <span aria-hidden="true" style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", fontSize: "var(--t-petit)", opacity: 0.6 }}>🔒</span>
+            <span aria-hidden="true" style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", fontSize: "var(--t-petit)", opacity: 0.6 }}><Icone nom="lock" /></span>
           )}
         </div>
         {!enClair && renseigne && (
@@ -76,7 +77,7 @@ export default function ChampProtege({
             aria-label={montre ? `Masquer ${ariaLabel}` : `Afficher ${ariaLabel}`}
             title={montre ? "Masquer" : "Afficher"}
             style={{ ...bouton(bdrChamp), padding: "0 10px", fontSize: "var(--t-titre)", lineHeight: 1 }}>
-            {montre ? "🙈" : "👁"}
+            <Icone nom={montre ? "visibility_off" : "visibility"} />
           </button>
         )}
         {actions}
@@ -97,7 +98,7 @@ export default function ChampProtege({
             </>
           ) : (
             <button style={bouton(bdrChamp)} onClick={() => setDeverrouille(false)}>
-              <span style={{ color: mut }}>🔒 Reverrouiller</span>
+              <span style={{ color: mut }}><Icone nom="lock" /> Reverrouiller</span>
             </button>
           )}
         </div>

@@ -1,3 +1,4 @@
+import Icone from "./Icone.jsx";
 import { useState } from "react";
 import Sheet from "./Sheet.jsx";
 import { card, bdr, txt, mut, accent, accentDoux, warn, bdrChamp, surAccent } from "../lib/theme.js";
@@ -161,7 +162,7 @@ export default function FiltersSheet({
     ...(!estPC && generationsPresentes.size > 1 ? [["generation", "Génération"]] : []),
     ...(!estPC && famillesPresentes.size > 1 ? [["famille", "Famille"]] : []),
     ["serie", "Série"], ["genre", "Genre"]];
-  const PRETS = [["tous", "Tous"], ["chez moi", "🏠 Chez moi"], ["prêtés", "📤 Prêtés"]];
+  const PRETS = [["tous", "Tous"], ["chez moi", <><Icone nom="home" /> Chez moi</>], ["prêtés", <><Icone nom="outbox" /> Prêtés</>]];
   const FORMATS = [["tous", "Tous"], ["physique", "Physique"], ["démat", "Démat"]];
   // Ce que la bibliothèque contient, pas ce que la table connaît.
   //
@@ -368,7 +369,7 @@ export default function FiltersSheet({
         <div style={{ color: mut, fontSize: "var(--t-legende)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 7 }}>
           Affichage
         </div>
-        <Puces options={[["liste", "☰ Liste"], ["compact", "≡ Compacte"], ["grille", "⊞ Grille"]]}
+        <Puces options={[["liste", <><Icone nom="view_list" /> Liste</>], ["compact", <><Icone nom="view_agenda" /> Compacte</>], ["grille", <><Icone nom="grid_view" /> Grille</>]]}
           value={view} onChange={setView} />
 
         <div style={{ color: mut, fontSize: "var(--t-legende)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em", margin: "16px 0 7px" }}>

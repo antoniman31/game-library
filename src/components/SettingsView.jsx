@@ -1,3 +1,4 @@
+import Icone from "./Icone.jsx";
 import { useEffect, useRef, useState } from "react";
 import { card, bdr, bdrChamp, txt, mut, accent, accentDoux, accentFond, ok, warn, danger, surAccent } from "../lib/theme.js";
 import { MODES, LIBELLES, ICONES } from "../lib/apparence.js";
@@ -106,6 +107,9 @@ const EnTeteChamp = ({ nom, lien, quoi }) => (
   </div>
 );
 
+// État du test d'une clé d'API : valide, refusée ou en cours (rien tant qu'elle n'a pas été testée).
+const ETAT_CLE = { ok: "check_circle", ko: "cancel", "…": "hourglass_top" };
+
 export default function SettingsView({
   modeTheme, setModeTheme,
   keys, setKeys, appliquerCles, testerCle, etatCles,
@@ -171,7 +175,7 @@ export default function SettingsView({
             <Bouton key={m} pleinePlace multiligne aria-pressed={modeTheme === m}
               intention={modeTheme === m ? "selection" : "neutre"}
               onClick={() => setModeTheme(m)}>
-              {ICONES[m]} {LIBELLES[m]}
+              <Icone nom={ICONES[m]} /> {LIBELLES[m]}
             </Bouton>
           ))}
         </div>
@@ -227,18 +231,18 @@ export default function SettingsView({
                 tous les deux les données d'ici. La direction suit désormais
                 l'appareil : ce qui part monte, ce qui arrive descend. */}
             <div style={{ display: "flex", gap: "var(--ecart-tap)" }}>
-              <Bouton pleinePlace intention="principal" disabled={syncEtat?.type === "…"} onClick={onEnvoyer}>⬆ Envoyer</Bouton>
-              <Bouton pleinePlace disabled={syncEtat?.type === "…"} onClick={onRecuperer}>⬇ Récupérer</Bouton>
+              <Bouton pleinePlace intention="principal" disabled={syncEtat?.type === "…"} onClick={onEnvoyer}><Icone nom="upload" /> Envoyer</Bouton>
+              <Bouton pleinePlace disabled={syncEtat?.type === "…"} onClick={onRecuperer}><Icone nom="download" /> Récupérer</Bouton>
             </div>
             {/* Le relais garde les deux envois précédents : une bibliothèque
                 abîmée puis envoyée n'efface plus la bonne. */}
             <div style={{ display: "flex", marginTop: "var(--ecart-tap)" }}>
-              <Bouton pleinePlace disabled={syncEtat?.type === "…" || !sync.code} onClick={onRecupererAncienne}>⬇ Version précédente</Bouton>
+              <Bouton pleinePlace disabled={syncEtat?.type === "…" || !sync.code} onClick={onRecupererAncienne}><Icone nom="download" /> Version précédente</Bouton>
             </div>
 
             {syncEtat && (
               <div role="status" style={{ marginTop: 10, fontSize: "var(--t-legende)", lineHeight: 1.4, color: syncEtat.type === "ko" ? danger : syncEtat.type === "ok" ? ok : mut }}>
-                {syncEtat.type === "ok" ? "✓ " : syncEtat.type === "ko" ? "✕ " : "⏳ "}{syncEtat.texte}
+                <Icone nom={syncEtat.type === "ok" ? "check" : syncEtat.type === "ko" ? "close" : "hourglass_top"} /> {syncEtat.texte}
               </div>
             )}
             {/* Les clés ne partent que si on le demande, et la conséquence est
@@ -300,7 +304,7 @@ export default function SettingsView({
               <span style={{ color: txt, fontSize: "var(--t-petit)", fontWeight: 600 }}>Me prévenir si la sauvegarde prend du retard</span>
               <span style={{ display: "block", color: mut, fontSize: "var(--t-legende)", lineHeight: 1.5, marginTop: 2 }}>
                 Une notification le matin, {JOURS_SAUVEGARDE_VIEILLE} jours après la dernière sauvegarde envoyée.
-                La pastille sur ⚙️ ne sert à rien tant qu'on n'ouvre pas l'application — et c'est précisément
+                La pastille sur <Icone nom="settings" /> ne sert à rien tant qu'on n'ouvre pas l'application — et c'est précisément
                 quand on ne l'ouvre plus qu'une sauvegarde vieillit sans que personne le sache.
               </span>
             </span>
@@ -312,7 +316,7 @@ export default function SettingsView({
                 color: ageSauvegarde.niveau === "fraiche" ? mut : warn,
                 fontSize: "var(--t-legende)", marginTop: 8, lineHeight: 1.5,
               }}>
-                {ageSauvegarde.niveau === "fraiche" ? "✓ " : "⚠️ "}
+                <Icone nom={ageSauvegarde.niveau === "fraiche" ? "check" : "warning"} />{" "}
                 Dernière sauvegarde : {texteAgeSauvegarde(ageSauvegarde)}
                 {sync.majLe && ageSauvegarde.niveau !== "jamais"
                   ? ` (${new Date(sync.majLe).toLocaleString("fr-FR")})` : ""}
@@ -328,8 +332,8 @@ export default function SettingsView({
           <Section titre="Copie hors ligne"
             aide="Un fichier JSON sur cet appareil, utile avant une manipulation risquée ou quand le relais n'est pas configuré. Il contient les jeux, mais ni les clés ni le code de synchronisation.">
             <div style={{ display: "flex", gap: "var(--ecart-tap)" }}>
-              <Bouton pleinePlace intention="principal" onClick={onExporter}>⬆ Exporter</Bouton>
-              <Bouton pleinePlace onClick={() => importRef.current?.click()}>⬇ Importer</Bouton>
+              <Bouton pleinePlace intention="principal" onClick={onExporter}><Icone nom="upload" /> Exporter</Bouton>
+              <Bouton pleinePlace onClick={() => importRef.current?.click()}><Icone nom="download" /> Importer</Bouton>
               <input ref={importRef} type="file" accept="application/json,.json" onChange={onImporter} style={{ display: "none" }} />
             </div>
           </Section>
@@ -351,7 +355,7 @@ export default function SettingsView({
                   <>
                     <Bouton disabled={!keys[id]} onClick={() => testerCle(id)}>Tester</Bouton>
                     <span aria-live="polite" style={{ fontSize: "var(--t-titre)", width: 18, textAlign: "center", flexShrink: 0 }}>
-                      {etatCles[id] === "ok" ? "✅" : etatCles[id] === "ko" ? "❌" : etatCles[id] === "…" ? "⏳" : ""}
+                      {ETAT_CLE[etatCles[id]] && <Icone nom={ETAT_CLE[etatCles[id]]} />}
                     </span>
                   </>
                 }
@@ -375,7 +379,7 @@ export default function SettingsView({
 
           <div style={{ display: "flex", gap: "var(--ecart-tap)", alignItems: "center", flexWrap: "wrap" }}>
             <Bouton intention="principal" onClick={enregistrerCles}>Enregistrer</Bouton>
-            {enregistre && <span role="status" style={{ color: ok, fontSize: "var(--t-legende)" }}>Enregistré ✓</span>}
+            {enregistre && <span role="status" style={{ color: ok, fontSize: "var(--t-legende)" }}>Enregistré <Icone nom="check" /></span>}
           </div>
         </Section>
       )}

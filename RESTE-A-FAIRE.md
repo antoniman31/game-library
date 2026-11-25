@@ -12,6 +12,13 @@ du projet. (Anciennement `TODO.md`, renommé le 16/11/2026.)
 - Fait (24/11/2026) : les messages d'erreur disent quoi faire. À vérifier sur le S26 : vider la date d'ajout d'un jeu,
   importer un fichier qui n'est pas un export.
 
+## Icônes Material (25/11/2026)
+
+- Fait : plus aucun emoji comme icône, des Material Symbols arrondis (`src/lib/icones.js`, composant `Icone`), gardé par
+  `src/lib/icones.test.mjs`. À regarder sur le S26, dans les deux thèmes : l'en-tête (réglages, thème, partager), la carte d'un
+  jeu (prêté, rétrocompatible), le balayage Prêter / Rendu, la fiche, les filtres, les Réglages (sauvegarde, clés), le panneau
+  Outils, l'écran « aucun résultat ».
+
 ## APK : mesuré, rien à faire
 
 Construction de publication n° 21 (16/11/2026, après le retrait du scan), lue par

@@ -1,3 +1,4 @@
+import Icone from "./Icone.jsx";
 import Sheet from "./Sheet.jsx";
 import { bdr, txt, mut, ok, warn, danger } from "../lib/theme.js";
 import { rapprochementDouteux } from "../lib/model.js";
@@ -35,7 +36,7 @@ export default function ScoresSheet({ bilan, onAnnulerScore, onClose }) {
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ color: txt, fontSize: "var(--t-petit)", fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.titre}</div>
               <div style={{ color: suspect ? warn : mut, fontSize: "var(--t-legende)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                {suspect ? "⚠️ " : ""}RAWG : {t.titreRawg}
+                {suspect && <><Icone nom="warning" /> </>}RAWG : {t.titreRawg}
               </div>
             </div>
             <span style={{ color: t.score >= 80 ? ok : t.score >= 60 ? warn : danger, fontSize: "var(--t-corps)", fontWeight: 700, flexShrink: 0 }}>{t.score}</span>

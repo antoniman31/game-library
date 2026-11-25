@@ -364,19 +364,19 @@ for (const [largeur, theme] of ECRANS) {
     ["fiche ouverte", async () => { await revenirALaListe(); await page.locator(".gl-card").first().click(); }],
     ["feuille de vidage", async () => {
       await page.getByRole("button", { name: /Modifier la fiche/ }).first().click();
-      await page.getByRole("button", { name: /^🧹 Vider/ }).first().click();
+      await page.getByRole("button", { name: "Vider", exact: true }).first().click();
     }],
     ["vue compacte", async () => {
       // La feuille de vidage couvre l'écran : sans cette fermeture, « Filtres »
       // resterait parfaitement visible et parfaitement inatteignable.
       await revenirALaListe();
       await page.getByRole("button", { name: /^Filtres/ }).click();
-      await page.getByRole("button", { name: "≡ Compacte" }).click();
+      await page.getByRole("button", { name: "Compacte", exact: true }).click();
       await page.getByRole("button", { name: /^Voir \d+ jeu/ }).click();
     }],
     ["liste groupée par plateforme", async () => {
       await page.getByRole("button", { name: /^Filtres/ }).click();
-      await page.getByRole("button", { name: "☰ Liste" }).click();
+      await page.getByRole("button", { name: "Liste", exact: true }).click();
       await page.getByRole("button", { name: "Plateforme", exact: true }).click();
       await page.getByRole("button", { name: /^Voir \d+ jeu/ }).click();
     }],
@@ -444,7 +444,7 @@ for (const [largeur, theme] of ECRANS) {
     ["grille, avec la console sous le titre", async () => {
       await page.getByRole("button", { name: /^Génération Rétro/ }).click();
       await page.getByRole("button", { name: "Toutes", exact: true }).first().click();
-      await page.getByRole("button", { name: "⊞ Grille" }).click();
+      await page.getByRole("button", { name: "Grille", exact: true }).click();
       await page.getByRole("button", { name: /^Voir \d+ jeu/ }).click();
 
       // La grille montrait une jaquette et un titre, et rien ne disait sur
@@ -469,16 +469,17 @@ for (const [largeur, theme] of ECRANS) {
         return JSON.parse(localStorage.getItem("gl_v2") || "[]")
           .filter(g => g.backCompat && compat[g.platform]).length;
       });
-      const marquees = vignettes.filter(t => /🔄/.test(t)).length;
+      // Depuis le 25/11/2026 la pastille porte une icône Material, plus « 🔄 » : on la compte par son info-bulle.
+      const marquees = await page.locator('.gl-tile [title^="Rétrocompatible"]').count();
       if (attendus > 0 && marquees === 0) {
         signaler("vue grille", "la rétrocompatibilité ne s'affiche pas", [
-          `${attendus} jeu(x) rétrocompatibles dans la bibliothèque, aucune pastille 🔄 sur les ${vignettes.length} premières vignettes`,
+          `${attendus} jeu(x) rétrocompatibles dans la bibliothèque, aucune pastille de rétrocompatibilité sur les ${vignettes.length} premières vignettes`,
         ]);
       }
     }],
     ["retour en liste", async () => {
       await page.getByRole("button", { name: /^Filtres/ }).click();
-      await page.getByRole("button", { name: "☰ Liste" }).click();
+      await page.getByRole("button", { name: "Liste", exact: true }).click();
       await page.getByRole("button", { name: /^Voir \d+ jeu/ }).click();
     }],
     // Le balayage d'une ligne, prêté puis rendu.
@@ -495,7 +496,7 @@ for (const [largeur, theme] of ECRANS) {
       // Une carte NON prêtée : la promenade en a prêté une plus haut, et sur
       // celle-là le balayage rend au lieu de prêter. Viser « la première »
       // supposait un état que la promenade elle-même avait changé.
-      const carte = page.locator(".gl-card").filter({ hasNotText: "📤" }).first();
+      const carte = page.locator(".gl-card").filter({ hasNot: page.locator('[title^="Prêté à"]') }).first();
       const titre = (await carte.innerText()).split("\n").find(l => l.trim().length > 3) || "";
       const b = await carte.boundingBox();
       // Un balayage franc : au-delà du seuil de 64 px, et horizontal pour que
@@ -586,17 +587,17 @@ for (const [largeur, theme] of ECRANS) {
     // arrivant dans le panneau.
     ["fiche · panneau RAWG", async () => {
       await page.getByRole("button", { name: /Modifier la fiche/ }).first().click();
-      await page.getByRole("button", { name: "🔄 RAWG" }).click();
+      await page.getByRole("button", { name: "RAWG", exact: true }).click();
     }],
     ["fiche · panneau Wikipédia", async () => {
       await page.keyboard.press("Escape");
       await page.getByRole("button", { name: /Modifier la fiche/ }).first().click();
-      await page.getByRole("button", { name: "📚 Wikipédia" }).click();
+      await page.getByRole("button", { name: "Wikipédia", exact: true }).click();
     }],
     ["fiche · panneau Jaquette", async () => {
       await page.keyboard.press("Escape");
       await page.getByRole("button", { name: /Modifier la fiche/ }).first().click();
-      await page.getByRole("button", { name: "📦 Jaquette" }).click();
+      await page.getByRole("button", { name: "Jaquette", exact: true }).click();
     }],
     // Le formulaire de prêt : deux champs et deux boutons que rien n'ouvrait
     // dans la promenade, puisqu'il faut d'abord toucher « Prêter ce jeu ».

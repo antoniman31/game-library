@@ -2786,3 +2786,16 @@ s'arrêtaient au constat : copie de la liste, écriture de la sauvegarde, lectur
 d'ajout et plateforme refusées dans la fiche. Ils prennent la forme « constat : action » (« Sauvegarde non écrite : libère
 de la place sur l'appareil, puis réessaie. »). Test ajouté à `model.test.mjs` : chaque refus d'un champ dit ce qui est
 attendu (vu échouer sur l'ancien code, « Plateforme inconnue »). Qualité : lint inchangé (7 avertissements d'avant), 300 tests.
+
+### Icônes Material au lieu des emojis — 25/11/2026
+
+Règle commune « Design » écrite le même jour (choix d'Antoni) : jamais d'emoji comme icône, des Material Symbols de Google en
+variante arrondie, embarqués. L'appli en affichait une quarantaine de différents (📤 ⚠️ ✕ ⏳ 🎮 ⚙️ 🔒 👁 ☰ ⊞…), dont le dessin
+dépendait de la police du téléphone. Ils deviennent des icônes du composant `Icone`, dont les tracés vivent dans
+`src/lib/icones.js` (@material-symbols/svg-400 0.49.0, Apache-2.0, copiés : aucune dépendance ni requête), à la couleur et à la
+taille du texte voisin. Correspondance validée par Antoni sur la maquette d'audit ; deux écarts plus justes : le 📤 « partager
+la liste » de l'en-tête devient `share` (le 📤 « prêté » reste `outbox`), et le 📦 « Jaquette » devient `image`. ℹ️ et le ⚙️
+d'une phrase d'aide, oubliés par l'audit, sont convertis aussi. Restent en texte : les flèches (→ ↑ ↓ ↗ ⇅ ↻ ▲ ▼ ▸ ▾), le 😊 du
+SMS de rappel d'un prêt, et les ⚠️ des boîtes de dialogue natives (`confirm`), qui n'acceptent pas d'image : retirés. Le
+placeholder « 🔍 » du champ de recherche, quand un tri est actif, devient « Chercher ». `src/lib/icones.test.mjs` refuse tout
+pictogramme hors flèches, SMS et commentaires, et vérifie que chaque icône appelée existe (vu échouer : 2 tests sur 3).

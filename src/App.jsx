@@ -1,3 +1,4 @@
+import Icone from "./components/Icone.jsx";
 import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 
 import Cover from "./components/Cover.jsx";
@@ -899,8 +900,8 @@ export default function App() {
     const ok = window.confirm(
       `${version ? "Version précédente" : "Sauvegarde"} du ${quand} : ${jeux.length} jeu(x).\n` +
       `Cet appareil en compte ${games.length}.` +
-      (rejetes ? `\n\n⚠️ ${rejetes} entrée(s) ignorée(s).` : "") +
-      (corriges ? `\n⚠️ ${corriges} entrée(s) corrigée(s).` : "") +
+      (rejetes ? `\n\n${rejetes} entrée(s) ignorée(s).` : "") +
+      (corriges ? `\n${corriges} entrée(s) corrigée(s).` : "") +
       `\n\nRemplacer la bibliothèque de cet appareil ?`
     );
     if (!ok) {
@@ -1283,7 +1284,7 @@ export default function App() {
                     borderRadius:"var(--r-xs)", padding:"1px 5px",
                     boxShadow:`0 0 0 1px ${contourSombre}`,
                     maxWidth:"100%", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap",
-                  }}>🔄 {nomCourt(BACK_COMPAT_PARENT[g.platform])}</span>
+                  }}><Icone nom="sync_alt" /> {nomCourt(BACK_COMPAT_PARENT[g.platform])}</span>
                 )}
               </div>
             </div>
@@ -1308,7 +1309,7 @@ export default function App() {
             }}>
             <span style={{ width:8, height:8, borderRadius:"var(--r-xs)", flexShrink:0, background:PLATFORM_COLORS[g.platform] || accentFond }} />
             <span style={{ flex:1, minWidth:0, color:txt, fontSize:"var(--t-petit)", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{g.title}</span>
-            {g.lentA && <span style={{ color:warn, fontSize:"var(--t-legende)", flexShrink:0 }}>📤</span>}
+            {g.lentA && <span title={`Prêté à ${g.lentA}`} style={{ color:warn, fontSize:"var(--t-legende)", flexShrink:0 }}><Icone nom="outbox" /></span>}
             {g.metacritic && <span style={{ color:mut, fontSize:"var(--t-legende)", flexShrink:0 }}>{g.metacritic}</span>}
           </button>
         ))}
@@ -1324,9 +1325,9 @@ export default function App() {
 
   const emptyState = (
     <div style={{ textAlign: "center", padding: "70px 20px", color: mut }}>
-      <div style={{ fontSize: 56, marginBottom: 12, opacity: 0.85 }}>🎮</div>
+      <div style={{ marginBottom: 12, opacity: 0.85 }}><Icone nom="stadia_controller" taille={56} /></div>
       <div style={{ color: txt, fontSize: "var(--t-titre)", fontWeight: 600, marginBottom: 6 }}>Aucun jeu trouvé</div>
-      <div style={{ fontSize: "var(--t-petit)" }}>Essaie un autre terme ou change les filtres 🔍</div>
+      <div style={{ fontSize: "var(--t-petit)" }}>Essaie un autre terme ou change les filtres.</div>
     </div>
   );
 
@@ -1384,7 +1385,7 @@ export default function App() {
               style={{ ...btnHdr, position: "relative",
                 background: tab === "settings" ? accentFond : "transparent",
                 color: tab === "settings" ? surAccent : txt }}>
-              ⚙️
+              <Icone nom="settings" />
               {sauvegardeAlerte && <span aria-hidden="true" style={{
                 position: "absolute", top: 4, right: 4, width: 8, height: 8,
                 borderRadius: "50%", background: warn,
@@ -1393,14 +1394,14 @@ export default function App() {
             <button onClick={() => setModeTheme(modeSuivant)}
               aria-label={`Thème : ${LIBELLES[modeTheme]}`} title={`Thème : ${LIBELLES[modeTheme]}`}
               style={{ ...btnHdr, color: txt }}>
-              {ICONES[modeTheme]}
+              <Icone nom={ICONES[modeTheme]} />
             </button>
             {estBibliotheque && (
               <button onClick={partagerListe}
                 aria-label={`Partager la liste — ${affichee.length} jeu${affichee.length > 1 ? "x" : ""}`}
                 title="Partager la liste"
                 style={{ ...btnHdr, color: txt }}>
-                📤
+                <Icone nom="share" />
               </button>
             )}
           </div>
@@ -1408,8 +1409,8 @@ export default function App() {
 
         {alerteStockage && (
           <div style={{ display: "flex", alignItems: "flex-start", gap: 8, background: dangerDoux, border: `1px solid ${danger}`, borderRadius: "var(--r-sm)", padding: "8px 10px", marginBottom: 10 }}>
-            <div style={{ flex: 1, minWidth: 0, color: danger, fontSize: "var(--t-legende)", fontWeight: 600, lineHeight: 1.4 }}>⚠️ {alerteStockage}</div>
-            <button onClick={() => setAlerteStockage(null)} aria-label="Masquer" style={{ ...btnFermer, color: danger }}>✕</button>
+            <div style={{ flex: 1, minWidth: 0, color: danger, fontSize: "var(--t-legende)", fontWeight: 600, lineHeight: 1.4 }}><Icone nom="warning" /> {alerteStockage}</div>
+            <button onClick={() => setAlerteStockage(null)} aria-label="Masquer" style={{ ...btnFermer, color: danger }}><Icone nom="close" /></button>
           </div>
         )}
 
@@ -1423,7 +1424,7 @@ export default function App() {
         {scoresBilan?.message && (
           <div style={{ display: "flex", alignItems: "flex-start", gap: 8, background: card, border: `1px solid ${bdr}`, borderRadius: "var(--r-sm)", padding: "8px 10px", marginBottom: 10 }}>
             <div style={{ flex: 1, minWidth: 0, color: txt, fontSize: "var(--t-legende)", fontWeight: 600 }}>{scoresBilan.message}</div>
-            <button onClick={() => setScoresBilan(null)} aria-label="Masquer" style={{ ...btnFermer, color: mut }}>✕</button>
+            <button onClick={() => setScoresBilan(null)} aria-label="Masquer" style={{ ...btnFermer, color: mut }}><Icone nom="close" /></button>
           </div>
         )}
 
@@ -1433,7 +1434,7 @@ export default function App() {
               <div style={{ color: txt, fontSize: "var(--t-legende)", fontWeight: 600 }}>{refreshMsg.text}</div>
               {refreshMsg.notFound.length > 0 && <div style={{ color: mut, fontSize: "var(--t-legende)", marginTop: 3, maxHeight: 54, overflowY: "auto" }}>Sans page : {refreshMsg.notFound.join(", ")}</div>}
             </div>
-            <button onClick={() => setRefreshMsg(null)} aria-label="Masquer" style={{ ...btnFermer, color: mut }}>✕</button>
+            <button onClick={() => setRefreshMsg(null)} aria-label="Masquer" style={{ ...btnFermer, color: mut }}><Icone nom="close" /></button>
           </div>
         )}
 
@@ -1446,7 +1447,7 @@ export default function App() {
               ? <button onClick={cancelEnrich} style={{ ...btnBandeau(danger, dangerDoux), fontSize: "var(--t-legende)" }}>Arrêter</button>
               : <>
                   <button onClick={enrichImported} style={{ ...btnBandeau(accent, accentDoux), fontSize: "var(--t-legende)" }}>Enrichir</button>
-                  <button onClick={() => setImportedIds([])} aria-label="Masquer" style={{ ...btnFermer, color: mut }}>✕</button>
+                  <button onClick={() => setImportedIds([])} aria-label="Masquer" style={{ ...btnFermer, color: mut }}><Icone nom="close" /></button>
                 </>}
           </div>
         )}
@@ -1490,7 +1491,7 @@ export default function App() {
         {estBibliotheque && (
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
             <input value={searchInput} onChange={e => setSearchInput(e.target.value)} type="search"
-              aria-label="Rechercher" placeholder={sort === TRI_DEFAUT ? "Rechercher…" : "🔍"}
+              aria-label="Rechercher" placeholder={sort === TRI_DEFAUT ? "Rechercher…" : "Chercher"}
               style={{ flex: 1, minWidth: 0, minHeight: "var(--tap)", background: card, border: `1px solid ${bdrChamp}`, borderRadius: "var(--r-md)", color: txt, padding: "0 12px", fontFamily: "inherit" }} />
             {/* Le contour accentué est réservé à « Filtres ». Un tri choisi se
                 dit par son libellé et par la couleur du texte, pas par une
@@ -1557,14 +1558,14 @@ export default function App() {
                   <Cover src={g.cover} title={g.title} size={52} />
                   <div style={{ flex:1, minWidth:0 }}>
                     <div style={{ color:txt, fontWeight:600, fontSize: "var(--t-corps)" }}>{g.title}</div>
-                    <div style={{ color:warn, fontSize: "var(--t-petit)" }}>📤 {g.lentA}</div>
+                    <div style={{ color:warn, fontSize: "var(--t-petit)" }}><Icone nom="outbox" /> {g.lentA}</div>
                     {days!==null && (
                       <div style={{ color:tard?danger:mut, fontSize: "var(--t-legende)" }}>
                         {days}j
                         {g.lentRetourPrevu
                           ? ` · à rendre le ${new Date(g.lentRetourPrevu).toLocaleDateString("fr-FR")}`
                           : ""}
-                        {tard ? " ⚠️" : ""}
+                        {tard && <> <Icone nom="warning" /></>}
                       </div>
                     )}
                   </div>
@@ -1587,7 +1588,7 @@ export default function App() {
                     <span style={{ color:mut, fontSize: "var(--t-legende)", flexShrink:0 }}>{dureeEntreeHistorique(e)} j</span>
                     <button onClick={() => supprimerPretPasse(e.jeuId, e.index, e)}
                       aria-label={`Supprimer le prêt de ${e.titre} à ${e.a}`} title="Supprimer de l'historique"
-                      style={{ ...btnFermer, color:mut }}>✕</button>
+                      style={{ ...btnFermer, color:mut }}><Icone nom="close" /></button>
                   </div>
                 ))}
               </>
@@ -1667,8 +1668,8 @@ export default function App() {
               remarque que plus tard, sur une fiche qui a changé toute seule. */}
           {(importChoix.rejetes > 0 || importChoix.corriges > 0) && (
             <div style={{ color: warn, fontSize: "var(--t-petit)", lineHeight: 1.5, marginBottom: 4 }}>
-              {importChoix.rejetes > 0 && <div>⚠️ {importChoix.rejetes} entrée(s) sans titre ont été ignorées.</div>}
-              {importChoix.corriges > 0 && <div>⚠️ {importChoix.corriges} entrée(s) contenaient des valeurs illisibles, ramenées à des valeurs sûres.</div>}
+              {importChoix.rejetes > 0 && <div><Icone nom="warning" /> {importChoix.rejetes} entrée(s) sans titre ont été ignorées.</div>}
+              {importChoix.corriges > 0 && <div><Icone nom="warning" /> {importChoix.corriges} entrée(s) contenaient des valeurs illisibles, ramenées à des valeurs sûres.</div>}
             </div>
           )}
           <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 12 }}>
@@ -1756,9 +1757,9 @@ export default function App() {
         <div role="status" style={{ ...bandeauBas, zIndex:401, gap:"var(--ecart-tap)", border:`1px solid ${accent}` }}>
           {/* Sur 412 px, les trois éléments ne tiennent que si le libellé ne
               se casse pas : « installée » partait à la ligne, seul. */}
-          <span style={{ color:txt, fontSize: "var(--t-corps)", whiteSpace:"nowrap" }}>✨ Nouvelle version</span>
+          <span style={{ color:txt, fontSize: "var(--t-corps)", whiteSpace:"nowrap" }}><Icone nom="upgrade" /> Nouvelle version</span>
           <button onClick={() => location.reload()} style={btnBandeau(accent, accentDoux)}>Recharger</button>
-          <button onClick={() => setMajDispo(false)} aria-label="Plus tard" style={{ ...btnFermer, color:mut }}>✕</button>
+          <button onClick={() => setMajDispo(false)} aria-label="Plus tard" style={{ ...btnFermer, color:mut }}><Icone nom="close" /></button>
         </div>
       )}
 
@@ -1789,14 +1790,14 @@ export default function App() {
           statistiques. Un balayage accidentel doit pouvoir se défaire. */}
       {rendu && (
         <div role="status" style={{ ...bandeauBas, zIndex:400, gap:14, border:`1px solid ${bdr}` }}>
-          <span style={{ color:txt, fontSize: "var(--t-corps)", minWidth:0 }}>🏠 « {rendu.avant.title} » rendu</span>
+          <span style={{ color:txt, fontSize: "var(--t-corps)", minWidth:0 }}><Icone nom="assignment_return" /> « {rendu.avant.title} » rendu</span>
           <button onClick={annulerRendu} style={btnBandeau(accent)}>Annuler</button>
         </div>
       )}
 
       {deleted && (
         <div role="status" style={{ ...bandeauBas, zIndex:400, gap:14, border:`1px solid ${bdr}` }}>
-          <span style={{ color:txt, fontSize: "var(--t-corps)", minWidth:0 }}>🗑 « {deleted.game.title} » supprimé</span>
+          <span style={{ color:txt, fontSize: "var(--t-corps)", minWidth:0 }}><Icone nom="delete" /> « {deleted.game.title} » supprimé</span>
           <button onClick={undoDelete} style={btnBandeau(accent)}>Annuler</button>
         </div>
       )}
