@@ -1,3 +1,4 @@
+import Icone from "./Icone.jsx";
 import { useState, useRef } from "react";
 import Sheet from "./Sheet.jsx";
 import { bg, card, bdr, bdrChamp, txt, mut, accent, accentFond, surAccent, ombreForte } from "../lib/theme.js";
@@ -196,7 +197,7 @@ function AddModal({ onAdd, onClose }) {
             {cover && <img src={cover} alt="Jaquette sélectionnée" style={{ width: 40, height: 60, minWidth: 40, objectFit: "cover", borderRadius: "var(--r-sm)" }} />}
             <div style={{ minWidth: 0 }}>
               {rawg && <div style={{ color: mut, fontSize: "var(--t-legende)" }}>{rawg.genres?.map(g => g.name).join(", ")}{rawg.metacritic ? ` · MC ${rawg.metacritic}` : ""}</div>}
-              {wikiExtract && <div style={{ color: mut, fontSize: "var(--t-legende)", marginTop: 2, maxHeight: 40, overflow: "hidden" }}>📝 {wikiExtract.slice(0, 90)}…</div>}
+              {wikiExtract && <div style={{ color: mut, fontSize: "var(--t-legende)", marginTop: 2, maxHeight: 40, overflow: "hidden" }}><Icone nom="notes" /> {wikiExtract.slice(0, 90)}…</div>}
               {!wikiExtract && !rawg && cover && <div style={{ color: mut, fontSize: "var(--t-legende)" }}>Jaquette sélectionnée</div>}
             </div>
           </div>
@@ -205,7 +206,7 @@ function AddModal({ onAdd, onClose }) {
         {/* Sources : Wikipédia + SteamGridDB */}
         <div style={{ display: "flex", gap: "var(--ecart-tap)", flexWrap: "wrap", marginBottom: 10 }}>
           <button onClick={() => { setWikiOpen(o => !o); if (!wikiOpen && title.trim()) { setWikiDone(false); wikiQuery(title); } }} style={srcBtn}>🇫🇷 Wikipédia (titre + desc.)</button>
-          <button onClick={() => { setSgOpen(o => !o); if (!sgOpen && title.trim()) { setSgDone(false); sgQuery(title); } }} style={srcBtn}>📦 Jaquette SteamGridDB</button>
+          <button onClick={() => { setSgOpen(o => !o); if (!sgOpen && title.trim()) { setSgDone(false); sgQuery(title); } }} style={srcBtn}><Icone nom="image" /> Jaquette SteamGridDB</button>
         </div>
 
         {wikiOpen && (

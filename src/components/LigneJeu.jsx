@@ -1,3 +1,4 @@
+import Icone from "./Icone.jsx";
 import { memo, useRef, useState } from "react";
 import Cover from "./Cover.jsx";
 import { card, bdr, txt, mut, demat, accent, accentFond, ok, okDoux, warn, warnDoux, warnFond, danger, surAccent, compatFond, pretFond } from "../lib/theme.js";
@@ -39,7 +40,7 @@ function LigneJeu({ g, onOuvrir, onPreter, onRendre }) {
   const [glisse, setGlisse] = useState(false);
   // Ce que le balayage va faire, écrit sous le doigt. Prêter demande un nom,
   // donc il ouvre une saisie ; rendre est immédiat.
-  const action = g.lentA ? { signe: "🏠", quoi: "Rendu" } : { signe: "📤", quoi: "Prêter" };
+  const action = g.lentA ? { signe: "assignment_return", quoi: "Rendu" } : { signe: "outbox", quoi: "Prêter" };
   const balayable = g.platform !== PC && typeof onPreter === "function";
 
   const surDebut = (e) => {
@@ -104,8 +105,8 @@ function LigneJeu({ g, onOuvrir, onPreter, onRendre }) {
         padding: "0 16px", background: g.lentA ? okDoux : warnDoux, color: g.lentA ? ok : warn,
         fontSize: "var(--t-petit)", fontWeight: 600, pointerEvents: "none",
       }}>
-        <span>{action.signe} {action.quoi}</span>
-        <span>{action.quoi} {action.signe}</span>
+        <span><Icone nom={action.signe} /> {action.quoi}</span>
+        <span>{action.quoi} <Icone nom={action.signe} /></span>
       </div>
     )}
     <div style={{ display: "flex", gap: 8, padding: "8px 10px", cursor: "pointer", background: card,
@@ -121,8 +122,8 @@ function LigneJeu({ g, onOuvrir, onPreter, onRendre }) {
           {g.platform === PC
             ? (g.boutique ? <span style={{ background: demat, color: accent, fontSize: "var(--t-legende)", borderRadius: "var(--r-xs)", padding: "1px 5px" }}>{g.boutique}</span> : null)
             : g.format === "démat" && <span style={{ background: demat, color: accent, fontSize: "var(--t-legende)", borderRadius: "var(--r-xs)", padding: "1px 5px" }}>démat</span>}
-          {BACK_COMPAT_PARENT[g.platform] && g.backCompat && <span title={`Rétrocompatible ${BACK_COMPAT_PARENT[g.platform]}`} style={{ background: compatFond, color: ok, fontSize: "var(--t-legende)", borderRadius: "var(--r-xs)", padding: "1px 5px" }}>🔄 Compatible {BACK_COMPAT_PARENT[g.platform].replace("Xbox ", "")}</span>}
-          {g.lentA && <span key={g.lentA} style={{ background: pretFond, color: warn, fontSize: "var(--t-legende)", borderRadius: "var(--r-xs)", padding: "1px 5px", animation: "statusPop 200ms ease" }}>📤 {g.lentA}{jours !== null ? ` · ${jours}j` : ""}</span>}
+          {BACK_COMPAT_PARENT[g.platform] && g.backCompat && <span title={`Rétrocompatible ${BACK_COMPAT_PARENT[g.platform]}`} style={{ background: compatFond, color: ok, fontSize: "var(--t-legende)", borderRadius: "var(--r-xs)", padding: "1px 5px" }}><Icone nom="sync_alt" /> Compatible {BACK_COMPAT_PARENT[g.platform].replace("Xbox ", "")}</span>}
+          {g.lentA && <span key={g.lentA} title={`Prêté à ${g.lentA}`} style={{ background: pretFond, color: warn, fontSize: "var(--t-legende)", borderRadius: "var(--r-xs)", padding: "1px 5px", animation: "statusPop 200ms ease" }}><Icone nom="outbox" /> {g.lentA}{jours !== null ? ` · ${jours}j` : ""}</span>}
           {/* Rien d'autre ici : les badges disent l'exemplaire, pas le contenu. */}
         </div>
         <div style={{ fontWeight: 600, fontSize: "var(--t-corps)", color: txt, marginBottom: 2, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>{g.title}</div>

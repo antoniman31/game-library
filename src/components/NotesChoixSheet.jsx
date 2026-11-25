@@ -1,3 +1,4 @@
+import Icone from "./Icone.jsx";
 import { useState } from "react";
 import Sheet from "./Sheet.jsx";
 import { bdr, txt, mut, accent, accentFond, ok, warn, danger, bdrChamp, surAccent } from "../lib/theme.js";
@@ -57,7 +58,7 @@ export default function NotesChoixSheet({ propositions, stopped, onAppliquer, on
                     trente points avec un titre voisin est un mauvais
                     rapprochement, pas une réévaluation. */}
                 <div style={{ color: suspect ? warn : mut, fontSize: "var(--t-legende)", lineHeight: 1.35 }}>
-                  {suspect ? "⚠️ " : ""}{p.source}
+                  {suspect && <><Icone nom="warning" /> </>}{p.source}
                 </div>
               </div>
               <span style={{ fontSize: "var(--t-petit)", whiteSpace: "nowrap", flexShrink: 0 }}>

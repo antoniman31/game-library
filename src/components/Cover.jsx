@@ -1,3 +1,4 @@
+import Icone from "./Icone.jsx";
 import { useState } from "react";
 import { COUVERTURES } from "../lib/theme.js";
 import { sourceJaquette } from "../lib/jaquettes.js";
@@ -22,7 +23,7 @@ function Cover({ src, title, size = 72 }) {
     ? { width: "100%", aspectRatio: "2 / 3", minWidth: 0 }
     : { width: size, height: size * 1.5, minWidth: size };
   if (!src || err) return (
-    <div style={{ ...box, background: bg, borderRadius: "var(--r-sm)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: isFull ? 40 : size * 0.4 }}>🎮</div>
+    <div style={{ ...box, background: bg, borderRadius: "var(--r-sm)", display: "flex", alignItems: "center", justifyContent: "center" }}><Icone nom="stadia_controller" taille={isFull ? 40 : size * 0.4} /></div>
   );
   const affichee = localRate ? src : sourceJaquette(src);
   // `lazy` et `async` : la liste monte deux cent quatre-vingt-huit fiches d'un

@@ -2790,3 +2790,16 @@ attendu (vu échouer sur l'ancien code, « Plateforme inconnue »). Qualité : l
 ### Règles communes mises à jour — 25/11/2026
 
 Bloc commun de `CLAUDE.md` aligné sur `regles-communes` (BLOC.md, commit 864f26d), par la propagation automatique.
+
+### Icônes Material au lieu des emojis — 25/11/2026
+
+Règle commune « Design » écrite le même jour (choix d'Antoni) : jamais d'emoji comme icône, des Material Symbols de Google en
+variante arrondie, embarqués. L'appli en affichait une quarantaine de différents (📤 ⚠️ ✕ ⏳ 🎮 ⚙️ 🔒 👁 ☰ ⊞…), dont le dessin
+dépendait de la police du téléphone. Ils deviennent des icônes du composant `Icone`, dont les tracés vivent dans
+`src/lib/icones.js` (@material-symbols/svg-400 0.49.0, Apache-2.0, copiés : aucune dépendance ni requête), à la couleur et à la
+taille du texte voisin. Correspondance validée par Antoni sur la maquette d'audit ; deux écarts plus justes : le 📤 « partager
+la liste » de l'en-tête devient `share` (le 📤 « prêté » reste `outbox`), et le 📦 « Jaquette » devient `image`. ℹ️ et le ⚙️
+d'une phrase d'aide, oubliés par l'audit, sont convertis aussi. Restent en texte : les flèches (→ ↑ ↓ ↗ ⇅ ↻ ▲ ▼ ▸ ▾), le 😊 du
+SMS de rappel d'un prêt, et les ⚠️ des boîtes de dialogue natives (`confirm`), qui n'acceptent pas d'image : retirés. Le
+placeholder « 🔍 » du champ de recherche, quand un tri est actif, devient « Chercher ». `src/lib/icones.test.mjs` refuse tout
+pictogramme hors flèches, SMS et commentaires, et vérifie que chaque icône appelée existe (vu échouer : 2 tests sur 3).

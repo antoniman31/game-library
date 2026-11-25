@@ -1,3 +1,4 @@
+import Icone from "./Icone.jsx";
 import { bdrChamp, txt, mut, danger } from "../lib/theme.js";
 
 // L'onglet « Outils » des Réglages : ce qui se lance, dure un moment et se
@@ -38,7 +39,7 @@ function Action({ icone, titre, detail, onClick, disabled, destructif }) {
         opacity: disabled ? 0.5 : 1, fontFamily: "inherit",
       }}
     >
-      <span style={{ fontSize: "var(--t-chiffre)", flexShrink: 0 }}>{icone}</span>
+      <span style={{ fontSize: "var(--t-chiffre)", flexShrink: 0 }}><Icone nom={icone} /></span>
       <span style={{ minWidth: 0 }}>
         <span style={{ display: "block", color: c, fontSize: "var(--t-corps)", fontWeight: 600 }}>{titre}</span>
         {detail && <span style={{ display: "block", color: mut, fontSize: "var(--t-legende)", lineHeight: 1.35, marginTop: 1 }}>{detail}</span>}
@@ -87,7 +88,7 @@ export default function PanneauOutils({
       <Groupe titre="Compléter les fiches">
         {refreshing ? (
           <Action
-            icone="⏳"
+            icone="hourglass_top"
             titre={`Actualisation… ${refreshProg}/${refreshTotal}`}
             detail="Toucher pour arrêter"
             onClick={onCancelRefresh}
@@ -95,7 +96,7 @@ export default function PanneauOutils({
           />
         ) : (
           <Action
-            icone="🌐"
+            icone="public"
             titre="Actualiser les descriptions"
             detail="Recharge chaque résumé depuis Wikipédia FR"
             onClick={onRefreshDescriptions}
@@ -103,7 +104,7 @@ export default function PanneauOutils({
         )}
         {scoresEnCours ? (
           <Action
-            icone="⏳"
+            icone="hourglass_top"
             titre={`Recherche des notes… ${scoresProg}/${scoresTotal}`}
             detail="Toucher pour arrêter"
             onClick={onAnnulerScores}
@@ -111,7 +112,7 @@ export default function PanneauOutils({
           />
         ) : (
           <Action
-            icone="🎯"
+            icone="target"
             titre="Compléter les notes manquantes"
             detail={scoresManquants > 0
               ? `${scoresManquants} jeu${scoresManquants > 1 ? "x" : ""} sans note · RAWG, puis Steam, puis Wikidata`
@@ -125,7 +126,7 @@ export default function PanneauOutils({
             Un jeu possédé sur deux plateformes a une fiche remplie et une nue,
             et la seconde n'a rien à demander au réseau. */}
         <Action
-          icone="🔗"
+          icone="link"
           titre="Remplir depuis les autres éditions"
           detail={editionsCompletables > 0
             ? `${editionsCompletables} fiche${editionsCompletables > 1 ? "s" : ""} à compléter · sans réseau`
@@ -134,7 +135,7 @@ export default function PanneauOutils({
         />
         {jaquettesEnCours ? (
           <Action
-            icone="⏳"
+            icone="hourglass_top"
             titre={`Recherche des jaquettes… ${jaquettesProg}/${jaquettesTotal}`}
             detail="Toucher pour arrêter"
             onClick={onAnnulerJaquettes}
@@ -142,7 +143,7 @@ export default function PanneauOutils({
           />
         ) : (
           <Action
-            icone="🖼"
+            icone="image"
             titre="Rattraper les jaquettes manquantes"
             detail={jaquettesManquantes > 0
               ? `${jaquettesManquantes} fiche${jaquettesManquantes > 1 ? "s" : ""} sans image · cherche sur SteamGridDB`
@@ -160,7 +161,7 @@ export default function PanneauOutils({
         <Groupe titre="Garder sur l'appareil">
           {descenteEnCours ? (
             <Action
-              icone="⏳"
+              icone="hourglass_top"
               titre={`Enregistrement des jaquettes… ${descenteProg}/${descenteTotal}`}
               detail="Toucher pour arrêter — ce qui est déjà descendu est gardé"
               onClick={onAnnulerDescente}
@@ -168,7 +169,7 @@ export default function PanneauOutils({
             />
           ) : (
             <Action
-              icone="💾"
+              icone="save"
               titre="Enregistrer les jaquettes sur l'appareil"
               detail={jaquettesADescendre > 0
                 ? `${jaquettesADescendre} image${jaquettesADescendre > 1 ? "s" : ""} à descendre · l'application les affichera sans réseau`
@@ -183,13 +184,13 @@ export default function PanneauOutils({
           vu la liste, dans un cas comme dans l'autre. */}
       <Groupe titre="Faire entrer des jeux">
         <Action
-          icone="🖥️"
+          icone="desktop_windows"
           titre="Importer un export Playnite"
           detail="Steam, Epic, GOG, Amazon — depuis le fichier produit par le logiciel sur ton PC"
           onClick={onPlaynite}
         />
         <Action
-          icone="🎮"
+          icone="stadia_controller"
           titre="Importer ma bibliothèque Xbox"
           detail="Via xbl.io — nécessite la clé et le relais"
           onClick={onImportXbox}

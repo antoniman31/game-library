@@ -13,7 +13,8 @@
 // un réglage déjà enregistré n'a donc rien à migrer.
 export const MODES = ["auto", "light", "dark"];
 export const LIBELLES = { auto: "Automatique", light: "Clair", dark: "Noir profond" };
-export const ICONES = { auto: "🌗", light: "☀️", dark: "🌑" };
+// Noms d'icônes Material (src/lib/icones.js), plus des emojis depuis le 25/11/2026.
+export const ICONES = { auto: "brightness_auto", light: "light_mode", dark: "dark_mode" };
 
 // Le mode stocké se traduit en thème réellement appliqué. Seul « auto »
 // dépend du système ; les autres tiennent, quoi que fasse le téléphone.

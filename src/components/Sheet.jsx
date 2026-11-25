@@ -1,3 +1,4 @@
+import Icone from "./Icone.jsx";
 import { useEffect, useId, useRef } from "react";
 import { createPortal } from "react-dom";
 import { card, bdr, txt, bdrChamp, voile } from "../lib/theme.js";
@@ -124,7 +125,7 @@ export default function Sheet({ title, onClose, children }) {
               width: "var(--tap)", height: "var(--tap)", fontSize: "var(--t-titre)", cursor: "pointer", flexShrink: 0,
             }}
           >
-            ✕
+            <Icone nom="close" />
           </button>
         </div>
         {children}

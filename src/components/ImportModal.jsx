@@ -1,3 +1,4 @@
+import Icone from "./Icone.jsx";
 import { useState, useEffect, useRef } from "react";
 import { bdr, bdrChamp, txt, mut, accent, accentFond, dangerDoux, ok, danger, surAccent } from "../lib/theme.js";
 import { XBOX_SERIES_CUTOFF, isBackCompatPlatform } from "../lib/model.js";
@@ -83,7 +84,7 @@ function ImportModal({ games, onImportGames, onClose }) {
   };
 
   return (
-    <Sheet title="🎮 Importer ma bibliothèque Xbox" onClose={importing ? () => {} : onClose}>
+    <Sheet title={<><Icone nom="stadia_controller" /> Importer ma bibliothèque Xbox</>} onClose={importing ? () => {} : onClose}>
         {loading && <div style={{ color: accent, fontSize: "var(--t-petit)", padding: "16px 0" }}>Récupération de l'historique Xbox…</div>}
 
         {!loading && list && (
