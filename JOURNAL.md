@@ -2803,3 +2803,13 @@ d'une phrase d'aide, oubliés par l'audit, sont convertis aussi. Restent en text
 SMS de rappel d'un prêt, et les ⚠️ des boîtes de dialogue natives (`confirm`), qui n'acceptent pas d'image : retirés. Le
 placeholder « 🔍 » du champ de recherche, quand un tri est actif, devient « Chercher ». `src/lib/icones.test.mjs` refuse tout
 pictogramme hors flèches, SMS et commentaires, et vérifie que chaque icône appelée existe (vu échouer : 2 tests sur 3).
+
+### Mention « Fait par AntoniMan31/Claude Code » et version — 25/11/2026
+
+Règle commune « Interface » écrite le même jour (choix d'Antoni). La ligne « Version … » du bas des Réglages devient un petit
+bloc « À propos » : « Fait par AntoniMan31/Claude Code · version a1b2c3d du 25/11/2026 » (dans l'APK, le numéro de
+construction d'Android à la place du commit, comme avant). La date est celle du build, en heure de Paris : `vite.config.js`
+ajoute `__BUILD_DATE__`. Ligne écrite par `src/lib/mention.js`, testée par `mention.test.mjs` (texte exact, hiver, été, nuit du
+changement d'heure, version absente) ; l'étape « Réglages » de `verif:ui` signale une mention absente ou une version vide (vue
+échouer sur le code d'avant, dans les trois passages). Lint sans erreur (les 7 avertissements d'avant), 306 tests, `verif:ui` :
+rien à signaler.

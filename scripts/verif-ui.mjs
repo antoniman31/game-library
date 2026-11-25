@@ -546,7 +546,15 @@ for (const [largeur, theme] of ECRANS) {
     }],
     ["Stats", async () => { await page.getByRole("button", { name: "Stats" }).click(); }],
     ["Stats · Collection", async () => { await page.getByRole("button", { name: "Collection" }).click(); }],
-    ["Réglages", async () => { await revenirALaListe(); await page.getByRole("button", { name: "Réglages" }).click(); }],
+    ["Réglages", async () => {
+      await revenirALaListe(); await page.getByRole("button", { name: "Réglages" }).click();
+      // Règle commune « Interface » (25/11/2026) : À propos porte la mention exacte et une version remplie (commit et
+      // date du build). Une ligne absente ou une version vide ne se verraient nulle part ailleurs.
+      const mention = await page.locator(".gl-mention").allInnerTexts();
+      if (!(mention.length === 1 && /^Fait par AntoniMan31\/Claude Code · version [0-9a-f]{7,} du \d{2}\/\d{2}\/\d{4}$/.test(mention[0].trim()))) {
+        signaler("Réglages", "la mention d'À propos est fausse", [mention.join(" | ") || "absente"]);
+      }
+    }],
     // Les trois sous-onglets. « Outils » est celui où vivent désormais les
     // opérations longues et les deux imports, et c'est un onglet de plus à
     // tenir sur 360 px : trois boutons en `flex: 1` y tombent à 105 px, et

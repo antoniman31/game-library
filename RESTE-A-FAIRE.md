@@ -19,6 +19,11 @@ du projet. (Anciennement `TODO.md`, renommé le 16/11/2026.)
   jeu (prêté, rétrocompatible), le balayage Prêter / Rendu, la fiche, les filtres, les Réglages (sauvegarde, clés), le panneau
   Outils, l'écran « aucun résultat ».
 
+## Mention et version (25/11/2026)
+
+- Fait : en bas des Réglages, « À propos » puis « Fait par AntoniMan31/Claude Code · version … du … » (règle commune
+  « Interface »). À regarder sur le S26 : le site (commit) et l'APK (numéro de construction), avec la date de la mise en ligne.
+
 ## APK : mesuré, rien à faire
 
 Construction de publication n° 21 (16/11/2026, après le retrait du scan), lue par

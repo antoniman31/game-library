@@ -41,7 +41,8 @@ export default defineConfig(({ mode }) => {
   const pourAndroid = mode === 'android';
   return {
   base: pourAndroid ? './' : '/game-library/',
-  define: { __COMMIT__: JSON.stringify(commit) },
+  // La date du build accompagne le commit dans Réglages › À propos : elle dit quand l'appareil a reçu cette version.
+  define: { __COMMIT__: JSON.stringify(commit), __BUILD_DATE__: JSON.stringify(new Date().toISOString()) },
   plugins: [
     react(),
     // Le site seulement : voir src/lib/csp.js.

@@ -9,6 +9,7 @@ import ChampProtege from "./ChampProtege.jsx";
 import SousOnglets from "./SousOnglets.jsx";
 import PanneauOutils from "./PanneauOutils.jsx";
 import { versionInstallee, estNatif } from "../lib/natif.js";
+import { ligneVersion } from "../lib/mention.js";
 
 // Les réglages, refaits.
 //
@@ -385,12 +386,14 @@ export default function SettingsView({
       )}
 
       {/* Discret et en dernier : cela ne se règle pas, cela se lit quand on en
-          a besoin. */}
-      {version && (
-        <div style={{ marginTop: "var(--ecart-bloc)", color: mut, fontSize: "var(--t-legende)", textAlign: "center" }}>
-          Version {version}
-        </div>
-      )}
+          a besoin. La mention et la date du build suivent la règle commune
+          « Interface » (25/11/2026). */}
+      <section aria-labelledby="gl-apropos" style={{ marginTop: "var(--ecart-bloc)", color: mut, fontSize: "var(--t-legende)", textAlign: "center" }}>
+        <h3 id="gl-apropos" style={{ margin: 0, fontSize: "var(--t-legende)", fontWeight: 700 }}>À propos</h3>
+        <p className="gl-mention" style={{ margin: 0 }}>
+          {ligneVersion(version || (typeof __COMMIT__ === "string" ? __COMMIT__ : ""), typeof __BUILD_DATE__ === "string" ? __BUILD_DATE__ : "")}
+        </p>
+      </section>
     </div>
   );
 }
