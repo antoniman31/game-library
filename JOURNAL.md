@@ -2813,3 +2813,15 @@ ajoute `__BUILD_DATE__`. Ligne écrite par `src/lib/mention.js`, testée par `me
 changement d'heure, version absente) ; l'étape « Réglages » de `verif:ui` signale une mention absente ou une version vide (vue
 échouer sur le code d'avant, dans les trois passages). Lint sans erreur (les 7 avertissements d'avant), 306 tests, `verif:ui` :
 rien à signaler.
+
+### Signature : logo AM.31 aux couleurs de l'appli — 25/11/2026
+
+Suite de la mention du même jour (choix d'Antoni : variante C d'une maquette, texte centré). Le bloc « À propos » du bas des Réglages
+porte maintenant le logo AM.31 (34 px de haut), « Fait par AntoniMan31/Claude Code » (le nom en accent) et « version a1b2c3d ·
+jj/mm/aaaa » en petit (dans l'APK : le numéro de construction à la place du commit, comme avant). Le logo vient de trois calques PNG
+(`public/logo/`, 16 Ko : contour, remplissage, reflets) que le CSS colore avec `--accent-fond` mêlé de noir ou de blanc : il suit le
+thème. Un double appui (vrai bouton de 48 px, composant `Signature`) alterne cette couleur et le bleu d'origine (jetons `--logo-contour`
+et `--logo-remplissage`) ; rien n'est mémorisé, pas de lien GitHub (choix d'Antoni). Le double appui se compte à la main (`estDoubleClic`,
+350 ms) : `dblclick` n'existe pas au clavier. `ligneVersion` devient `versionTexte`. Contrôles vus échouer sur le code d'avant :
+`mention.test.mjs` et l'étape « Réglages » de `verif:ui` (mention fausse et logo absent).
+- Qualité : lint sans erreur (les 7 avertissements d'avant), 307 tests, `verif:ui` : rien à signaler.
