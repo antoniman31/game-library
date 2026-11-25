@@ -548,11 +548,28 @@ for (const [largeur, theme] of ECRANS) {
     ["Stats · Collection", async () => { await page.getByRole("button", { name: "Collection" }).click(); }],
     ["Réglages", async () => {
       await revenirALaListe(); await page.getByRole("button", { name: "Réglages" }).click();
-      // Règle commune « Interface » (25/11/2026) : À propos porte la mention exacte et une version remplie (commit et
+      // Règle commune « Interface » (25/11/2026) : À propos porte le logo AM.31, la mention exacte et une version remplie (commit et
       // date du build). Une ligne absente ou une version vide ne se verraient nulle part ailleurs.
-      const mention = await page.locator(".gl-mention").allInnerTexts();
-      if (!(mention.length === 1 && /^Fait par AntoniMan31\/Claude Code · version [0-9a-f]{7,} du \d{2}\/\d{2}\/\d{4}$/.test(mention[0].trim()))) {
-        signaler("Réglages", "la mention d'À propos est fausse", [mention.join(" | ") || "absente"]);
+      const texte = await page.locator(".signature__texte").allInnerTexts();
+      const version = await page.locator(".signature__version").allInnerTexts();
+      if (!(texte.length === 1 && texte[0].trim() === "Fait par AntoniMan31/Claude Code")) signaler("Réglages", "la mention d'À propos est fausse", [texte.join(" | ") || "absente"]);
+      if (!(version.length === 1 && /^version [0-9a-f]{7,} · \d{2}\/\d{2}\/\d{4}$/.test(version[0].trim()))) signaler("Réglages", "la version d'À propos est fausse", [version.join(" | ") || "absente"]);
+      // Le logo : un vrai bouton de 48 px ; un double clic alterne la couleur de l'appli et le bleu d'origine, un seul appui ne change rien.
+      const logo = page.locator("button.am31");
+      if ((await logo.count()) !== 1) signaler("Réglages", "le logo AM.31 manque", []);
+      else {
+        const boite = await logo.boundingBox();
+        if (!(boite && boite.height >= 47.5 && boite.width >= 47.5)) signaler("Réglages", "le logo est trop petit pour le doigt", [JSON.stringify(boite)]);
+        const etat = () => logo.getAttribute("data-couleur");
+        if ((await etat()) !== "app") signaler("Réglages", "le logo doit partir à la couleur de l'appli", [String(await etat())]);
+        await logo.click();
+        if ((await etat()) !== "app") signaler("Réglages", "un seul appui ne doit rien changer", [String(await etat())]);
+        await page.waitForTimeout(450);
+        await logo.dblclick();
+        if ((await etat()) !== "origine") signaler("Réglages", "un double clic doit passer au bleu d'origine", [String(await etat())]);
+        await page.waitForTimeout(450);
+        await logo.dblclick();
+        if ((await etat()) !== "app") signaler("Réglages", "un second double clic doit revenir à la couleur de l'appli", [String(await etat())]);
       }
     }],
     // Les trois sous-onglets. « Outils » est celui où vivent désormais les

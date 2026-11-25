@@ -21,8 +21,9 @@ du projet. (Anciennement `TODO.md`, renommé le 16/11/2026.)
 
 ## Mention et version (25/11/2026)
 
-- Fait : en bas des Réglages, « À propos » puis « Fait par AntoniMan31/Claude Code · version … du … » (règle commune
-  « Interface »). À regarder sur le S26 : le site (commit) et l'APK (numéro de construction), avec la date de la mise en ligne.
+- Fait : en bas des Réglages, « À propos », le logo AM.31 (bleu de l'appli), « Fait par AntoniMan31/Claude Code » et « version … ·
+  jj/mm/aaaa » (règle commune « Interface »). Double appui sur le logo : bleu d'origine, puis retour. À regarder sur le S26 : le site
+  (commit) et l'APK (numéro de construction), les deux thèmes.
 
 ## APK : mesuré, rien à faire
 

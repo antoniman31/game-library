@@ -9,7 +9,7 @@ import ChampProtege from "./ChampProtege.jsx";
 import SousOnglets from "./SousOnglets.jsx";
 import PanneauOutils from "./PanneauOutils.jsx";
 import { versionInstallee, estNatif } from "../lib/natif.js";
-import { ligneVersion } from "../lib/mention.js";
+import Signature from "./Signature.jsx";
 
 // Les réglages, refaits.
 //
@@ -390,9 +390,7 @@ export default function SettingsView({
           « Interface » (25/11/2026). */}
       <section aria-labelledby="gl-apropos" style={{ marginTop: "var(--ecart-bloc)", color: mut, fontSize: "var(--t-legende)", textAlign: "center" }}>
         <h3 id="gl-apropos" style={{ margin: 0, fontSize: "var(--t-legende)", fontWeight: 700 }}>À propos</h3>
-        <p className="gl-mention" style={{ margin: 0 }}>
-          {ligneVersion(version || (typeof __COMMIT__ === "string" ? __COMMIT__ : ""), typeof __BUILD_DATE__ === "string" ? __BUILD_DATE__ : "")}
-        </p>
+        <Signature version={version} />
       </section>
     </div>
   );
