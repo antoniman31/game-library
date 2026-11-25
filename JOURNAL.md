@@ -2786,3 +2786,7 @@ s'arrêtaient au constat : copie de la liste, écriture de la sauvegarde, lectur
 d'ajout et plateforme refusées dans la fiche. Ils prennent la forme « constat : action » (« Sauvegarde non écrite : libère
 de la place sur l'appareil, puis réessaie. »). Test ajouté à `model.test.mjs` : chaque refus d'un champ dit ce qui est
 attendu (vu échouer sur l'ancien code, « Plateforme inconnue »). Qualité : lint inchangé (7 avertissements d'avant), 300 tests.
+
+### Règles communes mises à jour — 25/11/2026
+
+Bloc commun de `CLAUDE.md` aligné sur `regles-communes` (BLOC.md, commit 864f26d), par la propagation automatique.
