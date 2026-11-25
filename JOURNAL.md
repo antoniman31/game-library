@@ -2825,3 +2825,7 @@ et `--logo-remplissage`) ; rien n'est mémorisé, pas de lien GitHub (choix d'An
 350 ms) : `dblclick` n'existe pas au clavier. `ligneVersion` devient `versionTexte`. Contrôles vus échouer sur le code d'avant :
 `mention.test.mjs` et l'étape « Réglages » de `verif:ui` (mention fausse et logo absent).
 - Qualité : lint sans erreur (les 7 avertissements d'avant), 307 tests, `verif:ui` : rien à signaler.
+
+### Règles communes mises à jour — 25/11/2026
+
+Bloc commun de `CLAUDE.md` aligné sur `regles-communes` (BLOC.md, commit 8e4cde6), par la propagation automatique.
