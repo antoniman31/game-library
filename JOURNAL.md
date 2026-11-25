@@ -2787,6 +2787,10 @@ d'ajout et plateforme refusées dans la fiche. Ils prennent la forme « constat 
 de la place sur l'appareil, puis réessaie. »). Test ajouté à `model.test.mjs` : chaque refus d'un champ dit ce qui est
 attendu (vu échouer sur l'ancien code, « Plateforme inconnue »). Qualité : lint inchangé (7 avertissements d'avant), 300 tests.
 
+### Règles communes mises à jour — 25/11/2026
+
+Bloc commun de `CLAUDE.md` aligné sur `regles-communes` (BLOC.md, commit 864f26d), par la propagation automatique.
+
 ### Icônes Material au lieu des emojis — 25/11/2026
 
 Règle commune « Design » écrite le même jour (choix d'Antoni) : jamais d'emoji comme icône, des Material Symbols de Google en
